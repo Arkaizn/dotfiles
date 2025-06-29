@@ -19,3 +19,8 @@ sudo usermod -aG nordvpn $USER
 sudo systemctl enable --now nordvpnd.service
 nordvpn login
 nordvpn login --callback "continue Button URL from Nordvpn"
+
+
+# disk utiity
+sudo pacman -S baobab
+sudo pacman -S gnome-disk-utility
