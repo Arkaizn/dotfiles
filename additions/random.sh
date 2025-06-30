@@ -24,3 +24,6 @@ nordvpn login --callback "continue Button URL from Nordvpn"
 # disk utiity
 sudo pacman -S baobab
 sudo pacman -S gnome-disk-utility
+
+# thunar smb share packages
+sudo pacman -Syu gvfs gvfs-smb cifs-utils thunar-volman gigolo
