@@ -1,0 +1,15 @@
+
+services:
+  emby:
+    image: emby/embyserver
+    container_name: embyserver
+    network_mode: host
+    environment:
+      - UID=1000
+      - GID=100
+      - GIDLIST=100
+      - EMBY_SERVER_ADDRESS=0.0.0.0   # ensure binding
+    volumes:
+      - ./config:/config
+      - ./media:/mnt/share1
+    restart: unless-stopped
