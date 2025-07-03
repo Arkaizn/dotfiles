@@ -99,6 +99,20 @@ wal_hook_tasks() {
     fi
 }
 
+sync_openrgb() {
+    RAW=$(grep -m1 '^color9=' ~/.cache/wal/colors.sh)
+
+    # Strip everything up to '#', then strip trailing quote: yields CF1B1B
+    COLOR=${RAW#*\#}
+    COLOR=${COLOR%\'}
+
+    # Apply to all devices
+
+    openrgb --color "$COLOR"
+
+    echo "Applied color: $COLOR"
+}
+
 # Reload SwayNC CSS (fire-and-forget)
 reload_swaync() {
     if command -v swaync-client &>/dev/null; then
@@ -138,6 +152,7 @@ main() {
     # 4) Run wal exactly once, choosing backend <255→colorthief, else→walroeg, 
     #    then run hook tasks inline.
     run_wal "$selected" && wal_hook_tasks
+    sync_openrgb
 }
 
 main
