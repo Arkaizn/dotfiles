@@ -5,33 +5,36 @@
     font-family: "CodeNewRoman Nerd Font Propo";
 }
 
-/* inset the bar 30px from left/right, and 10px from the top */
 window#waybar {
   all: unset;
+  background-color: alpha(@background,.6);
+  transition-property: background-color;
+  transition-duration: 0.5s;
+  border-radius: 13px;
+  border: 1px solid @color9;
+  
 }
 
 .modules-left {
-    padding:7px;
+    padding:8px;
     margin:5px;
     border-radius:10px;
-    background: alpha(@background,.5);
-    box-shadow: 0px 0px 4px @color9;
+    background: alpha(@background,.0);
+
 }
 
 .modules-center {
-    padding:7px;
-    margin:5px;
+    padding:8px;
+    margin:5 11px;
     border-radius:10px;
-    background: alpha(@background,.5);
-    box-shadow: 0px 0px 4px @color9;
+    background: alpha(@background,.0);
 }
 
 .modules-right {
-    padding:7px;
-    margin:5px;
+    padding:8px;
+    margin:5 11px;
     border-radius:10px;
-    background: alpha(@background,.5);
-    box-shadow: 0px 0px 4px @color9;
+    background: alpha(@background,.0);
 }
 
 .tooltip {
