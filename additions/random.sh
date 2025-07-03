@@ -27,3 +27,7 @@ sudo pacman -S gnome-disk-utility
 
 # thunar smb share packages
 sudo pacman -Syu gvfs gvfs-smb cifs-utils thunar-volman gigolo
+
+# gnome wireless display
+yay -S gnome-network-displays 
+
