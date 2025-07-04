@@ -145,13 +145,13 @@ main() {
     # 2) Immediately set the wallpaper (blocks until wipe transition completes)
     set_wallpaper "$selected"
 
-    # 3) Reload SwayNC and copy current‐wallpaper in the background
-    reload_swaync &
+    # 3) copy current‐wallpaper in the background
     copy_current_wallpaper "$selected" &
 
     # 4) Run wal exactly once, choosing backend <255→colorthief, else→walroeg, 
     #    then run hook tasks inline.
     run_wal "$selected" && wal_hook_tasks
+    reload_swaync &
     sync_openrgb
 }
 
