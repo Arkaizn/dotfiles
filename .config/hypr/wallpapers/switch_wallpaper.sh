@@ -99,8 +99,10 @@ wal_hook_tasks() {
     fi
 }
 
-sync_openrgb() {
-    RAW=$(grep -m1 '^color9=' ~/.cache/wal/colors.sh)
+set_openrgb() {
+
+    # Grab the raw line
+    RAW=$(grep -m1 '^color11=' ~/.cache/wal/colors.sh)
 
     # Strip everything up to '#', then strip trailing quote: yields CF1B1B
     COLOR=${RAW#*\#}
@@ -111,6 +113,41 @@ sync_openrgb() {
     openrgb --color "$COLOR"
 
     echo "Applied color: $COLOR"
+}
+
+set_openlinkhub() {
+
+    # Grab the raw line
+    RAW=$(grep -m1 '^color11=' ~/.cache/wal/colors.sh)
+    # Strip to get just the six hex digits in $COLOR:
+    COLOR=${RAW#*\#}
+    COLOR=${COLOR%\'*}
+    echo "DEBUG: COLOR=\"$COLOR\""  >&2
+
+    # Convert hex → decimal using the same variable name:
+    R=$((16#${COLOR:0:2}))
+    G=$((16#${COLOR:2:2}))
+    B=$((16#${COLOR:4:2}))
+
+    # Verify:
+    echo "Parsed → R=$R, G=$G, B=$B"  >&2
+    
+    # change color in config with sed
+    sed -i -E '/"static"/,/"minTemp"/{ 
+    /"start"/,/\}/{ 
+        s/("red":[[:space:]]*)[0-9]+/\1'"$R"'/; 
+        s/("green":[[:space:]]*)[0-9]+/\1'"$G"'/; 
+        s/("blue":[[:space:]]*)[0-9]+/\1'"$B"'/ 
+    } 
+    /"end"/,/\}/{ 
+        s/("red":[[:space:]]*)[0-9]+/\1'"$R"'/; 
+        s/("green":[[:space:]]*)[0-9]+/\1'"$G"'/; 
+        s/("blue":[[:space:]]*)[0-9]+/\1'"$B"'/ 
+    } 
+    }' /var/lib/openlinkhub/database/rgb/71CB611182670C51BA1E355AA2FCE4B5.json
+
+    # restart openlinkhub service
+    systemctl restart openlinkhub.service
 }
 
 # Reload SwayNC CSS (fire-and-forget)
@@ -145,14 +182,16 @@ main() {
     # 2) Immediately set the wallpaper (blocks until wipe transition completes)
     set_wallpaper "$selected"
 
-    # 3) copy current‐wallpaper in the background
+    # 3) Reload SwayNC and copy current‐wallpaper in the background
+    
     copy_current_wallpaper "$selected" &
 
     # 4) Run wal exactly once, choosing backend <255→colorthief, else→walroeg, 
     #    then run hook tasks inline.
     run_wal "$selected" && wal_hook_tasks
-    reload_swaync &
-    sync_openrgb
+    reload_swaync
+    set_openrgb
+    set_openlinkhub
 }
 
 main
