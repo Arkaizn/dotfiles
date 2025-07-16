@@ -79,18 +79,10 @@
                 },
                 {
                     "label":"",
-                    "command": "sudo virsh start win11"
-                },
-                {
-                    "label":"󰢹",
-                    "command": "xfreerdp3 /ipv4 /v:192.168.122.2 /u:silas /p:password /sec:tls:on /cert:ignore +dynamic-resolution +clipboard /drive:homedir,/home/arkaizn"
-                },
-                {
-                    "label":" ",
                     "command": "bash /home/arkaizn/docker/winapps/toggle.sh"
                 },
                 {
-                    "label":"󰢹 ",
+                    "label":"󰢹",
                     "command": "xfreerdp3 /ipv4 /v:127.0.0.1 /u:Silas /p:password /sec:tls:on /cert:ignore +dynamic-resolution +clipboard /drive:homedir,/home/arkaizn"
                 },
                 {
