@@ -5,7 +5,7 @@
     "layer": "overlay",
     "control-center-layer": "top",
     "layer-shell": true,
-    "cssPriority": "application",
+    "cssPriority": "user",
     "control-center-width": 450,
     "control-center-margin-top": 9,
     "control-center-margin-bottom": 800,
@@ -44,7 +44,6 @@
             "max-lines":1,
             "text": "Notification Center!"
         },
-
         "mpris": {
             "image-size": 80,
             "image-radius": 0
