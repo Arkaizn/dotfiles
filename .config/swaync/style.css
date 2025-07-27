@@ -1,6 +1,6 @@
 /* ───────────────────────────────────────────────────────────────────────── */
 /* 1) Pywal import & color definitions */
-@import url("file:///home/arkaizn/.cache/wal/colors-waybar.css");
+@import url("../../.cache/wal/colors-waybar.css");
 @define-color mpris-album-art-overlay rgba(0, 0, 0, 0.55);
 @define-color mpris-button-hover      rgba(0, 0, 0, 0.50);
 @define-color text                    @color7;
