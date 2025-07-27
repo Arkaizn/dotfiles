@@ -2,7 +2,6 @@
 
 # intsall xbox controller drivers 
 yay -S xpadneo-dkms
-yay -S btop
 yay -S openlinkhub
 
 # tailscale
@@ -30,4 +29,16 @@ sudo pacman -Syu gvfs gvfs-smb cifs-utils thunar-volman gigolo
 
 # gnome wireless display
 yay -S gnome-network-displays 
+
+
+# install openvpn cli
+yay -S openvpn
+# connect to connection
+openvpn --config ssl.ovpn
+
+
+# network tools
+yay -S bind-tools net-tools nmap arp-scan
+
+yay -S btop
 
