@@ -21,22 +21,22 @@ button {
 }
 
 #lock {
-    background-image: image(url("/home/arkaizn/.config/wlogout/lock.png"))
+    background-image: image(url("../../.config/wlogout/lock.png"))
 }
 #hibernate {
-    background-image: image(url("/home/arkaizn/.config/wlogout/sleep.png"))
+    background-image: image(url("../../.config/wlogout/sleep.png"))
 }
 #logout {
-    background-image: image(url("/home/arkaizn/.config/wlogout/logout.png"))
+    background-image: image(url("../../.config/wlogout/logout.png"))
 }
 #shutdown {
-    background-image: image(url("/home/arkaizn/.config/wlogout/power.png"))
+    background-image: image(url("../../.config/wlogout/power.png"))
 }
 #suspend {
-    background-image: image(url("/home/arkaizn/.config/wlogout/pause.png"))
+    background-image: image(url("../../.config/wlogout/pause.png"))
 }
 #reboot {
-    background-image: image(url("/home/arkaizn/.config/wlogout/restart.png"))
+    background-image: image(url("../../.config/wlogout/restart.png"))
 }
 
 button:focus,
