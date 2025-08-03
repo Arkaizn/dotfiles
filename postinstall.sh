@@ -48,8 +48,8 @@ setup_greetd() {
 vt = 1
 
 [initial_session]
-command = "agreety --cmd Hyprland"
-user = "greeter"
+command = "Hyprland"
+user = "arkaizn"
 
 [default_session]
 command = "Hyprland"
