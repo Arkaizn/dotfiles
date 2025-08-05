@@ -1,12 +1,13 @@
 @import url('../../.cache/wal/colors-waybar.css');
 
+* { all: unset; }
+
 * {
     font-size:15px;
     font-family: "CodeNewRoman Nerd Font Propo";
 }
 
 window#waybar {
-  all: unset;
   background-color: alpha(@background,.6);
   transition-property: background-color;
   transition-duration: 0.5s;
