@@ -46,6 +46,8 @@ essential_packages=(
     qimgv
     gdu
     nwg-look
+    hypridle
+    lm_sensors
 )
 
 essential_vm_packages=(
