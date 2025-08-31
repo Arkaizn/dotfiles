@@ -1,7 +1,0 @@
-[pyprland]
-plugins = [
-    "expose",
-]
-
-[expose]
-include_special = true
