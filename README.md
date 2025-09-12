@@ -114,25 +114,25 @@ After running the installation script, your system will be fully configured with
 Here are some planned features and improvements for the project:
 
 ### High Priority
-- [x] **Basic system setup and GUI installation.**
-- [x] **Configured**
-  - hyprland, waybar, hyprlock, wofi, pywal, fastfetch, swaync
-- [ ] **To configure**
-  -  pavucontrol, blueman, iwgtk, waybar, swaync
 - [ ] **Add Images of the System**
-- [ ] **Fix theme and icon not working**
-- [ ] **Replace Theme and Icon Folders with an intallation**
-- [ ] **Configure TUI (pre-installation) and GUI (post-installation) for the scripts**.
+- [ ] **make a better insatllation script with gum**
 
 ### Low Priority
 - [ ] **Configure Hyprland plugins**.
-- [ ] **Create nvidia.sh script**:
-  - Automate setup for NVIDIA drivers and configurations (Grub, etc.).
 - [ ] **Clean up scripts (structure)**:
   - Refactor and organize script files for better structure and readability.
 - [ ] **Text from image**:
   - Implement OCR functionality to extract text from images.
 
+### Done
+- [x] **Basic system setup and GUI installation.**
+- [x] **Configured**
+  - hyprland, waybar, hyprlock, wofi, pywal, fastfetch, swaync
+- [x] **Configure TUI (pre-installation) and GUI (post-installation) for the scripts**.
+- [x] **Fix theme and icon not working**
+- [x] **Replace Theme and Icon Folders with an intallation**
+- [x] **Create nvidia.sh script**:
+  - Automate setup for NVIDIA drivers and configurations (Grub, etc.).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -165,18 +165,6 @@ Here are some planned features and improvements for the project:
     └── refresh.sh
 ```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-<!-- HOME MANAGER -->
-## Home Manager
-
-The `nix/` directory contains a flake with a [Home Manager](https://nix-community.github.io/home-manager/) setup.
-If you have the Nix package manager installed with flakes enabled, apply the configuration using:
-
-```sh
-nix run github:nix-community/home-manager --extra-experimental-features 'nix-command flakes' -- -b bak switch --flake ./nix#user
-```
-
-This will install the packages listed in `nix/home.nix` and link all program configurations.
 
 <!-- LICENSE -->
 ## License
