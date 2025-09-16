@@ -8,7 +8,10 @@
         "reload_style_on_change": true,
         "modules-left": [
             "custom/notification",
-            "clock","custom/pacman",
+            "clock",
+            "custom/pacman",
+            "custom/download",
+            "custom/upload",
             "tray"
         ],
         "modules-center": [
@@ -204,5 +207,15 @@
             "format": "{}",
             "tooltip": false,
             "on-click": "wlogout"
+        },
+        "custom/download": {
+            "format": "󰇚{}",
+            "tooltip": false,
+            "on-click": "kitty sh -c 'bash ~/git/dotfiles/update.sh; echo Done - Press enter to exit; read';"
+        },
+        "custom/upload": {
+            "format": "󰕒{}",
+            "tooltip": false,
+            "on-click": "kitty sh -c 'bash ~/git/dotfiles/scripts/push.sh; echo Done - Press enter to exit; read';"
         }
 } 

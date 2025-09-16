@@ -39,9 +39,12 @@ window#waybar {
 }
 
 .tooltip {
-    background:@background;
-    color: @color7;
+    background: rgba(40, 40, 40, 0.95); /* dark with slight transparency */
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 4px 8px;
 }
+
 
 #custom-power:hover,
 #clock:hover,
@@ -54,7 +57,7 @@ window#waybar {
 #cpu:hover,
 #memory:hover,
 #temperature:hover {
-    transition: all .3s ease;
+    transition: all .1s ease;
     color:@color9;
 }
 
@@ -205,7 +208,8 @@ window#waybar {
     padding: 0px 5px;
     transition: all .3s ease;
 }
-
+#custom-download,
+#custom-upload,
 #custom-cputemp,
 #custom-cpuusage,
 #custom-gputemp,
@@ -216,6 +220,8 @@ window#waybar {
   transition: color 0.2s ease, background 0.2s ease;
 }
 /* hover highlight */
+#custom-download:hover,
+#custom-upload:hover,
 #custom-cputemp:hover,
 #custom-cpuusage:hover,
 #custom-gputemp:hover,
