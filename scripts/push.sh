@@ -15,7 +15,7 @@ copy_config() {
     fi
 }
 
-dotdir="$HOME/git/Dotfiles/.config"
+dotdir="$HOME/git/dotfiles/.config"
 
 copy_config "$HOME/.config/hypr"     "$dotdir"
 copy_config "$HOME/.config/wal"      "$dotdir"
