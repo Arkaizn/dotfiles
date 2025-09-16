@@ -82,11 +82,15 @@
                 },
                 {
                     "label":"󰢹",
-                    "command": "xfreerdp3 /ipv4 /v:127.0.0.1 /u:Silas /p:password /sec:tls:on /cert:ignore +dynamic-resolution +clipboard /drive:homedir,/home/arkaizn"
+                    "command": "bash ~/.config/custom/scripts/rdp-home.sh"
                 },
                 {
                     "label":"",
                     "command": "kitty lazydocker"
+                },
+                {
+                    "label":"󰢹",
+                    "command": "bash ~/.config/custom/scripts/rdp-work.sh"
                 },
                 {
                     "label": "",
