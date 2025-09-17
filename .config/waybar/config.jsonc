@@ -26,6 +26,7 @@
         ],
         "modules-right": [
             "group/expand",
+            "custom/headset",
             "bluetooth",
             "custom/sound",
             "network",
@@ -51,18 +52,11 @@
             "escape": true
         },
         "clock": {
-            "format": "{:%d-%m-%Y %I:%M:%S %p} ",
+            "format": "{:%d.%m.%Y %I:%M:%S %p} ",
             "interval": 1,   
             "tooltip-format": "<tt>{calendar}</tt>",
-            "calendar": {
-                "format": {
-                    "today": "<span color='#fAfBfC'><b>{}</b></span>"
-                }
-            },
-            "actions": {
-                "on-click-right": "shift_down",
-                "on-click": "shift_up"
-            }
+            "calendar": { "format": { "today": "<span color='#fAfBfC'><b>{}</b></span>" } },
+            "actions": { "on-click-right": "shift_down", "on-click": "shift_up" }
         },
         "network": {
             "format-wifi": " ",
@@ -92,7 +86,7 @@
             "tooltip-format-connected": "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}",
             "tooltip-format-enumerate-connected": "{device_alias}\n{device_address}",
             "tooltip-format-enumerate-connected-battery": "{device_alias}\n{device_address}\n{device_battery_percentage}%",
-            "on-click-right": "blueman-manager"
+            "on-click": "blueman-manager"
         }, 
         "battery": {
             "interval":1,
@@ -208,6 +202,12 @@
             "tooltip": false,
             "on-click": "wlogout"
         },
+        "custom/headset": {
+        "interval": 5,
+        "exec": "curl -s http://127.0.0.1:27003/api/batteryStats | jq -r --arg k 1786e76c000400da '.data[$k].Level'",
+        "format": " {}%",
+        "tooltip": false
+        },
         "custom/download": {
             "format": "󰇚{}",
             "tooltip": false,
@@ -218,4 +218,5 @@
             "tooltip": false,
             "on-click": "kitty sh -c 'bash ~/git/dotfiles/scripts/push.sh; echo Done - Press enter to exit; read';"
         }
+
 } 
