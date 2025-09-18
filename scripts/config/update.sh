@@ -5,7 +5,7 @@ SOURCE_DIR="$HOME/git/dotfiles/.config"
 TARGET_DIR="$HOME/.config"
 
 # Let user choose mode with gum
-choice=$(gum choose "standard" "full-lite" "full")
+choice=$(gum choose "full-lite" "standard" "full")
 
 echo "You chose: $choice"
 
