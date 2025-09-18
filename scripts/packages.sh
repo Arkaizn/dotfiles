@@ -48,6 +48,8 @@ essential_packages=(
     nwg-look
     hypridle
     lm_sensors
+    rsync
+    bc
 )
 
 essential_vm_packages=(
