@@ -211,12 +211,12 @@
         "custom/download": {
             "format": "󰇚{}",
             "tooltip": false,
-            "on-click": "kitty sh -c 'bash ~/git/dotfiles/update.sh; echo Done - Press enter to exit; read';"
+            "on-click": "kitty sh -c 'bash ~/git/dotfiles/scripts/config/update.sh; echo Done - Press enter to exit; read';"
         },
         "custom/upload": {
             "format": "󰕒{}",
             "tooltip": false,
-            "on-click": "kitty sh -c 'bash ~/git/dotfiles/scripts/push.sh; echo Done - Press enter to exit; read';"
+            "on-click": "kitty sh -c 'bash ~/git/dotfiles/scripts/config/push.sh; echo Done - Press enter to exit; read';"
         }
 
 } 

@@ -155,8 +155,11 @@ if gum confirm "Fortfahren und kopieren?" ; then
         src="$DOTFILES_DIR/$p"
         dest="$TARGET_DIR/$p"
 
-        real_src=$(realpath "$src")
-        real_dest=$(realpath "$(dirname "$dest")")
+        real_src="$src"
+        real_dest="$(dirname "$dest")"
+
+        [[ -e "$src" ]] && real_src=$(realpath "$src")
+        [[ -e "$real_dest" ]] && real_dest=$(realpath "$real_dest")
 
         if [[ "$real_dest" == "$real_src"* ]]; then
             echo "⚠️ Überspringe $p → Ziel liegt innerhalb der Quelle, vermeidet Schleife."
