@@ -50,6 +50,7 @@ essential_packages=(
     lm_sensors
     rsync
     bc
+    gum
 )
 
 essential_vm_packages=(
