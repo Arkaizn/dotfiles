@@ -18,17 +18,17 @@ GLOBAL_EXCEPTIONS=(
 
 # Function to copy all except exclusions
 copy_all() {
-    rsync -av --delete "$SOURCE_DIR/" "$TARGET_DIR/"
+    rsync -av "$SOURCE_DIR/" "$TARGET_DIR/"
 }
 
 copy_with_excludes() {
-    rsync -av --delete \
+    rsync -av \
         --exclude="$1" \
         "$SOURCE_DIR/" "$TARGET_DIR/"
 }
 
 copy_with_multiple_excludes() {
-    rsync -av --delete \
+    rsync -av \
         --exclude="hypr/hyprland/monitors.conf" \
         --exclude="hypr/hyprlock/hyprlock.sh" \
         "$SOURCE_DIR/" "$TARGET_DIR/"
@@ -76,5 +76,9 @@ for rel_path in "${GLOBAL_EXCEPTIONS[@]}"; do
         echo "Skipped global exception (exists or not present): $rel_path"
     fi
 done
+
+# reload applications
+hyprctl reload
+
 
 echo "Done ✅"
