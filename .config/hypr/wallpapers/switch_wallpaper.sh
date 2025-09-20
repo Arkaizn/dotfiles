@@ -356,7 +356,6 @@ update_openlinkhub_files() {
 
   if (( changed > 0 )); then
     log "OLH: $changed file(s) updated; restarting service"
-    sudo -n /usr/bin/systemctl restart openlinkhub.service || log "OLH: restart failed"
   else
     log "OLH: nothing changed; skip restart"; return 1
   fi
@@ -430,6 +429,7 @@ main() {
 
   local selected="$(pick_wall)"
   set_wallpaper "$selected"
+  pkill waybar && hyprctl dispatch exec waybar
 
   # Fire-and-forget bits
   copy_current_wallpaper "$selected" &
