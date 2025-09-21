@@ -4,81 +4,90 @@ set -euo pipefail
 SOURCE_DIR="$HOME/git/dotfiles/.config"
 TARGET_DIR="$HOME/.config"
 
-# Let user choose mode with gum
 choice=$(gum choose "full-lite" "standard" "full")
-
 echo "You chose: $choice"
 
-# Global always-skip files (only copy if missing)
+# Files that should only be created if missing (never overwritten)
 GLOBAL_EXCEPTIONS=(
-    "hypr/wallpapers/pywallpaper.png"
-    "hypr/wallpapers/thumbs.db"
-    "kitty/current-theme.conf"
+  "hypr/wallpapers/pywallpaper.png"
+  "hypr/wallpapers/thumbs.db"
+  "kitty/current-theme.conf"
 )
 
-# Function to copy all except exclusions
+# Base rsync flags
+RSYNC_FLAGS=(-av)
+
+# Always exclude custom/** so contents are handled by the missing-only copier,
+# and also exclude every GLOBAL_EXCEPTION so rsync never overwrites them.
+COMMON_EXCLUDES=(--exclude="custom/**")
+for rel in "${GLOBAL_EXCEPTIONS[@]}"; do
+  COMMON_EXCLUDES+=( "--exclude=$rel" )
+done
+
 copy_all() {
-    rsync -av "$SOURCE_DIR/" "$TARGET_DIR/"
+  rsync "${RSYNC_FLAGS[@]}" "${COMMON_EXCLUDES[@]}" \
+    "$SOURCE_DIR/" "$TARGET_DIR/"
 }
 
 copy_with_excludes() {
-    rsync -av \
-        --exclude="$1" \
-        "$SOURCE_DIR/" "$TARGET_DIR/"
+  rsync "${RSYNC_FLAGS[@]}" "${COMMON_EXCLUDES[@]}" \
+    --exclude="$1" \
+    "$SOURCE_DIR/" "$TARGET_DIR/"
 }
 
 copy_with_multiple_excludes() {
-    rsync -av \
-        --exclude="hypr/hyprland/monitors.conf" \
-        --exclude="hypr/hyprlock/hyprlock.sh" \
-        "$SOURCE_DIR/" "$TARGET_DIR/"
+  rsync "${RSYNC_FLAGS[@]}" "${COMMON_EXCLUDES[@]}" \
+    --exclude="hypr/hyprland/monitors.conf" \
+    --exclude="hypr/hyprlock/hyprlock.sh" \
+    "$SOURCE_DIR/" "$TARGET_DIR/"
 }
 
 case "$choice" in
-    "standard")
-        echo "Copying everything except hypr..."
-        copy_with_excludes "hypr"
-        ;;
-    "full-lite")
-        echo "Copying everything except monitors.conf and hyprlock.sh..."
-        copy_with_multiple_excludes
-        ;;
-    "full")
-        echo "Copying everything..."
-        copy_all
-        ;;
+  "standard")
+    echo "Copying everything except hypr… (custom/ + global exceptions preserved)"
+    copy_with_excludes "hypr"
+    ;;
+  "full-lite")
+    echo "Copying everything except monitors.conf + hyprlock.sh… (custom/ + global exceptions preserved)"
+    copy_with_multiple_excludes
+    ;;
+  "full")
+    echo "Copying everything… (custom/ + global exceptions preserved)"
+    copy_all
+    ;;
 esac
 
-# Handle custom/ → only copy missing files
+# custom/: only create missing files (never replace existing)
 if [ -d "$SOURCE_DIR/custom" ]; then
-    echo "Checking custom/ for missing files..."
-    find "$SOURCE_DIR/custom" -type f | while read -r src_file; do
-        rel_path="${src_file#$SOURCE_DIR/}"
-        dest_file="$TARGET_DIR/$rel_path"
-        dest_dir="$(dirname "$dest_file")"
-        if [ ! -f "$dest_file" ]; then
-            mkdir -p "$dest_dir"
-            cp "$src_file" "$dest_file"
-            echo "Copied missing file: $rel_path"
-        fi
-    done
+  echo "Checking custom/ for missing files..."
+  while IFS= read -r -d '' src_file; do
+    rel_path="${src_file#$SOURCE_DIR/}"
+    dest_file="$TARGET_DIR/$rel_path"
+    dest_dir="$(dirname "$dest_file")"
+    if [ ! -f "$dest_file" ]; then
+      mkdir -p "$dest_dir"
+      cp -n "$src_file" "$dest_file"
+      echo "Copied missing file: $rel_path"
+    else
+      echo "Kept existing file: $rel_path"
+    fi
+  done < <(find "$SOURCE_DIR/custom" -type f -print0)
 fi
 
-# Handle global exceptions → copy only if missing
+# Global exceptions: copy only if missing
 for rel_path in "${GLOBAL_EXCEPTIONS[@]}"; do
-    src_file="$SOURCE_DIR/$rel_path"
-    dest_file="$TARGET_DIR/$rel_path"
-    if [ -f "$src_file" ] && [ ! -f "$dest_file" ]; then
-        mkdir -p "$(dirname "$dest_file")"
-        cp "$src_file" "$dest_file"
-        echo "Copied missing global exception file: $rel_path"
-    else
-        echo "Skipped global exception (exists or not present): $rel_path"
-    fi
+  src_file="$SOURCE_DIR/$rel_path"
+  dest_file="$TARGET_DIR/$rel_path"
+  if [ -f "$src_file" ] && [ ! -f "$dest_file" ]; then
+    mkdir -p "$(dirname "$dest_file")"
+    cp -n "$src_file" "$dest_file"
+    echo "Copied missing global exception file: $rel_path"
+  else
+    echo "Skipped global exception (exists or not present): $rel_path"
+  fi
 done
 
-# reload applications
-hyprctl reload
-
+# Reload Hyprland (don’t fail script if not running)
+hyprctl reload || true
 
 echo "Done ✅"
