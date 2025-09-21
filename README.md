@@ -103,8 +103,13 @@ To get started with this project, follow these simple steps.
 After running the installation script, your system will be fully configured with a GUI and all necessary settings. Below are some screenshots of the setup:
 
 <!-- Screenshots  -->
-![Screenshot 1](images/screenshot1.png)
-![Screenshot 2](images/screenshot2.png)
+![alt text](images/image.png)
+![alt text](images/image-1.png)
+![alt text](images/image-2.png)
+
+![alt text](images/image-3.png)
+![alt text](images/image-4.png)
+![alt text](images/image-5.png)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
