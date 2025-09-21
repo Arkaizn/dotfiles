@@ -89,5 +89,7 @@ done
 
 # Reload Hyprland (don’t fail script if not running)
 hyprctl reload || true
+pkill waybar && hyprctl dispatch exec waybar 
+pkill swaync && hyprctl dispatch exec swaync 
 
 echo "Done ✅"
