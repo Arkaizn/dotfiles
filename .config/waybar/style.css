@@ -8,18 +8,21 @@
 
 window#waybar {
   all: unset;
+}
+window#waybar > box {
   background-color: alpha(@background,.6);
   transition-property: background-color;
   transition-duration: 0.5s;
   border-radius: 13px;
-  border: 1px solid @color9;
-  
+  border: 1.5px solid @color9;
+  margin: 10px 10px 5px 10px;
+  box-shadow: 0px 0px 4px -2px alpha(@color9,1);
 }
 
 .modules-left {
     padding:8px;
     margin:5px;
-    border-radius:10px;
+    border-radius:0px;
     background: alpha(@background,.0);
 
 }
