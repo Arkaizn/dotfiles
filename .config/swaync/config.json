@@ -77,28 +77,33 @@
                     "type":"toggle"
                 },
                 {
-                    "label":"",
-                    "command": "bash /home/arkaizn/docker/winapps/toggle.sh"
-                },
-                {
-                    "label":"󰢹",
-                    "command": "bash ~/.config/custom/scripts/rdp-home.sh"
-                },
-                {
-                    "label":"",
-                    "command": "kitty lazydocker"
-                },
-                {
-                    "label":"󰢹",
-                    "command": "bash ~/.config/custom/scripts/rdp-work.sh"
-                },
-                {
                     "label": "",
-                    "command": "bash /home/arkaizn/.config/hypr/hyprlock/hyprlock.sh"
+                    "command": "bash ~/.config/hypr/hyprlock/hyprlock.sh"
                 },
                 {
                     "label":"",
                     "command": "wlogout"
+                },
+                {
+                    "label":"",
+                    "command": "bash ~/docker/winapps/toggle.sh",
+                    "type":"toggle"
+                },
+                                {
+                    "label":"",
+                    "command": "kitty lazydocker"
+                },
+                {
+                    "label":"󰢹  h",
+                    "command": "bash ~/.config/custom/scripts/rdp-home.sh"
+                },
+                {
+                    "label":"󰢹  w",
+                    "command": "bash ~/.config/custom/scripts/rdp-work.sh"
+                },
+                {
+                    "label":"󰢹  V1",
+                    "command": "bash ~/.config/custom/scripts/vnc01.sh"
                 }
 
             ]
