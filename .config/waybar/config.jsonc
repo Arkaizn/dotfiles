@@ -12,7 +12,8 @@
             "custom/pacman",
             "custom/download",
             "custom/upload",
-            "tray"
+            "tray",
+            "custom/tailscale"
         ],
         "modules-center": [
             "custom/gpuusage",
@@ -217,6 +218,12 @@
             "format": "󰕒{}",
             "tooltip": false,
             "on-click": "kitty sh -c 'bash ~/git/dotfiles/scripts/config/push.sh; echo Done - Press enter to exit; read';"
+        },
+        "custom/tailscale": {
+            "exec": "~/.config/custom/scripts/tailscale-status.sh",
+            "interval": 5,
+            "format": "   ",
+            "on-click": "~/.config/custom/scripts/tailscale-toggle.sh"
         }
 
 } 

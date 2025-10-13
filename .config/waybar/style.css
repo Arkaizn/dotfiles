@@ -210,6 +210,7 @@ window#waybar > box {
     transition: all .3s ease;
 }
 
+#custom-tailscale,
 #custom-headset,
 #custom-download,
 #custom-upload,
@@ -246,3 +247,19 @@ window#waybar > box {
 #memory.warning {
   color: #ffbe61;
 }
+
+#custom-tailscale {
+    font-size: 15px;
+        background-image: url('/home/silas/.config/waybar/icons/tailscale-on.png');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: contain;
+}
+#custom-tailscale:hover {
+    font-size: 15px;
+        background-image: url('/home/silas/.config/waybar/icons/tailscale-off.png');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: contain;
+}
+
