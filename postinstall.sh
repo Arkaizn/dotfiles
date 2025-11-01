@@ -40,6 +40,7 @@ install_nvidia() {
 
 setup_greetd() {
     echo -e "${YELLOW}Setting up greetd autologin…${NC}"
+    yay -S greetd
     sudo systemctl enable greetd.service
     sudo systemctl disable getty@tty1.service
 
