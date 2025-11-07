@@ -17,12 +17,13 @@ PanelWindow {
         right: true
     }
 
-    height: 36
+    height: 45
     exclusiveZone: height + margins.top
     aboveWindows: true
     focusable: false
+    color: "transparent"
 
-    margins.top: 6
+    margins.top: 8
     margins.left: 8
     margins.right: 8
 
@@ -137,11 +138,11 @@ PanelWindow {
     // =========================================================
     Rectangle {
         anchors.fill: parent
-        radius: 10
+        radius: 12
         color: Colors.background
         border.color: Colors.color1
-        border.width: 1
-        opacity: 0.98
+        border.width: 2
+        opacity: 0.85
     }
 
     // =========================================================
@@ -186,8 +187,9 @@ PanelWindow {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
             spacing: 12
 
+            // left side center
             Loader { sourceComponent: commandLabel; onLoaded: { item.icon="󰢮  "; item.interval=2000; item.suffix="%"; item.command="nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits" } }
-            Loader { sourceComponent: commandLabel; onLoaded: { item.icon="  "; item.interval=2000; item.suffix="%"; item.command="top -bn1 | awk '/^%?Cpu\\(s\\):/ {print 100 - \\$8}' | xargs printf \"%.0f\"" } }
+            Loader { sourceComponent: commandLabel; onLoaded: { item.icon="  "; item.interval=2000; item.suffix="%"; item.command="top -bn1 | grep \"Cpu(s)\" | awk '{print 100 - $8}' | cut -d. -f1" } }
             Loader { sourceComponent: commandLabel; onLoaded: { item.icon="  "; item.interval=2000; item.suffix="%"; item.command="free -h | awk '/Mem:/ {print int($3/$2*100)}'" } }
 
             Text { text:"|"; font.pixelSize: bar.iconSize; color: Colors.foreground; opacity:0.6 }
@@ -208,14 +210,15 @@ PanelWindow {
                 }
             }
 
+            // right side center
             Text { text:"|"; font.pixelSize: bar.iconSize; color: Colors.foreground; opacity:0.6 }
 
-            Loader { sourceComponent: commandLabel; onLoaded: { item.icon="󰢮"; item.interval=5000; item.suffix="°C"; item.command="nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader" } }
-            Loader { sourceComponent: commandLabel; onLoaded: { item.icon=""; item.interval=5000; item.command="sensors | grep 'Tctl' | awk '{print $2}' | sed 's/+//'" } }
+            Loader { sourceComponent: commandLabel; onLoaded: { item.icon="󰢮  "; item.interval=5000; item.suffix="°C"; item.command="nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader" } }
+            Loader { sourceComponent: commandLabel; onLoaded: { item.icon="  "; item.interval=5000; item.command="sensors | grep 'Tctl' | awk '{print $2}' | sed 's/+//'" } }
         }
 
         Item { Layout.fillWidth: true }
-
+ 
         // ================= RIGHT =================
         RowLayout {
             Layout.alignment: Qt.AlignVCenter | Qt.AlignRight

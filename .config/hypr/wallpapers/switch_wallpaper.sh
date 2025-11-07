@@ -429,7 +429,6 @@ main() {
 
   local selected="$(pick_wall)"
   set_wallpaper "$selected"
-  pkill waybar && hyprctl dispatch exec waybar
 
   # Fire-and-forget bits
   copy_current_wallpaper "$selected" &
@@ -438,6 +437,9 @@ main() {
   run_wal "$selected"
   wal_hook_tasks
 
+  # copy quickshell Color.qml that pywal generated
+  cp ~/.cache/wal/Colors.qml ~/.config/quickshell
+  chmod +x ~/.config/quickshell/Colors.qml
   # theme consumers
   reload_swaync
 
@@ -454,9 +456,6 @@ main() {
       log "APPLIED: OpenRGB=#${openrgb_final:-na}  OLH=#${olh_final:-na}"
     fi
   fi
-  # copy quickshell Color.qml that pywal generated
-  cp ~/.cache/wal/Colors.qml ~/.config/quickshell
-  chmod +x ~/.config/quickshell/Colors.qml
 }
 
 main "$@"
