@@ -454,6 +454,9 @@ main() {
       log "APPLIED: OpenRGB=#${openrgb_final:-na}  OLH=#${olh_final:-na}"
     fi
   fi
+  # copy quickshell Color.qml that pywal generated
+  cp ~/.cache/wal/Colors.qml ~/.config/quickshell
+  chmod +x ~/.config/quickshell/Colors.qml
 }
 
 main "$@"
