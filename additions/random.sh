@@ -42,3 +42,5 @@ yay -S bind-tools net-tools nmap arp-scan
 
 yay -S btop
 
+
+xdg-mime default org.gnome.Nautilus.desktop inode/directory application/x-gnome-saved-search
