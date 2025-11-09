@@ -14,6 +14,7 @@ ShellRoot {
     property int barSpacing: 12
     property int sidePadding: 10
 
+    
     Variants {
 
         model: Quickshell.screens
@@ -242,7 +243,7 @@ ShellRoot {
                     Loader {
                         sourceComponent: commandLabel
                         onLoaded: {
-                            item.icon = "󰅢"
+                            item.icon = "󰅢  "
                             item.interval = 600000
                             item.command = "checkupdates 2>/dev/null | wc -l"
                         }
