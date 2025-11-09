@@ -51,6 +51,7 @@ essential_packages=(
     lm_sensors
     rsync
     bc
+    gvfs-smb
 )
 
 essential_vm_packages=(
