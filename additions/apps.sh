@@ -5,19 +5,14 @@ packages=(
     wine
     winegui
     steam
-    liquidcctl
     thunderbird
-    ani-cli
-    ferdium
     nordvpn-bin
-    rustdesk
     vesktop-bin
     vmware-workstation
     vscodium
     firefox
     lutris
     lazydocker
-    greetd
     paleta
     pitivi
     openlinkhub
@@ -29,7 +24,8 @@ packages=(
     obsidian
     docker
     docker-compose
-    
+    qimgv
+    tigervnc
 )
 
 # Check if yay is installed

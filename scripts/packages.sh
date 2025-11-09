@@ -40,17 +40,17 @@ essential_packages=(
     iwd
     pavucontrol
     blueman
+    bluez
+    bluez-utils
     wayvnc
     python-colorthief
     gnome-calculator
-    qimgv
     gdu
     nwg-look
     hypridle
     lm_sensors
     rsync
     bc
-    gum
 )
 
 essential_vm_packages=(
