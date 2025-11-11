@@ -3,34 +3,37 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
-import QtQuick
-import QtQuick.Controls
-import QtQuick.Layouts
 import Quickshell.Services.SystemTray
 import Quickshell.DBusMenu
 import Quickshell.Widgets
+
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+
 import "Colors.qml"
 
 ShellRoot {
-    // Your properties etc
+    // Global defaults
     property int iconSize: 15
     property int barSpacing: 12
     property int sidePadding: 10
 
-    
     Variants {
-
         model: Quickshell.screens
-        PanelWindow { // Bar
+
+        PanelWindow {
             id: bar
+
+            property var modelData
+            screen: modelData
+
             anchors {
                 top: true
                 left: true
                 right: true
             }
 
-            property var modelData
-            screen: modelData
             implicitHeight: 45
             exclusiveZone: height + margins.top
             aboveWindows: true
@@ -45,16 +48,14 @@ ShellRoot {
             property int barSpacing: 12
             property int sidePadding: 10
 
-            Component.onCompleted: {
-                Quickshell.inhibitReloadPopup()
-            }    
+            Component.onCompleted: Quickshell.inhibitReloadPopup()
 
             // =========================================================
             // REUSABLE HELPERS
             // =========================================================
 
-            // Metric / label with hover background (no border)
-            Component { // ================ REUSABLE HELPERS =================
+            // Command-driven pill
+            Component {
                 id: commandLabel
 
                 Rectangle {
@@ -150,7 +151,8 @@ ShellRoot {
                 }
             }
 
-            Component { // Clickable icon with hover pill (no border)
+            // Clickable icon pill
+            Component {
                 id: clickIcon
 
                 Rectangle {
@@ -161,7 +163,7 @@ ShellRoot {
                     property bool hovered: false
                     property int paddingX: 6
                     property int paddingY: 4
-        
+
                     radius: 8
                     color: hovered ? Colors.color1 : "transparent"
 
@@ -179,6 +181,7 @@ ShellRoot {
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
                         onEntered: iconRoot.hovered = true
                         onExited: iconRoot.hovered = false
                         onClicked: {
@@ -202,7 +205,8 @@ ShellRoot {
             // =========================================================
             // BACKGROUND
             // =========================================================
-            Rectangle { // =============== BACKGROUND ===============
+
+            Rectangle {
                 anchors.fill: parent
                 radius: 12
                 color: Colors.background
@@ -212,66 +216,77 @@ ShellRoot {
             }
 
             // =========================================================
-            // MAIN LAYOUT
+            // LEFT BLOCK
             // =========================================================
-            RowLayout { // =============== MAIN LAYOUT ===============
-                anchors.fill: parent
-                anchors.margins: sidePadding
+
+            RowLayout {
+                id: leftRow
+                anchors.left: parent.left
+                anchors.leftMargin: sidePadding
+                anchors.verticalCenter: parent.verticalCenter
                 spacing: barSpacing
 
-                RowLayout { // ================= LEFT =================
-                    Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
-                    spacing: 10
-                    Loader {
-                        sourceComponent: clickIcon
-                        onLoaded: {
-                            item.glyph = "󰣇"
-                            item.command = ["bash","-lc","swaync"]
-                        }
-                    }
-
-                    // Clock
-                    Row {
-                        spacing: 6
-                        Layout.alignment: Qt.AlignVCenter
-                        SystemClock { id: sysClock; precision: SystemClock.Seconds }
-                        Text {
-                            font.pixelSize: bar.iconSize
-                            color: Colors.foreground
-                            text: Qt.formatDateTime(sysClock.date, "dd.MM.yyyy hh:mm:ss")
-                        }
-                    }
-
-                    // Pacman updates
-                    Loader {
-                        sourceComponent: commandLabel
-                        onLoaded: {
-                            item.icon = "󰅢  "
-                            item.interval = 600000
-                            item.command = "checkupdates 2>/dev/null | wc -l"
-                        }
-                    }
-
-                    // Dotfiles pull/push
-                    Loader {
-                        sourceComponent: clickIcon
-                        onLoaded: {
-                            item.glyph = "󰇚"
-                            item.command = ["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/update.sh"]
-                        }
-                    }
-                    Loader {
-                        sourceComponent: clickIcon
-                        onLoaded: {
-                            item.glyph = "󰕒"
-                            item.command = ["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/push.sh"]
-                        }
+                // Notifications
+                Loader {
+                    sourceComponent: clickIcon
+                    onLoaded: {
+                        item.glyph = "󰣇"
+                        item.command = ["bash","-lc","swaync"]
                     }
                 }
+
+                // Clock
+                Row {
+                    spacing: 6
+                    Layout.alignment: Qt.AlignVCenter
+                    SystemClock { id: sysClock; precision: SystemClock.Seconds }
+                    Text {
+                        font.pixelSize: bar.iconSize
+                        color: Colors.foreground
+                        text: Qt.formatDateTime(sysClock.date, "dd.MM.yyyy hh:mm:ss")
+                    }
+                }
+
+                // Pacman updates
+                Loader {
+                    id: pacman
+                    sourceComponent: commandLabel
+                    Layout.alignment: Qt.AlignVCenter
+                    onLoaded: {
+                        item.icon = "󰅢   "
+                        item.interval = 10000
+                        item.command = "checkupdates | wc -l"
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Quickshell.execDetached(["bash","-lc","kitty -e yay -Syu --noconfirm"])
+                    }
+                }
+
+                // Dotfiles pull
+                Loader {
+                    sourceComponent: clickIcon
+                    onLoaded: {
+                        item.glyph = "󰇚"
+                        item.command = ["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/update.sh"]
+                    }
+                }
+
+                // Dotfiles push
+                Loader {
+                    sourceComponent: clickIcon
+                    onLoaded: {
+                        item.glyph = "󰕒"
+                        item.command = ["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/push.sh"]
+                    }
+                }
+
                 // System Tray
                 RowLayout {
                     id: systemTrayRow
-                    Layout.alignment: Qt.AlignVCenter
                     spacing: 4
 
                     Repeater {
@@ -286,11 +301,9 @@ ShellRoot {
                             implicitHeight: bar.iconSize + 8
 
                             IconImage {
-                                id: trayIcon
                                 anchors.centerIn: parent
                                 width: bar.iconSize
                                 height: bar.iconSize
-                                // Quickshell gives us a ready-to-use icon source for each tray item
                                 source: modelData.icon
                             }
 
@@ -302,37 +315,33 @@ ShellRoot {
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
                                 onClicked: function(mouse) {
-                                    // Right click → open context menu if available
                                     if (mouse.button === Qt.RightButton) {
                                         if (modelData.hasMenu || modelData.onlyMenu) {
-                                            modelData.display(bar, trayButton.x, trayButton.y + trayButton.height)
+                                            modelData.display(bar,
+                                                trayButton.x,
+                                                trayButton.y + trayButton.height)
                                         }
                                         return
                                     }
 
-                                    // Middle click → secondary action (if app supports it)
                                     if (mouse.button === Qt.MiddleButton) {
-                                        if (modelData.secondaryActivate) {
+                                        if (modelData.secondaryActivate)
                                             modelData.secondaryActivate()
-                                        }
                                         return
                                     }
 
-                                    // Left click
-                                    if (modelData.onlyMenu && (modelData.hasMenu)) {
-                                        // Some icons are "menu-only" → open menu on left click
-                                        modelData.display(bar, trayButton.x, trayButton.y + trayButton.height)
+                                    if (modelData.onlyMenu && modelData.hasMenu) {
+                                        modelData.display(bar,
+                                            trayButton.x,
+                                            trayButton.y + trayButton.height)
                                     } else {
-                                        // Normal primary activation
                                         modelData.activate()
                                     }
                                 }
 
                                 onWheel: function(wheel) {
-                                    // Optional: scroll support for things like volume icons
-                                    if (modelData.scroll) {
+                                    if (modelData.scroll)
                                         modelData.scroll(wheel.angleDelta.y, false)
-                                    }
                                 }
                             }
 
@@ -347,270 +356,294 @@ ShellRoot {
                         }
                     }
                 }
+            }
 
-                Item { Layout.fillWidth: true }
+            // =========================================================
+            // CENTER BLOCK (fixed true center)
+            // =========================================================
 
-                
-                RowLayout { // ================= CENTER =================
-                    Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
+            RowLayout {
+                id: centerRow
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: barSpacing
 
-                    // left side center
-                    // GPU Usage
-                    Loader {
-                        sourceComponent: commandLabel
-                        onLoaded: {
-                            item.icon = "󰢮 "
-                            item.interval = 2000
-                            item.suffix = "%"
-                            item.command = "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits"
-                        }
+                // GPU usage
+                Loader {
+                    sourceComponent: commandLabel
+                    onLoaded: {
+                        item.icon = "󰢮 "
+                        item.interval = 2000
+                        item.suffix = "%"
+                        item.command = "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits"
                     }
-                    // CPU Usage
-                    Loader {
-                        sourceComponent: commandLabel
-                        onLoaded: {
-                            item.icon = " "
-                            item.interval = 2000
-                            item.suffix = "%"
-                            item.command = "top -bn1 | grep \"Cpu(s)\" | awk '{print 100 - $8}' | cut -d. -f1"
-                        }
+                }
+
+                // CPU usage
+                Loader {
+                    sourceComponent: commandLabel
+                    onLoaded: {
+                        item.icon = " "
+                        item.interval = 2000
+                        item.suffix = "%"
+                        item.command = "top -bn1 | grep \"Cpu(s)\" | awk '{print 100 - $8}' | cut -d. -f1"
                     }
-                    // RAM Usage
-                    Loader {
-                        sourceComponent: commandLabel
-                        onLoaded: {
-                            item.icon = "  "
-                            item.interval = 2000
-                            item.suffix = "%"
-                            item.command = "free -h | awk '/Mem:/ {print int($3/$2*100)}'"
-                        }
+                }
+
+                // RAM usage
+                Loader {
+                    sourceComponent: commandLabel
+                    onLoaded: {
+                        item.icon = "  "
+                        item.interval = 2000
+                        item.suffix = "%"
+                        item.command = "free -h | awk '/Mem:/ {print int($3/$2*100)}'"
                     }
+                }
 
-                    // pipe
-                    Text { text: "|"; font.pixelSize: bar.iconSize; color: Colors.foreground; opacity: 0.6 }
+                Text {
+                    text: "|"
+                    font.pixelSize: bar.iconSize
+                    color: Colors.foreground
+                    opacity: 0.6
+                }
 
-                    // Hyprland workspaces — no hover effect, only active highlight
-                    Row {
-                        spacing: 6
-                        Repeater {
-                            model: Hyprland.workspaces
+                // Workspaces
+                Row {
+                    spacing: 6
+                    Repeater {
+                        model: Hyprland.workspaces
 
-                            Text {
-                                required property HyprlandWorkspace modelData
+                        Text {
+                            required property HyprlandWorkspace modelData
+                            font.pixelSize: bar.iconSize
+                            text: ""
+                            color: modelData.active ? Colors.color4 : Colors.foreground
+                            opacity: modelData.active ? 1.0 : 0.35
 
-                                font.pixelSize: bar.iconSize
-                                text: ""
-
-                                // Active workspace: bright; inactive: dimmed
-                                color: modelData.active ? Colors.color4 : Colors.foreground
-                                opacity: modelData.active ? 1.0 : 0.35
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: modelData.activate()
-                                }
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: modelData.activate()
                             }
-                        }
-                    }
-
-                    // pipe
-                    Text { text: "|"; font.pixelSize: bar.iconSize; color: Colors.foreground; opacity: 0.6 }
-
-                    // right side center
-                    Loader {
-                        sourceComponent: commandLabel
-                        onLoaded: {
-                            item.icon = "󰢮 "
-                            item.interval = 5000
-                            item.suffix = "°C"
-                            item.command = "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
-                        }
-                    }
-                    Loader {
-                        sourceComponent: commandLabel
-                        onLoaded: {
-                            item.icon = " "
-                            item.interval = 5000
-                            item.command = "sensors | grep 'Tctl' | awk '{print $2}' | sed 's/+//'"
                         }
                     }
                 }
 
-                Item { Layout.fillWidth: true }
+                Text {
+                    text: "|"
+                    font.pixelSize: bar.iconSize
+                    color: Colors.foreground
+                    opacity: 0.6
+                }
 
-                
-                RowLayout { // ================= RIGHT =================
-                    Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+                // GPU temp
+                Loader {
+                    sourceComponent: commandLabel
+                    onLoaded: {
+                        item.icon = "󰢮 "
+                        item.interval = 5000
+                        item.suffix = "°C"
+                        item.command = "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
+                    }
+                }
 
-                    // Headset battery
-                    Loader {
-                        sourceComponent: commandLabel
-                        Layout.alignment: Qt.AlignVCenter
+                // CPU temp
+                Loader {
+                    sourceComponent: commandLabel
+                    onLoaded: {
+                        item.icon = " "
+                        item.interval = 5000
+                        item.command = "sensors | grep 'Tctl' | awk '{print $2}' | sed 's/+//'"
+                    }
+                }
+            }
 
-                        onLoaded: {
-                            item.icon = " "
-                            item.enabled = true
-                            item.interval = 5000
-                            item.suffix = "%"
-                            item.command = "curl -s http://127.0.0.1:27003/api/batteryStats | jq -r --arg k 1786e76c000400da '.data[$k].Level'"
+            // =========================================================
+            // RIGHT BLOCK
+            // =========================================================
+
+            RowLayout {
+                id: rightRow
+                anchors.right: parent.right
+                anchors.rightMargin: sidePadding
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: barSpacing
+
+                // Headset battery
+                Loader {
+                    sourceComponent: commandLabel
+                    Layout.alignment: Qt.AlignVCenter
+                    onLoaded: {
+                        item.icon = " "
+                        item.enabled = true
+                        item.interval = 5000
+                        item.suffix = "%"
+                        item.command = "curl -s http://127.0.0.1:27003/api/batteryStats | jq -r --arg k 1786e76c000400da '.data[$k].Level'"
+                    }
+                }
+
+                // Bluetooth
+                Loader {
+                    id: bluetoothLoader
+                    sourceComponent: commandLabel
+                    Layout.alignment: Qt.AlignVCenter
+
+                    onLoaded: {
+                        item.interval = 5000
+                        item.command =
+                            "bash -lc '" +
+                            "if ! command -v bluetoothctl >/dev/null 2>&1; then echo noadapter; exit; fi; " +
+                            "if ! bluetoothctl show | grep -q \"^Controller \"; then echo noadapter; exit; fi; " +
+                            "if bluetoothctl show | grep -q \"Powered: no\"; then echo off; exit; fi; " +
+                            "if bluetoothctl devices Connected | grep -q .; then echo connected; else echo idle; fi" +
+                            "'"
+
+                        item.formatter = function (raw) {
+                            var state = raw.trim()
+                            bluetoothLoader.visible = (state !== "noadapter")
+
+                            if (state === "connected") {
+                                item.icon = "󰂱 "
+                            } else if (state === "idle") {
+                                item.icon = "󰂯 "
+                            } else if (state === "off") {
+                                item.icon = "󰂲 "
+                            } else {
+                                item.icon = "󰂲 "
+                            }
+                            return ""
                         }
                     }
 
-                    Loader {
-                        id: bluetoothLoader
-                        sourceComponent: commandLabel
-                        Layout.alignment: Qt.AlignVCenter
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Quickshell.execDetached([
+                            "bash","-lc",
+                            "command -v blueman-manager >/dev/null && blueman-manager || " +
+                            "command -v bluetuith >/dev/null && alacritty -e bluetuith || " +
+                            "alacritty -e bluetoothctl"
+                        ])
+                    }
+                }
 
-                        onLoaded: {
-                            item.interval = 5000
-                            // Emit a single state word we can parse reliably.
-                            item.command = `
-                    bash -lc '
-                    if ! command -v bluetoothctl >/dev/null 2>&1; then echo noadapter; exit; fi
-                    # Need a controller present
-                    if ! bluetoothctl show | grep -q "^Controller "; then echo noadapter; exit; fi
-                    # Powered?
-                    if bluetoothctl show | grep -q "Powered: no"; then echo off; exit; fi
-                    # Any connected devices?
-                    if bluetoothctl devices Connected | grep -q .; then echo connected; else echo idle; fi
-                    '`.trim()
+                // Volume
+                Loader {
+                    id: vol
+                    sourceComponent: commandLabel
+                    Layout.alignment: Qt.AlignVCenter
+                    onLoaded: {
+                        item.icon = "  "
+                        item.interval = 1000
+                        item.suffix = "%"
+                        item.command = "pamixer --get-volume"
+                    }
 
-                            item.formatter = function (raw) {
-                                var state = raw.trim()
-                                // Optional: hide the icon entirely if there is no adapter.
-                                bluetoothLoader.visible = (state !== "noadapter")
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Quickshell.execDetached(["bash","-lc","pavucontrol"])
+                    }
+                }
 
-                                if (state === "connected") {
-                                    item.icon = "󰂱 "   // BT connected
-                                    // item.opacity = 1.0
-                                } else if (state === "idle") {
-                                    item.icon = "󰂯 "   // BT on, no device
-                                    // item.opacity = 0.9
-                                } else if (state === "off") {
-                                    item.icon = "󰂲 "   // BT off
-                                    // item.opacity = 0.5
-                                } else { // noadapter or anything unexpected
-                                    item.icon = "󰂲 "
-                                    // item.opacity = 0.0 // or keep it visible but dim
+                // Network
+                Loader {
+                    id: networkLoader
+                    sourceComponent: commandLabel
+                    Layout.alignment: Qt.AlignVCenter
+
+                    onLoaded: {
+                        item.interval = 4000
+                        item.command = "networkctl list --no-pager --no-legend"
+
+                        item.formatter = function(raw) {
+                            var lines = raw.trim().split("\n")
+                            var ethernetUp = false
+                            var wifiUp = false
+
+                            for (var i = 0; i < lines.length; i++) {
+                                var parts = lines[i].trim().split(/\s+/)
+                                if (parts.length < 4)
+                                    continue
+
+                                var iface = parts[1]
+                                var type  = parts[2]
+                                var state = parts[3]
+
+                                if (iface === "lo" ||
+                                    iface.startsWith("br") ||
+                                    iface.startsWith("docker") ||
+                                    iface.startsWith("tailscale"))
+                                    continue
+
+                                if (state === "routable" ||
+                                    state === "configured" ||
+                                    state === "carrier") {
+                                    if (type === "ether")
+                                        ethernetUp = true
+                                    else if (type === "wlan")
+                                        wifiUp = true
                                 }
-                                return "" // icon-only, no text
                             }
-                        }
 
-                        // Click to open a manager (tries blueman, falls back gracefully)
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Quickshell.execDetached([
+                            if (ethernetUp) {
+                                item.icon = ""
+                            } else if (wifiUp) {
+                                item.icon = "󰤨 "
+                            } else {
+                                item.icon = "󰤭 "
+                            }
+
+                            return ""
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: Quickshell.execDetached(["bash", "-lc", "iwgtk"])
+                    }
+                }
+
+                // Laptop battery
+                Loader {
+                    id: battery
+                    sourceComponent: commandLabel
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: true
+
+                    onLoaded: {
+                        var hasBattery = false
+                        try {
+                            var output = Quickshell.exec([
                                 "bash","-lc",
-                                "command -v blueman-manager >/dev/null && blueman-manager || " +
-                                "command -v bluetuith >/dev/null && alacritty -e bluetuith || " +
-                                "alacritty -e bluetoothctl"
+                                "upower -e | grep BAT | head -n1"
                             ])
+                            hasBattery = output && output.trim().length > 0
+                        } catch (e) {
+                            hasBattery = false
                         }
+
+                        item.icon = "󰁹 "
+                        item.interval = 60000
+                        item.command =
+                            "upower -i $(upower -e | grep BAT | head -n1) | awk '/percentage:/ {print $2}'"
+
+                        battery.visible = hasBattery
                     }
+                }
 
-
-                    // Volume
-                    Loader {
-                        id: vol
-                        sourceComponent: commandLabel
-                        Layout.alignment: Qt.AlignVCenter
-                        onLoaded: {
-                            item.icon = "  "
-                            item.interval = 1000
-                            item.suffix = "%"
-                            item.command = "pamixer --get-volume"
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: Quickshell.execDetached(["bash","-lc","pavucontrol"])
-                        }
-                    }
-                    
-                    Loader { // Network
-                        id: networkLoader
-                        sourceComponent: commandLabel
-                        Layout.alignment: Qt.AlignVCenter
-
-                        onLoaded: {
-                            item.interval = 4000
-                            item.command = "networkctl list --no-pager --no-legend"
-
-                            item.formatter = function(raw) {
-                                var lines = raw.trim().split("\n")
-                                var ethernetUp = false
-                                var wifiUp = false
-
-                                for (var i = 0; i < lines.length; i++) {
-                                    var parts = lines[i].trim().split(/\s+/)
-                                    if (parts.length < 4) continue
-
-                                    var iface = parts[1]   // e.g. eno1
-                                    var type  = parts[2]   // e.g. ether / wlan
-                                    var state = parts[3]   // e.g. routable / carrier / no-carrier
-
-                                    // Ignore loopback / docker / bridges / tailscale
-                                    if (iface === "lo" || iface.startsWith("br") || iface.startsWith("docker") || iface.startsWith("tailscale"))
-                                        continue
-
-                                    if (state === "routable" || state === "configured" || state === "carrier") {
-                                        if (type === "ether") ethernetUp = true
-                                        else if (type === "wlan") wifiUp = true
-                                    }
-                                }
-
-                                if (ethernetUp) {
-                                    item.icon = ""   // Ethernet symbol
-                                } else if (wifiUp) {
-                                    item.icon = "󰤨 "   // Wi-Fi symbol
-                                } else {
-                                    item.icon = "󰤭 "   // No network
-                                }
-
-                                // Don’t return any text after the icon
-                                return ""
-                            }
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: Quickshell.execDetached(["bash", "-lc", "iwgtk"])
-                        }
-                    }
-
-
-                    Loader { // battery
-                        id: battery
-                        sourceComponent: commandLabel
-                        Layout.alignment: Qt.AlignVCenter
-                        visible: true   // default hidden
-                        onLoaded: {
-                            var hasBattery = false
-                            try {
-                                var output = Quickshell.exec(["bash","-lc","upower -e | grep BAT | head -n1"])
-                                hasBattery = output && output.trim().length > 0
-                            } catch (e) { hasBattery = false }
-
-                            item.icon = "󰁹 "
-                            item.interval = 60000
-                            item.command = "upower -i $(upower -e | grep BAT | head -n1) | awk '/percentage:/ {print $2}'"
-                            battery.visible = hasBattery
-                        }
-                    }
-
-                    Loader { // Wlogout
-                        sourceComponent: clickIcon
-
-                        onLoaded: {
-                            item.glyph = "  "
-                            item.command = ["bash","-lc","wlogout"]
-                        }
+                // Wlogout
+                Loader {
+                    sourceComponent: clickIcon
+                    onLoaded: {
+                        item.glyph = "  "
+                        item.command = ["bash","-lc","wlogout"]
                     }
                 }
             }
