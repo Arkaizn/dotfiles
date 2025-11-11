@@ -1,11 +1,14 @@
 // ~/.config/quickshell/shell.qml
-
+//@ pragma UseQApplication
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Quickshell.Services.SystemTray
+import Quickshell.DBusMenu
+import Quickshell.Widgets
 import "Colors.qml"
 
 ShellRoot {
@@ -265,6 +268,85 @@ ShellRoot {
                         }
                     }
                 }
+                // System Tray
+                RowLayout {
+                    id: systemTrayRow
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 4
+
+                    Repeater {
+                        model: SystemTray.items
+
+                        delegate: Rectangle {
+                            id: trayButton
+                            radius: 8
+                            color: ma.containsMouse ? Colors.color1 : "transparent"
+
+                            implicitWidth: bar.iconSize + 8
+                            implicitHeight: bar.iconSize + 8
+
+                            IconImage {
+                                id: trayIcon
+                                anchors.centerIn: parent
+                                width: bar.iconSize
+                                height: bar.iconSize
+                                // Quickshell gives us a ready-to-use icon source for each tray item
+                                source: modelData.icon
+                            }
+
+                            MouseArea {
+                                id: ma
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+                                onClicked: function(mouse) {
+                                    // Right click → open context menu if available
+                                    if (mouse.button === Qt.RightButton) {
+                                        if (modelData.hasMenu || modelData.onlyMenu) {
+                                            modelData.display(bar, trayButton.x, trayButton.y + trayButton.height)
+                                        }
+                                        return
+                                    }
+
+                                    // Middle click → secondary action (if app supports it)
+                                    if (mouse.button === Qt.MiddleButton) {
+                                        if (modelData.secondaryActivate) {
+                                            modelData.secondaryActivate()
+                                        }
+                                        return
+                                    }
+
+                                    // Left click
+                                    if (modelData.onlyMenu && (modelData.hasMenu)) {
+                                        // Some icons are "menu-only" → open menu on left click
+                                        modelData.display(bar, trayButton.x, trayButton.y + trayButton.height)
+                                    } else {
+                                        // Normal primary activation
+                                        modelData.activate()
+                                    }
+                                }
+
+                                onWheel: function(wheel) {
+                                    // Optional: scroll support for things like volume icons
+                                    if (modelData.scroll) {
+                                        modelData.scroll(wheel.angleDelta.y, false)
+                                    }
+                                }
+                            }
+
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                            Behavior on scale { NumberAnimation { duration: 80 } }
+
+                            states: State {
+                                name: "hover"
+                                when: ma.containsMouse
+                                PropertyChanges { target: trayButton; scale: 1.04 }
+                            }
+                        }
+                    }
+                }
 
                 Item { Layout.fillWidth: true }
 
@@ -376,9 +458,6 @@ ShellRoot {
                         }
                     }
 
-
-
-                    
                     Loader {
                         id: bluetoothLoader
                         sourceComponent: commandLabel
