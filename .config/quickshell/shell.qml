@@ -255,7 +255,7 @@ ShellRoot {
                     onLoaded: {
                         item.icon = "󰅢   "
                         item.interval = 10000
-                        item.command = "checkupdates | wc -l"
+                        item.command = "yay -Qu | wc -l"
                     }
 
                     MouseArea {
