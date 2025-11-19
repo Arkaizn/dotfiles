@@ -254,7 +254,7 @@ ShellRoot {
                     Layout.alignment: Qt.AlignVCenter
                     onLoaded: {
                         item.icon = "󰅢   "
-                        item.interval = 100
+                        item.interval = 10000
                         item.command = "checkupdates | wc -l"
                     }
 
