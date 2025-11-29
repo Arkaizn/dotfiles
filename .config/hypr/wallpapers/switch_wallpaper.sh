@@ -361,6 +361,73 @@ update_openlinkhub_files() {
   fi
   echo "$hex" # print for explain
 }
+# ───── dark/light mode ────────────────────────────────────────────────────────────
+LIGHTMODE_SCRIPT="${HOME}/.config/hypr/wallpapers/lightmode.sh"
+DARKMODE_SCRIPT="${HOME}/.config/hypr/wallpapers/darkmode.sh"
+
+# Threshold for deciding light vs dark based on brightness.
+# Uses 299*R + 587*G + 114*B, range 0..255000. 128000 ≈ middle.
+LIGHT_DARK_THRESHOLD=50000
+
+# Choose a hex color that represents overall lightness of the wallpaper.
+# Prefer: average image color via ImageMagick. Fallback: pywal "background".
+theme_lightness_hex() {
+  local img="$1" hex=""
+
+  # 1) Try ImageMagick average color if available
+  hex="$(im_avg_hex "$img" 2>/dev/null || true)"
+
+  # 2) Fallback: pywal "background" from colors.sh
+  if [[ -z "$hex" ]]; then
+    hex="$(get_wal_hex "background" || true)"
+  fi
+
+  # 3) Last fallback: whatever WAL_COLOR_KEY is (e.g. color11)
+  if [[ -z "$hex" ]]; then
+    hex="$(get_wal_hex "$WAL_COLOR_KEY" || true)"
+  fi
+
+  [[ -n "$hex" ]] && echo "$hex" || echo ""
+}
+
+apply_dark_light_mode() {
+  local img="$1"
+  local hex
+  hex="$(theme_lightness_hex "$img" || true)"
+
+  if [[ -z "$hex" ]]; then
+    log "ThemeSwitch: no base color for brightness detection; skipping"
+    return 0
+  fi
+
+  # Make sure it’s just RRGGBB
+  hex="${hex#\#}"
+
+  local r g b
+  read -r r g b <<<"$(hex_to_rgb "$hex")"
+
+  # Perceived brightness: 0..255000 (no /1000 to keep integers)
+  local luma=$((299*r + 587*g + 114*b))
+
+  log "ThemeSwitch: wallpaper hex #$hex → R=$r G=$g B=$b, luma=$luma"
+
+  if (( luma > LIGHT_DARK_THRESHOLD )); then
+    log "ThemeSwitch: detected LIGHT wallpaper → running: $LIGHTMODE_SCRIPT"
+    if [[ -x "$LIGHTMODE_SCRIPT" ]]; then
+      "$LIGHTMODE_SCRIPT" || log "ThemeSwitch: lightmode script failed"
+    else
+      log "ThemeSwitch: lightmode script not executable or missing"
+    fi
+  else
+    log "ThemeSwitch: detected DARK wallpaper → running: $DARKMODE_SCRIPT"
+    if [[ -x "$DARKMODE_SCRIPT" ]]; then
+      "$DARKMODE_SCRIPT" || log "ThemeSwitch: darkmode script failed"
+    else
+      log "ThemeSwitch: darkmode script not executable or missing"
+    fi
+  fi
+}
+
 
 # ── MISC (bg stuff) ────────────────────────────────────────────────────────────
 copy_current_wallpaper() { cp "$1" "$PYWALLPAPER_DST"; }
@@ -436,6 +503,9 @@ main() {
   # wal + hooks (blocking so palette is ready)
   run_wal "$selected"
   wal_hook_tasks
+
+  # Decide light/dark mode based on wallpaper and switch system theme
+  apply_dark_light_mode "$selected"
 
   # copy quickshell Color.qml that pywal generated
   cp ~/.cache/wal/Colors.qml ~/.config/quickshell
