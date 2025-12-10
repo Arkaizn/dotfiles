@@ -271,7 +271,7 @@ ShellRoot {
                     sourceComponent: clickIcon
                     onLoaded: {
                         item.glyph = "󰇚"
-                        item.command = ["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/update.sh"]
+                        item.command = ["bash","-lc","kitty --class custom_hover -e bash ~/git/dotfiles/scripts/config/update.sh "]
                     }
                 }
 
@@ -280,7 +280,7 @@ ShellRoot {
                     sourceComponent: clickIcon
                     onLoaded: {
                         item.glyph = "󰕒"
-                        item.command = ["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/push.sh"]
+                        item.command = ["bash","-lc","kitty --class custom_hover -e bash ~/git/dotfiles/scripts/config/push.sh"]
                     }
                 }
 
