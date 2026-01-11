@@ -49,7 +49,7 @@ setup_greetd() {
 vt = 1
 
 [initial_session]
-command = "Hyprland"
+command = "start-hyprland"
 user = "arkaizn"
 
 [default_session]
