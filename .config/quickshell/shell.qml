@@ -10,6 +10,7 @@ import Quickshell.Widgets
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Shapes
 
 import "Colors.qml"
 
@@ -206,13 +207,47 @@ ShellRoot {
             // BACKGROUND
             // =========================================================
 
+
+            Shape {
+                id: mainShape
+                anchors.fill: parent
+                layer.enabled: true
+                layer.samples: 4
+
+                ShapePath {
+                    id: myPath
+                    strokeWidth: 0
+                    strokeColor: "transparent"
+
+                    // Force the gradient to use the absolute bounds of the Shape
+                    fillGradient: LinearGradient {
+                        x1: 0; y1: 0
+                        x2: mainShape.width; y2: mainShape.height
+                        
+                        GradientStop { position: 0.0; color: Colors.color1 }
+                        GradientStop { position: 1.0; color: Colors.color2 }
+                    }
+
+                    // Rounded Rectangle Path
+                    startX: 12; startY: 0
+                    PathLine { x: mainShape.width - 12; y: 0 }
+                    PathArc  { x: mainShape.width; y: 12; radiusX: 12; radiusY: 12 }
+                    PathLine { x: mainShape.width; y: mainShape.height - 12 }
+                    PathArc  { x: mainShape.width - 12; y: mainShape.height; radiusX: 12; radiusY: 12 }
+                    PathLine { x: 12; y: mainShape.height }
+                    PathArc  { x: 0; y: mainShape.height - 12; radiusX: 12; radiusY: 12 }
+                    PathLine { x: 0; y: 12 }
+                    PathArc  { x: 12; y: 0; radiusX: 12; radiusY: 12 }
+                }
+            }
+
+
+            // The "Black Box" that sits inside to create the border look
             Rectangle {
                 anchors.fill: parent
-                radius: 12
-                color: Colors.background
-                border.color: Colors.color1
-                border.width: 2
-                opacity: 0.85
+                anchors.margins: 2 // This is your border thickness
+                color: "black"
+                radius: 11 // Slightly smaller radius to align with outer curve
             }
 
             // =========================================================
