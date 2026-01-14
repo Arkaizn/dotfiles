@@ -817,28 +817,24 @@ ShellRoot {
                 // Laptop battery
                 Loader {
                     id: battery
-                    sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
                     
-                    // Check if upower actually lists a battery device
-                    visible: {
-                        try {
-                            var res = Quickshell.exec(["sh", "-c", "upower -e | grep -q battery && echo 'yes'"]);
-                            return res.out.includes("yes");
-                        } catch (e) {
-                            return false;
-                        }
-                    }
+                    // ACTIVE determines if the component is even created.
+                    // We check for the BAT directory directly.
+                    active: Quickshell.exec(["sh", "-c", "ls /sys/class/power_supply/ | grep -q BAT && echo true || echo false"]).out.trim() === "true"
+                    
+                    // Only if active is true, it loads the source
+                    sourceComponent: statDisplay
 
                     onLoaded: {
                         if (item) {
-                            item.icon = "󰁹"
-                            item.interval = 60000
-                            // Find the battery dynamically so it works on any machine
-                            item.command = "upower -i $(upower -e | grep battery | head -n1) | awk '/percentage:/ {print $2}'"
+                            item.icon = "󰁹";
+                            item.interval = 60000;
+                            item.command = "cat /sys/class/power_supply/BAT*/capacity | head -n1 | sed 's/$/%/'";
+                            console.log("Battery found and loaded.");
                         }
                     }
-}
+                }
 
                 // Logout/power menu
                 Loader {
