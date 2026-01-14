@@ -283,7 +283,7 @@ ShellRoot {
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: 2
-                color: '#bb000000'
+                color: '#cb000000'
                 radius: 10
             }
 
