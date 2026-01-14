@@ -1,5 +1,9 @@
 // ~/.config/quickshell/shell.qml
 //@ pragma UseQApplication
+
+// =========================================================
+// IMPORTS
+// =========================================================
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
@@ -14,12 +18,17 @@ import QtQuick.Shapes
 
 import "Colors.qml"
 
+// =========================================================
+// ROOT CONFIGURATION
+// =========================================================
 ShellRoot {
-    // Global defaults
     property int iconSize: 15
     property int barSpacing: 12
     property int sidePadding: 10
 
+    // =========================================================
+    // MULTI-MONITOR SUPPORT
+    // =========================================================
     Variants {
         model: Quickshell.screens
 
@@ -52,24 +61,15 @@ ShellRoot {
             Component.onCompleted: Quickshell.inhibitReloadPopup()
 
             // =========================================================
-            // REUSABLE HELPERS
+            // REUSABLE COMPONENT: STAT DISPLAY
             // =========================================================
-
-            // Command-driven pill
             Component {
-                id: commandLabel
+                id: statDisplay
 
                 Rectangle {
-                    id: root
-
+                    id: statRoot
                     radius: 8
-                    color: hovered ? Colors.color1 : "transparent"
-
-                    property bool hovered: false
-                    property int paddingX: 6
-                    property int paddingY: 4
-
-                    // API
+                    
                     property string icon: ""
                     property string command: ""
                     property int interval: 2000
@@ -77,114 +77,178 @@ ShellRoot {
                     property var formatter: null
                     property bool enabled: true
                     property bool trimNewline: true
-                    property int fontSize: bar.iconSize
+                    property string displayValue: "…"
+                    property bool hovered: false
 
-                    RowLayout {
-                        id: contentRow
-                        anchors.fill: parent
-                        anchors.leftMargin: paddingX
-                        anchors.rightMargin: paddingX
-                        anchors.topMargin: paddingY
-                        anchors.bottomMargin: paddingY
+                    width: statLabel.implicitWidth + 28
+                    height: statLabel.implicitHeight + 8
 
-                        Text {
-                            id: label
-                            font.pixelSize: root.fontSize
-                            color: root.hovered ? Colors.color7 : Colors.foreground
-                            text: root.icon.length > 0 ? root.icon + " …" : "…"
+                    // Outer "glass edge" gradient
+                    gradient: Gradient {
+                        GradientStop {
+                            position: 0.0
+                            color: statRoot.hovered
+                                ? Qt.rgba(1, 1, 1, 0.45)
+                                : Qt.rgba(1, 1, 1, 0.25)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Qt.rgba(1, 1, 1, 0.15)
                         }
                     }
 
-                    implicitWidth: contentRow.implicitWidth + paddingX * 2
-                    implicitHeight: contentRow.implicitHeight + paddingY * 2
-
-                    MouseArea {
+                    // Inner "glass body"
+                    Rectangle {
                         anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.NoButton
-                        onEntered: root.hovered = true
-                        onExited: root.hovered = false
-                    }
+                        anchors.margins: 1
+                        radius: 7
+                        color: Qt.rgba(0.12, 0.12, 0.12,
+                                    statRoot.hovered ? 0.30 : 0.18)
 
-                    Behavior on color { ColorAnimation { duration: 100 } }
-
-                    Process {
-                        id: proc
-                        stdout: StdioCollector {
-                            onStreamFinished: {
-                                if (!root.enabled)
-                                    return
-
-                                var raw = this.text
-                                if (root.trimNewline)
-                                    raw = raw.trim()
-
-                                var value = ""
-                                if (root.formatter) {
-                                    value = root.formatter(raw)
+                        Text {
+                            id: statLabel
+                            anchors.centerIn: parent
+                            font.pixelSize: bar.iconSize
+                            color: statRoot.hovered ? Colors.color4 : Colors.color6
+                            opacity: statRoot.hovered ? 1.0 : 0.7
+                            text: {
+                                if (statRoot.displayValue === "…") {
+                                    return statRoot.icon.length > 0 ? statRoot.icon + " …" : "…"
+                                } else if (statRoot.displayValue.length === 0) {
+                                    return statRoot.icon
+                                } else if (statRoot.icon.length > 0) {
+                                    return statRoot.icon + " " + statRoot.displayValue
                                 } else {
-                                    value = raw.length > 0 ? raw + root.suffix : ""
-                                }
-
-                                if (value.length === 0) {
-                                    label.text = root.icon
-                                } else if (root.icon.length > 0) {
-                                    label.text = root.icon + " " + value
-                                } else {
-                                    label.text = value
+                                    return statRoot.displayValue
                                 }
                             }
                         }
                     }
 
+                    // Hover detection
+                    MouseArea {
+                        id: statMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
+                        onEntered: {
+                            statRoot.hovered = true
+                            statRoot.scale = 1.08
+                        }
+                        onExited: {
+                            statRoot.hovered = false
+                            statRoot.scale = 1.0
+                        }
+                    }
+
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: 140
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
+                    // Command execution
+                    Process {
+                        id: statProc
+                        stdout: StdioCollector {
+                            onStreamFinished: {
+                                if (!statRoot.enabled)
+                                    return
+
+                                var raw = this.text
+                                if (statRoot.trimNewline)
+                                    raw = raw.trim()
+
+                                var value = ""
+                                if (statRoot.formatter) {
+                                    value = statRoot.formatter(raw)
+                                } else {
+                                    value = raw.length > 0 ? raw + statRoot.suffix : ""
+                                }
+
+                                statRoot.displayValue = value
+                            }
+                        }
+                    }
+
+                    // Periodic updates
                     Timer {
-                        id: timer
-                        interval: root.interval
-                        running: root.enabled && root.command.length > 0
+                        interval: statRoot.interval
+                        running: statRoot.enabled && statRoot.command.length > 0
                         repeat: true
                         triggeredOnStart: true
                         onTriggered: {
-                            if (root.enabled && root.command.length > 0) {
-                                proc.exec(["bash", "-lc", root.command])
+                            if (statRoot.enabled && statRoot.command.length > 0) {
+                                statProc.exec(["bash", "-lc", statRoot.command])
                             }
                         }
                     }
                 }
             }
 
-            // Clickable icon pill
+            // =========================================================
+            // REUSABLE COMPONENT: CLICKABLE ICON
+            // =========================================================
             Component {
                 id: clickIcon
 
                 Rectangle {
                     id: iconRoot
+                    radius: 8
 
                     property string glyph: "?"
                     property var command: []
                     property bool hovered: false
-                    property int paddingX: 6
-                    property int paddingY: 4
 
-                    radius: 8
-                    color: hovered ? Colors.color1 : "transparent"
-                    
-                    Text {
-                        id: iconText
-                        anchors.centerIn: parent
-                        text: iconRoot.glyph
-                        font.pixelSize: bar.iconSize
-                        color: iconRoot.hovered ? Colors.color7 : Colors.foreground
+                    width: iconText.implicitWidth + 14
+                    height: iconText.implicitHeight + 8
+
+                    // Outer "glass edge" gradient
+                    gradient: Gradient {
+                        GradientStop {
+                            position: 0.0
+                            color: iconRoot.hovered
+                                ? Qt.rgba(1, 1, 1, 0.45)
+                                : Qt.rgba(1, 1, 1, 0.25)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Qt.rgba(1, 1, 1, 0.15)
+                        }
                     }
 
-                    implicitWidth: iconText.implicitWidth + paddingX * 2
-                    implicitHeight: iconText.implicitHeight + paddingY * 2
+                    // Inner "glass body"
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        radius: 7
+                        color: Qt.rgba(0.12, 0.12, 0.12,
+                                    iconRoot.hovered ? 0.30 : 0.18)
 
+                        Text {
+                            id: iconText
+                            anchors.centerIn: parent
+                            text: iconRoot.glyph
+                            font.pixelSize: bar.iconSize
+                            color: iconRoot.hovered ? Colors.color4 : Colors.color6
+                            opacity: iconRoot.hovered ? 1.0 : 0.7
+                        }
+                    }
+
+                    // Click handling
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onEntered: iconRoot.hovered = true
-                        onExited: iconRoot.hovered = false
+                        onEntered: {
+                            iconRoot.hovered = true
+                            iconRoot.scale = 1.08
+                        }
+                        onExited: {
+                            iconRoot.hovered = false
+                            iconRoot.scale = 1.0
+                        }
                         onClicked: {
                             if (iconRoot.command && iconRoot.command.length > 0) {
                                 Quickshell.execDetached(iconRoot.command)
@@ -192,54 +256,40 @@ ShellRoot {
                         }
                     }
 
-                    Behavior on color { ColorAnimation { duration: 100 } }
-                    Behavior on scale { NumberAnimation { duration: 80 } }
-
-                    states: State {
-                        name: "hover"
-                        when: iconRoot.hovered
-                        PropertyChanges { target: iconRoot; scale: 1.04 }
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: 140
+                            easing.type: Easing.OutCubic
+                        }
                     }
                 }
             }
 
             // =========================================================
-            // BACKGROUND
+            // BACKGROUND STYLING
             // =========================================================
-
-
-                Rectangle {
+            Rectangle {
                 id: mainShape
                 anchors.fill: parent
                 radius: 12
 
                 gradient: Gradient {
-                    // In QML Rectangle, we use orientation or define the start/end
-                    // To get a diagonal in a standard Rectangle:
                     GradientStop { position: 0.0; color: Colors.color2 }
                     GradientStop { position: 1.0; color: Colors.color1 }
-                    
-                    // This makes it diagonal (Top-Left to Bottom-Right)
-                    orientation: Gradient.Vertical 
+                    orientation: Gradient.Vertical
                 }
-                
-                // To get a true custom diagonal angle in a standard Rectangle, 
-                // you might need a Rotation or a custom Shader, 
-                // but usually, Vertical/Horizontal satisfies most designs.
             }
 
-            // The "Black Box" that sits inside to create the border look
             Rectangle {
                 anchors.fill: parent
-                anchors.margins: 2 // This is your border thickness
-                color: "black"
-                radius: 10 // Slightly smaller radius to align with outer curve
+                anchors.margins: 2
+                color: '#bb000000'
+                radius: 10
             }
 
             // =========================================================
-            // LEFT BLOCK
+            // LEFT SECTION
             // =========================================================
-
             RowLayout {
                 id: leftRow
                 anchors.left: parent.left
@@ -247,7 +297,7 @@ ShellRoot {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: barSpacing
 
-                // Notifications
+                // Notification center button
                 Loader {
                     sourceComponent: clickIcon
                     onLoaded: {
@@ -256,25 +306,79 @@ ShellRoot {
                     }
                 }
 
-                // Clock
-                Row {
-                    spacing: 6
+                // System clock
+                Rectangle {
+                    id: clockRoot
+                    radius: 8
                     Layout.alignment: Qt.AlignVCenter
-                    SystemClock { id: sysClock; precision: SystemClock.Seconds }
-                    Text {
-                        font.pixelSize: bar.iconSize
-                        color: Colors.foreground
-                        text: Qt.formatDateTime(sysClock.date, "dd.MM.yyyy hh:mm:ss")
+
+                    property bool hovered: clockMouseArea.containsMouse
+
+                    width: clockLabel.implicitWidth + 14
+                    height: clockLabel.implicitHeight + 8
+
+                    // Outer "glass edge" gradient
+                    gradient: Gradient {
+                        GradientStop {
+                            position: 0.0
+                            color: clockRoot.hovered
+                                ? Qt.rgba(1, 1, 1, 0.45)
+                                : Qt.rgba(1, 1, 1, 0.25)
+                        }
+                        GradientStop {
+                            position: 1.0
+                            color: Qt.rgba(1, 1, 1, 0.15)
+                        }
+                    }
+
+                    // Inner "glass body"
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        radius: 7
+                        color: Qt.rgba(0.12, 0.12, 0.12,
+                                    clockRoot.hovered ? 0.30 : 0.18)
+
+                        SystemClock { 
+                            id: sysClock
+                            precision: SystemClock.Seconds
+                        }
+
+                        Text {
+                            id: clockLabel
+                            anchors.centerIn: parent
+                            font.pixelSize: bar.iconSize
+                            color: clockRoot.hovered ? Colors.color4 : Colors.color6
+                            opacity: clockRoot.hovered ? 1.0 : 0.7
+                            text: Qt.formatDateTime(sysClock.date, "dd.MM.yyyy hh:mm:ss")
+                        }
+                    }
+
+                    // Hover detection
+                    MouseArea {
+                        id: clockMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
+                        onEntered: clockRoot.scale = 1.08
+                        onExited: clockRoot.scale = 1.0
+                    }
+
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: 140
+                            easing.type: Easing.OutCubic
+                        }
                     }
                 }
 
-                // Pacman updates
+                // Package updates indicator
                 Loader {
                     id: pacman
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
                     onLoaded: {
-                        item.icon = "󰅢   "
+                        item.icon = "󰅢 "
                         item.interval = 10000
                         item.command = "checkupdates | wc -l"
                     }
@@ -287,7 +391,7 @@ ShellRoot {
                     }
                 }
 
-                // Dotfiles pull
+                // Dotfiles git pull button
                 Loader {
                     sourceComponent: clickIcon
                     onLoaded: {
@@ -296,7 +400,7 @@ ShellRoot {
                     }
                 }
 
-                // Dotfiles push
+                // Dotfiles git push button
                 Loader {
                     sourceComponent: clickIcon
                     onLoaded: {
@@ -305,7 +409,7 @@ ShellRoot {
                     }
                 }
 
-                // System Tray
+                // System tray
                 RowLayout {
                     id: systemTrayRow
                     spacing: 4
@@ -316,16 +420,38 @@ ShellRoot {
                         delegate: Rectangle {
                             id: trayButton
                             radius: 8
-                            color: ma.containsMouse ? Colors.color1 : "transparent"
 
-                            implicitWidth: bar.iconSize + 8
-                            implicitHeight: bar.iconSize + 8
+                            width: bar.iconSize + 14
+                            height: bar.iconSize + 8
 
-                            IconImage {
-                                anchors.centerIn: parent
-                                width: bar.iconSize
-                                height: bar.iconSize
-                                source: modelData.icon
+                            property bool hovered: ma.containsMouse
+
+                            gradient: Gradient {
+                                GradientStop {
+                                    position: 0.0
+                                    color: trayButton.hovered
+                                        ? Qt.rgba(1, 1, 1, 0.45)
+                                        : Qt.rgba(1, 1, 1, 0.25)
+                                }
+                                GradientStop {
+                                    position: 1.0
+                                    color: Qt.rgba(1, 1, 1, 0.15)
+                                }
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                radius: 7
+                                color: Qt.rgba(0.12, 0.12, 0.12,
+                                            trayButton.hovered ? 0.30 : 0.18)
+
+                                IconImage {
+                                    anchors.centerIn: parent
+                                    width: bar.iconSize
+                                    height: bar.iconSize
+                                    source: modelData.icon
+                                }
                             }
 
                             MouseArea {
@@ -335,26 +461,39 @@ ShellRoot {
                                 cursorShape: Qt.PointingHandCursor
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
+                                onEntered: trayButton.scale = 1.08
+                                onExited: trayButton.scale = 1.0
+
                                 onClicked: function(mouse) {
+                                    // Right click: show context menu
                                     if (mouse.button === Qt.RightButton) {
                                         if (modelData.hasMenu || modelData.onlyMenu) {
-                                            modelData.display(bar,
-                                                trayButton.x,
-                                                trayButton.y + trayButton.height)
+                                            // Calculate position relative to the bar window
+                                            var globalPos = trayButton.mapToItem(bar.contentItem, 0, 0)
+                                            modelData.display(
+                                                bar,
+                                                globalPos.x,
+                                                globalPos.y + trayButton.height + 4
+                                            )
                                         }
                                         return
                                     }
 
+                                    // Middle click: secondary action
                                     if (mouse.button === Qt.MiddleButton) {
                                         if (modelData.secondaryActivate)
                                             modelData.secondaryActivate()
                                         return
                                     }
 
+                                    // Left click: activate or show menu
                                     if (modelData.onlyMenu && modelData.hasMenu) {
-                                        modelData.display(bar,
-                                            trayButton.x,
-                                            trayButton.y + trayButton.height)
+                                        var globalPos = trayButton.mapToItem(bar.contentItem, 0, 0)
+                                        modelData.display(
+                                            bar,
+                                            globalPos.x,
+                                            globalPos.y + trayButton.height + 4
+                                        )
                                     } else {
                                         modelData.activate()
                                     }
@@ -366,13 +505,11 @@ ShellRoot {
                                 }
                             }
 
-                            Behavior on color { ColorAnimation { duration: 100 } }
-                            Behavior on scale { NumberAnimation { duration: 80 } }
-
-                            states: State {
-                                name: "hover"
-                                when: ma.containsMouse
-                                PropertyChanges { target: trayButton; scale: 1.04 }
+                            Behavior on scale {
+                                NumberAnimation {
+                                    duration: 140
+                                    easing.type: Easing.OutCubic
+                                }
                             }
                         }
                     }
@@ -380,9 +517,8 @@ ShellRoot {
             }
 
             // =========================================================
-            // CENTER BLOCK
+            // CENTER SECTION
             // =========================================================
-
             RowLayout {
                 id: centerRow
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -391,7 +527,7 @@ ShellRoot {
 
                 // GPU usage
                 Loader {
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     onLoaded: {
                         item.icon = "󰢮 "
                         item.interval = 2000
@@ -402,9 +538,9 @@ ShellRoot {
 
                 // CPU usage
                 Loader {
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     onLoaded: {
-                        item.icon = " "
+                        item.icon = " "
                         item.interval = 2000
                         item.suffix = "%"
                         item.command = "top -bn1 | grep \"Cpu(s)\" | awk '{print 100 - $8}' | cut -d. -f1"
@@ -413,15 +549,16 @@ ShellRoot {
 
                 // RAM usage
                 Loader {
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     onLoaded: {
-                        item.icon = "  "
+                        item.icon = " "
                         item.interval = 2000
                         item.suffix = "%"
                         item.command = "free -h | awk '/Mem:/ {print int($3/$2*100)}'"
                     }
                 }
 
+                // Separator
                 Text {
                     text: "|"
                     font.pixelSize: bar.iconSize
@@ -429,7 +566,7 @@ ShellRoot {
                     opacity: 0.6
                 }
 
-                // Workspaces
+                // Hyprland workspaces
                 Row {
                     spacing: 6
                     Repeater {
@@ -442,7 +579,8 @@ ShellRoot {
                             width: label.implicitWidth + 14
                             height: label.implicitHeight + 8
 
-                            // outer "glass edge"
+                            property bool hovered: workspaceMouse.containsMouse
+
                             gradient: Gradient {
                                 GradientStop {
                                     position: 0.0
@@ -456,7 +594,6 @@ ShellRoot {
                                 }
                             }
 
-                            // inner glass body
                             Rectangle {
                                 anchors.fill: parent
                                 anchors.margins: 1
@@ -471,12 +608,13 @@ ShellRoot {
                                     text: modelData.name
                                     color: modelData.active
                                         ? Colors.color4
-                                        : Colors.foreground
+                                        : Colors.color6
                                     opacity: modelData.active ? 1.0 : 0.5
                                 }
                             }
 
                             MouseArea {
+                                id: workspaceMouse
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
@@ -496,8 +634,7 @@ ShellRoot {
                     }
                 }
 
-                
-
+                // Separator
                 Text {
                     text: "|"
                     font.pixelSize: bar.iconSize
@@ -505,9 +642,9 @@ ShellRoot {
                     opacity: 0.6
                 }
 
-                // GPU temp
+                // GPU temperature
                 Loader {
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     onLoaded: {
                         item.icon = "󰢮 "
                         item.interval = 5000
@@ -516,21 +653,21 @@ ShellRoot {
                     }
                 }
 
-                // CPU temp
+                // CPU temperature
                 Loader {
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     onLoaded: {
-                        item.icon = " "
+                        item.icon = " "
                         item.interval = 5000
-                        item.command = "sensors | grep 'Tctl' | awk '{print $2}' | sed 's/+//'"
+                        item.suffix = "°C"
+                        item.command = "sensors | grep 'Tctl' | awk '{print $2}' | sed 's/+//' | cut -d. -f1"
                     }
                 }
             }
 
             // =========================================================
-            // RIGHT BLOCK
+            // RIGHT SECTION
             // =========================================================
-
             RowLayout {
                 id: rightRow
                 anchors.right: parent.right
@@ -540,10 +677,10 @@ ShellRoot {
 
                 // Headset battery
                 Loader {
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
                     onLoaded: {
-                        item.icon = " "
+                        item.icon = "  󰁹"
                         item.enabled = true
                         item.interval = 5000
                         item.suffix = "%"
@@ -551,10 +688,10 @@ ShellRoot {
                     }
                 }
 
-                // Bluetooth
+                // Bluetooth status
                 Loader {
                     id: bluetoothLoader
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
 
                     onLoaded: {
@@ -572,13 +709,13 @@ ShellRoot {
                             bluetoothLoader.visible = (state !== "noadapter")
 
                             if (state === "connected") {
-                                item.icon = "󰂱 "
+                                item.icon = "󰂱"
                             } else if (state === "idle") {
-                                item.icon = "󰂯 "
+                                item.icon = "󰂯"
                             } else if (state === "off") {
-                                item.icon = "󰂲 "
+                                item.icon = "󰂲"
                             } else {
-                                item.icon = "󰂲 "
+                                item.icon = "󰂲"
                             }
                             return ""
                         }
@@ -600,10 +737,10 @@ ShellRoot {
                 // Volume
                 Loader {
                     id: vol
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
                     onLoaded: {
-                        item.icon = "  "
+                        item.icon = "󰕾"
                         item.interval = 1000
                         item.suffix = "%"
                         item.command = "pamixer --get-volume"
@@ -617,10 +754,10 @@ ShellRoot {
                     }
                 }
 
-                // Network
+                // Network status
                 Loader {
                     id: networkLoader
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
 
                     onLoaded: {
@@ -658,11 +795,11 @@ ShellRoot {
                             }
 
                             if (ethernetUp) {
-                                item.icon = ""
+                                item.icon = "󰌗"
                             } else if (wifiUp) {
-                                item.icon = "󰤨 "
+                                item.icon = "󰤨"
                             } else {
-                                item.icon = "󰤭 "
+                                item.icon = "󰤭"
                             }
 
                             return ""
@@ -680,7 +817,7 @@ ShellRoot {
                 // Laptop battery
                 Loader {
                     id: battery
-                    sourceComponent: commandLabel
+                    sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
                     visible: true
 
@@ -696,7 +833,7 @@ ShellRoot {
                             hasBattery = false
                         }
 
-                        item.icon = "󰁹 "
+                        item.icon = "󰁹"
                         item.interval = 60000
                         item.command =
                             "upower -i $(upower -e | grep BAT | head -n1) | awk '/percentage:/ {print $2}'"
@@ -705,11 +842,11 @@ ShellRoot {
                     }
                 }
 
-                // Wlogout
+                // Logout/power menu
                 Loader {
                     sourceComponent: clickIcon
                     onLoaded: {
-                        item.glyph = "  "
+                        item.glyph = "⏻ "
                         item.command = ["bash","-lc","wlogout"]
                     }
                 }
