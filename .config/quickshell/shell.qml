@@ -819,26 +819,22 @@ ShellRoot {
                     id: battery
                     sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
-                    visible: true
+                    
+                    // Check hardware directly via shell
+                    visible: {
+                        const res = Quickshell.exec(["ls", "/sys/class/power_supply/"]);
+                        // Check if "BAT" appears anywhere in the output string
+                        return res.out.includes("BAT");
+                    }
 
                     onLoaded: {
-                        var hasBattery = false
-                        try {
-                            var output = Quickshell.exec([
-                                "bash","-lc",
-                                "upower -e | grep BAT | head -n1"
-                            ])
-                            hasBattery = output && output.trim().length > 0
-                        } catch (e) {
-                            hasBattery = false
+                        // We use 'item' to refer to the loaded statDisplay
+                        if (item) {
+                            item.icon = "󰁹";
+                            item.interval = 60000;
+                            item.command = "upower -i $(upower -e | grep -m1 BAT) | awk '/percentage:/ {print $2}'";
+                            console.log("Battery component initialized successfully");
                         }
-
-                        item.icon = "󰁹"
-                        item.interval = 60000
-                        item.command =
-                            "upower -i $(upower -e | grep BAT | head -n1) | awk '/percentage:/ {print $2}'"
-
-                        battery.visible = hasBattery
                     }
                 }
 
