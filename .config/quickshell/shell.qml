@@ -167,7 +167,7 @@ ShellRoot {
 
                     radius: 8
                     color: hovered ? Colors.color1 : "transparent"
-
+                    
                     Text {
                         id: iconText
                         anchors.centerIn: parent
@@ -380,7 +380,7 @@ ShellRoot {
             }
 
             // =========================================================
-            // CENTER BLOCK (fixed true center)
+            // CENTER BLOCK
             // =========================================================
 
             RowLayout {
@@ -435,22 +435,68 @@ ShellRoot {
                     Repeater {
                         model: Hyprland.workspaces
 
-                        Text {
+                        Rectangle {
                             required property HyprlandWorkspace modelData
-                            font.pixelSize: bar.iconSize
-                            text: ""
-                            color: modelData.active ? Colors.color4 : Colors.foreground
-                            opacity: modelData.active ? 1.0 : 0.35
+
+                            radius: 8
+                            width: label.implicitWidth + 14
+                            height: label.implicitHeight + 8
+
+                            // outer "glass edge"
+                            gradient: Gradient {
+                                GradientStop {
+                                    position: 0.0
+                                    color: modelData.active
+                                        ? Qt.rgba(1, 1, 1, 0.45)
+                                        : Qt.rgba(1, 1, 1, 0.25)
+                                }
+                                GradientStop {
+                                    position: 1.0
+                                    color: Qt.rgba(1, 1, 1, 0.15)
+                                }
+                            }
+
+                            // inner glass body
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.margins: 1
+                                radius: 7
+                                color: Qt.rgba(0.12, 0.12, 0.12,
+                                            modelData.active ? 0.30 : 0.18)
+
+                                Text {
+                                    id: label
+                                    anchors.centerIn: parent
+                                    font.pixelSize: bar.iconSize
+                                    text: modelData.name
+                                    color: modelData.active
+                                        ? Colors.color4
+                                        : Colors.foreground
+                                    opacity: modelData.active ? 1.0 : 0.5
+                                }
+                            }
 
                             MouseArea {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: modelData.activate()
+
+                                onEntered: parent.scale = 1.08
+                                onExited: parent.scale = 1.0
+                            }
+
+                            Behavior on scale {
+                                NumberAnimation {
+                                    duration: 140
+                                    easing.type: Easing.OutCubic
+                                }
                             }
                         }
                     }
                 }
+
+                
 
                 Text {
                     text: "|"
