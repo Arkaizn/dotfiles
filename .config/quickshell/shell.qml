@@ -387,7 +387,7 @@ ShellRoot {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: Quickshell.execDetached(["bash","-lc","kitty -e yay -Syu --noconfirm"])
+                        onClicked: Quickshell.execDetached(["bash","-lc","kitty --class custom_hover -e yay -Syu --noconfirm"])
                     }
                 }
 
@@ -395,7 +395,7 @@ ShellRoot {
                 Loader {
                     sourceComponent: clickIcon
                     onLoaded: {
-                        item.glyph = "󰇚"
+                        item.glyph = " 󰇚 "
                         item.command = ["bash","-lc","kitty --class custom_hover -e bash ~/git/dotfiles/scripts/config/update.sh "]
                     }
                 }
@@ -404,7 +404,7 @@ ShellRoot {
                 Loader {
                     sourceComponent: clickIcon
                     onLoaded: {
-                        item.glyph = "󰕒"
+                        item.glyph = " 󰕒 "
                         item.command = ["bash","-lc","kitty --class custom_hover -e bash ~/git/dotfiles/scripts/config/push.sh"]
                     }
                 }
