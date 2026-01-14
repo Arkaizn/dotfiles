@@ -820,23 +820,25 @@ ShellRoot {
                     sourceComponent: statDisplay
                     Layout.alignment: Qt.AlignVCenter
                     
-                    // Check hardware directly via shell
+                    // Check if upower actually lists a battery device
                     visible: {
-                        const res = Quickshell.exec(["ls", "/sys/class/power_supply/"]);
-                        // Check if "BAT" appears anywhere in the output string
-                        return res.out.includes("BAT");
+                        try {
+                            var res = Quickshell.exec(["sh", "-c", "upower -e | grep -q battery && echo 'yes'"]);
+                            return res.out.includes("yes");
+                        } catch (e) {
+                            return false;
+                        }
                     }
 
                     onLoaded: {
-                        // We use 'item' to refer to the loaded statDisplay
                         if (item) {
-                            item.icon = "󰁹";
-                            item.interval = 60000;
-                            item.command = "upower -i $(upower -e | grep -m1 BAT) | awk '/percentage:/ {print $2}'";
-                            console.log("Battery component initialized successfully");
+                            item.icon = "󰁹"
+                            item.interval = 60000
+                            // Find the battery dynamically so it works on any machine
+                            item.command = "upower -i $(upower -e | grep battery | head -n1) | awk '/percentage:/ {print $2}'"
                         }
                     }
-                }
+}
 
                 // Logout/power menu
                 Loader {
