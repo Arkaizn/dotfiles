@@ -4,6 +4,11 @@ set -euo pipefail
 SOURCE_DIR="$HOME/git/dotfiles/.config"
 TARGET_DIR="$HOME/.config"
 
+echo "Pulling dotfiles"
+cd $HOME/git/dotfiles && git pull > /dev/null 2>&1
+echo "done."
+clear
+
 choice=$(gum choose "full-lite" "standard" "full")
 echo "You chose: $choice"
 
