@@ -422,7 +422,7 @@ ShellRoot {
                             radius: 8
 
                             width: bar.iconSize + 14
-                            height: bar.iconSize + 8
+                            height: bar.iconSize + 11
 
                             property bool hovered: ma.containsMouse
 
