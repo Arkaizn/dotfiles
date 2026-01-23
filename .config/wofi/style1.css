@@ -1,11 +1,17 @@
-@import url('/home/arkaizn/.cache/wal/colors-waybar.css');
-@define-color mauve @color9;
-@define-color red @color9;
-@define-color lavender @color7;
-@define-color text @color7;
+/* --- pywal import (absolute path is safest) --- */
+@import url("file:///home/silas/.cache/wal/colors-waybar.css");
 
+/* --- palette bindings --- */
+@define-color mauve     @color1;
+@define-color red       @color9;
+@define-color lavender  @color7;
+@define-color text      @color7;
+
+/* (optional) noop animation kept */
+@keyframes fadeIn { 0%{} 100%{} }
+
+/* --- globals --- */
 * {
-  all: unset;
   font-family: 'CodeNewRoman Nerd Font Mono', monospace;
   font-size: 18px;
   outline: none;
@@ -14,10 +20,11 @@
   background-color: transparent;
 }
 
+/* --- containers --- */
 window {
   all: unset;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 0px;
   background-color: alpha(@background, 0.5);
 }
 
@@ -25,28 +32,37 @@ window {
   border: none;
 }
 
-#scroll {
-  margin: 0px;
-  padding: 20px;
+#inner-box {
+  margin: 2px;
+  padding: 5px;         /* fixed ; */
   border: none;
 }
 
+#scroll {
+  margin: 0px;
+  padding: 30px;
+  border: none;
+}
+
+/* --- input --- */
 #input {
   all: unset;
-  margin: 20px;
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 20px;
   padding: 20px;
   border: none;
   outline: none;
   color: @text;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, .5);
-  border-radius: 10px;
-  background-color: alpha(@background, 0.2);
+  /* GTK may ignore box-shadow; harmless if so */
+  box-shadow: 1px 1px 5px rgba(255,255,255,.2);
+  border-radius: 10px;   /* added px */
+  background-color: alpha(@background, .2);
 }
 
 #input image {
   border: none;
   color: @red;
-  padding-right: 10px;
 }
 
 #input * {
@@ -57,66 +73,20 @@ window {
 #input:focus {
   outline: none;
   border: none;
-  border-radius: 10px;
+  border-radius: 10px;   /* added px */
 }
 
-#inner-box {
-  margin: 5px;
-  padding: 10px;
-  border: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  grid-gap: 15px;
-}
-
+/* --- entries --- */
 #entry {
-  margin: 0;
-  padding: 15px;
-  border-radius: 12px;
-  background-color: transparent;
-  
-  /* Fixed dimensions for consistent layout */
-  height: 180px;
-  width: 120px;
-  
-  /* Better centering with flexbox */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  
-  transition: all 0.2s ease-in-out;
-  position: relative;
-  cursor: pointer;
-  box-sizing: border-box;
+  border: none;
+  margin: 5px;
+  padding-left: 10px;
 }
 
-/* Hover effect - soft highlight */
-#entry:hover {
-  background-color: alpha(@lavender, 0.15);
-  transform: scale(1.02);
-}
-
-#entry image {
-  /* Fixed size for consistency */
-  width: 180px;
-  height: 120px;
-  
-  /* Perfect centering */
-  object-fit: contain;
-  display: block;
-  margin: 0 auto;
-}
-
-#entry:selected {
-  background-color: alpha(@lavender, 0.35);
-  border-radius: 12px;
-  transform: scale(1.05);
-  box-shadow: 0 0 8px alpha(@lavender, 0.4);
-}
-
-#entry:drop(active) {
-  background-color: @lavender;
+#entry #img {
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: 5px;
 }
 
 #entry arrow {
@@ -124,21 +94,25 @@ window {
   color: @lavender;
 }
 
-#text {
-  font-size: 0;
-  margin: 0;
-  padding: 0;
-  min-width: 0;
-  width: 0;
+#entry #text {
+  font-size: 0px;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+#entry:selected {
+  /* subtle highlight; transparent keeps wallpaper vibe */
+  box-shadow: 1px 1px 5px rgba(255,255,255,.15);
+  border: none;
+  margin-left: 15px;
+  border-radius: 20px;
+  background-color: transparent;
 }
 
 #entry:selected #text {
-  color: @mauve;
-  font-weight: bold;
+  color: @color1;
 }
 
-/* Ensure one-click selection works properly */
-#entry:active {
-  background-color: alpha(@mauve, 0.5);
-  transform: scale(0.98);
+#entry:drop(active) {
+  background-color: @lavender !important;
 }
