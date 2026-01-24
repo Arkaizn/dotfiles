@@ -7,10 +7,9 @@ TARGET_DIR="${HOME}/git/dotfiles/.config"
 # Never overwrite or delete these (if they exist in target, they stay as-is)
 SKIP_ALWAYS=(
   "hypr/wallpapers/pywallpaper.png"
-  "hypr/wallpapers/thumbs.db"
-  "kitty/current-theme.conf"
   "custom/hyprland/custom.conf"
   "hypr/hyprlock/hyprlock.sh"
+  "quickshell/Colors.qml"
 )
 
 # Extra excludes for "push-lite"
