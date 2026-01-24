@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -e
+
+rm -fr /tmp/wallpaper_script.log
+LOG_FILE="/tmp/wallpaper_script.log"
+exec &> >(tee -a "$LOG_FILE")
+echo "=== Script started at $(date) ==="
 
 WALLPAPER="${HOME}/.config/hypr/wallpapers/pywallpaper.png"
-KITTY_CURRENT_THEME="${HOME}/.config/kitty/current-theme.conf"
 HYPRLOCK_COLORS_CACHE="${HOME}/.cache/wal/hyprlock_colors"
 
 # Set wallpaper
@@ -13,13 +17,12 @@ swww img "$WALLPAPER" --transition-type wipe --transition-angle 210 --transition
 rm -fr ~/.cache/wal/schemes
 
 # Run pywal
-wal -i "$WALLPAPER"
+wal -i "$WALLPAPER" 2>/dev/null || true
 
 # Reload hyprland
-hyprctl reload
+#echo reload
+#hyprctl reload
 
-# Kitty
-[[ -f "$HOME/.cache/wal/colors-kitty.conf" ]] && cp "$HOME/.cache/wal/colors-kitty.conf" "$KITTY_CURRENT_THEME"
 
 # pywalfox / Firefox
 command -v pywalfox >/dev/null 2>&1 && pywalfox update 2>/dev/null || true
@@ -35,7 +38,9 @@ chmod +x ~/.config/quickshell/Colors.qml
 command -v swaync-client >/dev/null 2>&1 && swaync-client --reload-css || true
 
 # OpenRGB - use pywal color directly
-if [[ -f "$HOME/.cache/wal/colors.sh" ]]; then
-  source "$HOME/.cache/wal/colors.sh"
-  [[ -n "${color11:-}" ]] && openrgb --color "${color11#\#}" 2>/dev/null || true
-fi
+export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-}"
+source "$HOME/.cache/wal/colors.sh"
+openrgb --color "${color11#\#}" 2>/dev/null || true
+
+
+echo "=== Script ended at $(date) ==="
