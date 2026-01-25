@@ -15,7 +15,7 @@ Row {
             radius: 8
             
             implicitHeight: bar.buttonHeight
-            implicitWidth: bar.iconSize + 5
+            implicitWidth: text.implicitWidth + bar.iconSize
 
             property bool hovered: workspaceMouse.containsMouse
 
@@ -39,7 +39,7 @@ Row {
                 color: Qt.rgba(0.12, 0.12, 0.12, modelData.active ? 0.30 : 0.18)
 
                 Text {
-                    id: label
+                    id: text
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.verticalCenter: parent.verticalCenter
                     font.pixelSize: bar.pixelSize
