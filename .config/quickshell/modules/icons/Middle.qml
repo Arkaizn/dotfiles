@@ -10,24 +10,14 @@ import QtQuick
 import QtQuick.Layouts
 // import QtQuick.Shapes
 
-import "../.."
+import "Middle"
 
 RowLayout {
     id: middle
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    spacing: 8
+    spacing: bar.spacing
 
-    Row {
-        Text {
-            text: "Middle 󰣇"
-            font.pixelSize: 24
-            color: "white"
-            MouseArea {
-                anchors.fill: parent
-                onClicked: Quickshell.Io.exec("swaync")
-            }
-        }
-    }
+    Workspaces {}
 }
