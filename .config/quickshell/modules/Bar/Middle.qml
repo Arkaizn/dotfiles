@@ -19,5 +19,10 @@ RowLayout {
     anchors.bottom: parent.bottom
     spacing: bar.spacing
 
+    GPUusage {}
+    CPUusage {}
+    Memusage {}
     Workspaces {}
+    GPUtemp {}
+    CPUtemp {}
 }
