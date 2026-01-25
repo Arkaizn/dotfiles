@@ -51,6 +51,7 @@ Rectangle {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton
         onEntered: root.scale = bar.onEnteredButtonScale
         onExited: root.scale = bar.onExitedButtonScale

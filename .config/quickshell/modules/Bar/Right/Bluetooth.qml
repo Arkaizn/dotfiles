@@ -67,11 +67,10 @@ Rectangle {
                 }
             }
         }
-        onRunningChanged: if (!running) running = true
     }
 
     Timer {
-        interval: 5000
+        interval: bar.interval
         running: true
         repeat: true
         onTriggered: process.running = true

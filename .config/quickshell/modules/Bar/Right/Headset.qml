@@ -56,11 +56,10 @@ Rectangle {
                 root.output = this.text.trim() 
             }
         }
-        onRunningChanged: if (!running) running = true
     }
 
     Timer {
-        interval: 5000
+        interval: bar.interval
         running: true
         repeat: true
         onTriggered: process.running = true  // Rerun process
@@ -71,6 +70,7 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
+        cursorShape: Qt.PointingHandCursor
         onEntered: root.scale = bar.onEnteredButtonScale
         onExited: root.scale = onExitedButtonScale
         onClicked: Quickshell.execDetached(["bash","-lc","pavucontrol"])    

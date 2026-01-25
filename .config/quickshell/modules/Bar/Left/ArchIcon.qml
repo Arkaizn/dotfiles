@@ -52,6 +52,7 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
+        cursorShape: Qt.PointingHandCursor
         onEntered: root.scale = bar.onEnteredButtonScale
         onExited: root.scale = bar.onExitedButtonScale
         onClicked: Quickshell.execDetached(["swaync-client", "-t", "-sw"])

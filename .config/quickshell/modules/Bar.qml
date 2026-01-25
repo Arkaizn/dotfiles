@@ -48,7 +48,8 @@ PanelWindow {
     property int buttonWidth: 15
     property int buttonradius: 7
     property color colorfg: Qt.rgba(0.12, 0.12, 0.12, 0.30)
-    property color colorfgHovered: Qt.rgba(0.12, 0.12, 0.12, 0.18) 
+    property color colorfgHovered: Qt.rgba(0.12, 0.12, 0.12, 0.18)
+    property int interval: 5000
 
     // visual Bar Border (in the back)
     Rectangle {

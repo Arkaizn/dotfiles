@@ -92,11 +92,10 @@ Rectangle {
                 }
             }
         }
-        onRunningChanged: if (!running) running = true
     }
 
     Timer {
-        interval: 1000
+        interval: bar.interval
         running: true
         repeat: true
         onTriggered: process.running = true
@@ -107,6 +106,7 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
+        cursorShape: Qt.PointingHandCursor
         onEntered: root.scale = bar.onEnteredButtonScale
         onExited: root.scale = bar.onExitedButtonScale
         onClicked: Quickshell.execDetached(["bash", "-lc", "iwgtk"])
