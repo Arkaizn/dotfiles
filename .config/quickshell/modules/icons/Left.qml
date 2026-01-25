@@ -1,4 +1,4 @@
-import Quickshell
+// import Quickshell
 // import Quickshell.Io
 // import Quickshell.Hyprland
 // import Quickshell.Services.SystemTray
@@ -10,43 +10,28 @@ import QtQuick
 import QtQuick.Layouts
 // import QtQuick.Shapes
 
-import "../.."
+import "Left"
 
 RowLayout {
     id: left
     anchors.left: parent.left
     anchors.bottom: parent.bottom
     anchors.top: parent.top
-    anchors.margins: 0
-    spacing: 10
+    anchors.leftMargin: 8
+    spacing: bar.spacing
 
-    // 
+    ArchIcon {}
+    Clock {}
+
     Row {
-        Text {
-            text: "Left 󰣇"
-            font.pixelSize: 24
-            color: "white"
-            MouseArea {
-                anchors.fill: parent
-                onClicked: Quickshell.Io.exec("swaync")
+            Text {
+                text: "Left 󰣇"
+                font.pixelSize: 24
+                color: "white"
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: Quickshell.execDetached(["swaync-client", "-t", "-sw"])
+                }
             }
-        }
     }
-
-    Rectangle {
-    width: 30; height: 30
-    color: "green"
-
-    MouseArea {
-        anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        onClicked: (mouse)=> {
-            if (mouse.button == Qt.RightButton)
-                parent.color = 'blue';
-            else
-                parent.color = 'red';
-        }
-    }
-}
-
 }
