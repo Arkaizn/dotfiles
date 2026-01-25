@@ -23,6 +23,9 @@ RowLayout {
     ArchIcon {}
     Clock {}
     Updater {}
+    Pull {}
+    Push {}
+    Tray {}
 
     Row {
             Text {

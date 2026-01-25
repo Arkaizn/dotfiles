@@ -1,6 +1,4 @@
-// =========================================================
-// IMPORTS
-// =========================================================
+//@ pragma UseQApplication
 
 import Quickshell
 // import Quickshell.Io
@@ -16,11 +14,6 @@ import Quickshell
 
 import "."
 import "modules"
-
-
-// =========================================================
-// ROOT CONFIGURATION
-// =========================================================
 
 ShellRoot {
     Variants {
