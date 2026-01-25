@@ -21,6 +21,10 @@ RowLayout {
     anchors.rightMargin: 8
     spacing: 8
 
+    Headset {}
+    Bluetooth {}
+    Volume {}
+    Network {}
     Battery {}
     Powermenu {}
     
