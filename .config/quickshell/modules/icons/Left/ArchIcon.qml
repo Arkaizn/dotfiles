@@ -6,7 +6,7 @@ import "../../.."
 
 Rectangle {
     id:root
-    implicitWidth: text.implicitWidth + 10
+    implicitWidth: text.implicitWidth + bar.buttonWidth
     implicitHeight: bar.buttonHeight
     anchors.margins: 1
     radius: bar.buttonradius
@@ -30,14 +30,22 @@ Rectangle {
         } 
     }
     
-    Text {
-        id: text
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        text: "󰣇"
-        font.pixelSize: bar.iconSize
-        color: root.hovered ? Colors.color4 : Colors.color6
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 1
+        radius: 7
+        color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
+
+        Text {
+            id: text
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            text: "󰣇"
+            font.pixelSize: bar.iconSize
+            color: root.hovered ? Colors.color4 : Colors.color6
+        }
     }
+    
 
     MouseArea {
         id: mouseArea
@@ -45,7 +53,7 @@ Rectangle {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
         onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = onExitedButtonScale
+        onExited: root.scale = bar.onExitedButtonScale
         onClicked: Quickshell.execDetached(["swaync-client", "-t", "-sw"])
     }
 }

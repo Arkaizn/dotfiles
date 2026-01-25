@@ -16,7 +16,7 @@ RowLayout {
             radius: 8
 
             implicitHeight: bar.buttonHeight
-            implicitWidth: bar.iconSize + 10
+            implicitWidth: bar.iconSize + bar.buttonWidth
 
             property bool hovered: ma.containsMouse
 

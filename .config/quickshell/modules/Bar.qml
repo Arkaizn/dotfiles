@@ -39,13 +39,16 @@ PanelWindow {
 
 
     // properties / settings
-    property int iconSize: 20
+    property int iconSize: 18
     property int pixelSize: 15
     property int spacing: 8
     property double onEnteredButtonScale: 1.1
     property double onExitedButtonScale: 1.0
-    property int buttonHeight: 30
+    property int buttonHeight: 26
+    property int buttonWidth: 15
     property int buttonradius: 7
+    property color colorfg: Qt.rgba(0.12, 0.12, 0.12, 0.30)
+    property color colorfgHovered: Qt.rgba(0.12, 0.12, 0.12, 0.18) 
 
     // visual Bar Border (in the back)
     Rectangle {
