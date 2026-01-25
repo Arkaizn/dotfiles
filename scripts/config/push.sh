@@ -8,6 +8,7 @@ TARGET_DIR="${HOME}/git/dotfiles/.config"
 SKIP_ALWAYS=(
   "hypr/wallpapers/pywallpaper.png"
   "custom/hyprland/custom.conf"
+  "kitty/current-theme.conf"
   "hypr/hyprlock/hyprlock.sh"
   "quickshell/Colors.qml"
 )
