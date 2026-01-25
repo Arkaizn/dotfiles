@@ -70,6 +70,7 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
+        cursorShape: Qt.PointingHandCursor
         onEntered: root.scale = bar.onEnteredButtonScale
         onExited: root.scale = onExitedButtonScale
         onClicked: Quickshell.execDetached(["bash","-lc","pavucontrol"])
