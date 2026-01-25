@@ -26,16 +26,4 @@ RowLayout {
     Pull {}
     Push {}
     Tray {}
-
-    Row {
-            Text {
-                text: "Left 󰣇"
-                font.pixelSize: 24
-                color: "white"
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: Quickshell.execDetached(["swaync-client", "-t", "-sw"])
-                }
-            }
-    }
 }
