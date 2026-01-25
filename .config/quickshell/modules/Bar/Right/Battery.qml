@@ -4,7 +4,6 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell.Services.UPower
 
-
 import "../../.."
 
 Rectangle {
@@ -15,6 +14,14 @@ Rectangle {
     radius: bar.buttonradius
 
     property bool hovered: mouseArea.containsMouse
+    property bool hasBattery: UPower.displayDevice !== null
+
+    // Hide if no battery devices
+    visible: hasBattery
+
+    readonly property var battery: UPower.displayDevice
+    readonly property real percentage: battery?.percentage ?? 0
+    readonly property int batteryLevel: Math.round(percentage * 100)
 
     gradient: Gradient {
         GradientStop {
@@ -26,29 +33,12 @@ Rectangle {
             color: Qt.rgba(1, 1, 1, 0.15)
         }
     }
+
     Behavior on scale {
         NumberAnimation {
             duration: 140
             easing.type: Easing.OutCubic
-        } 
-    }
-
-    // Hide if no battery devices
-    visible: hasBattery
-
-    property bool hasBattery: false
-
-    Component.onCompleted: {
-        // Check once on load
-        checkBattery()
-        // Monitor changes
-        UPower.UPower.devicesChanged.connect(checkBattery)
-    }
-
-    function checkBattery() {
-        hasBattery = UPower.UPower.devices.some(function(device) {
-            return device.isBattery
-        })
+        }
     }
 
     Rectangle {
@@ -56,13 +46,15 @@ Rectangle {
         anchors.margins: 1
         radius: 7
         color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
+
         Text {
             id: text
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            // ... existing anchors/properties ...
-            text: hasBattery ? "󰁹" + Math.round(UPower.UPower.displayDevice.percent) + "%" : ""
-            // No need for Process/Timer—UPower updates reactively
+            
+            color: "white"
+            font.pixelSize: 12
+            text: hasBattery ? "󰁹 " + batteryLevel + "%" : ""
         }
     }
 
@@ -71,7 +63,6 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = onExitedButtonScale
+        onExited: root.scale = bar.onExitedButtonScale
     }
 }
-
