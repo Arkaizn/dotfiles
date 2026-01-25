@@ -16,15 +16,18 @@ import "icons"
 PanelWindow {
     id: bar
 
+    // for multiple Moniors
     required property var modelData
     screen: modelData
 
+    // Top Bar
     anchors {
         top: true
         left: true
         right: true
     }
     
+    // Space between edge of the screen and Bar
     margins.top: 8
     margins.left: 8
     margins.right: 8
@@ -34,8 +37,18 @@ PanelWindow {
     color: "transparent"
     aboveWindows: true
 
+
+    // properties / settings
+    property int iconSize: 15
+    property int pixelSize: 20
+    property int spacing: 8
+    property double onEnteredButtonScale: 1.1
+    property double onExitedButtonScale: 1.0
+    property int buttonHeight: 30
+    property int buttonradius: 7
+
+    // visual Bar Border (in the back)
     Rectangle {
-        id: mainShape
         anchors.fill: parent
         radius: 12
 
@@ -46,12 +59,15 @@ PanelWindow {
         }
     }
 
+    // visual Bar in front
     Rectangle {
         anchors.fill: parent
         anchors.margins: 2
         color: '#cb000000'
         radius: 10
     }
+
+    // Call Bar Buttons
     Left {}
     Middle {}
     Right {}
