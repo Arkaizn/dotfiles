@@ -22,6 +22,7 @@ RowLayout {
 
     ArchIcon {}
     Clock {}
+    Updater {}
 
     Row {
             Text {
