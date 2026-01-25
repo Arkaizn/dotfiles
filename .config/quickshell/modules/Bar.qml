@@ -39,8 +39,8 @@ PanelWindow {
 
 
     // properties / settings
-    property int iconSize: 15
-    property int pixelSize: 20
+    property int iconSize: 20
+    property int pixelSize: 15
     property int spacing: 8
     property double onEnteredButtonScale: 1.1
     property double onExitedButtonScale: 1.0
