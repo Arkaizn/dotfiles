@@ -51,9 +51,8 @@ Rectangle {
             id: text
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            
-            color: "white"
-            font.pixelSize: 12
+            color: root.hovered ? Colors.color4 : Colors.color6
+            font.pixelSize: bar.pixelSize
             text: hasBattery ? "󰁹 " + batteryLevel + "%" : ""
         }
     }
