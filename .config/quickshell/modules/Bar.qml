@@ -11,7 +11,7 @@ import QtQuick
 // import QtQuick.Shapes
 
 import ".."
-import "icons"
+import "Bar"
 
 PanelWindow {
     id: bar
