@@ -4,19 +4,19 @@ import QtQuick
 import "../../.."
 
 Rectangle{
-    id: clock
-    implicitWidth: clockText.implicitWidth + 10
+    id: root
+    implicitWidth: text.implicitWidth + 10
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
     
-    color: Qt.rgba(0.12, 0.12, 0.12,clock.hovered ? 0.30 : 0.18)
+    color: Qt.rgba(0.12, 0.12, 0.12,root.hovered ? 0.30 : 0.18)
 
-    property bool hovered: clockMouseArea.containsMouse
+    property bool hovered: mouseArea.containsMouse
 
     gradient: Gradient {
         GradientStop {
             position: 0.0
-            color: clock.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.25)
+            color: root.hovered ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(1, 1, 1, 0.25)
         }
         GradientStop {
             position: 1.0
@@ -24,11 +24,11 @@ Rectangle{
         }
     }
     MouseArea {
-            id: clockMouseArea
+            id: mouseArea
             anchors.fill: parent
             hoverEnabled: true
-            onEntered: clock.scale = 1.05
-            onExited: clock.scale = onExitedButtonScale
+            onEntered: root.scale = 1.05
+            onExited: root.scale = onExitedButtonScale
         }
     Behavior on scale {
             NumberAnimation {
@@ -43,11 +43,11 @@ Rectangle{
     }
 
     Text {
-        id: clockText
+        id: text
         anchors.centerIn: parent
-        font.pixelSize: bar.iconSize
-        color: clock.hovered ? Colors.color4 : Colors.color6
-        opacity: clock.hovered ? 1.0 : 0.7
+        font.pixelSize: bar.pixelSize
+        color: root.hovered ? Colors.color4 : Colors.color6
+        opacity: root.hovered ? 1.0 : 0.7
         text: Qt.formatDateTime(sysClock.date, "dd.MM.yyyy hh:mm:ss")
     }
 }

@@ -5,18 +5,18 @@ import QtQuick.Controls
 import "../../.."
 
 Rectangle {
-    id:archIcon
-    implicitWidth: archIcontext.implicitWidth + 10
+    id:root
+    implicitWidth: text.implicitWidth + 10
     implicitHeight: bar.buttonHeight
     anchors.margins: 1
     radius: bar.buttonradius
 
-    property bool hovered: archIconMouseArea.containsMouse
+    property bool hovered: mouseArea.containsMouse
 
     gradient: Gradient {
         GradientStop {
             position: 0.0
-            color: archIcon.hovered ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.25)
+            color: root.hovered ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.25)
         }
         GradientStop {
             position: 1.0
@@ -31,21 +31,21 @@ Rectangle {
     }
     
     Text {
-        id: archIcontext
+        id: text
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         text: "󰣇"
-        font.pixelSize: bar.pixelSize
-        color: archIcon.hovered ? Colors.color4 : Colors.color6
+        font.pixelSize: bar.iconSize
+        color: root.hovered ? Colors.color4 : Colors.color6
     }
 
     MouseArea {
-        id: archIconMouseArea
+        id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
-        onEntered: archIcon.scale = bar.onEnteredButtonScale
-        onExited: archIcon.scale = onExitedButtonScale
+        onEntered: root.scale = bar.onEnteredButtonScale
+        onExited: root.scale = onExitedButtonScale
         onClicked: Quickshell.execDetached(["swaync-client", "-t", "-sw"])
     }
 }
