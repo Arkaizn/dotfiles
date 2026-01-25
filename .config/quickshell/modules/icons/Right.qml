@@ -14,10 +14,10 @@ import "../.."
 
 RowLayout {
     id: middle
-    anchors.right: parent.right
+    anchors.right: parent.right 
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    anchors.margins: 16
+    anchors.rightMargin: 8
     spacing: 8
 
     Row {

@@ -17,7 +17,6 @@ RowLayout {
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    anchors.margins: 16
     spacing: 8
 
     Row {
