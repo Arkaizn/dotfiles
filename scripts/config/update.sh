@@ -17,6 +17,7 @@ GLOBAL_EXCEPTIONS=(
   "hypr/wallpapers/pywallpaper.png"
   "hypr/wallpapers/thumbs.db"
   "kitty/current-theme.conf"
+  "quickshell/Colors.qml"
 )
 
 # Base rsync flags
