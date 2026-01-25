@@ -10,7 +10,8 @@ import QtQuick
 import QtQuick.Layouts
 // import QtQuick.Shapes
 
-import "../.."
+
+import "Right"
 
 RowLayout {
     id: middle
@@ -20,15 +21,7 @@ RowLayout {
     anchors.rightMargin: 8
     spacing: 8
 
-    Row {
-        Text {
-            text: "right 󰣇"
-            font.pixelSize: 24
-            color: "white"
-            MouseArea {
-                anchors.fill: parent
-                onClicked: Quickshell.Io.exec("swaync")
-            }
-        }
-    }
+    Battery {}
+    Powermenu {}
+    
 }
