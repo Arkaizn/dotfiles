@@ -41,7 +41,7 @@ Rectangle {
             id: text
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            text: "  " + root.output + "%"
+            text: "  " + root.output + "°"
             font.pixelSize: bar.pixelSize
             color: root.hovered ? Colors.color4 : Colors.color6
         }
@@ -49,7 +49,7 @@ Rectangle {
 
     Process {
         id: process
-        command: ["bash", "-lc", "sensors | grep 'Tctl' | awk '{print $2}' | sed 's/+//' | cut -d. -f1"]
+        command: ["bash", "-lc", "sensors | grep -E '^Package|^Core' | grep -o '+[0-9][0-9]\\.[0-9]°C' | sed 's/+//;s/°C//' | awk '{sum+=$1} END {printf \"%.0f\", sum/NR}'"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {

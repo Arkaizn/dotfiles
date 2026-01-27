@@ -41,7 +41,7 @@ Rectangle {
             id: text
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            text: "󰢮  " + root.output + "%"
+            text: "󰢮  " + root.output + "°"
             font.pixelSize: bar.pixelSize
             color: root.hovered ? Colors.color4 : Colors.color6
         }
