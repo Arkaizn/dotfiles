@@ -30,7 +30,10 @@ essential_packages=(
     python-pywalfox
     swww
     zen-browser-bin
-    nerd-fonts
+    ttf-jetbrains-mono-nerd 
+    ttf-firacode-nerd 
+    ttf-hack-nerd 
+    ttf-nerd-fonts-symbols-mono
     cmake
     meson
     cpio
