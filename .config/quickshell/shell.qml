@@ -1,6 +1,7 @@
 //@ pragma UseQApplication
 
 import Quickshell
+import QtQuick
 // import Quickshell.Io
 // import Quickshell.Hyprland
 // import Quickshell.Services.SystemTray
@@ -14,6 +15,7 @@ import Quickshell
 
 import "."
 import "modules"
+import "services" as QsServices
 
 ShellRoot {
     Variants {

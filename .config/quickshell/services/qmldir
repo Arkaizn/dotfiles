@@ -1,0 +1,4 @@
+module qs.services
+singleton Time Time.qml
+singleton Colors Colors.qml
+

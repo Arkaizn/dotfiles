@@ -1,8 +1,6 @@
 import Quickshell.Hyprland
 import QtQuick
-
-
-import "../../.."
+import qs.services
 
 Row {
     spacing: 6

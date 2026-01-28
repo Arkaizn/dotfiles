@@ -1,8 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Controls
-
-import "../../.."
+import qs.services
 
 Rectangle {
     id:root

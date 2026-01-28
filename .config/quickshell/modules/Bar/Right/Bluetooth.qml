@@ -1,7 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "../../.."
+import qs.services
 
 Rectangle {
     id: root

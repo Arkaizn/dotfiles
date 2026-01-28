@@ -3,8 +3,7 @@ import Quickshell.Io
 import QtQuick
 import QtQuick.Controls
 import Quickshell.Services.UPower
-
-import "../../.."
+import qs.services
 
 Rectangle {
     id: root

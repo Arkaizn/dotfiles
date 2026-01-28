@@ -1,0 +1,1 @@
+/home/arkaizn/.cache/wal/Colors.qml
