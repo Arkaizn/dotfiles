@@ -1,135 +1,219 @@
 #!/bin/bash
-GREEN="\033[0;32m"
-YELLOW="\033[1;33m"
-NC="\033[0m" # No Color
 
-#---------------------------------------------------------------------Define essential packages
-essential_packages=(
+SILENTS=$1
+
+magenta=170
+blue=26
+red=196
+green=34
+
+necessary_packages=(
+    # Dependencies / Build Tools
+    cmake
+    meson
+    pkg-config
+    cpio
+
+    # Essential Utilities
     nano
     curl
     wget
+    rsync
+    pacman-contrib
+    zsh
+
+    # System Info & Monitoring
     fastfetch
+    lm_sensors
+    gdu
+
+    # Wayland/Hyprland Desktop (Core)
     hyprland
     kitty
+    xdg-desktop-portal-hyprland
     hyprlock
+    hypridle
     hyprcursor
     hyprshot
     hyprpicker
-    xdg-desktop-portal-hyprland
-    pacman-contrib
-    pamixer
-    ntfs-3g
-    p7zip
+
+    # Wayland/Hyprland Extras (Launchers, File Mgr, etc.)
     wofi
     thunar
-    waybar
     wlogout
     swaync
-    cliphist
-    pywal-git
-    python-pywalfox
-    swww
-    zen-browser-bin
-    ttf-jetbrains-mono-nerd 
-    ttf-firacode-nerd 
-    ttf-hack-nerd 
-    ttf-nerd-fonts-symbols-mono
-    cmake
-    meson
-    cpio
-    pkg-config
+    nwg-look
+    quickshell
+    wayvnc
+
+    # Audio/Bluetooth
+    pamixer
+    pavucontrol
+    bluez
+    bluez-utils
+    blueman
+
+    # Network/WiFi
     openssh
     iwgtk
     iwd
-    pavucontrol
-    blueman
-    bluez
-    bluez-utils
-    wayvnc
-    python-colorthief
-    gnome-calculator
-    gdu
-    nwg-look
-    hypridle
-    lm_sensors
-    rsync
-    bc
     gvfs-smb
+
+    # Storage/Mounting
+    ntfs-3g
+    p7zip
+
+    # Clipboard/Wallpaper/Theming
+    cliphist
+    swww
+    pywal-git
+    python-pywalfox
+
+    # Browser
+    zen-browser-bin
+    
+    # Fonts
+    ttf-jetbrains-mono-nerd
+    ttf-firacode-nerd
+    ttf-hack-nerd
+    ttf-nerd-fonts-symbols-mono
+
+    # Lazy Vim / Neovim Setup
+    vim
+    nvim
+    fd
+    tree-sitter-cli
+    fzf
+    ripgrep
+    lazygit
+
+    # Miscellaneous Apps
+    gnome-calculator
 )
 
-essential_vm_packages=(
+
+necessary_vm_packages=(
     open-vm-tools
     mesa
     libglvnd
 )
 
-# install yay
-# Check if yay is installed
-if command -v yay &>/dev/null; then
-    echo "yay is already installed. Skipping installation."
-else
-    echo "yay is not installed. Proceeding with installation."
+# Install yay if missing
+install_yay() {
+    gum style --foreground "$magenta" "Installing yay"
+    
+    if ! command -v yay &> /dev/null; then
+        gum style --foreground "$blue" "yay not found. Installing dependencies and building..."
+        
+        if ! sudo pacman -S --needed git base-devel; then
+            gum style --foreground "$red" "Failed to install dependencies. Aborting."
+            return 1
+        fi
+        
+        if ! git clone https://aur.archlinux.org/yay.git && cd yay && makepkg -si && cd .. && rm -rf yay; then
+            gum style --foreground "$red" "Failed to build/install yay. Please install manually."
+            choice=$(gum choose "Abort" "Skip yay")
+            [[ "$choice" == "Skip yay" ]] || exit 1
+        else
+            gum style --foreground "$green" "yay installed successfully."
+        fi
+    else
+        gum style --foreground "$green" "yay already installed."
+    fi
+}
 
-    # Install necessary dependencies
-    sudo pacman -S --needed base-devel
 
-    # Clone, build, and install yay in a subshell
-    (
-        git clone https://aur.archlinux.org/yay.git
-        cd yay || exit 1
-        makepkg -si
-    )
-    rm -rf yay
-fi
-
-# ------------------------------------------------------------------install packages
-# Show packages that will be installed
-echo -e "${YELLOW}The following packages will be installed:${NC}"
-for package in "${essential_packages[@]}"; do
-    echo -e "${GREEN}- $package${NC}"
-done
-
-# Confirm package installation
-echo -e "${YELLOW}Proceed with the installation? (y/n)${NC}"
-read -r -p "Answer: " proceed
-case "$proceed" in
-    ""|[yY][eE][sS]|[yY])
-        echo -e "${YELLOW}Installing essential packages...${NC}"
-        for package in "${essential_packages[@]}"; do
-            echo -e "${YELLOW}Installing $package...${NC}"
-            if yay -S --noconfirm --noanswerclean --noansweredit "$package"; then
-                echo -e "${GREEN}$package installed successfully.${NC}"
+install_packages() {
+    gum style --foreground "$magenta" "Installing necessary packages"
+    aborted=false
+    for package in "${necessary_packages[@]}"; do
+        if [[ $aborted == true ]]; then
+            break
+        fi
+        gum style --foreground "$blue" "Installing $package"
+        if [[ "$SILENTS" == "--silent" ]]; then
+            if ! gum spin --spinner dot --title "Installing $package" -- yay -S --noconfirm --noanswerclean --noansweredit "$package"; then
+                gum style --foreground "$red" "$package failed to install."
+                choice=$(gum choose "Skip and continue" "Abort all installs")
+                if [[ "$choice" == "Abort all installs" ]]; then
+                    gum style --foreground "$red" "Aborting installation."
+                    exit 1
+                fi
             else
-                echo -e "${RED}Failed to install $package. Skipping...${NC}"
-                echo -e "${RED}Press a button to proceed.${NC}"
-                read
-
+                gum style --foreground "$green" "$package installed successfully."
             fi
-        done
-        ;;
-    *)
-        echo -e "${YELLOW}Installation cancelled. Skipping...${NC}"
-        ;;
-esac
+        else
+            if ! yay -S --noconfirm --noanswerclean --noansweredit "$package"; then
+                gum style --foreground "$red" "$package failed to install."
+                choice=$(gum choose "Skip and continue" "Abort all installs")
+                if [[ "$choice" == "Abort all installs" ]]; then
+                    gum style --foreground "$red" "Aborting installation."
+                    exit 1
+                fi
+            else
+                gum style --foreground "$green" "$package installed successfully."
+            fi
+        fi
+    done
+}
 
 # Ask if vmware
-echo -e "${YELLOW}Are you in a Vmware Virtual Machine? (y/n)${NC}"
-read -r -p "Answer: " proceed
-case "$proceed" in
-    ""|[yY][eE][sS]|[yY])
-        echo -e "${YELLOW}Installing essential packages for vmware...${NC}"
-        for vm_package in "${essential_vm_packages[@]}"; do
-            echo -e "${YELLOW}Installing $vm_package...${NC}"
-            if sudo yay -S --noconfirm --noanswerclean --noansweredit "$vm_package"; then
-                echo -e "${GREEN}$vm_package installed successfully.${NC}"
-            else
-                echo -e "${RED}Failed to install $vm_package. Skipping...${NC}"
-                read
-            fi
-        done
-        sudo systemctl enable --now vmtoolsd.service # enable service
-        ;;
-    *)
-        echo -e "${YELLOW}Installation cancelled. Skipping...${NC}"
-        ;;
-esac
+install_vmware_packages() {
+    gum style --foreground "$magenta" "Installing necessary packages for VMware..."
+    aborted=false
+    
+    install_vm_pkg() {
+        vm_package="$1"
+        gum style --foreground "$blue" "Installing $vm_package"
+        
+        if ! sudo yay -S --noconfirm --noanswerclean --noansweredit "$vm_package"; then
+            gum style --foreground "$red" "$vm_package failed to install."
+            choice=$(gum choose "Skip and continue" "Abort VM installs")
+            [[ "$choice" == "Abort VM installs" ]] && exit 1
+        else
+            gum style --foreground "$green" "$vm_package installed successfully."
+        fi
+    }
+    
+    for vm_package in "${necessary_vm_packages[@]}"; do
+        [[ $aborted == true ]] && break
+        install_vm_pkg "$vm_package"
+    done
+    
+    if [[ $aborted != true ]]; then
+        sudo systemctl enable --now vmtoolsd.service
+        gum style --foreground "$green" "VMware tools service enabled."
+    fi
+}
+
+install_zsh() {
+    gum style --foreground "$blue" "Configuring ZSH"
+    if [[ "$SILENTS" == "--silent" ]]; then
+    gum spin --spinner dot --title "Configuring ZSH" -- bash ./scripts/config.sh
+    gum style --foreground "$green" "ZSH successfully configured"
+    else
+    bash ./scripts/config.sh
+    gum style --foreground "$green" "ZSH successfully configured"
+    fi
+}
+
+
+install_yay
+
+if gum confirm "Do you want to install all necessary packages"; then
+    install_packages
+else
+    gum style --foreground "$blue" "Skipping package installation."
+fi
+
+if gum confirm "Do you want to install all necessary packages"; then
+    install_zsh
+else
+    gum style --foreground "$blue" "Skipping package installation."
+fi
+
+if gum confirm "Are you in a Vmware Virtual Machine?"; then
+    install_vmware_packages
+else
+    gum style --foreground "$blue" "Skipping VMware packages."
+fi
