@@ -2,10 +2,11 @@ import Quickshell.Hyprland
 import QtQuick
 import qs.services
 
+
 Row {
     spacing: 6
     Repeater {
-        model: Hyprland.workspaces
+        model: Hyprland.workspaces.values
 
         Rectangle {
             required property HyprlandWorkspace modelData
@@ -20,7 +21,7 @@ Row {
             gradient: Gradient {
                 GradientStop {
                     position: 0.0
-                    color: modelData.active
+                    color: modelData.id === Hyprland.focusedWorkspace?.id
                         ? Qt.rgba(1, 1, 1, 0.45)
                         : Qt.rgba(1, 1, 1, 0.25)
                 }
@@ -34,7 +35,7 @@ Row {
                 anchors.fill: parent
                 anchors.margins: 1
                 radius: 7
-                color: Qt.rgba(0.12, 0.12, 0.12, modelData.active ? 0.30 : 0.18)
+                color: Qt.rgba(0.12, 0.12, 0.12, modelData.id === Hyprland.focusedWorkspace?.id ? 0.30 : 0.18)
 
                 Text {
                     id: text
@@ -42,7 +43,7 @@ Row {
                     anchors.verticalCenter: parent.verticalCenter
                     font.pixelSize: bar.pixelSize
                     text: modelData.name
-                    color: modelData.active
+                    color: modelData.id === Hyprland.focusedWorkspace?.id
                         ? Colors.color4
                         : Colors.color6
                     opacity: modelData.active ? 1.0 : 0.5
