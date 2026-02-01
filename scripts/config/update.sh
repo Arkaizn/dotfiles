@@ -95,7 +95,7 @@ done
 
 # Reload Hyprland (don’t fail script if not running)
 hyprctl reload || true
-pkill qs && hyprctl dispatch exec qs
+pkill qs && hyprctl dispatch exec QS_NO_RELOAD_POPUP=1 qs
 pkill swaync && hyprctl dispatch exec swaync 
 
 echo "Done ✅"
