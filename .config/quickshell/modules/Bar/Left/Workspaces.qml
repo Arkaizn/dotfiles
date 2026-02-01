@@ -44,9 +44,9 @@ Row {
                     font.pixelSize: bar.pixelSize
                     text: modelData.name
                     color: modelData.id === Hyprland.focusedWorkspace?.id
-                        ? Colors.color4
-                        : Colors.color6
-                    opacity: modelData.active ? 1.0 : 0.5
+                    ? Colors.color4 
+                    : Colors.color6
+                    opacity: modelData.id === Hyprland.focusedWorkspace?.id ? 1.0 : 0.5
                 }
             }
 
