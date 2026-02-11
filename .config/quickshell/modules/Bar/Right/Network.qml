@@ -70,6 +70,7 @@ Rectangle {
                     if (iface === "lo" ||
                         iface.startsWith("br") ||
                         iface.startsWith("docker") ||
+                        iface.startsWith("vmnet") ||
                         iface.startsWith("tailscale"))
                         continue
 
