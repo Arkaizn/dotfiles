@@ -74,9 +74,10 @@ necessary_packages=(
     
     # Fonts
     ttf-jetbrains-mono-nerd
-    ttf-firacode-nerd
-    ttf-hack-nerd
     ttf-nerd-fonts-symbols-mono
+    noto-fonts-cjk 
+    noto-fonts-emoji 
+    noto-fonts
 
     # Lazy Vim / Neovim Setup
     vim
