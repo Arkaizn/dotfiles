@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Bluetooth
 import Quickshell.Io
 import QtQuick
 import qs.services
@@ -11,7 +12,15 @@ Rectangle {
     radius: bar.buttonradius
 
     property bool hovered: mouseArea.containsMouse
-    property string icon: "󰂲"
+
+    visible: true
+
+    readonly property string icon: {
+        const adapter = Bluetooth.defaultAdapter
+        if (!adapter || !adapter.enabled) return "󰂲"
+        if (!adapter.enabling)  return "󰂱"
+        return "󰂯"
+    }
 
     gradient: Gradient {
         GradientStop {
@@ -45,35 +54,6 @@ Rectangle {
             font.pixelSize: bar.iconSize
             color: root.hovered ? Colors.color4 : Colors.color6
         }
-    }
-
-    Process {
-        id: process
-        command: ["bash", "-lc", "if ! command -v bluetoothctl >/dev/null 2>&1; then echo noadapter; exit; fi; if ! bluetoothctl show | grep -q '^Controller '; then echo noadapter; exit; fi; if bluetoothctl show | grep -q 'Powered: no'; then echo off; exit; fi; if bluetoothctl devices Connected | grep -q .; then echo connected; else echo idle; fi"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var state = this.text.trim()
-                root.visible = (state !== "noadapter")
-
-                if (state === "connected") {
-                    root.icon = "󰂱"
-                } else if (state === "idle") {
-                    root.icon = "󰂯"
-                } else if (state === "off") {
-                    root.icon = "󰂲"
-                } else {
-                    root.icon = "󰂲"
-                }
-            }
-        }
-    }
-
-    Timer {
-        interval: bar.interval
-        running: true
-        repeat: true
-        onTriggered: process.running = true
     }
 
     MouseArea {
