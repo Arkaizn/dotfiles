@@ -36,15 +36,6 @@ Rectangle{
             }
         }
 
-        // Text {
-        //     id: text
-        //     anchors.horizontalCenter: parent.horizontalCenter
-        //     anchors.verticalCenter: parent.verticalCenter
-        //     text: "󰣇"
-        //     font.pixelSize: bar.iconSize
-        //     color: root.hovered ? Colors.color4 : Colors.color6
-        // }
-
     Rectangle {
         anchors.fill: parent
         anchors.margins: 1
@@ -64,7 +55,7 @@ Rectangle{
                 Text {
                     id: hoursText
                     text: Time.format("hh")
-                    color: Colors.foreground
+                    color: root.hovered ? Colors.color6 : Colors.foreground
                     font.pixelSize: 12
                     font.weight: Font.Bold
                     font.family: "Inter"
@@ -75,7 +66,7 @@ Rectangle{
                 Text {
                     id: colonSeparator
                     text: ":"
-                    color: Colors.color6
+                    color: Colors.color4
                     font.pixelSize: 12
                     font.weight: Font.Bold
                     font.family: "Inter"
@@ -93,7 +84,7 @@ Rectangle{
                 Text { 
                     id: minutesText
                     text: Time.format("mm")
-                    color: Colors.foreground
+                    color: root.hovered ? Colors.color6 : Colors.foreground
                     font.pixelSize: 12
                     font.weight: Font.Bold
                     font.family: "Inter"
@@ -107,7 +98,7 @@ Rectangle{
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Time.format("ddd d")
-                color: Colors.foreground
+                color: root.hovered ? Colors.color6 : Colors.foreground
                 font.pixelSize: 10
                 font.weight: Font.Medium
                 font.family: "Inter"

@@ -57,7 +57,7 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         anchors.margins: 2
-        color: '#cb000000'
+        color: '#eb000000'
         radius: 10
     }
 
