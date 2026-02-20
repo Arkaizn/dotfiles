@@ -17,7 +17,7 @@ GLOBAL_EXCEPTIONS=(
   "hypr/wallpapers/pywallpaper.png"
   "hypr/wallpapers/thumbs.db"
   "kitty/current-theme.conf"
-  "quickshell/Colors.qml"
+  "quickshell/services/Colors.qml"
 )
 
 # Base rsync flags
@@ -38,6 +38,7 @@ copy_all() {
 copy_with_excludes() {
   rsync "${RSYNC_FLAGS[@]}" "${COMMON_EXCLUDES[@]}" \
     --exclude="$1" \
+    --exclude="quickshell/services/Colors.qml" \
     "$SOURCE_DIR/" "$TARGET_DIR/"
 }
 
