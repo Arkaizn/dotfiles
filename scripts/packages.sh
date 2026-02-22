@@ -45,6 +45,7 @@ necessary_packages=(
     nwg-look
     quickshell
     wayvnc
+    kvantum
 
     # Audio/Bluetooth
     pamixer

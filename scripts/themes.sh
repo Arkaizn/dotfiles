@@ -29,8 +29,7 @@ install_icons() {
     gsettings set org.gnome.desktop.interface icon-theme 'Fluent-dark'
 }
 
-
-install_widgets() {
+install_widgets_gtk() {
     curl -L -o 2025-07-31.tar.gz https://github.com/vinceliuice/Colloid-gtk-theme/archive/refs/tags/2025-07-31.tar.gz
     7z x 2025-07-31.tar.gz
     7z x 2025-07-31.tar
@@ -39,6 +38,16 @@ install_widgets() {
     rm -fr 2025-07-31.tar.gz 2025-07-31.tar Colloid-gtk-theme-2025-07-31
     gsettings set org.gnome.desktop.interface gtk-theme 'Colloid-Dark'
     pkill nauilus
+}
+
+install_widgets_qt() {
+    curl -L -o Fluent-kde.tar.gz https://github.com/vinceliuice/Fluent-kde/archive/refs/tags/2021-11-04.tar.gz
+    7z x Fluent-kde.tar.gz
+    7z x Fluent-kde.tar
+    mkdir -p ~/.icons/
+    bash Fluent-kde-2021-11-04/install.sh
+    rm -fr Fluent-kde.tar.gz Fluent-kde.tar Fluent-kde-2021-11-04
+    kvantummanager --set Fluent-roundDark
 }
 
 
@@ -57,8 +66,15 @@ else
 fi
 
 if [[ $SILENT == "--silent" ]]; then
-    gum spin --spinner dot --title "Installing Theme" -- bash -c "$(declare -f install_widgets); install_widgets"
+    gum spin --spinner dot --title "Installing GTK Theme" -- bash -c "$(declare -f install_widgets_gtk); install_widgets_gtk"
     gum style --foreground $green "Widget theme successfully installed"
 else
-    install_widgets
+    install_widgets_gtk
+fi
+
+if [[ $SILENT == "--silent" ]]; then
+    gum spin --spinner dot --title "Installing QT/KDE Theme" -- bash -c "$(declare -f install_widgets_qt); install_widgets_qt"
+    gum style --foreground $green "Widget theme successfully installed"
+else
+    install_widgets_qt
 fi
