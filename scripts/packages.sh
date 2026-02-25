@@ -35,6 +35,7 @@ necessary_packages=(
     hypridle
     hyprcursor
     hyprshot
+    hyprquickframe
     hyprpicker
 
     # Wayland/Hyprland Extras (Launchers, File Mgr, etc.)
@@ -46,6 +47,7 @@ necessary_packages=(
     quickshell
     wayvnc
     kvantum
+    satty
 
     # Audio/Bluetooth
     pamixer
@@ -72,6 +74,7 @@ necessary_packages=(
 
     # Browser
     zen-browser-bin
+    firefox
     
     # Fonts
     ttf-jetbrains-mono-nerd
