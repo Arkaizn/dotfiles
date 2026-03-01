@@ -72,7 +72,7 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
         onEntered: root.scale = bar.onEnteredButtonScale
         onExited: root.scale = onExitedButtonScale
-        onClicked: Quickshell.execDetached(["bash","-lc","kitty --class custom_hover -e bash -c 'sudo ls >/dev/null 2>&1 && sudo pacman -Syu && yay -Quq --aur | xargs -n 1 yay -S --noconfirm'"])
+        onClicked: Quickshell.execDetached(["bash","-lc","kitty --class custom_hover -e bash -c 'sudo ls >/dev/null 2>&1 && sudo pacman -Syu --noconfirm && yay -Quq --aur | xargs -n 1 yay -S --noconfirm'"])
     }
 }
 
