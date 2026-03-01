@@ -37,6 +37,7 @@ necessary_packages=(
     hyprshot
     hyprquickframe
     hyprpicker
+    qt6-5compat
 
     # Wayland/Hyprland Extras (Launchers, File Mgr, etc.)
     wofi
