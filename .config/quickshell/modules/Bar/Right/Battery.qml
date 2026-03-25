@@ -16,28 +16,39 @@ Rectangle {
     property bool hasBattery: UPower.displayDevice !== null
 
     // Hide if no battery devices
-    visible: hasBattery
+    visible: UPower.displayDevice.isLaptopBattery !== false
+    
+    readonly property var battery: UPower.displayDevice //define battery
+    readonly property real percentage: UPower.displayDevice?.percentage ?? 0 // define battery percentage
+    readonly property int batteryLevel: Math.round(percentage * 100) // set battery level
+    readonly property bool isCharging: battery?.state === UPowerDeviceState.Charging || battery?.state === UPowerDeviceState.FullyCharged
 
-    readonly property var battery: UPower.displayDevice
-    readonly property real percentage: battery?.percentage ?? 0
-    readonly property int batteryLevel: Math.round(percentage * 100)
-
-    gradient: Gradient {
-        GradientStop {
-            position: 0.0
-            color: root.hovered ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.25)
-        }
-        GradientStop {
-            position: 1.0
-            color: Qt.rgba(1, 1, 1, 0.15)
-        }
+    gradient: ButtonGradient {
+    hovered: root.hovered
     }
 
     Behavior on scale {
         NumberAnimation {
-            duration: 140
+            duration: bar.bduration
             easing.type: Easing.OutCubic
         }
+    }
+
+    readonly property color batteryColor: {
+        if (isCharging)       return "#4CAF50"  // green
+        if (batteryLevel <= 10) return "#F44336" // red
+        if (batteryLevel <= 20) return "#FFA726" // orange
+        return root.hovered ? Colors.color6 : Colors.foreground
+    }
+
+    readonly property string batteryIcon: {
+        if (isCharging)        return "󰂄 "
+        if (batteryLevel < 10) return "󰁺 "
+        if (batteryLevel < 20) return "󰁻 "
+        if (batteryLevel < 40) return "󰁽 "
+        if (batteryLevel < 60) return "󰁿 "
+        if (batteryLevel < 80) return "󰂁 "
+        return "󰁹 "
     }
 
     Rectangle {
@@ -50,9 +61,9 @@ Rectangle {
             id: text
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            color: root.hovered ? Colors.color6 : Colors.foreground
+            color: root.batteryColor
             font.pixelSize: bar.pixelSize
-            text: hasBattery ? "󰁹 " + batteryLevel + "%" : ""
+            text: hasBattery ? batteryIcon + batteryLevel + "%" : ""
         }
     }
 

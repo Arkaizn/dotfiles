@@ -2,6 +2,7 @@ import Quickshell.Widgets
 import Quickshell.Services.SystemTray
 import QtQuick
 import QtQuick.Layouts
+import qs.services
 
 
 RowLayout {
@@ -20,17 +21,8 @@ RowLayout {
 
             property bool hovered: ma.containsMouse
 
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.0
-                    color: trayButton.hovered
-                        ? Qt.rgba(1, 1, 1, 0.45)
-                        : Qt.rgba(1, 1, 1, 0.25)
-                }
-                GradientStop {
-                    position: 1.0
-                    color: Qt.rgba(1, 1, 1, 0.15)
-                }
+            gradient: ButtonGradient {
+            hovered: root.hovered
             }
 
             Rectangle {
@@ -101,7 +93,7 @@ RowLayout {
 
             Behavior on scale {
                 NumberAnimation {
-                    duration: 140
+                    duration: bar.bduration
                     easing.type: Easing.OutCubic
                 }
             }

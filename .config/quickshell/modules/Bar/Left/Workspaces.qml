@@ -18,17 +18,8 @@ Row {
 
             property bool hovered: workspaceMouse.containsMouse
 
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.0
-                    color: modelData.id === Hyprland.focusedWorkspace?.id
-                        ? Qt.rgba(1, 1, 1, 0.45)
-                        : Qt.rgba(1, 1, 1, 0.25)
-                }
-                GradientStop {
-                    position: 1.0
-                    color: Qt.rgba(1, 1, 1, 0.15)
-                }
+            gradient: ButtonGradient {
+            hovered: root.hovered
             }
 
             Rectangle {
@@ -63,7 +54,7 @@ Row {
 
             Behavior on scale {
                 NumberAnimation {
-                    duration: 140
+                    duration: bar.bduration
                     easing.type: Easing.OutCubic
                 }
             }

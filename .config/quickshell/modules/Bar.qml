@@ -40,6 +40,7 @@ PanelWindow {
     property color colorfg: Qt.rgba(0.12, 0.12, 0.12, 0.30)
     property color colorfgHovered: Qt.rgba(0.12, 0.12, 0.12, 0.18)
     property int interval: 500
+    property int bDuration: 140
 
     // visual Bar Border (in the back)
     Rectangle {
@@ -60,6 +61,12 @@ PanelWindow {
         color: '#eb000000'
         radius: 10
     }
+
+    // MusicPopOut {
+    //         id: musicPopOut
+    //         popOutHeight: 320
+    //         // modelData: root.modelData
+    //     }
 
     // Call Bar Buttons
     Left {}

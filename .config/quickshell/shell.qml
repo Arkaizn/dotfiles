@@ -18,8 +18,9 @@ import "modules"
 import "services" as QsServices
 
 ShellRoot {
+    id: root
     Variants {
         model: Quickshell.screens
         Bar {}
-        }
+    }
 }

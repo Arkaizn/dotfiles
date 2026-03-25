@@ -12,19 +12,12 @@ Rectangle {
 
     property bool hovered: mouseArea.containsMouse
 
-    gradient: Gradient {
-        GradientStop {
-            position: 0.0
-            color: root.hovered ? Qt.rgba(1, 1, 1, 0.45) : Qt.rgba(1, 1, 1, 0.25)
-        }
-        GradientStop {
-            position: 1.0
-            color: Qt.rgba(1, 1, 1, 0.15)
-        }
+    gradient: ButtonGradient {
+    hovered: root.hovered
     }
     Behavior on scale {
         NumberAnimation {
-            duration: 140
+            duration: bar.bduration
             easing.type: Easing.OutCubic
         } 
     }
@@ -53,7 +46,13 @@ Rectangle {
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.PointingHandCursor
         onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = bar.onExitedButtonScale
-        onClicked: Quickshell.execDetached(["swaync-client", "-t", "-sw"])
+        // onExited: root.scale = bar.onExitedButtonScale
+        onClicked: {
+            FoldOutManager.toggle("powermenu", root.screenName, true);
+        }
+        onExited: {
+            FoldOutManager.setTriggerHovered("powermenu", root.screenName, false);
+            powerMenu.startTimer();
+        }
     }
 }
