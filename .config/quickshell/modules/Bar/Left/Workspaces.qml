@@ -18,8 +18,17 @@ Row {
 
             property bool hovered: workspaceMouse.containsMouse
 
-            gradient: ButtonGradient {
-            hovered: root.hovered
+            gradient: Gradient {
+                GradientStop {
+                    position: 0.0
+                    color: modelData.id === Hyprland.focusedWorkspace?.id
+                        ? Qt.rgba(1, 1, 1, 0.45)
+                        : Qt.rgba(1, 1, 1, 0.25)
+                }
+                GradientStop {
+                    position: 1.0
+                    color: Qt.rgba(1, 1, 1, 0.15)
+                }
             }
 
             Rectangle {
