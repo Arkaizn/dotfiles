@@ -11,6 +11,8 @@ Rectangle {
     anchors.margins: 1
     radius: bar.buttonradius
 
+    visible: root.output !== 0
+
     property bool hovered: mouseArea.containsMouse
     property int output: 0
 
