@@ -15,12 +15,15 @@ Rectangle {
         hovered: trayButton.hovered
     }
 
+    visible: repeater.count > 0
+
     Rectangle {
         anchors.fill: parent
         anchors.margins: 1
         radius: 7
         color: Qt.rgba(0.12, 0.12, 0.12,
             trayButton.hovered ? 0.30 : 0.18)
+        
     }
 
     HoverHandler {
@@ -33,11 +36,13 @@ Rectangle {
         spacing: 0
 
         Repeater {
+            id:repeater
             model: SystemTray.items
             delegate: Item {
                 id: trayButton
                 implicitHeight: bar.iconSize
                 implicitWidth: bar.iconSize + bar.buttonWidth
+                
 
                 property bool hovered: ma.containsMouse
 
@@ -55,7 +60,7 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-                    onEntered: trayButton.scale = 1.08
+                    onEntered: trayButton.scale = 1.3
                     onExited: trayButton.scale = 1.0
 
                     onClicked: function(mouse) {
