@@ -5,8 +5,8 @@ WALLPAPER="${HOME}/.config/hypr/wallpapers/pywallpaper.png"
 HYPRLOCK_COLORS_CACHE="${HOME}/.cache/wal/hyprlock_colors"
 
 # Set wallpaper
-pgrep -x swww-daemon >/dev/null 2>&1 || swww-daemon >/dev/null 2>&1 &
-swww img "$WALLPAPER" --transition-type wipe --transition-angle 210 --transition-fps 60 --transition-duration .5
+pgrep -x awww-daemon >/dev/null 2>&1 || awww-daemon >/dev/null 2>&1 &
+awww img "$WALLPAPER" --transition-type wipe --transition-angle 210 --transition-fps 60 --transition-duration .5
 
 # Remove cache
 rm -fr ~/.cache/wal/schemes
