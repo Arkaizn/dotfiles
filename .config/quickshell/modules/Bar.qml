@@ -41,6 +41,7 @@ PanelWindow {
     property color colorfgHovered: Qt.rgba(0.12, 0.12, 0.12, 0.18)
     property int interval: 500
     property int bDuration: 140
+    property color hoveredColor: root.hovered ? Colors.color6 : Colors.foreground
 
     // visual Bar Border (in the back)
     Rectangle {

@@ -8,7 +8,7 @@ import qs.components
 
 Rectangle {
     id: root
-    implicitWidth: text.implicitWidth + bar.buttonWidth
+    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
     implicitHeight: bar.buttonHeight
     anchors.margins: 1
     radius: bar.buttonradius
@@ -52,21 +52,30 @@ Rectangle {
         return "󰁹 "
     }
 
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: 1
-        radius: 7
-        color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
 
-        Text {
-            id: text
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            color: root.batteryColor
-            font.pixelSize: bar.pixelSize
-            text: hasBattery ? batteryIcon + batteryLevel + "%" : ""
-        }
+    ButtonBackground {
+        id: buttonBackground
+        hovered: root.hovered
+        color: root.batteryColor
+        iconText: hasBattery ? batteryIcon + batteryLevel + "%" : ""
+        iconSize: bar.pixelSize
     }
+
+    // Rectangle {
+    //     anchors.fill: parent
+    //     anchors.margins: 1
+    //     radius: 7
+    //     color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
+
+    //     Text {
+    //         id: text
+    //         anchors.horizontalCenter: parent.horizontalCenter
+    //         anchors.verticalCenter: parent.verticalCenter
+    //         color: root.batteryColor
+    //         font.pixelSize: bar.pixelSize
+    //         text: hasBattery ? batteryIcon + batteryLevel + "%" : ""
+    //     }
+    // }
 
     MouseArea {
         id: mouseArea

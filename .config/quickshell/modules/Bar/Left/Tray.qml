@@ -41,7 +41,7 @@ Rectangle {
             id:repeater
             model: SystemTray.items
             delegate: Item {
-                id: trayButton
+                id: delegateItem
                 implicitHeight: bar.iconSize
                 implicitWidth: bar.iconSize + bar.buttonWidth
                 
@@ -62,8 +62,8 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-                    onEntered: trayButton.scale = 1.3
-                    onExited: trayButton.scale = 1.0
+                    onEntered: delegateItem.scale = 1.3
+                    onExited: delegateItem.scale = 1.0
 
                     onClicked: function(mouse) {
                         if (mouse.button === Qt.RightButton) {
