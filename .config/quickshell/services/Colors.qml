@@ -1,1 +1,1 @@
-/home/arkaizn/.cache/wal/Colors.qml
+/home/silas/.cache/wal/Colors.qml

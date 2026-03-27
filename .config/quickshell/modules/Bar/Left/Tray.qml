@@ -3,6 +3,7 @@ import Quickshell.Services.SystemTray
 import QtQuick
 import QtQuick.Layouts
 import qs.services
+import qs.components
 
 Rectangle {
     id: trayButton
@@ -25,6 +26,7 @@ Rectangle {
             trayButton.hovered ? 0.30 : 0.18)
         
     }
+   
 
     HoverHandler {
         id: trayHoverHandler

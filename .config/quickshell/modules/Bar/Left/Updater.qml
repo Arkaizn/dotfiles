@@ -3,10 +3,12 @@ import Quickshell.Io
 import QtQuick
 import QtQuick.Controls
 import qs.services
+import qs.components
+
 
 Rectangle {
     id:root
-    implicitWidth: text.implicitWidth + bar.buttonWidth
+    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
     implicitHeight: bar.buttonHeight
     anchors.margins: 1
     radius: bar.buttonradius
@@ -27,19 +29,11 @@ Rectangle {
         } 
     }
     
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: 1
-        radius: 7
-        color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
-        Text {
-            id: text
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            text: "󰅢  " + root.output
-            font.pixelSize: bar.pixelSize
-            color: root.hovered ? Colors.color6 : Colors.foreground
-        }
+    ButtonBackground {
+        id: buttonBackground
+        hovered: root.hovered
+        iconText: "󰅢  " + root.output
+        iconSize: bar.pixelSize
     }
 
     Process {

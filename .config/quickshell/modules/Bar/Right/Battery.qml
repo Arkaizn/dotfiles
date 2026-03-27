@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell.Services.UPower
 import qs.services
+import qs.components
 
 Rectangle {
     id: root

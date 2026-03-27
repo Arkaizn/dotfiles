@@ -1,6 +1,7 @@
 import Quickshell
 import QtQuick 
 import qs.services
+import qs.components
 
 Rectangle{
     id: root

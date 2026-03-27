@@ -1,7 +1,7 @@
 import Quickshell.Hyprland
 import QtQuick
 import qs.services
-
+import qs.components
 
 Row {
     spacing: 6

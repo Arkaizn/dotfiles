@@ -1,0 +1,3 @@
+module qs.components
+ButtonBackground ButtonBackground.qml
+ButtonGradient ButtonGradient.qml
