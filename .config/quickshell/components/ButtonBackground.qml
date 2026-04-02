@@ -8,7 +8,7 @@ Item {
     property bool hovered: false
     property string iconText: ""
     property int iconSize: 16
-    property color color: bar.hoveredColor
+    property color color: root.hovered ? Colors.color6 : Colors.foreground
 
     // Item doesnt have implicit size so we use the text implicitwidth
     implicitWidth: text.implicitWidth
