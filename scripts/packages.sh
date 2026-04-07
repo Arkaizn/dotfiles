@@ -35,7 +35,8 @@ necessary_packages=(
     hypridle
     hyprcursor
     hyprshot
-    hyprquickframe
+    hyprquickframe-git
+    quicksnip-git
     hyprpicker
     qt6-5compat
 
