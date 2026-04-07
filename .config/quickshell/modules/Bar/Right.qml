@@ -1,4 +1,3 @@
-import Quickshell
 import QtQuick
 import QtQuick.Layouts
 
@@ -10,7 +9,7 @@ RowLayout {
     anchors.top: parent.top
     anchors.bottom: parent.bottom
     anchors.rightMargin: bar.barMarginRight + 8
-    spacing: 8
+    spacing: bar.spacing
 
     Headset {}
     Bluetooth {}

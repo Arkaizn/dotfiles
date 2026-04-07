@@ -14,7 +14,13 @@ RowLayout {
     // GPUusage {}
     // CPUusage {}
     // Memusage {}
-    Clock {}
+    Music {
+        id:music
+        
+    }
+    Clock {
+        id: clock
+    }
     // GPUtemp {}
     // CPUtemp {}
 }

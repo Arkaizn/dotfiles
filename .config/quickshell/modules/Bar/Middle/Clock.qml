@@ -4,7 +4,7 @@ import qs.services
 import qs.components
 
 Rectangle{
-    id: root
+    anchors.horizontalCenter: parent.horizontalCenter
     implicitWidth: bar.buttonWidth + clockRow.implicitWidth
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
@@ -12,15 +12,15 @@ Rectangle{
     property bool hovered: mouseArea.containsMouse
 
     gradient: ButtonGradient {
-        hovered: root.hovered
+        hovered: clock.hovered
     }
     
     MouseArea {
             id: mouseArea
             anchors.fill: parent
             hoverEnabled: true
-            onEntered: root.scale = onEnteredButtonScale
-            onExited: root.scale = onExitedButtonScale
+            onEntered: clock.scale = onEnteredButtonScale
+            onExited: clock.scale = onExitedButtonScale
         }
 
     Behavior on scale {
@@ -41,8 +41,6 @@ Rectangle{
         anchors.verticalCenter: parent.verticalCenter
         
         Text {
-            anchors.horizontalCenter: root.horizontalCenter
-            anchors.verticalCenter: root.verticalCenter
             id: hoursText
             text: Time.format("hh")
             color: Colors.foreground
