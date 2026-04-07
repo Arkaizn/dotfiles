@@ -38,7 +38,7 @@ PanelWindow {
     property int bDuration: 140
 
     // Text / Font
-    property int pixelSize: 12
+    property int pixelSize: 13
     property var fontFamily: "Inter"
 
 
