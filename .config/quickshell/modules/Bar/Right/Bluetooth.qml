@@ -29,7 +29,7 @@ Rectangle {
     
     Behavior on scale {
         NumberAnimation {
-            duration: bar.bduration
+            duration: bar.bDuration
             easing.type: Easing.OutCubic
         } 
     }
