@@ -15,12 +15,15 @@ Item {
     implicitHeight: text.implicitHeight
 
     anchors.fill: parent
-    anchors.margins: 1
+    anchors.topMargin: 2
+    anchors.leftMargin: 1
+    anchors.rightMargin: 1
+
 
     Rectangle {
         anchors.fill: parent
         radius: 7
-        color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
+        color: colorfg
 
         Text {
             id: text
