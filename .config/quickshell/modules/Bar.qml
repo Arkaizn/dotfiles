@@ -39,7 +39,7 @@ PanelWindow {
     property int barMarginTop: 13
     property int barMarginLeft: 10
     property int barMarginRight: 10
-    property double onEnteredTextScale: 1.3
+    property double onEnteredTextScale: 1.2
     property double onExitedTextScale: 1.0
     property double onEnteredButtonScale: 1.1
     property double onExitedButtonScale: 1.0

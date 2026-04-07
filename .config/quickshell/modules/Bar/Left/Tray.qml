@@ -43,7 +43,7 @@ Rectangle {
             delegate: Item {
                 id: delegateItem
                 implicitHeight: bar.iconSize
-                implicitWidth: bar.iconSize + bar.buttonWidth
+                implicitWidth: bar.iconSize + 10
                 
 
                 property bool hovered: ma.containsMouse

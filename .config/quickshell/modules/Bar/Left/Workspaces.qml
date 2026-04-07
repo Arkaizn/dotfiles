@@ -5,7 +5,7 @@ import qs.components
 
 Rectangle {
     id:root
-    implicitWidth: row.implicitWidth  
+    implicitWidth: row.implicitWidth
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
 
@@ -18,6 +18,9 @@ Rectangle {
 
     Row {
         id: row
+        spacing: 10
+        leftPadding: 10
+        rightPadding: 10
 
         Repeater {
             model: Hyprland.workspaces.values
@@ -28,7 +31,9 @@ Rectangle {
                 color: Qt.rgba(0, 0, 0, 0)
 
                 implicitHeight: bar.buttonHeight
-                implicitWidth: text.implicitWidth + bar.buttonWidth
+                implicitWidth: text.implicitWidth
+
+                
 
                 property bool hovered: workspaceMouse.containsMouse
 
