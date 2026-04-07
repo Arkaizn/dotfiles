@@ -23,7 +23,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: 7
-        color: colorfg
+        color: bar.buttonColorIfHovered
+        
 
         Text {
             id: text
