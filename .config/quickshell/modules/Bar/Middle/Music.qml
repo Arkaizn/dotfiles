@@ -9,7 +9,7 @@ import qs.components
 
 
 Rectangle {
-    implicitWidth: albumArt.width + buttonBackground.implicitWidth + bar.buttonWidth
+    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth + visualizer.width + albumArt.width
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
     anchors.verticalCenter: parent.verticalCenter
@@ -18,6 +18,8 @@ Rectangle {
 
     property var player: Mpris.players.values.length > 0 ? Mpris.players.values[0] : null
     property bool hovered: mouseArea.containsMouse
+    property int pulse: 0
+    property var barHeights: [3, 3, 3]
 
     visible: music.player !== null && music.player.trackArtUrl !== ""
 
@@ -33,37 +35,87 @@ Rectangle {
     
     ButtonBackground {
         id: buttonBackground
-        hovered: music.hovered
-        iconText: player
-        iconSize: bar.iconSize
+        iconText: ""
     }
 
-    Image {
-        id: albumArt
+    Row {
+        id: layoutRow
         anchors.centerIn: parent
-        width: parent.height * 0.75
-        height: width
-        source: music.player ? music.player.trackArtUrl : ""
-        fillMode: Image.PreserveAspectCrop
+        spacing: 8
 
-        property bool rounded: true
-        property bool adapt: true
+        Image {
+            id: albumArt
+            anchors.centerIn: music
+            width: music.height * 0.75
+            height: width
+            source: music.player ? music.player.trackArtUrl : ""
+            fillMode: Image.PreserveAspectCrop
 
-        layer.enabled: rounded
-        layer.effect: OpacityMask {
-            maskSource: Item {
-                width: albumArt.width
-                height: albumArt.height
+            property bool rounded: true
+            property bool adapt: true
+
+            layer.enabled: rounded
+            layer.effect: OpacityMask {
+                maskSource: Item {
+                    width: albumArt.width
+                    height: albumArt.height
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: albumArt.adapt ? albumArt.width : Math.min(albumArt.width, albumArt.height)
+                        height: albumArt.adapt ? albumArt.height : width
+                        radius: 8
+                    }
+                }
+            }
+        }
+
+        Row {
+            id: visualizer
+            spacing: 3
+            anchors.verticalCenter: parent.verticalCenter
+            height: 20
+
+            property bool isPlaying: music.player && music.player.playbackStatus === Mpris.Playing
+
+            Repeater {
+                model: 3
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: albumArt.adapt ? albumArt.width : Math.min(albumArt.width, albumArt.height)
-                    height: albumArt.adapt ? albumArt.height : width
-                    radius: 8
+                    width: 3
+                    anchors.verticalCenter: parent.verticalCenter  // parent is the Row
+                    height: visualizer.isPlaying ? (music.barHeights[index] ?? 3) : 3
+                    radius: width / 2
+                    color: "white"
+                    opacity: player.isPlaying ? 1.0 : 0.6
+
+                    Behavior on height {
+                        NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                    }
+                    Behavior on opacity {
+                        NumberAnimation { duration: 200 }
+                    }
                 }
             }
         }
     }
+
+    Timer {
+    interval: 120
+    running: player.isPlaying === true
+    repeat: true
+    onTriggered: {
+        music.barHeights = [
+            Math.random() * 13 + 4,
+            Math.random() * 13 + 4,
+            Math.random() * 13 + 4
+        ]
+    }
     
+        onRunningChanged: {
+            if (!running) {
+                music.barHeights = [3, 3, 3]  // reset to dots when stopped
+            }
+        }
+    }
     
     MouseArea {
         id: mouseArea
