@@ -32,6 +32,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: root.iconText
             font.pixelSize: root.iconSize
+            font.family: bar.fontFamily
             color: root.color
         }
     }

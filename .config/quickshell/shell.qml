@@ -23,4 +23,5 @@ ShellRoot {
         model: Quickshell.screens
         Bar {}
     }
+    
 }
