@@ -9,7 +9,7 @@ RowLayout {
     anchors.right: parent.right 
     anchors.top: parent.top
     anchors.bottom: parent.bottom
-    anchors.rightMargin: 8
+    anchors.rightMargin: bar.barMarginRight + 8
     spacing: 8
 
     Headset {}

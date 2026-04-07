@@ -21,6 +21,10 @@ Rectangle {
         hovered: root.hovered
     }
 
+    ButtonBackground {
+        id: buttonBackground
+    }
+
     Behavior on scale {
         NumberAnimation {
             duration: bar.bDuration
@@ -32,14 +36,14 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 1
         radius: 7
-        color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
+        color: "transparent"
 
         Text {
             id: text
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             font.pixelSize: bar.pixelSize
-            color: root.hovered ? Colors.color6 : Colors.foreground
+            color: Colors.foreground
 
             text: {
                 if (root.sink?.audio?.muted) return "󰝟";

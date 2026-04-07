@@ -1,29 +1,29 @@
+// qs/services/ButtonBackground.qml
 import QtQuick
 import qs.services
 
 Item {
     id: root
 
-    // Properties to pass in from the parent, seting here just that tehy exist
+    // Properties to pass in from the parent, setting here just that they exist
     property bool hovered: false
     property string iconText: ""
     property int iconSize: 16
-    property color color: root.hovered ? Colors.color6 : Colors.foreground
+    property color color: bar.textColorIfHovered
 
     // Item doesnt have implicit size so we use the text implicitwidth
     implicitWidth: text.implicitWidth
     implicitHeight: text.implicitHeight
 
     anchors.fill: parent
-    anchors.topMargin: 2
-    anchors.leftMargin: 1
-    anchors.rightMargin: 1
+    anchors.margins: 0.8
+    anchors.topMargin: 1.5
 
 
     Rectangle {
         anchors.fill: parent
-        radius: 7
-        color: bar.buttonColorIfHovered
+        radius: bar.radius
+        color: Qt.rgba(0, 0, 0, 0.18)
         
 
         Text {

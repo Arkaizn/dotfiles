@@ -5,11 +5,9 @@ import qs.components
 
 Rectangle{
     id: root
-    implicitWidth: clockRow.implicitWidth + bar.buttonWidth
+    implicitWidth: bar.buttonWidth + clockRow.implicitWidth
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
-    
-    // color: Qt.rgba(0.12, 0.12, 0.12,root.hovered ? 0.30 : 0.18)
 
     property bool hovered: mouseArea.containsMouse
 
@@ -21,9 +19,10 @@ Rectangle{
             id: mouseArea
             anchors.fill: parent
             hoverEnabled: true
-            onEntered: root.scale = 1.05
+            onEntered: root.scale = onEnteredButtonScale
             onExited: root.scale = onExitedButtonScale
         }
+
     Behavior on scale {
             NumberAnimation {
                 duration: bar.bDuration
@@ -31,74 +30,62 @@ Rectangle{
             }
         }
 
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: 1
-        radius: 7
-        color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
-        Row {
-            id: clockRow
-            anchors.centerIn: parent
-            spacing: 8
+    ButtonBackground {
+    id: buttonBackground
+    }
+
+    Row {
+        id: clockRow
+        anchors.centerIn: parent 
+        spacing: 1
+        anchors.verticalCenter: parent.verticalCenter
+        
+        Text {
+            anchors.horizontalCenter: root.horizontalCenter
+            anchors.verticalCenter: root.verticalCenter
+            id: hoursText
+            text: Time.format("hh")
+            color: Colors.foreground
+            font.pixelSize: 12
+            font.weight: Font.Bold
+            font.family: "Inter"
+            font.letterSpacing: 0.3
+        }
+
+        Text {
+            id: colonSeparator
+            text: ":"
+            color: Colors.color4
+            font.pixelSize: 12
+            font.weight: Font.Bold
+            font.family: "Inter"
             
-            // Compact time display
-            Row {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 1
+            // Subtle pulse animation
+            SequentialAnimation on opacity {
+                running: true
+                loops: Animation.Infinite
                 
-                // Hours
-                Text {
-                    id: hoursText
-                    text: Time.format("hh")
-                    color: root.hovered ? Colors.color6 : Colors.foreground
-                    font.pixelSize: 12
-                    font.weight: Font.Bold
-                    font.family: "Inter"
-                    font.letterSpacing: 0.3
-                }
-                
-                // Animated colon separator
-                Text {
-                    id: colonSeparator
-                    text: ":"
-                    color: Colors.color4
-                    font.pixelSize: 12
-                    font.weight: Font.Bold
-                    font.family: "Inter"
-                    
-                    // Subtle pulse animation
-                    SequentialAnimation on opacity {
-                        running: true
-                        loops: Animation.Infinite
-                        
-                        NumberAnimation { to: 0.4; duration: 800; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
-                    }
-                }
-                // minutes
-                Text { 
-                    id: minutesText
-                    text: Time.format("mm")
-                    color: root.hovered ? Colors.color6 : Colors.foreground
-                    font.pixelSize: 12
-                    font.weight: Font.Bold
-                    font.family: "Inter"
-                    font.letterSpacing: 0.3
-                }
-                
+                NumberAnimation { to: 0.4; duration: 800; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
             }
-            
-            
-            // Compact date
-            Text {
+        }
+
+        Text { 
+            id: minutesText
+            text: Time.format("mm")
+            color: Colors.foreground
+            font.pixelSize: 12
+            font.weight: Font.Bold
+            font.family: "Inter"
+            font.letterSpacing: 0.3
+        }
+    Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Time.format("ddd d")
-                color: root.hovered ? Colors.color6 : Colors.foreground
+                color: Colors.foreground
                 font.pixelSize: 10
                 font.weight: Font.Medium
                 font.family: "Inter"
             }
-            
-        }
     }
 }

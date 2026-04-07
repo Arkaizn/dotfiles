@@ -8,7 +8,6 @@ Rectangle {
     id:root
     implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
     implicitHeight: bar.buttonHeight
-    anchors.margins: 1
     radius: bar.buttonradius
 
     property bool hovered: mouseArea.containsMouse

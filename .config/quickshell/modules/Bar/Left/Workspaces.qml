@@ -3,68 +3,70 @@ import QtQuick
 import qs.services
 import qs.components
 
-Row {
-    spacing: 6
-    Repeater {
-        model: Hyprland.workspaces.values
+Rectangle {
+    id:root
+    implicitWidth: row.implicitWidth
+    implicitHeight: bar.buttonHeight
+    radius: bar.buttonradius
 
-        Rectangle {
-            required property HyprlandWorkspace modelData
 
-            radius: 8
-            
-            implicitHeight: bar.buttonHeight
-            implicitWidth: text.implicitWidth + bar.iconSize
+    gradient: ButtonGradient {
+    }
+    ButtonBackground {
+        id: buttonBackground
+    }
 
-            property bool hovered: workspaceMouse.containsMouse
+    Row {
+        id: row
+        spacing: 6
 
-            gradient: Gradient {
-                GradientStop {
-                    position: 0.0
-                    color: modelData.id === Hyprland.focusedWorkspace?.id
-                        ? Qt.rgba(1, 1, 1, 0.45)
-                        : Qt.rgba(1, 1, 1, 0.25)
-                }
-                GradientStop {
-                    position: 1.0
-                    color: Qt.rgba(1, 1, 1, 0.15)
-                }
-            }
+        Repeater {
+            model: Hyprland.workspaces.values
 
             Rectangle {
-                anchors.fill: parent
-                anchors.margins: 1
-                radius: 7
-                color: Qt.rgba(0.12, 0.12, 0.12, modelData.id === Hyprland.focusedWorkspace?.id ? 0.30 : 0.18)
+                required property HyprlandWorkspace modelData
 
-                Text {
-                    id: text
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.verticalCenter: parent.verticalCenter
-                    font.pixelSize: bar.pixelSize
-                    text: modelData.name
-                    color: modelData.id === Hyprland.focusedWorkspace?.id
-                    ? Colors.color4
-                    : Colors.foreground
-                    opacity: modelData.id === Hyprland.focusedWorkspace?.id ? 1.0 : 0.5
+                color: Qt.rgba(0, 0, 0, 0)
+                radius: 8
+
+                implicitHeight: bar.buttonHeight
+                implicitWidth: text.implicitWidth + 15
+
+                property bool hovered: workspaceMouse.containsMouse
+
+                Rectangle { // currently active workspace
+                    anchors.fill: parent
+                    color: Qt.rgba(0, 0, 0, modelData.id === Hyprland.focusedWorkspace?.id ? 0 : 0)
+                    scale: modelData.id === Hyprland.focusedWorkspace?.id ? 1.3 : 1
+
+
+                    Text {
+                        id: text
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.pixelSize: bar.pixelSize
+                        text: modelData.name
+                        color: Colors.foreground
+                        opacity: modelData.id === Hyprland.focusedWorkspace?.id ? 1.0 : 0.5
+                    }
                 }
-            }
 
-            MouseArea {
-                id: workspaceMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: modelData.activate()
+                MouseArea {
+                    id: workspaceMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: modelData.activate()
 
-                onEntered: parent.scale = 1.08
-                onExited: parent.scale = 1.0
-            }
+                    onEntered: modelData.id === Hyprland.focusedWorkspace?.id ? 1 : parent.scale = bar.onEnteredTextScale
+                    onExited: parent.scale = bar.onExitedTextScale
+                }
 
-            Behavior on scale {
-                NumberAnimation {
+                Behavior on scale {
+                    NumberAnimation {
                         duration: bar.bDuration
-                    easing.type: Easing.OutCubic
+                        easing.type: Easing.OutCubic
+                    }
                 }
             }
         }

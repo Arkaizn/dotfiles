@@ -10,7 +10,8 @@ Rectangle {
     radius: 8
     implicitHeight: bar.buttonHeight
     implicitWidth: trayRow.width + 8
-    property bool hovered: trayHoverHandler.containsMouse
+
+    property bool hovered: false
 
     gradient: ButtonGradient {
         hovered: trayButton.hovered
@@ -24,7 +25,6 @@ Rectangle {
         radius: 7
         color: Qt.rgba(0.12, 0.12, 0.12,
             trayButton.hovered ? 0.30 : 0.18)
-        
     }
    
 
@@ -62,8 +62,8 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-                    onEntered: delegateItem.scale = 1.3
-                    onExited: delegateItem.scale = 1.0
+                    onEntered: delegateItem.scale = bar.onEnteredTextScale
+                    onExited: delegateItem.scale = bar.onExitedTextScale
 
                     onClicked: function(mouse) {
                         if (mouse.button === Qt.RightButton) {

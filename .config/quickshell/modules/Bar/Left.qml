@@ -8,7 +8,7 @@ RowLayout {
     anchors.left: parent.left
     anchors.bottom: parent.bottom
     anchors.top: parent.top
-    anchors.leftMargin: 8
+    anchors.leftMargin: bar.barMarginLeft + 8
     spacing: bar.spacing
 
     ArchIcon {}

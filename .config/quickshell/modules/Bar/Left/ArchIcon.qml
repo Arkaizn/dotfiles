@@ -1,5 +1,6 @@
 import Quickshell
 import QtQuick
+import QtQuick.Shapes
 import QtQuick.Controls
 import qs.services
 import qs.components
@@ -8,7 +9,6 @@ Rectangle {
     id:root
     implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
     implicitHeight: bar.buttonHeight
-    anchors.margins: 1
     radius: bar.buttonradius
 
     property bool hovered: mouseArea.containsMouse
@@ -39,12 +39,12 @@ Rectangle {
         onEntered: root.scale = bar.onEnteredButtonScale
         // onExited: root.scale = bar.onExitedButtonScale
         onClicked: {
-            FoldOutManager.toggle("powermenu", root.screenName, true);
+            // FoldOutManager.toggle("powermenu", root.screenName, true);
         }
         onExited: {
             root.scale = bar.onExitedButtonScale
-            FoldOutManager.setTriggerHovered("powermenu", root.screenName, false);
-            powerMenu.startTimer();
+            // FoldOutManager.setTriggerHovered("powermenu", root.screenName, false);
+            // powerMenu.startTimer();
         }
     }
 }
