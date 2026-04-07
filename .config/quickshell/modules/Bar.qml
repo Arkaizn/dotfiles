@@ -34,17 +34,16 @@ PanelWindow {
     property int iconSize: 18
     property int pixelSize: 15
     property int spacing: 5
-    property int radius: 10
-    property int barMarginBottom: 15
-    property int barMarginTop: 15
+    property int radius: 8
+    property int barMarginBottom: 13
+    property int barMarginTop: 13
     property int barMarginLeft: 10
     property int barMarginRight: 10
-
     property double onEnteredTextScale: 1.3
     property double onExitedTextScale: 1.0
     property double onEnteredButtonScale: 1.1
     property double onExitedButtonScale: 1.0
-    property int buttonHeight: 30
+    property int buttonHeight: 32
     property int buttonWidth: 20
     property int buttonradius: 10
     property color colorfg: Qt.rgba(0, 0, 0, 0.54)
@@ -76,11 +75,11 @@ Item {
         source: rectangle
         anchors.fill: rectangle
         shadowEnabled: true
-        shadowColor: '#000000'     // Higher is softer
+        shadowColor: '#000000'     
         shadowHorizontalOffset: 0
         shadowVerticalOffset: 0
-        shadowBlur: 1
-        shadowScale: 1.001
+        shadowBlur: 0.5 // Higher is softer
+        shadowScale: 1.0001 // cause of the sides
 
     }
 }
