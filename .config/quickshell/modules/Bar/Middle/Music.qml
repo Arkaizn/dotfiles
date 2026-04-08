@@ -22,7 +22,7 @@ Rectangle {
     property var barHeights: [3, 3, 3]
     property int currentPlayerIndex: 0
 
-    visible: music.player !== null && music.player.trackArtUrl !== ""
+    visible: player !== null
 
     gradient: ButtonGradient {
     hovered: music.hovered
@@ -46,17 +46,18 @@ Rectangle {
 
         Image {
             id: albumArt
-            anchors.centerIn: music
+            anchors.verticalCenter: parent.verticalCenter
             width: music.height * 0.75
             height: width
-            source: music.player ? music.player.trackArtUrl : ""
+            source: music.player && music.player.trackArtUrl !== "" ? music.player.trackArtUrl : ""
             fillMode: Image.PreserveAspectCrop
+            visible: status === Image.Ready
 
             property bool rounded: true
             property bool adapt: true
 
             layer.enabled: rounded
-            layer.effect: OpacityMask {
+            layer.effect: OpacityMask {  // for rounded corners
                 maskSource: Item {
                     width: albumArt.width
                     height: albumArt.height
@@ -68,6 +69,13 @@ Rectangle {
                     }
                 }
             }
+        }
+        Text {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: albumArt.status === Image.Error || albumArt.status === Image.Null
+            text: "󰎇"  // nerd font music note icon
+            font.pixelSize: music.height * 0.5
+            color: "white"
         }
 
         Row {
@@ -86,7 +94,7 @@ Rectangle {
                     height: visualizer.isPlaying ? (music.barHeights[index] ?? 3) : 3
                     radius: width / 2
                     color: "white"
-                    opacity: player.isPlaying ? 1.0 : 0.6
+                    opacity: visualizer.isPlaying ? 1.0 : 0.6
 
                     Behavior on height {
                         NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
@@ -101,7 +109,7 @@ Rectangle {
 
     Timer {
         interval: 120
-        running: player.isPlaying === true
+        running: player.isPlaying
         repeat: true
         onTriggered: {
             music.barHeights = [
@@ -112,7 +120,7 @@ Rectangle {
         }
         onRunningChanged: {
             if (!running) {
-                music.barHeights = [3, 3, 3]  // reset to dots when stopped
+                music.barHeights = [3, 3, 3]
             }
         }
     }
