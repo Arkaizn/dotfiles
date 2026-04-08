@@ -9,17 +9,18 @@ import qs.components
 
 
 Rectangle {
-    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth + visualizer.width + albumArt.width
+    implicitWidth: bar.buttonWidth + visualizer.width + albumArt.width
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
     anchors.verticalCenter: parent.verticalCenter
     anchors.rightMargin: bar.spacing
     anchors.right: clock.left  // stuck to the left of clock
 
-    property var player: Mpris.players.values.length > 0 ? Mpris.players.values[0] : null
+    property var player: Mpris.players.values.length > 0 ? Mpris.players.values[currentPlayerIndex] : null
     property bool hovered: mouseArea.containsMouse
     property int pulse: 0
     property var barHeights: [3, 3, 3]
+    property int currentPlayerIndex: 0
 
     visible: music.player !== null && music.player.trackArtUrl !== ""
 
@@ -99,33 +100,41 @@ Rectangle {
     }
 
     Timer {
-    interval: 120
-    running: player.isPlaying === true
-    repeat: true
-    onTriggered: {
-        music.barHeights = [
-            Math.random() * 13 + 4,
-            Math.random() * 13 + 4,
-            Math.random() * 13 + 4
-        ]
-    }
-    
+        interval: 120
+        running: player.isPlaying === true
+        repeat: true
+        onTriggered: {
+            music.barHeights = [
+                Math.random() * 13 + 4,
+                Math.random() * 13 + 4,
+                Math.random() * 13 + 4
+            ]
+        }
         onRunningChanged: {
             if (!running) {
                 music.barHeights = [3, 3, 3]  // reset to dots when stopped
             }
         }
     }
-    
+    function nextPlayer() {
+        if (Mpris.players.values.length > 0) {
+            music.currentPlayerIndex = (music.currentPlayerIndex + 1) % Mpris.players.values.length
+        }
+    }
+
     MouseArea {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onEntered: music.scale = bar.onEnteredButtonScale
-        onClicked: {
-
+        onPressed: (mouse) => {
+            if (mouse.button === Qt.LeftButton) {
+                
+            } else if (mouse.button === Qt.RightButton) {
+                nextPlayer()
+            }
         }
         onExited: {
             music.scale = bar.onExitedButtonScale
