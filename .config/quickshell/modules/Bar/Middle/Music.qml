@@ -131,7 +131,10 @@ Rectangle {
         onEntered: music.scale = bar.onEnteredButtonScale
         onPressed: (mouse) => {
             if (mouse.button === Qt.LeftButton) {
-                
+                if (player.isPlaying)
+                music.player.pause()
+                else
+                music.player.play()
             } else if (mouse.button === Qt.RightButton) {
                 nextPlayer()
             }
