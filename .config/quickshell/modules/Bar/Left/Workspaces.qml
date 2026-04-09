@@ -18,7 +18,7 @@ Rectangle {
 
     Row {
         id: row
-        spacing: 10
+        spacing: 0
         leftPadding: 10
         rightPadding: 10
 
@@ -31,15 +31,15 @@ Rectangle {
                 color: Qt.rgba(0, 0, 0, 0)
 
                 implicitHeight: bar.buttonHeight
-                implicitWidth: text.implicitWidth
+                implicitWidth: text.implicitWidth + 10
 
                 
 
                 property bool hovered: workspaceMouse.containsMouse
 
-                Rectangle { // currently active workspace
+                Rectangle {
                     anchors.fill: parent
-                    color: Qt.rgba(0, 0, 0, modelData.id === Hyprland.focusedWorkspace?.id ? 0 : 0)
+                    color: "transparent" // for testing -> Qt.rgba(0, 0, 0, modelData.id === Hyprland.focusedWorkspace?.id ? 0 : 0)
                     scale: modelData.id === Hyprland.focusedWorkspace?.id ? bar.onEnteredTextScale : bar.onExitedTextScale
 
 
