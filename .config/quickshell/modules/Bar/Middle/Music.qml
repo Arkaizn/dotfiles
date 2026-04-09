@@ -12,9 +12,6 @@ Rectangle {
     implicitWidth: bar.buttonWidth + visualizer.width + albumArt.width
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
-    anchors.verticalCenter: parent.verticalCenter
-    anchors.rightMargin: bar.spacing
-    anchors.right: clock.left  // stuck to the left of clock
 
     property var player: Mpris.players.values.length > 0 ? Mpris.players.values[currentPlayerIndex] : null
     property bool hovered: mouseArea.containsMouse
@@ -109,7 +106,7 @@ Rectangle {
 
     Timer {
         interval: 120
-        running: player.isPlaying
+        running: player !== null && player.isPlaying
         repeat: true
         onTriggered: {
             music.barHeights = [

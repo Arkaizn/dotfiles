@@ -4,23 +4,25 @@ import QtQuick.Layouts
 
 import "Middle"
 
-RowLayout {
-    id: middle
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: parent.top
-    anchors.bottom: parent.bottom
-    spacing: bar.spacing
 
+Item {
+    id: middle
+    anchors.fill: parent
+
+    Clock {
+        id: clock
+        anchors.centerIn: parent
+    }
+
+    Music {
+        id: music
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.right: clock.left
+        anchors.rightMargin: bar.spacing
+    }
     // GPUusage {}
     // CPUusage {}
     // Memusage {}
-    Music {
-        id:music
-        
-    }
-    Clock {
-        id: clock
-    }
     // GPUtemp {}
     // CPUtemp {}
 }
