@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import qs.services
 
 PanelWindow {
     id: root
@@ -15,10 +16,12 @@ PanelWindow {
 
     property string title: ""
     property string body: ""
+    property string appname: ""
 
     function notify(summary, body) {
         root.title = summary
         root.body = body
+        root.appname = appName
         root.visible = true
         timer.restart()
     }
@@ -45,7 +48,18 @@ PanelWindow {
                 top: parent.top
                 margins: 12 
                 }
-            spacing: 4
+            spacing: 6
+            
+            Text {
+                text: root.appname
+                font { 
+                    bold: true
+                    pixelSize: 10
+                    }
+                color: Colors.color4
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+            }
 
             Text {
                 text: root.title
