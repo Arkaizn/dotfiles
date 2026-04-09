@@ -54,7 +54,7 @@ PanelWindow {
                 text: root.appname
                 font { 
                     bold: true
-                    pixelSize: 10
+                    pixelSize: 12
                     }
                 color: Colors.color4
                 Layout.fillWidth: true
@@ -65,7 +65,7 @@ PanelWindow {
                 text: root.title
                 font { 
                     bold: true
-                    pixelSize: 14 
+                    pixelSize: 16
                     }
                 color: "#cdffffff"
                 Layout.fillWidth: true
@@ -75,7 +75,7 @@ PanelWindow {
             Text {
                 text: root.body
                 color: "#acffffff"
-                font.pixelSize: 12
+                font.pixelSize: 14
                 wrapMode: Text.WordWrap
                 Layout.fillWidth: true
             }
