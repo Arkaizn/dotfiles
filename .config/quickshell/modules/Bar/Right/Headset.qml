@@ -11,7 +11,7 @@ Rectangle {
     implicitHeight: bar.buttonHeight
     anchors.margins: 1
     radius: bar.buttonradius
-    visible: root.output !== "" || root.output !== null
+    visible: root.output !== "" && root.output !== "null"
 
     property bool hovered: mouseArea.containsMouse
     property string output: ""
