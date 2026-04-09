@@ -1,6 +1,4 @@
 module qs.services
-ButtonBackground ButtonBackground.qml
-ButtonGradient ButtonGradient.qml
 singleton Time Time.qml
 singleton Colors Colors.qml
 
