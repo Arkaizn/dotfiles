@@ -18,7 +18,7 @@ PanelWindow {
     property string body: ""
     property string appname: ""
 
-    function notify(summary, body) {
+    function notify(summary, body, appName) {
         root.title = summary
         root.body = body
         root.appname = appName
