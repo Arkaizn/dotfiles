@@ -29,7 +29,7 @@ ShellRoot {
         // console.log("summary:", notif.summary)
         // console.log("body:", notif.body)
         notif.tracked = true
-        notifPopup.notify(notif.summary, notif.body, notif.appName)
+        notifPopup.notify(notif.summary, notif.body, notif.appName, notif.appIcon)
     }
 }
 
