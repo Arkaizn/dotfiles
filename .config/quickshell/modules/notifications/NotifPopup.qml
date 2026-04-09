@@ -5,7 +5,10 @@ import Quickshell
 PanelWindow {
     id: root
     visible: false
-    anchors { top: true; right: true }
+    anchors { 
+        top: true
+        right: true 
+        }
     implicitWidth: 360
     implicitHeight: col.implicitHeight + 24
     color: "transparent"
@@ -27,18 +30,29 @@ PanelWindow {
     }
 
     Rectangle {
-        anchors { fill: parent; rightMargin: 10 }
+        anchors { 
+            fill: parent
+            rightMargin: 10 
+            }
         radius: 10
         color: "#27000000"
 
         ColumnLayout {
             id: col
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+            anchors { 
+                left: parent.left
+                right: parent.right
+                top: parent.top
+                margins: 12 
+                }
             spacing: 4
 
             Text {
                 text: root.title
-                font { bold: true; pixelSize: 14 }
+                font { 
+                    bold: true
+                    pixelSize: 14 
+                    }
                 color: "#cdffffff"
                 Layout.fillWidth: true
                 elide: Text.ElideRight
