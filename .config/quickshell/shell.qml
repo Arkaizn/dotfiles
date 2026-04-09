@@ -2,6 +2,7 @@
 
 import Quickshell
 import QtQuick
+import Quickshell.Services.Notifications
 // import Quickshell.Io
 // import Quickshell.Hyprland
 // import Quickshell.Services.SystemTray
@@ -16,12 +17,23 @@ import QtQuick
 import "."
 import "modules"
 import "services" as QsServices
+import "modules/notifications"
 
 ShellRoot {
     id: root
+
+    NotificationServer {
+    keepOnReload: false
+    onNotification: notif => {
+        notif.tracked = true
+        notifPopup.notify(notif.summary, notif.body)
+    }
+}
+
     Variants {
         model: Quickshell.screens
         Bar {}
     }
-    
+
+    NotifPopup {id: notifPopup}
 }
