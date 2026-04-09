@@ -4,6 +4,7 @@ import QtQuick
 // import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 import Quickshell.Services.Mpris
+import Quickshell.Io
 import qs.services
 import qs.components
 
@@ -31,6 +32,12 @@ Rectangle {
         } 
     }
     
+    function nextPlayer() {
+        if (Mpris.players.values.length > 0) {
+            music.currentPlayerIndex = (music.currentPlayerIndex + 1) % Mpris.players.values.length
+        }
+    }
+
     ButtonBackground {
         id: buttonBackground
         iconText: ""
@@ -104,26 +111,24 @@ Rectangle {
         }
     }
 
-    Timer {
-        interval: 120
+    Process {
+        id: cavaProcess
+        command: ["cava", "-p", "/home/arkaizn/.config/cava/quickshell.ini"]
         running: player !== null && player.isPlaying
-        repeat: true
-        onTriggered: {
-            music.barHeights = [
-                Math.random() * 13 + 4,
-                Math.random() * 13 + 4,
-                Math.random() * 13 + 4
-            ]
-        }
-        onRunningChanged: {
-            if (!running) {
-                music.barHeights = [3, 3, 3]
+        stdout: SplitParser {
+            onRead: (line) => {
+                const parts = line.trim().split(" ")
+                if (parts.length === 3) {
+                    const vals = parts.map(v => {
+                        const n = parseInt(v)
+                        return isNaN(n) ? 3 : Math.max(3, n)
+                    })
+                    music.barHeights = vals
+                }
             }
         }
-    }
-    function nextPlayer() {
-        if (Mpris.players.values.length > 0) {
-            music.currentPlayerIndex = (music.currentPlayerIndex + 1) % Mpris.players.values.length
+        onRunningChanged: {
+            if (!running) music.barHeights = [3, 3, 3]
         }
     }
 

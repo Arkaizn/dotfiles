@@ -50,6 +50,7 @@ necessary_packages=(
     wayvnc
     kvantum
     satty
+    cava
 
     # Audio/Bluetooth
     pamixer
