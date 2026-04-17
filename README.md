@@ -1,4 +1,4 @@
-<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
+<!-- Improved compatibility of back to top link: See: https://gitlab.silnas.ch/othneildrew/Best-README-Template/pull/73 -->
 <a id="readme-top"></a>
 
 <!-- PROJECT SHIELDS -->
@@ -7,7 +7,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <a href="https://github.com/arkaizn/Dotfiles">
+  <a href="https://gitlab.silnas.ch/arkaizn/dotfiles">
     <img src="images\archlinux-logo.svg" alt="Logo" width="600" height="300">
   </a>
 
@@ -16,9 +16,9 @@
   <p align="center">
     Automate your Arch Linux installation with a fully configured GUI and system settings.
     <br />
-    <a href="https://github.com/arkaizn/Dotfiles/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://gitlab.silnas.ch/arkaizn/dotfiles/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
-    <a href="https://github.com/arkaizn/Dotfiles/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://gitlab.silnas.ch/arkaizn/dotfiles/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
@@ -53,7 +53,7 @@ To get started with this project, follow these simple steps.
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/arkaizn/Dotfiles
+   git clone https://gitlab.silnas.ch/arkaizn/Dotfiles
    cd Dotfiles
    ```
 
@@ -104,9 +104,9 @@ To get started with this project, follow these simple steps.
 <!-- LICENSE -->
 ## License
 
-This project is licensed under the GNU License. See [LICENSE](https://github.com/arkaizn/Dotfiles/blob/master/LICENSE) for more details.
+This project is licensed under the GNU License. See [LICENSE](https://gitlab.silnas.ch/arkaizn/dotfiles/blob/master/LICENSE) for more details.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 [license-shield]: https://img.shields.io/github/license/arkaizn/dotfiles
-[license-url]: https://github.com/arkaizn/Dotfiles/blob/master/LICENSE
+[license-url]: https://gitlab.silnas.ch/arkaizn/dotfiles/blob/master/LICENSE
 
