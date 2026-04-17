@@ -104,9 +104,9 @@ To get started with this project, follow these simple steps.
 <!-- LICENSE -->
 ## License
 
-This project is licensed under the GNU License. See [LICENSE](https://gitlab.silnas.ch/arkaizn/dotfiles/blob/master/LICENSE) for more details.
+This project is licensed under the GNU License. See [LICENSE](https://gitlab.silnas.ch/arkaizn/dotfiles/-/blob/main/LICENSE) for more details.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 [license-shield]: https://img.shields.io/github/license/arkaizn/dotfiles
-[license-url]: https://gitlab.silnas.ch/arkaizn/dotfiles/blob/master/LICENSE
+[license-url]: https://gitlab.silnas.ch/arkaizn/dotfiles/-/blob/main/LICENSE
 
