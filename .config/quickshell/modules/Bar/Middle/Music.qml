@@ -12,8 +12,8 @@ Rectangle {
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
 
-    implicitWidth: expanded ? bar.buttonWidth + visualizer.width + albumArt.width + controlsRow.width 
-                            : bar.buttonWidth + visualizer.width + albumArt.width
+    implicitWidth: expanded ? bar.buttonWidth + visualizer.width + albumArt.width + controlsRow.width + 10
+                            : bar.buttonWidth + visualizer.width + albumArt.width 
 
     property var player: Mpris.players.values.length > 0 ? Mpris.players.values[currentPlayerIndex] : null
     property bool hovered: hoverHandler.hovered   // back to real hover for gradient
