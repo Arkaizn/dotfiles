@@ -15,6 +15,8 @@ PanelWindow {
     implicitWidth: 420
     implicitHeight: Math.min(mainCol.implicitHeight + 20, 600)
     color: "transparent"
+    
+    property alias groupCount: groupModel.count
 
     // Called from your bar button
     function toggle() {
