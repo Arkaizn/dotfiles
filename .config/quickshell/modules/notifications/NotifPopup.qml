@@ -154,7 +154,8 @@ PanelWindow {
 
                                 Image {
                                     visible: cardWrapper.model.appIcon !== "" && cardWrapper.model.appIcon !== null
-                                    width: 32; height: 32
+                                    sourceSize.width: 60
+                                    sourceSize.height: 60
                                     source: cardWrapper.model.appIcon ? Quickshell.iconPath(cardWrapper.model.appIcon, true) : ""
                                 }
 
