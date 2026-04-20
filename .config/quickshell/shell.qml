@@ -30,7 +30,13 @@ ShellRoot {
         // console.log("body:", notif.body)
         notif.tracked = true
         notifPopup.notify(notif.summary, notif.body, notif.appName, notif.appIcon, notif.actions)
+        notifCenter.addNotification(
+            Date.now(), notif.summary, notif.body,
+            notif.appName, notif.appIcon,
+            JSON.stringify(notif.actions ?? [])
+        )
     }
+    
 }
 
     Variants {
@@ -39,4 +45,5 @@ ShellRoot {
     }
 
     NotifPopup {id: notifPopup}
+    NotifCenter { id: notifCenter }
 }

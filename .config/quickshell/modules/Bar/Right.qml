@@ -15,6 +15,7 @@ RowLayout {
     Bluetooth {}
     Volume {}
     Network {}
+    NotifButton {}
     Battery {}
     Powermenu {}
     
