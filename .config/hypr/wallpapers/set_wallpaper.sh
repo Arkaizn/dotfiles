@@ -18,7 +18,8 @@ wal -i "$WALLPAPER" 2>/dev/null || true
 command -v pywalfox >/dev/null 2>&1 && pywalfox update 2>/dev/null || true
 
 # Quickshell
-[[ -e ~/.config/quickshell/services/Colors.qml ]] || ln -s ~/.cache/wal/Colors.qml ~/.config/quickshell/services/Colors.qml
+cp -fr ~/.cache/wal/Colors.qml ~/.config/quickshell/services/Colors.qml
+# [[ -e ~/.config/quickshell/services/Colors.qml ]] || ln -s ~/.cache/wal/Colors.qml ~/.config/quickshell/services/Colors.qml
 
 # Reload swaync
 command -v swaync-client >/dev/null 2>&1 && swaync-client --reload-css || true
