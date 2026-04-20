@@ -12,10 +12,12 @@ Rectangle {
     implicitHeight: bar.buttonHeight
     radius: bar.buttonradius
 
-    implicitWidth: hovered ? bar.buttonWidth + visualizer.width + albumArt.width + controlsRow.width : bar.buttonWidth + visualizer.width + albumArt.width
+    implicitWidth: expanded ? bar.buttonWidth + visualizer.width + albumArt.width + controlsRow.width 
+                            : bar.buttonWidth + visualizer.width + albumArt.width
 
     property var player: Mpris.players.values.length > 0 ? Mpris.players.values[currentPlayerIndex] : null
-    property bool hovered: hoverHandler.hovered
+    property bool hovered: hoverHandler.hovered   // back to real hover for gradient
+    property bool expanded: false
     property int pulse: 0
     property var barHeights: [3, 3, 3]
     property int currentPlayerIndex: 0
@@ -34,12 +36,12 @@ Rectangle {
         hovered: music.hovered
     }
 
-    // Behavior on scale {
-    //     NumberAnimation {
-    //         duration: bar.bDuration
-    //         easing.type: Easing.OutCubic
-    //     }
-    // }
+    Behavior on scale {
+        NumberAnimation {
+            duration: bar.bDuration
+            easing.type: Easing.OutCubic
+        }
+    }
 
     function nextPlayer() {
         if (Mpris.players.values.length > 0) {
@@ -132,7 +134,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 5
             anchors.centerIn: parent
-            opacity: music.hovered ? 1.0 : 0.0
+            opacity: music.expanded ? 1.0 : 0.0
             visible: opacity > 0
 
             Behavior on opacity {
@@ -230,10 +232,17 @@ Rectangle {
 
     HoverHandler {
         id: hoverHandler
+        cursorShape: Qt.PointingHandCursor
+        onHoveredChanged: music.scale = hovered ? bar.onEnteredButtonScale : bar.onExitedButtonScale
     }
 
     TapHandler {
-        acceptedButtons: Qt.RightButton
-        onTapped: nextPlayer()
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onTapped: (eventPoint, button) => {
+            if (button === Qt.RightButton)
+                nextPlayer()
+            else if (button === Qt.LeftButton)
+                music.expanded = !music.expanded
+        }
     }
 }
