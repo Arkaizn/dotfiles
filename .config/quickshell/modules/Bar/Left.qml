@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 
 import "Left"
+import "Left/Tray"
 
 RowLayout {
     id: left

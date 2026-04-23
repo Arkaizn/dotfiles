@@ -19,6 +19,10 @@ Rectangle {
 
     visible: repeater.count > 0
 
+    TrayMenu {
+        id: customTrayMenu
+    }
+
     Rectangle {
         anchors.fill: parent
         anchors.margins: 1
@@ -68,12 +72,8 @@ Rectangle {
                     onClicked: function(mouse) {
                         if (mouse.button === Qt.RightButton) {
                             if (modelData.hasMenu || modelData.onlyMenu) {
-                                var globalPos = trayButton.mapToItem(bar.contentItem, 0, 0)
-                                modelData.display(
-                                    bar,
-                                    globalPos.x,
-                                    globalPos.y + trayButton.height + 4
-                                )
+                                var globalPos = delegateItem.mapToItem(null, 0, delegateItem.height + 4)
+                                customTrayMenu.openFor(modelData, globalPos.x, globalPos.y)
                             }
                             return
                         }
