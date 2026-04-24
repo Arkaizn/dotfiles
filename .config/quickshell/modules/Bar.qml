@@ -20,11 +20,11 @@ PanelWindow {
     }
     
     // Space between edge of the screen and Bar
-    margins.top: 0
+    margins.top: 10
     margins.left: 0
     margins.right: 0
 
-    implicitHeight: 70
+    implicitHeight: 50
     exclusiveZone: height
     color: "transparent"
     aboveWindows: true
@@ -43,8 +43,8 @@ PanelWindow {
 
 
     // Margin
-    property int barMarginBottom: 13
-    property int barMarginTop: 13
+    property int barMarginBottom: 0
+    property int barMarginTop: 0
     property int barMarginLeft: 10
     property int barMarginRight: 10
 
@@ -59,6 +59,7 @@ PanelWindow {
     property int buttonWidth: 20
     property int buttonradius: 10
 
+
     // Colors
     property color colorfg: Qt.rgba(0, 0, 0, 0.54)
     property color colorfgHovered: Qt.rgba(0.12, 0.12, 0.12, 0.1) 
@@ -66,66 +67,23 @@ PanelWindow {
     property color textColorIfHovered: root.hovered ? Colors.color6 : Colors.foreground
 
 
-
-    // visual Bar Border (in the back)
-    Item {
+    Rectangle {
+        id: rectangle
         anchors.fill: parent
-
-        Rectangle {
-            id: rectangle
-            anchors.fill: parent
-            anchors.leftMargin: barMarginLeft
-            anchors.rightMargin: barMarginRight
-            anchors.topMargin: barMarginTop
-            anchors.bottomMargin: barMarginBottom
-            radius: 10
-             color: '#27000000'
-            // gradient: Gradient {
-            //     GradientStop { position: 0.0; color: Qt.alpha(Colors.color1, 0.1 )}
-            //     GradientStop { position: 1.0; color: Qt.alpha(Colors.color8, 0.1 )}
-            // }
-        }
-
-        MultiEffect {
-            source: rectangle
-            anchors.fill: rectangle
-            shadowEnabled: true
-            shadowColor: '#00000000'     
-            shadowHorizontalOffset: 0
-            shadowVerticalOffset: 0
-            shadowBlur: 0.5 // Higher is softer
-            shadowScale: 1 // cause of the sides
-
-        }
+        anchors.leftMargin: barMarginLeft
+        anchors.rightMargin: barMarginRight
+        anchors.topMargin: barMarginTop
+        anchors.bottomMargin: barMarginBottom
+        color: '#50000000'
+        topLeftRadius: 10
+        topRightRadius: 10
+        bottomRightRadius: BarState.popupOpenRight ? 0 : 10
+        bottomLeftRadius: BarState.popupOpenLeft ? 0 : 10
+        Behavior on bottomRightRadius { NumberAnimation { duration: 140 } }
+        Behavior on bottomLeftRadius { NumberAnimation { duration: 140 } }
     }
-    
 
 
-
-    // Rectangle {
-    //     anchors.fill: parent
-    //     anchors.margins: 1
-    //     radius: 10
-
-    //     gradient: Gradient {
-    //         orientation: Gradient.Vertical
-    //         GradientStop { position: 0.0; color: Colors.color1 }
-    //         GradientStop { position: 1.0; color: Colors.color8 }
-    //     }
-    // }
-
-    // visual Bar in front
-
-    // Rectangle {
-    //     anchors.fill: parent
-    //     anchors.leftMargin: barMarginLeft
-    //     anchors.rightMargin: barMarginRight
-    //     anchors.topMargin: barMarginTop
-    //     anchors.bottomMargin: barMarginBottom
-    //     color: '#7b000000'
-    //     radius: 10
-    
-    // }
 
     // Call Bar Buttons
     Left {}

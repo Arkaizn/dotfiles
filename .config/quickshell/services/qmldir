@@ -1,4 +1,5 @@
 module qs.services
+singleton BarState BarState.qml
 singleton Time Time.qml
 singleton Colors Colors.qml
 

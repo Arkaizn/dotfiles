@@ -5,6 +5,8 @@ import Quickshell
 import qs.services
 import qs.components
 
+import ".."
+
 PanelWindow {
     id: root
     visible: false
@@ -15,13 +17,14 @@ PanelWindow {
     implicitWidth: 420
     implicitHeight: Math.min(mainCol.implicitHeight + 40, 600)
     color: "transparent"
-
+    
     property alias groupCount: groupModel.count
 
     // Called from your bar button
     function toggle() {
         root.visible = !root.visible
-    }
+        BarState.popupOpenRight = root.visible
+        }
 
     // Called from NotifPopup to mirror notifications here
     function addNotification(uid, summary, body, appName, appIcon, actionsJson) {
@@ -61,16 +64,26 @@ PanelWindow {
 
     ListModel { id: groupModel }
 
+    InverseCorner {
+        anchors.right: rect.left
+        anchors.top: rect.top
+        corner: "topRight"
+        color: rect.color
+        radius: 12
+    }
+
     // ── Outer container ───────────────────────────────────────────
     Rectangle {
+        id:rect
         anchors {
             fill: parent
             rightMargin: 10
-            topMargin: 10
+            leftMargin: 10
             bottomMargin: 10
         }
-        radius: 12
-        color: "#1a000000"
+        bottomLeftRadius: 12
+        bottomRightRadius: 12
+        color: '#45000000'
 
         ColumnLayout {
             id: mainCol
@@ -101,7 +114,7 @@ PanelWindow {
                     visible: groupModel.count > 0
 
                     property bool hovered: clearAllMouse.containsMouse
-                    gradient: ButtonGradient { hovered: parent.hovered }
+                    gradient: ButtonGradient { hovered: hovered }
 
                     Text {
                         id: clearAllLabel
