@@ -1,3 +1,4 @@
 module qs.components
+InverseCorner InverseCorner.qml
 ButtonBackground ButtonBackground.qml
 ButtonGradient ButtonGradient.qml
