@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.components
+import qs.services
 import QtQuick.Layouts
 import "."
 
@@ -10,14 +11,32 @@ PanelWindow {
     anchors {
         top: true
     }
-    implicitWidth: 800
-    implicitHeight: 400
+    readonly property int width: 800
+    readonly property int height: 400
+
+    implicitWidth: width
+    implicitHeight: height
     color: "transparent"
     exclusiveZone: 0
 
+
+    PopupAnimation {
+        id: anim
+        target: rect
+        direction: "top"
+        enterDuration: 150
+        exitDuration: 150
+        onExitFinished: root.visible = false
+    }
+
     function toggle() {
-        root.visible = !root.visible
+        if (root.visible) {
+            anim.exit()
+        } else {
+            root.visible = true
+            anim.enter()
         }
+    }
 
     InverseCorner {
         anchors.right: rect.left
@@ -35,20 +54,32 @@ PanelWindow {
     }
 
     Rectangle {
-        id: rect
-        anchors {
-            fill: parent
-            rightMargin: 10
-            leftMargin: 10
-            bottomMargin: 10
-        }
-        bottomLeftRadius: 12
-        bottomRightRadius: 12
-        color: '#45000000'
+    id: rect
+    implicitHeight: parent.height - 20
+    clip: true
+    opacity: 1
+    anchors {
+        top: parent.top
+        left: parent.left
+        right: parent.right
+        rightMargin: 10
+        leftMargin: 10
+    }
+    // NO bottom anchor, NO anchors.fill
+    
+    bottomLeftRadius: 12
+    bottomRightRadius: 12
+    color: '#45000000'
 
         RowLayout {
-            anchors.fill: parent
-            anchors.margins: 10
+            anchors {
+                bottom: parent.bottom
+                left: parent.left
+                right: parent.right
+                // top: parent.top  // remove this if you have it
+                margins: 10
+            }
+            height: rect.implicitHeight - 20  // fixed height, not dependent on animated height
             spacing: 10
 
             // LEFT — User stats
