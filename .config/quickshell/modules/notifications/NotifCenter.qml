@@ -5,8 +5,6 @@ import Quickshell
 import qs.services
 import qs.components
 
-import ".."
-
 PanelWindow {
     id: root
     visible: false

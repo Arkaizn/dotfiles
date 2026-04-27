@@ -3,7 +3,7 @@ import QtQuick
 import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
 import qs.services
-import "Bar"
+import "."
 
 PanelWindow {
     id: bar

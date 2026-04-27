@@ -14,9 +14,8 @@ import QtQuick
 // import QtQuick.Layouts
 // import QtQuick.Shapes
 
-import "."
-import "modules"
 import "services" as QsServices
+import "modules/Bar"
 import "modules/notifications"
 import "modules/controlcenter"
 
