@@ -18,6 +18,7 @@ import "services" as QsServices
 import "modules/Bar"
 import "modules/notifications"
 import "modules/controlcenter"
+import "modules/dashboard"
 
 ShellRoot {
     id: root
@@ -31,4 +32,5 @@ ShellRoot {
     NotifPopup {id: notifPopup}
     NotifCenter { id: notifCenter }
     ControlCenter {}
+    Dashboard {id: dashboard}
 }

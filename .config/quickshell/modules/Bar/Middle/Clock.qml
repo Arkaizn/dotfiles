@@ -21,6 +21,8 @@ Rectangle{
             hoverEnabled: true
             onEntered: clock.scale = onEnteredButtonScale
             onExited: clock.scale = onExitedButtonScale
+            cursorShape: Qt.PointingHandCursor
+            onClicked: dashboard.toggle()
         }
 
     Behavior on scale {
