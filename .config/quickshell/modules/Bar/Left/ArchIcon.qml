@@ -37,14 +37,11 @@ Rectangle {
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.PointingHandCursor
         onEntered: root.scale = bar.onEnteredButtonScale
-        // onExited: root.scale = bar.onExitedButtonScale
         onClicked: {
-            // FoldOutManager.toggle("powermenu", root.screenName, true);
+            wallpaperSelector.toggle()
         }
         onExited: {
             root.scale = bar.onExitedButtonScale
-            // FoldOutManager.setTriggerHovered("powermenu", root.screenName, false);
-            // powerMenu.startTimer();
         }
     }
 }
