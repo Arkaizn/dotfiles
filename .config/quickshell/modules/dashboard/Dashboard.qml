@@ -2,17 +2,21 @@ import QtQuick
 import Quickshell
 import qs.components
 import qs.services
+import QtQuick.Shapes
+import QtQuick.Controls
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
+import Quickshell.Io
 import "."
 
 PanelWindow {
     id: root
-    visible: false
+    visible: true
     anchors {
         top: true
     }
-    readonly property int width: 800
-    readonly property int height: 400
+    readonly property int width: 1000
+    readonly property int height: 500
 
     implicitWidth: width
     implicitHeight: height
@@ -85,19 +89,11 @@ PanelWindow {
             // LEFT — User stats
             Rectangle {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 160
+                Layout.preferredWidth: 220
                 radius: 12
                 color: '#45000000'
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 6
-
-                    Text { text: "👤 user"; color: "white"; font.bold: true }
-                    Text { text: "Arch Linux 6.9.3"; color: "#aaaaaa"; font.pixelSize: 11 }
-                    Text { text: "1,482 packages"; color: "#aaaaaa"; font.pixelSize: 11 }
-                }
+                DashboardProfile {}
             }
 
             // MIDDLE — Music player (top) + Calendar (bottom)
@@ -109,7 +105,7 @@ PanelWindow {
                 // Music player
                 Rectangle {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 120
+                    Layout.preferredHeight: 180
                     radius: 12
                     color: '#45000000'
 
@@ -134,7 +130,7 @@ PanelWindow {
             // RIGHT — System stats
             Rectangle {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 160
+                Layout.preferredWidth: 220
                 radius: 12
                 color: '#45000000'
 
