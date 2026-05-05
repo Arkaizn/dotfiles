@@ -11,7 +11,7 @@ import "."
 
 PanelWindow {
     id: root
-    visible: true
+    visible: false
     anchors {
         top: true
     }
