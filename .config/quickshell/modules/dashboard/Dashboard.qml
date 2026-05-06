@@ -17,12 +17,14 @@ PanelWindow {
     }
     readonly property int width: 1000
     readonly property int height: 500
+    property bool hasBeenHovered: false
 
     implicitWidth: width
     implicitHeight: height
     color: "transparent"
     exclusiveZone: 0
 
+    
 
     PopupAnimation {
         id: anim
@@ -33,12 +35,33 @@ PanelWindow {
         onExitFinished: root.visible = false
     }
 
+
+
     function toggle() {
         if (root.visible) {
             anim.exit()
         } else {
             root.visible = true
+            enterTimer.start()
+        }
+    }
+
+    Timer {
+        id: enterTimer
+        interval: 50
+        repeat: false
+        onTriggered: {
             anim.enter()
+        }
+    }
+
+    Timer {
+        id: autoCloseTimer
+        interval: 500
+        repeat: false
+        onTriggered: {
+            anim.exit()
+            hasBeenHovered = false
         }
     }
 
@@ -58,22 +81,21 @@ PanelWindow {
     }
 
     Rectangle {
-    id: rect
-    implicitHeight: parent.height - 20
-    clip: true
-    opacity: 1
-    anchors {
-        top: parent.top
-        left: parent.left
-        right: parent.right
-        rightMargin: 10
-        leftMargin: 10
-    }
-    // NO bottom anchor, NO anchors.fill
-    
-    bottomLeftRadius: 12
-    bottomRightRadius: 12
-    color: '#45000000'
+        id: rect
+        implicitHeight: parent.height - 20
+        clip: true
+        opacity: 0
+        y: -height
+        anchors {
+            top: parent.top
+            left: parent.left
+            right: parent.right
+            rightMargin: 10
+            leftMargin: 10
+        }
+        bottomLeftRadius: 12
+        bottomRightRadius: 12
+        color: '#45000000'
 
         RowLayout {
             anchors {
@@ -142,6 +164,17 @@ PanelWindow {
                     Text { text: "CPU  42°C  23%"; color: "white"; font.pixelSize: 11 }
                     Text { text: "GPU  61°C  40%"; color: "white"; font.pixelSize: 11 }
                     Text { text: "RAM  6.2 / 16 GB"; color: "white"; font.pixelSize: 11 }
+                }
+            }
+        }
+        HoverHandler {
+            id: rectHover
+            onHoveredChanged: {
+                if (hovered) {
+                    hasBeenHovered = true
+                    autoCloseTimer.stop()
+                } else if (hasBeenHovered) {
+                    autoCloseTimer.start()
                 }
             }
         }
