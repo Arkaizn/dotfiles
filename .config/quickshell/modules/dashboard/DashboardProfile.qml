@@ -11,14 +11,14 @@ import Quickshell.Io
 
 ColumnLayout {
     anchors.fill: parent
-    anchors.margins: 20
+    anchors.topMargin: 25
 
         Process {
             id: usernameProc
             command: ["whoami"]
             running: true
             stdout: SplitParser {
-                onRead: data => username.text = data
+                onRead: data => usernameText.text = data
             }
         }
 
@@ -27,7 +27,7 @@ ColumnLayout {
             command: ["bash", "-c", "uname -r | cut -d'-' -f1"]
             running: true
             stdout: SplitParser {
-                onRead: data => kernelText.text = data
+                onRead: data => kernelText.text = "󰣇 " + data
             }
         }
 
@@ -39,33 +39,31 @@ ColumnLayout {
                 onRead: data => pkgText.text = data + " "
             }
         }
-    // anchors.horizontalCenter: parent.horizontalCenter
 
     spacing: 50
 
-    // Avatar — rounded square, matching the widget card style
+    // Avatar
     Rectangle {
+        id: faceRect
         Layout.alignment: Qt.AlignHCenter
         width: 160
         height: 160
         radius: 10
         color: "#1a1a2e"
-        clip: false  // turn off clip, use layer instead
         property bool hovered: false
         
         
         layer.enabled: true
         layer.effect: OpacityMask {
             maskSource: Rectangle {
-                width: 110
-                height: 110
-                radius: 10
+                width: 160
+                height: 160
+                radius: 22
             }
         }
 
         Image {
             anchors.fill: parent
-
             source: Quickshell.env("HOME") + "/.face"
             fillMode: Image.PreserveAspectCrop
             smooth: true
@@ -74,20 +72,32 @@ ColumnLayout {
             sourceSize.height: 160
             antialiasing: true
         }
+        MouseArea {
+            id: faceMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            propagateComposedEvents: true
+        }
     }
+
     Rectangle {
+        id:usernameRect
         Layout.alignment: Qt.AlignHCenter
         width: 160
         height: 50
         radius: 10
-        // color: "#1a1a2e"
-        gradient: Gradient {
-            GradientStop { position: 0.0;color: Qt.rgba(0.5, 0.5, 0.5, 0.85) }
-            GradientStop { position: 1.0 ;color: Qt.rgba(0.2, 0.2, 0.2, 0.6) }
+        gradient: ButtonGradient {
+            hovered: usernameMouseArea.containsMouse
         }
-
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 0.8
+            anchors.topMargin: 1.5
+            radius: 10
+            color: Qt.rgba(0, 0, 0, 0.1)
+        }
         Text {
-            id: username
+            id: usernameText
             anchors.fill: parent
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
@@ -96,103 +106,190 @@ ColumnLayout {
             font.bold: true
             font.pixelSize: 24
         }
-    }
-    ColumnLayout  {
-        RowLayout {
-            Rectangle {
-                Layout.alignment: Qt.AlignHCenter
-                width: 90
-                height: 50
-                radius: 10
-                clip: false  // turn off clip, use layer instead
-                gradient: Gradient {
-                    GradientStop { position: 0.0;color: Qt.rgba(0.5, 0.5, 0.5, 0.85) }
-                    GradientStop { position: 1.0 ;color: Qt.rgba(0.2, 0.2, 0.2, 0.6) }
-                }
 
-                Text {
-                    id: kernelText
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: ""
-                    color: Colors.foreground
-                    font.pixelSize: 18
-                    font.bold: true
-                }
-            }
-            
-        Rectangle {
-                Layout.alignment: Qt.AlignHCenter
-                width: 90
-                height: 50
-                radius: 10
-                clip: false  // turn off clip, use layer instead
-                gradient: Gradient {
-                    GradientStop { position: 0.0;color: Qt.rgba(0.5, 0.5, 0.5, 0.85) }
-                    GradientStop { position: 1.0 ;color: Qt.rgba(0.2, 0.2, 0.2, 0.6) }
-                }
-                
-                // Layout.alignment: Qt.AlignHCenter
-                Text {
-                    id: pkgText
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: ""
-                    color: Colors.foreground
-                    font.pixelSize: 18
-                    font.bold: true
-                }
-            }
-
-            Item { Layout.fillHeight: true }
+        Behavior on scale {
+            NumberAnimation {
+                duration: Properties.duration
+                easing.type: Easing.OutCubic
+            } 
         }
+        MouseArea {
+            id: usernameMouseArea
+            anchors.fill: parent
+            hoverEnabled: true
+            onEntered: usernameRect.scale = 1.1
+            onExited: usernameRect.scale = 1.0
+        }
+
+        
+        
+    }
+    ColumnLayout {
+        Layout.alignment: Qt.AlignHCenter
+        spacing: -10
+
+            RowLayout {
+                Rectangle {
+                    id: kernelRect
+                    width: 90
+                    height: 50
+                    radius: 10
+                    clip: false  // turn off clip, use layer instead
+                    gradient: ButtonGradient {
+                        hovered: kernelMouseArea.containsMouse
+                    }
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 0.8
+                        anchors.topMargin: 1.5
+                        radius: 10
+                        color: Qt.rgba(0, 0, 0, 0.1)
+                    }
+                    Text {
+                        id: kernelText
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        text: ""
+                        color: Colors.foreground
+                        font.pixelSize: 15
+                        font.bold: true
+                    }
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: Properties.duration
+                            easing.type: Easing.OutCubic
+                        } 
+                    }
+                    MouseArea {
+                        id: kernelMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: kernelRect.scale = 1.1
+                        onExited: kernelRect.scale = 1.0
+                    }
+                }
+
+                Rectangle {
+                    id: pkgRect
+                    width: 90; height: 50; radius: 10
+                    gradient: ButtonGradient {
+                        hovered: pkgMouseArea.containsMouse
+                    }
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 0.8
+                        anchors.topMargin: 1.5
+                        radius: 10
+                        color: Qt.rgba(0, 0, 0, 0.1)
+                    }
+                    Text {
+                        id: pkgText
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        text: ""; color: Colors.foreground; font.pixelSize: 18; font.bold: true
+                    }
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: Properties.duration
+                            easing.type: Easing.OutCubic
+                        } 
+                    }
+                    MouseArea {
+                        id: pkgMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        onEntered: pkgRect.scale = 1.1
+                        onExited: pkgRect.scale = 1.0
+                    }
+                }
+            }
+
         RowLayout {
             Rectangle {
-                Layout.alignment: Qt.AlignHCenter
+                id: custom1Rect
                 width: 90
                 height: 50
                 radius: 10
-                clip: false  // turn off clip, use layer instead
-                gradient: Gradient {
-                    GradientStop { position: 0.0;color: Qt.rgba(0.5, 0.5, 0.5, 0.85) }
-                    GradientStop { position: 1.0 ;color: Qt.rgba(0.2, 0.2, 0.2, 0.6) }
+                gradient: ButtonGradient {
+                    hovered: custom1MouseArea.containsMouse
                 }
-
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 0.8
+                    anchors.topMargin: 1.5
+                    radius: 10
+                    color: Qt.rgba(0, 0, 0, 0.1)
+                }
                 Text {
-                    id: kernelText2
+                    id: custom1Text
                     anchors.fill: parent
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                    text: ""
+                    text: "RDP "
                     color: Colors.foreground
                     font.pixelSize: 18
                     font.bold: true
+                }
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Properties.duration
+                        easing.type: Easing.OutCubic
+                    } 
+                }
+                MouseArea {
+                    id: custom1MouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: custom1Rect.scale = 1.1
+                    onExited: custom1Rect.scale = 1.0
+                    onClicked: Quickshell.execDetached(["bash", "-lc", "~/.config/custom/scripts/rdp-home.sh"])
                 }
             }
             
-        Rectangle {
+            Rectangle {
+                id: custom2Rect
                 Layout.alignment: Qt.AlignHCenter
                 width: 90
                 height: 50
                 radius: 10
-                clip: false  // turn off clip, use layer instead
-                gradient: Gradient {
-                    GradientStop { position: 0.0;color: Qt.rgba(0.5, 0.5, 0.5, 0.85) }
-                    GradientStop { position: 1.0 ;color: Qt.rgba(0.2, 0.2, 0.2, 0.6) }
+                // clip: false  // turn off clip, use layer instead
+                gradient: ButtonGradient {
+                    hovered: custom2MouseArea.containsMouse
                 }
-                
-                // Layout.alignment: Qt.AlignHCenter
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 0.8
+                    anchors.topMargin: 1.5
+                    radius: 10
+                    color: Qt.rgba(0, 0, 0, 0.1)
+                }
                 Text {
-                    id: pkgText2
+                    id: custom2Text
                     anchors.fill: parent
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
-                    text: ""
+                    text: "RDP "
                     color: Colors.foreground
                     font.pixelSize: 18
                     font.bold: true
+                }
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Properties.duration
+                        easing.type: Easing.OutCubic
+                    } 
+                }
+                MouseArea {
+                    id: custom2MouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: custom2Rect.scale = 1.1
+                    onExited: custom2Rect.scale = 1.0
+                    onClicked: Quickshell.execDetached(["bash", "-lc", "~/.config/custom/scripts/rdp-work.sh"])
                 }
             }
 
