@@ -1,4 +1,5 @@
 module qs.services
+singleton Properties Properties.qml
 singleton Anim Anim.qml
 singleton BarState BarState.qml
 singleton Time Time.qml
