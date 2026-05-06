@@ -131,11 +131,7 @@ PanelWindow {
                     radius: 12
                     color: '#45000000'
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: "🎵 Music Player"
-                        color: "white"
-                    }
+                    DashboardMusic {}
                 }
 
                 // Calendar
