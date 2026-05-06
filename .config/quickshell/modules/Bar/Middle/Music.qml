@@ -164,7 +164,7 @@ Rectangle {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 property bool isPlaying: music.player && music.player.playbackStatus === Mpris.Playing
-                text: player.isPlaying ? "" : ""  // pause : play
+                text: player ? player.isPlaying : false ? "" : ""  // pause : play
                 font.pixelSize: bar.pixelSize + 3
                 color: "white"
                 opacity: playHover.containsMouse ? 1.0 : 0.65
@@ -178,7 +178,7 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     onPressed: (mouse) => {
                         if (mouse.button === Qt.LeftButton) {
-                            if (player.isPlaying)
+                            if (player ? player.isPlaying : false)
                             music.player.pause()
                             else
                             music.player.play()
@@ -212,7 +212,7 @@ Rectangle {
     Process {
         id: cavaProcess
         command: ["cava", "-p", "/home/arkaizn/.config/cava/quickshell.ini"]
-        running: player !== null && player.isPlaying
+        running: player !== null && player ? player.isPlaying : false
         stdout: SplitParser {
             onRead: (line) => {
                 const parts = line.trim().split(" ")

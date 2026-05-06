@@ -1,5 +1,6 @@
 // PopupAnimation.qml
 import QtQuick
+import qs.services
 
 Item {
     id: root
