@@ -1,6 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Shapes
+import Qt5Compat.GraphicalEffects
 import Quickshell.Io
+import qs.components
 
 Item {
     id: root
@@ -46,13 +49,25 @@ Item {
         return -1
     }
 
+    // ISO 8601 week number — standard UTC-based algorithm:
+    // shift to the Thursday of the current week, then count weeks from Jan 1.
     function isoWeek(y, m, d) {
-        let date    = new Date(y, m, d)
-        let jan4    = new Date(y, 0, 4)
-        let w1start = new Date(jan4)
-        w1start.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7))
-        let diff = date - w1start
-        return diff < 0 ? 52 : Math.floor(diff / 604800000) + 1
+        // Work in UTC to avoid DST shifts
+        let date = new Date(Date.UTC(y, m, d))
+        // Day of week: Mon=1 … Sun=7
+        let dow = date.getUTCDay() || 7
+        // Move to the Thursday of this week (ISO weeks are identified by their Thursday)
+        date.setUTCDate(date.getUTCDate() + 4 - dow)
+        // Jan 1 of the year that Thursday falls in
+        let yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1))
+        return Math.ceil((((date - yearStart) / 86400000) + 1) / 7)
+    }
+
+    // Resolve a cell to a real Date, accounting for prev/next month overflow
+    function cellDate(cell) {
+        if (cell.type === "cur")  return new Date(curYear, curMonth,     cell.d)
+        if (cell.type === "prev") return new Date(curYear, curMonth - 1, cell.d)
+        return                           new Date(curYear, curMonth + 1, cell.d)
     }
 
     function prevMonth() {
@@ -77,20 +92,36 @@ Item {
         anchors.margins: 12
         spacing: 6
 
-        // Header: prev / month+year / next
+        // ── Header: prev / month+year pill / next ────────────
         RowLayout {
             Layout.fillWidth: true
 
+            // Prev button
             Item {
                 id: prevBtn
                 width: 28; height: 28
-                HoverHandler { id: prevHover }
+                HoverHandler { 
+                    id: prevHover
+                    cursorShape: Qt.PointingHandCursor
+                }
                 TapHandler   { onTapped: root.prevMonth() }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                }
+                scale: prevHover.hovered ? 1.10 : 1.0
+
                 Rectangle {
+                    id: prevBtnBg
                     anchors.fill: parent
                     radius: 6
-                    color: prevHover.hovered ? Qt.rgba(1,1,1,0.12) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    color: "transparent"
+                    border.color: Qt.rgba(1,1,1, prevHover.hovered ? 0.28 : 0.14)
+                    border.width: 0.5
+
+                    gradient: ButtonGradient {
+                            hovered: prevHover.hovered
+                        }
                 }
                 Text {
                     anchors.centerIn: parent
@@ -103,28 +134,80 @@ Item {
 
             Item { Layout.fillWidth: true }
 
-            Text {
-                text: root.monthNames[root.curMonth] + "   " + root.curYear
-                color: "white"
-                font.pixelSize: 13
-                font.weight: Font.Medium
-                Layout.alignment: Qt.AlignVCenter
-                TapHandler { onTapped: root.goToToday() }
+            // Month + year pill with gradient and hover scale
+            Item {
+                id: monthPillItem
+                height: 26
+                // Measure the text so the pill is always snug
+                implicitWidth: monthLabel.implicitWidth + 28
+
+                property bool hovered: monthPillHover.hovered
+
+                HoverHandler { 
+                    id: monthPillHover 
+                    cursorShape: Qt.PointingHandCursor
+                }
+                TapHandler   { onTapped: root.goToToday() }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                }
+                scale: monthPillItem.hovered ? 1.08 : 1.0
+
+                // Gradient background
+                Rectangle {
+                    id: monthPillBg
+                    anchors.fill: parent
+                    radius: 7
+                    color: "transparent"   // filled by the gradient layer below
+                    border.color: Qt.rgba(1,1,1, monthPillItem.hovered ? 0.28 : 0.18)
+                    border.width: 0.5
+                    
+                    gradient: ButtonGradient {
+                            hovered: monthPillHover.hovered
+                        }
+                    
+                }
+
+                Text {
+                    id: monthLabel
+                    anchors.centerIn: parent
+                    text: root.monthNames[root.curMonth] + "   " + root.curYear
+                    color: "white"
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                }
             }
 
             Item { Layout.fillWidth: true }
 
+            // Next button
             Item {
                 id: nextBtn
                 width: 28; height: 28
-                HoverHandler { id: nextHover }
+                HoverHandler { 
+                    id: nextHover 
+                    cursorShape: Qt.PointingHandCursor
+                    }
                 TapHandler   { onTapped: root.nextMonth() }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                }
+                scale: nextHover.hovered ? 1.10 : 1.0
+
                 Rectangle {
+                    id: nextBtnBg
                     anchors.fill: parent
                     radius: 6
-                    color: nextHover.hovered ? Qt.rgba(1,1,1,0.12) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    color: "transparent"
+                    border.color: Qt.rgba(1,1,1, nextHover.hovered ? 0.28 : 0.14)
+                    border.width: 0.5
+                    gradient: ButtonGradient {
+                            hovered: nextHover.hovered
+                        }
                 }
+
                 Text {
                     anchors.centerIn: parent
                     text: "›"
@@ -135,14 +218,13 @@ Item {
             }
         }
 
-        // Day-of-week header row — MUST match grid columns exactly
+        // ── Day-of-week header row ────────────────────────────
         RowLayout {
             Layout.fillWidth: true
             Layout.topMargin: 4
             spacing: 0
 
-            // Week-number column spacer — same width as week num cells below
-            Item { width: 28 }
+            Item { width: 28 }   // spacer matching week-number column
 
             Repeater {
                 model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
@@ -156,7 +238,7 @@ Item {
             }
         }
 
-        // Week rows
+        // ── Week rows ─────────────────────────────────────────
         ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -172,14 +254,16 @@ Item {
                     Layout.fillHeight: true
                     spacing: 0
 
-                    // Week number
+                    // Week number — resolved from the actual date of the first cell
+                    // so Jan/Dec cross-year edge cases are handled correctly.
                     Text {
                         width: 28
                         Layout.fillHeight: true
-                        text: root.isoWeek(
-                            root.curYear, root.curMonth,
-                            root.calCells[weekRow.index * 7].d
-                        )
+                        text: {
+                            let c = root.calCells[weekRow.index * 7]
+                            let dt = root.cellDate(c)
+                            root.isoWeek(dt.getFullYear(), dt.getMonth(), dt.getDate())
+                        }
                         color: Qt.rgba(1,1,1,0.2)
                         font.pixelSize: 9
                         verticalAlignment: Text.AlignVCenter
@@ -202,39 +286,48 @@ Item {
                                 && root.curMonth === root.todayDate.getMonth()
                                 && cell.d === root.todayDate.getDate()
                             property bool isOther:    cell.type !== "cur"
-                            property bool isSelected: !isToday && cell.type === "cur" && cell.d === root.selectedDay
+                            // today can also be selected — clicking it toggles the strong gradient on top
+                            property bool isSelected: cell.type === "cur" && cell.d === root.selectedDay
 
                             HoverHandler { id: dayHover }
 
-                            // Today highlight ring
+                            // Hover scale — snappy spring feel
+                            Behavior on scale {
+                                NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                            }
+                            scale: (dayHover.hovered && !dayCell.isOther) ? 1.20 : 1.0
+
+                            // ── Today — always-visible soft fill (same feel as hover) ──
                             Rectangle {
                                 anchors.centerIn: parent
                                 width:  Math.min(parent.width, parent.height) - 4
                                 height: width
                                 radius: 6
-                                visible: dayCell.isToday
-                                color: Qt.rgba(1,1,1,0.18)
+                                visible: dayCell.isToday && !dayCell.isSelected
+                                color: Qt.rgba(1,1,1,0.13)
+                                border.color: Qt.rgba(1,1,1,0.22)
+                                border.width: 0.5
                             }
 
-                            // Selected ring
+                            // ── Selected — strong gradient (applies to today too if clicked) ──
                             Rectangle {
+                                id: selectedBg
                                 anchors.centerIn: parent
                                 width:  Math.min(parent.width, parent.height) - 4
                                 height: width
                                 radius: 6
                                 visible: dayCell.isSelected
-                                color: "transparent"
-                                border.color: Qt.rgba(1,1,1,0.4)
-                                border.width: 1
+                                color: Qt.rgba(1, 1, 1, 0.1)
                             }
 
-                            // Hover highlight
+                            // ── Hover highlight (non-other, non-today, non-selected) ──
                             Rectangle {
                                 anchors.centerIn: parent
                                 width:  Math.min(parent.width, parent.height) - 4
                                 height: width
                                 radius: 6
-                                visible: dayHover.hovered && !dayCell.isOther && !dayCell.isToday && !dayCell.isSelected
+                                visible: dayHover.hovered && !dayCell.isOther
+                                         && !dayCell.isToday && !dayCell.isSelected
                                 color: Qt.rgba(1,1,1,0.08)
                                 Behavior on color { ColorAnimation { duration: 80 } }
                             }
@@ -243,10 +336,10 @@ Item {
                                 anchors.centerIn: parent
                                 text: dayCell.cell.d
                                 font.pixelSize: 12
-                                font.weight: dayCell.isToday ? Font.Medium : Font.Normal
-                                color: dayCell.isToday    ? "white"
-                                     : dayCell.isOther   ? Qt.rgba(1,1,1,0.15)
-                                     : dayCell.isSelected ? Qt.rgba(1,1,1,0.9)
+                                font.weight: (dayCell.isToday || dayCell.isSelected) ? Font.Medium : Font.Normal
+                                color: dayCell.isOther    ? Qt.rgba(1,1,1,0.15)
+                                     : dayCell.isSelected ? "white"
+                                     : dayCell.isToday    ? "white"
                                      : Qt.rgba(1,1,1,0.75)
                             }
 
