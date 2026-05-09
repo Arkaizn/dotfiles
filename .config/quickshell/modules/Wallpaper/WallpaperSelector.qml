@@ -1,10 +1,11 @@
 import QtQuick
 import Quickshell
-import Quickshell.Io
-import QtQuick.Controls
-import QtQuick.Layouts
 import qs.components
 import qs.services
+import QtQuick.Controls
+import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
+import Quickshell.Io
 import "."
 
 PanelWindow {
@@ -15,16 +16,18 @@ PanelWindow {
         left: true
     }
 
-    implicitWidth: 480
-    implicitHeight: 420
+    implicitWidth: 800
+    implicitHeight: 620
     color: "transparent"
     exclusiveZone: 0
 
-    // ── Paths ─────────────────────────────────────────────────
+    property bool hasBeenHovered: false
+
+    // ── Paths ──────────────────────────────────────────────────
     readonly property string wallpapersDir: Quickshell.env("HOME") + "/Pictures/Wallpapers"
     readonly property string outputPath:    Quickshell.env("HOME") + "/.config/hypr/wallpapers/pywallpaper.png"
     readonly property string scriptPath:    Quickshell.env("HOME") + "/.config/hypr/wallpapers/set_wallpaper.sh"
-    // ─────────────────────────────────────────────────────────
+    // ──────────────────────────────────────────────────────────
 
     PopupAnimation {
         id: anim
@@ -40,9 +43,25 @@ PanelWindow {
             anim.exit()
         } else {
             root.visible = true
-            anim.enter()
-            // re-scan every time the panel opens
+            enterTimer.start()
             scanProc.running = true
+        }
+    }
+
+    Timer {
+        id: enterTimer
+        interval: 50
+        repeat: false
+        onTriggered: anim.enter()
+    }
+
+    Timer {
+        id: autoCloseTimer
+        interval: 500
+        repeat: false
+        onTriggered: {
+            anim.exit()
+            hasBeenHovered = false
         }
     }
 
@@ -55,20 +74,18 @@ PanelWindow {
         radius: 12
     }
 
-    // ── Recursive find via `find` command ─────────────────────
-    // Populates wallModel with { path, name } objects
+    // ── Wallpaper model + scanner ──────────────────────────────
     ListModel { id: wallModel }
 
     Process {
         id: scanProc
-        running: true   // scan once on startup too
+        running: true
         command: [
             "bash", "-c",
             "find '" + root.wallpapersDir + "' -type f " +
             "\\( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' -o -iname '*.gif' \\) " +
             "| sort"
         ]
-        property string buffer: ""
 
         stdout: SplitParser {
             splitMarker: "\n"
@@ -83,7 +100,6 @@ PanelWindow {
 
         onStarted: {
             wallModel.clear()
-            scanProc.buffer = ""
         }
 
         onExited: function(code) {
@@ -92,7 +108,7 @@ PanelWindow {
         }
     }
 
-    // ── Copy + run script ─────────────────────────────────────
+    // ── Apply wallpaper ────────────────────────────────────────
     Process {
         id: applyProc
         property string pickedPath: ""
@@ -112,12 +128,13 @@ PanelWindow {
         }
     }
 
-    // ── Main panel ────────────────────────────────────────────
+    // ── Main panel ─────────────────────────────────────────────
     Rectangle {
         id: rect
         implicitHeight: parent.height - 20
         clip: true
-        opacity: 1
+        opacity: 0
+        y: -height
         anchors {
             top: parent.top
             left: parent.left
@@ -125,19 +142,23 @@ PanelWindow {
             leftMargin: 10
             rightMargin: 10
         }
-
         bottomLeftRadius: 12
         bottomRightRadius: 12
         color: '#45000000'
 
+        // 3 columns
+        readonly property real cellW: (rect.width - 28) / 3
+        readonly property real cellH: cellW * 0.58
+
+        // Content pinned to bottom — reveals as rect slides down, just like the dashboard
         ColumnLayout {
             anchors {
-                top: parent.top
+                bottom: parent.bottom
                 left: parent.left
                 right: parent.right
-                bottom: parent.bottom
                 margins: 10
             }
+            height: rect.implicitHeight - 20
             spacing: 8
 
             // Header
@@ -170,7 +191,7 @@ PanelWindow {
                 color: "#33ffffff"
             }
 
-            // Thumbnail grid
+            // Thumbnail grid — 3 columns, scrollable
             ScrollView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -180,10 +201,22 @@ PanelWindow {
                 GridView {
                     id: grid
                     width: parent.width
-                    cellWidth: (root.implicitWidth - 28) / 2
-                    cellHeight: cellWidth * 0.6
+                    cellWidth: rect.cellW
+                    cellHeight: rect.cellH
 
                     model: wallModel
+
+                    // Faster wheel scroll — 1.5x multiplier, tune to taste
+                    WheelHandler {
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                        onWheel: function(event) {
+                            grid.contentY = Math.max(0, Math.min(
+                                grid.contentHeight - grid.height,
+                                grid.contentY - event.angleDelta.y * 0.8
+                            ))
+                            event.accepted = true
+                        }
+                    }
 
                     Text {
                         anchors.centerIn: parent
@@ -204,11 +237,25 @@ PanelWindow {
                         readonly property bool isSelected: applyProc.pickedPath === path
 
                         Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: 4
-                            radius: 8
-                            color: "#1a1a2e"
+                            id: tile
+                            anchors.centerIn: parent
+                            width: parent.width - 8
+                            height: parent.height - 8
+                            radius: 10
                             clip: true
+                            color: "#1a1a2e"
+
+                            layer.enabled: true
+                            layer.effect: OpacityMask {
+                                maskSource: Rectangle {
+                                    width: rect.cellW * 2
+                                    height: rect.cellH * 2
+                                    radius: 22
+                                }
+                            }
+
+                            scale: tileArea.containsMouse ? 1.06 : 1.0
+                            Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
                             Image {
                                 id: thumb
@@ -217,6 +264,8 @@ PanelWindow {
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
                                 smooth: true
+                                sourceSize.width: rect.cellW * 2
+                                sourceSize.height: rect.cellH * 2
 
                                 Rectangle {
                                     anchors.fill: parent
@@ -231,10 +280,10 @@ PanelWindow {
                                 }
                             }
 
-                            // Hover / selected overlay
+                            // Hover / selected name overlay
                             Rectangle {
                                 anchors.fill: parent
-                                radius: 8
+                                radius: 10
                                 color: tileArea.containsMouse || isSelected ? "#99000000" : "transparent"
 
                                 Text {
@@ -260,13 +309,13 @@ PanelWindow {
                                 }
                             }
 
-                            // Selection border
+                            // Selection border — only when selected, never on plain hover
                             Rectangle {
                                 anchors.fill: parent
-                                radius: 8
+                                radius: 10
                                 color: "transparent"
-                                border.width: isSelected ? 2 : (tileArea.containsMouse ? 1 : 0)
-                                border.color: isSelected ? "#cba6f7" : "#89b4fa"
+                                border.width: isSelected ? 2 : 0
+                                border.color: "#cba6f7"
                                 Behavior on border.width { NumberAnimation { duration: 80 } }
                             }
 
@@ -285,6 +334,18 @@ PanelWindow {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        HoverHandler {
+            id: rectHover
+            onHoveredChanged: {
+                if (hovered) {
+                    hasBeenHovered = true
+                    autoCloseTimer.stop()
+                } else if (hasBeenHovered) {
+                    autoCloseTimer.start()
                 }
             }
         }
