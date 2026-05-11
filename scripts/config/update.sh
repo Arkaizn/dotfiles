@@ -73,7 +73,6 @@ done
 # ── Reload ────────────────────────────────────────────────────────────────────
 echo "Reloading…"
 hyprctl reload || true
-pkill qs      && hyprctl dispatch exec "QS_NO_RELOAD_POPUP=1 qs" || true
-pkill swaync  && hyprctl dispatch exec swaync || true
+pkill qs      && hyprctl dispatch "hl.dsp.exec_cmd('QS_NO_RELOAD_POPUP=1 qs')" || true
 
 echo "Done ✅"
