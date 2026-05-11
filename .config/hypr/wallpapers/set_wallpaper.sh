@@ -14,16 +14,12 @@ rm -fr ~/.cache/wal/schemes
 # Run pywal
 wal -i "$WALLPAPER" 2>/dev/null || true
 
-# pywalfox / Firefox
-command -v pywalfox >/dev/null 2>&1 && pywalfox update 2>/dev/null || true
-
 # Quickshell
 [[ -e ~/.config/quickshell/services/Colors.qml ]] || rm -fr ~/.cache/wal/Colors.qml
 cp -fr ~/.cache/wal/Colors.qml ~/.config/quickshell/services/Colors.qml
-# [[ -e ~/.config/quickshell/services/Colors.qml ]] || ln -s ~/.cache/wal/Colors.qml ~/.config/quickshell/services/Colors.qml
 
-# Reload swaync
-command -v swaync-client >/dev/null 2>&1 && swaync-client --reload-css || true
+# Reload Hyprland
+hyprctl reload
 
 # OpenRGB - use pywal color directly
 export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-}"
