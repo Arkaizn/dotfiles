@@ -12,7 +12,7 @@ hl.bind(mainMod .. " + R",          hl.dsp.exec_cmd("wofi --show drun -n || pkil
 hl.bind(mainMod .. " + P",          hl.dsp.window.pseudo())
 hl.bind(mainMod .. " + J",          hl.dsp.layout("togglesplit")) -- dwindle
 hl.bind(mainMod .. " + F",          hl.dsp.window.fullscreen())
-hl.bind(mainMod .. " + G",          hl.dsp.window.fullscreen(0))
+hl.bind(mainMod .. " + G",          hl.dsp.window.fullscreen({ mode = 1 }))
 
 -- Custom Keybinds
 hl.bind(mainMod .. " + Escape",     hl.dsp.exec_cmd("wlogout"),                                                     { description = "Logout screen" })
