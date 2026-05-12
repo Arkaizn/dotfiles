@@ -16,7 +16,7 @@ PRECIOUS=(
 # ── Profile excludes (on top of precious + custom/) ───────────────────────────
 declare -A PROFILE_EXCLUDES=(
     [full]=""
-    [full-lite]="hypr/hyprland/monitors.conf hypr/hyprlock/hyprlock.sh"
+    [full-lite]="hypr/hyprland/monitors.lua hypr/hyprlock/hyprlock.sh"
     [standard]="hypr/"
 )
 
