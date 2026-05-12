@@ -59,7 +59,7 @@ for i = 1, 10 do
     local key = i % 10 -- key 0 maps to workspace 10
     hl.bind(mainMod .. " + " .. key,          hl.dsp.focus({ workspace = i }))
     hl.bind(mainMod .. " + SHIFT + " .. key,  hl.dsp.window.move({ workspace = i }))
-    hl.bind(mainMod .. " + CTRL + " .. key,   hl.dsp.window.move({ workspace = i, silent = true }))
+    hl.bind(mainMod .. " + CTRL + " .. key,   hl.dsp.window.move({ workspace = i, follow = false }))
 end
 
 -- Switch / move to next empty workspace with section key
