@@ -16,9 +16,9 @@
   <p align="center">
     Automate your Arch Linux installation with a fully configured GUI and system settings.
     <br />
-    <a href="https://gitlab.silnas.ch/arkaizn/dotfiles/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/arkaizn/Dotfiles/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     ·
-    <a href="https://gitlab.silnas.ch/arkaizn/dotfiles/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/arkaizn/Dotfiles/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
 
