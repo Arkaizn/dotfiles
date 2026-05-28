@@ -15,7 +15,7 @@ PanelWindow {
     anchors {
         top: true
     }
-    readonly property int width: 1000
+    readonly property int width: 1120
     readonly property int height: 500
     property bool hasBeenHovered: false
 
@@ -111,7 +111,7 @@ PanelWindow {
             // LEFT — User stats
             Rectangle {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 220
+                Layout.preferredWidth: 300
                 radius: 12
                 color: '#45000000'
 
@@ -148,19 +148,11 @@ PanelWindow {
             // RIGHT — System stats
             Rectangle {
                 Layout.fillHeight: true
-                Layout.preferredWidth: 220
+                Layout.preferredWidth: 300
                 radius: 12
                 color: '#45000000'
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 12
-                    spacing: 6
-
-                    Text { text: "CPU  42°C  23%"; color: "white"; font.pixelSize: 11 }
-                    Text { text: "GPU  61°C  40%"; color: "white"; font.pixelSize: 11 }
-                    Text { text: "RAM  6.2 / 16 GB"; color: "white"; font.pixelSize: 11 }
-                }
+                DashboardStats {}
             }
         }
         HoverHandler {
