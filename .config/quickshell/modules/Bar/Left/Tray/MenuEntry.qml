@@ -71,12 +71,35 @@ Rectangle {
         enabled: entry.isSeparator !== true && entry.enabled !== false
         cursorShape: Qt.PointingHandCursor
         onClicked: {
-            entry.triggered()
-            root.clicked()
+            if (entry && entry.hasChildren === true) {
+                entry.opened()
+                submenuLoader.active = !submenuLoader.active
+                if (submenuLoader.item) {
+                    submenuLoader.item.parentEntry = entry
+                }
+            } else if (entry) {
+                entry.triggered()
+                root.clicked()
+            }
         }
     }
 
     Behavior on color {
         ColorAnimation { duration: 80 }
     }
+
+        Loader {
+        id: submenuLoader
+        active: false
+        anchors.top: parent.top
+        anchors.left: parent.right
+        anchors.leftMargin: 4
+        z: 10
+        source: active ? Qt.resolvedUrl("MenuChildren.qml") : ""
+        onLoaded: {
+            item.parentEntry = root.entry
+            item.clicked.connect(root.clicked)
+        }
+    }
 }
+
