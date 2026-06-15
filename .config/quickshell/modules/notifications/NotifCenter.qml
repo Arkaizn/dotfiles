@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
+import Quickshell.Services.Pipewire
 import qs.services
 import qs.components
 
@@ -13,11 +14,24 @@ PanelWindow {
         right: true
     }
     implicitWidth: 420
+    // Height driven by rect, which is driven by mainCol, which sums child implicitHeights
     implicitHeight: Math.min(mainCol.implicitHeight + 40, 600)
     color: "transparent"
     exclusiveZone: 0
 
-    property alias groupCount: groupModel.count
+    // Forwarded aliases so callers can still do root.groupCount / root.addNotification etc.
+    property alias groupCount: notifSection.groupCount
+
+    function addNotification(uid, summary, body, appName, appIcon, actionsJson) {
+        notifSection.addNotification(uid, summary, body, appName, appIcon, actionsJson)
+    }
+    function removeGroup(appName) {
+        notifSection.removeGroup(appName)
+    }
+    function clearAll() {
+        notifSection.clearAll()
+    }
+
     property bool hasBeenHovered: false
 
     PopupAnimation {
@@ -57,43 +71,68 @@ PanelWindow {
         }
     }
 
-    // Called from NotifPopup to mirror notifications here
-    function addNotification(uid, summary, body, appName, appIcon, actionsJson) {
-        for (let i = 0; i < groupModel.count; i++) {
-            if (groupModel.get(i).appName === appName) {
-                let group = groupModel.get(i)
-                let items = JSON.parse(group.itemsJson)
-                items.unshift({ uid, summary, body, actionsJson })
-                groupModel.setProperty(i, "itemsJson", JSON.stringify(items))
-                groupModel.setProperty(i, "latestSummary", summary)
-                return
+    // ── Pipewire tracking (must live here so Quickshell manages lifetime) ──
+    PwObjectTracker {
+        objects: Pipewire.nodes.values.filter(n => n.isSink && n.audio)
+    }
+    PwObjectTracker {
+        objects: Pipewire.nodes.values.filter(n => n.isStream && n.audio && !n.isSink)
+    }
+
+    readonly property var outputSinks: Pipewire.nodes.values.filter(n => n.isSink && n.audio)
+    readonly property var appStreams:   Pipewire.nodes.values.filter(n => n.isStream && n.audio && !n.isSink)
+
+    function cycleOutput(delta) {
+        const sinks = Pipewire.nodes.values.filter(node => {
+            return node.audio &&
+                node.isSink &&
+                !node.isStream &&
+                !node.name.includes("monitor") &&
+                !node.name.includes("virtual") &&
+                node.properties &&
+                (node.properties["media.class"] === "Audio/Sink" ||
+                    node.properties["node.name"]?.includes("alsa_output"));
+        }).sort((a, b) => (a.description || a.name || "").localeCompare(b.description || b.name || ""));
+
+        console.log("cycleOutput - sinks:", sinks.map(s => s.description || s.name));
+
+        if (sinks.length < 2) {
+            console.log("Not enough devices to cycle");
+            return;
+        }
+
+        const current = Pipewire.defaultAudioSink;
+        if (!current) {
+            console.log("No current default sink");
+            return;
+        }
+
+        // More robust index finding
+        let currentIndex = -1;
+        for (let i = 0; i < sinks.length; i++) {
+            const s = sinks[i];
+            if (s === current || s.id === current.id || s.name === current.name) {
+                currentIndex = i;
+                break;
             }
         }
-        groupModel.append({
-            "appName":       appName,
-            "appIcon":       appIcon,
-            "latestSummary": summary,
-            "itemsJson":     JSON.stringify([{ uid, summary, body, actionsJson }]),
-            "expanded":      false
-        })
-    }
 
-    function removeGroup(appName) {
-        for (let i = 0; i < groupModel.count; i++) {
-            if (groupModel.get(i).appName === appName) {
-                groupModel.remove(i)
-                return
-            }
+        if (currentIndex === -1) {
+            console.log("Current sink not found in list, starting from 0");
+            currentIndex = 0;
+        }
+
+        const nextIndex = (currentIndex + delta + sinks.length) % sinks.length;
+        const nextSink = sinks[nextIndex];
+
+        console.log(`Cycling ${delta > 0 ? 'right' : 'left'}: ${currentIndex} → ${nextIndex} (${current.description || current.name} → ${nextSink.description || nextSink.name})`);
+
+        if (nextSink && nextSink !== current) {
+            Pipewire.preferredDefaultAudioSink = nextSink;
         }
     }
 
-    function clearAll() {
-        groupModel.clear()
-    }
-
-    ListModel { id: groupModel }
-
-    // Inverse corner — left side only, panel is flush right
+    // ── Decorative inverse corner ──────────────────────────────
     InverseCorner {
         anchors.right: rect.left
         anchors.top: rect.top
@@ -105,10 +144,11 @@ PanelWindow {
     // ── Main panel ─────────────────────────────────────────────
     Rectangle {
         id: rect
-        implicitHeight: parent.height - 20
+        // implicitHeight sums mainCol children — grows when AppsCard expands
+        implicitHeight: mainCol.implicitHeight + 20
         clip: true
         opacity: 0
-        y: -height
+        y: -implicitHeight
         anchors {
             top: parent.top
             left: parent.left
@@ -120,263 +160,33 @@ PanelWindow {
         bottomRightRadius: 12
         color: '#45000000'
 
-        // Content pinned to bottom — reveals as rect slides down
         ColumnLayout {
             id: mainCol
             anchors {
-                bottom: parent.bottom
+                top: parent.top
                 left: parent.left
                 right: parent.right
                 margins: 10
             }
-            height: Math.min(mainCol.implicitHeight, rect.implicitHeight - 20)
             spacing: 8
 
-            // ── Header ────────────────────────────────────────────
-            RowLayout {
+            // ── Output device + master volume ──────────────────
+            OutputCard {
                 Layout.fillWidth: true
-
-                Text {
-                    text: "Notifications"
-                    color: "white"
-                    font.pixelSize: 14
-                    font.bold: true
-                    Layout.fillWidth: true
-                }
-
-                // Clear all button
-                Rectangle {
-                    implicitWidth: clearAllLabel.implicitWidth + 20
-                    implicitHeight: 28
-                    radius: 8
-                    visible: groupModel.count > 0
-
-                    property bool hovered: clearAllMouse.containsMouse
-                    gradient: ButtonGradient { hovered: hovered }
-
-                    Text {
-                        id: clearAllLabel
-                        anchors.centerIn: parent
-                        text: "Clear all"
-                        color: "#ddffffff"
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        id: clearAllMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.clearAll()
-                    }
-
-                    Behavior on scale {
-                        NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-                    }
-                    onHoveredChanged: scale = hovered ? 1.05 : 1.0
-                }
+                onCycleOutputRequested: (delta) => root.cycleOutput(delta)
             }
 
-            // Divider
-            Rectangle {
+            // ── App mixer (collapsible) ────────────────────────
+            // implicitHeight animates open/closed, pushing everything below downward
+            AppsCard {
                 Layout.fillWidth: true
-                height: 1
-                color: "#33ffffff"
+                appStreams: root.appStreams
             }
 
-            // ── Empty state ───────────────────────────────────────
-            Text {
-                visible: groupModel.count === 0
-                text: "No notifications"
-                color: "#666666"
-                font.pixelSize: 12
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: 16
-                Layout.bottomMargin: 16
-            }
-
-            // ── Notification groups ───────────────────────────────
-            ScrollView {
+            // ── Notifications ──────────────────────────────────
+            NotificationsSection {
+                id: notifSection
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                visible: groupModel.count > 0
-                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-
-                ColumnLayout {
-                    id: groupsCol
-                    width: parent.width
-                    spacing: 6
-
-                    Repeater {
-                        model: groupModel
-
-                        delegate: Rectangle {
-                            id: groupCard
-                            required property var model
-                            required property int index
-
-                            property var items: JSON.parse(model.itemsJson ?? "[]")
-                            property bool expanded: model.expanded
-
-                            Layout.fillWidth: true
-                            implicitHeight: groupInner.implicitHeight + 20
-                            radius: 10
-                            color: "#27000000"
-
-                            // Slide in animation
-                            x: 0
-                            opacity: 1
-                            Component.onCompleted: {
-                                groupCard.x = 420
-                                groupCard.opacity = 0
-                                slideIn.start()
-                            }
-                            ParallelAnimation {
-                                id: slideIn
-                                NumberAnimation { target: groupCard; property: "x"; to: 0; duration: 300; easing.type: Easing.OutCubic }
-                                NumberAnimation { target: groupCard; property: "opacity"; to: 1; duration: 300; easing.type: Easing.OutCubic }
-                            }
-
-                            ColumnLayout {
-                                id: groupInner
-                                anchors {
-                                    left: parent.left
-                                    right: parent.right
-                                    top: parent.top
-                                    margins: 12
-                                }
-                                spacing: 6
-
-                                // ── Group header row ──────────────
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 8
-
-                                    Image {
-                                        visible: groupCard.model.appIcon !== "" && groupCard.model.appIcon !== null
-                                        width: 24; height: 24
-                                        source: groupCard.model.appIcon ? Quickshell.iconPath(groupCard.model.appIcon, true) : ""
-                                    }
-
-                                    Text {
-                                        text: groupCard.model.appName
-                                        font { bold: true; pixelSize: 12 }
-                                        color: "#88ffffff"
-                                    }
-
-                                    // Badge count
-                                    Rectangle {
-                                        visible: groupCard.items.length > 1
-                                        width: countLabel.implicitWidth + 10
-                                        height: 18
-                                        radius: 9
-                                        color: "#40ffffff"
-                                        Text {
-                                            id: countLabel
-                                            anchors.centerIn: parent
-                                            text: groupCard.items.length
-                                            color: "#ddffffff"
-                                            font { bold: true; pixelSize: 10 }
-                                        }
-                                    }
-
-                                    Item { Layout.fillWidth: true }
-
-                                    // Expand/collapse toggle (only if >1 notif)
-                                    Text {
-                                        visible: groupCard.items.length > 1
-                                        text: groupCard.expanded ? "▲" : "▼"
-                                        color: "#60ffffff"
-                                        font.pixelSize: 10
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: groupModel.setProperty(groupCard.index, "expanded", !groupCard.expanded)
-                                        }
-                                    }
-
-                                    // Dismiss group button
-                                    Text {
-                                        text: "✕"
-                                        color: "#60ffffff"
-                                        font.pixelSize: 12
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.removeGroup(groupCard.model.appName)
-                                        }
-                                    }
-                                }
-
-                                // ── Collapsed: show only latest ───
-                                ColumnLayout {
-                                    visible: !groupCard.expanded
-                                    Layout.fillWidth: true
-                                    spacing: 4
-
-                                    Text {
-                                        text: groupCard.items[0]?.summary ?? ""
-                                        font { bold: true; pixelSize: 14 }
-                                        color: "#cdffffff"
-                                        Layout.fillWidth: true
-                                        elide: Text.ElideRight
-                                    }
-                                    Text {
-                                        visible: (groupCard.items[0]?.body ?? "") !== ""
-                                        text: groupCard.items[0]?.body ?? ""
-                                        color: "#acffffff"
-                                        font.pixelSize: 13
-                                        wrapMode: Text.WordWrap
-                                        Layout.fillWidth: true
-                                    }
-                                }
-
-                                // ── Expanded: show all stacked ────
-                                ColumnLayout {
-                                    visible: groupCard.expanded
-                                    Layout.fillWidth: true
-                                    spacing: 8
-
-                                    Repeater {
-                                        model: groupCard.items
-
-                                        delegate: ColumnLayout {
-                                            required property var modelData
-                                            required property int index
-                                            Layout.fillWidth: true
-                                            spacing: 3
-
-                                            // Divider between items
-                                            Rectangle {
-                                                visible: index > 0
-                                                Layout.fillWidth: true
-                                                height: 1
-                                                color: "#20ffffff"
-                                            }
-
-                                            Text {
-                                                text: modelData.summary ?? ""
-                                                font { bold: true; pixelSize: 13 }
-                                                color: "#cdffffff"
-                                                Layout.fillWidth: true
-                                                elide: Text.ElideRight
-                                            }
-                                            Text {
-                                                visible: (modelData.body ?? "") !== ""
-                                                text: modelData.body ?? ""
-                                                color: "#acffffff"
-                                                font.pixelSize: 12
-                                                wrapMode: Text.WordWrap
-                                                Layout.fillWidth: true
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
 
