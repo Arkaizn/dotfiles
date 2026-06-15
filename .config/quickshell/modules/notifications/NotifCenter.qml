@@ -15,18 +15,50 @@ PanelWindow {
     implicitWidth: 420
     implicitHeight: Math.min(mainCol.implicitHeight + 40, 600)
     color: "transparent"
-    
-    property alias groupCount: groupModel.count
+    exclusiveZone: 0
 
-    // Called from your bar button
+    property alias groupCount: groupModel.count
+    property bool hasBeenHovered: false
+
+    PopupAnimation {
+        id: anim
+        target: rect
+        direction: "top"
+        enterDuration: 150
+        exitDuration: 150
+        onExitFinished: root.visible = false
+    }
+
     function toggle() {
-        root.visible = !root.visible
-        BarState.popupOpenRight = root.visible
+        if (root.visible) {
+            anim.exit()
+        } else {
+            root.visible = true
+            BarState.popupOpenRight = true
+            enterTimer.start()
         }
+    }
+
+    Timer {
+        id: enterTimer
+        interval: 50
+        repeat: false
+        onTriggered: anim.enter()
+    }
+
+    Timer {
+        id: autoCloseTimer
+        interval: 500
+        repeat: false
+        onTriggered: {
+            anim.exit()
+            BarState.popupOpenRight = false
+            hasBeenHovered = false
+        }
+    }
 
     // Called from NotifPopup to mirror notifications here
     function addNotification(uid, summary, body, appName, appIcon, actionsJson) {
-        // Check if group for this app already exists
         for (let i = 0; i < groupModel.count; i++) {
             if (groupModel.get(i).appName === appName) {
                 let group = groupModel.get(i)
@@ -37,7 +69,6 @@ PanelWindow {
                 return
             }
         }
-        // New group
         groupModel.append({
             "appName":       appName,
             "appIcon":       appIcon,
@@ -62,6 +93,7 @@ PanelWindow {
 
     ListModel { id: groupModel }
 
+    // Inverse corner — left side only, panel is flush right
     InverseCorner {
         anchors.right: rect.left
         anchors.top: rect.top
@@ -70,27 +102,34 @@ PanelWindow {
         radius: 12
     }
 
-    // ── Outer container ───────────────────────────────────────────
+    // ── Main panel ─────────────────────────────────────────────
     Rectangle {
-        id:rect
+        id: rect
+        implicitHeight: parent.height - 20
+        clip: true
+        opacity: 0
+        y: -height
         anchors {
-            fill: parent
-            rightMargin: 10
+            top: parent.top
+            left: parent.left
+            right: parent.right
             leftMargin: 10
-            bottomMargin: 10
+            rightMargin: 10
         }
         bottomLeftRadius: 12
         bottomRightRadius: 12
         color: '#45000000'
 
+        // Content pinned to bottom — reveals as rect slides down
         ColumnLayout {
             id: mainCol
             anchors {
+                bottom: parent.bottom
                 left: parent.left
                 right: parent.right
-                top: parent.top
-                margins: 12
+                margins: 10
             }
+            height: Math.min(mainCol.implicitHeight, rect.implicitHeight - 20)
             spacing: 8
 
             // ── Header ────────────────────────────────────────────
@@ -99,8 +138,9 @@ PanelWindow {
 
                 Text {
                     text: "Notifications"
-                    font { bold: true; pixelSize: 16 }
-                    color: "#cdffffff"
+                    color: "white"
+                    font.pixelSize: 14
+                    font.bold: true
                     Layout.fillWidth: true
                 }
 
@@ -137,30 +177,35 @@ PanelWindow {
                 }
             }
 
+            // Divider
+            Rectangle {
+                Layout.fillWidth: true
+                height: 1
+                color: "#33ffffff"
+            }
+
             // ── Empty state ───────────────────────────────────────
             Text {
                 visible: groupModel.count === 0
                 text: "No notifications"
-                color: "#60ffffff"
-                font.pixelSize: 13
+                color: "#666666"
+                font.pixelSize: 12
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: 16
                 Layout.bottomMargin: 16
             }
 
             // ── Notification groups ───────────────────────────────
-            Flickable {
-                id: flick
+            ScrollView {
                 Layout.fillWidth: true
-                implicitHeight: Math.min(groupsCol.implicitHeight, 520)
-                contentHeight: groupsCol.implicitHeight
+                Layout.fillHeight: true
                 clip: true
-                flickableDirection: Flickable.VerticalFlick
                 visible: groupModel.count > 0
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                 ColumnLayout {
                     id: groupsCol
-                    width: flick.width
+                    width: parent.width
                     spacing: 6
 
                     Repeater {
@@ -331,6 +376,18 @@ PanelWindow {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        HoverHandler {
+            id: rectHover
+            onHoveredChanged: {
+                if (hovered) {
+                    hasBeenHovered = true
+                    autoCloseTimer.stop()
+                } else if (hasBeenHovered) {
+                    autoCloseTimer.start()
                 }
             }
         }
