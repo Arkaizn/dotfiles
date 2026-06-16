@@ -10,4 +10,6 @@ hl.on("hyprland.start", function ()
   hl.exec_cmd("~/.config/hypr/hyprlock/hyprlock.sh")
   hl.exec_cmd("hypridle")
   hl.exec_cmd("hyprpm reload -n")
+  hl.exec_cmd("nm-applet --indicator")
+
 end)
