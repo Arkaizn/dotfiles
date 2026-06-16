@@ -16,14 +16,14 @@ Rectangle {
     gradient: ButtonGradient {
         hovered: root.hovered
     }
-    
+
     Behavior on scale {
         NumberAnimation {
             duration: bar.bDuration
             easing.type: Easing.OutCubic
-        } 
+        }
     }
-    
+
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
@@ -33,7 +33,7 @@ Rectangle {
 
     Process {
         id: process
-        command: ["networkctl", "list", "--no-pager", "--no-legend"]
+        command: ["nmcli", "-t", "-f", "TYPE,STATE", "device"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -43,27 +43,17 @@ Rectangle {
                 var wifiUp = false
 
                 for (var i = 0; i < lines.length; i++) {
-                    var parts = lines[i].trim().split(/\s+/)
-                    if (parts.length < 4)
+                    var parts = lines[i].trim().split(":")
+                    if (parts.length < 2)
                         continue
 
-                    var iface = parts[1]
-                    var type = parts[2]
-                    var state = parts[3]
+                    var type = parts[0]
+                    var state = parts[1]
 
-                    if (iface === "lo" ||
-                        iface.startsWith("br") ||
-                        iface.startsWith("docker") ||
-                        iface.startsWith("vmnet") ||
-                        iface.startsWith("tailscale"))
-                        continue
-
-                    if (state === "routable" ||
-                        state === "configured" ||
-                        state === "carrier") {
-                        if (type === "ether")
+                    if (state === "connected" || state === "connecting (getting IP address)" || state === "connecting (checking IP connectivity)") {
+                        if (type === "ethernet")
                             ethernetUp = true
-                        else if (type === "wlan")
+                        else if (type === "wifi")
                             wifiUp = true
                     }
                 }
