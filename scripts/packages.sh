@@ -60,6 +60,9 @@ necessary_packages=(
     blueman
 
     # Network/WiFi
+    networkmanager
+    network-manager-applet
+    nm-connection-editor
     openssh
     iwgtk
     iwd
