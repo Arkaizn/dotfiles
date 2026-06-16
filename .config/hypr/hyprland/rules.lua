@@ -73,6 +73,15 @@ hl.window_rule({
     animation = "slide bottom",
 })
 
+-- Network Manager (nm-connection-editor)
+hl.window_rule({
+    match     = { class = "^(nm-connection-editor)$" },
+    float     = true,
+    center    = true,
+    size      = { 800, 600 },
+    animation = "slide bottom",
+})
+
 --- Custom rules ---
 
 -- custom_hover (floating terminal / hover window)
