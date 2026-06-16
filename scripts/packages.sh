@@ -63,6 +63,7 @@ necessary_packages=(
     networkmanager
     network-manager-applet
     nm-connection-editor
+    networkmanager-openvpn
     openssh
     iwgtk
     iwd
