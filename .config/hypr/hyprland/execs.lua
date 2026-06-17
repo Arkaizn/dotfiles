@@ -11,5 +11,4 @@ hl.on("hyprland.start", function ()
   hl.exec_cmd("hypridle")
   hl.exec_cmd("hyprpm reload -n")
   hl.exec_cmd("nm-applet --indicator")
-
 end)
