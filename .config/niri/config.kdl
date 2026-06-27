@@ -29,6 +29,9 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 // You can also set this to null to disable saving screenshots to disk.
 // screenshot-path null
 
+blur {
+    passes 2      // more passes = smoother blur (default is 2)
+}
 
 prefer-no-csd
 
