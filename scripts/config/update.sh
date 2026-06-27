@@ -11,12 +11,13 @@ PRECIOUS=(
     "hypr/wallpapers/thumbs.db"
     "kitty/current-theme.conf"
     "quickshell/services/Colors.qml"
+    "niri/config/layout.kdl"
 )
 
 # ── Profile excludes (on top of precious + custom/) ───────────────────────────
 declare -A PROFILE_EXCLUDES=(
     [full]=""
-    [full-lite]="hypr/hyprland/monitors.lua hypr/hyprlock/hyprlock.sh"
+    [full-lite]="hypr/hyprland/monitors.lua hypr/hyprlock/hyprlock.sh niri/config/outputs.kdl"
     [standard]="hypr/"
 )
 
