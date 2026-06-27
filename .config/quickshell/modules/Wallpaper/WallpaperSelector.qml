@@ -25,8 +25,8 @@ PanelWindow {
 
     // ── Paths ──────────────────────────────────────────────────
     readonly property string wallpapersDir: Quickshell.env("HOME") + "/Pictures/Wallpapers"
-    readonly property string outputPath:    Quickshell.env("HOME") + "/.config/hypr/wallpapers/pywallpaper.png"
-    readonly property string scriptPath:    Quickshell.env("HOME") + "/.config/hypr/wallpapers/set_wallpaper.sh"
+    readonly property string outputPath:    Quickshell.env("HOME") + "/Pictures/Wallpapers/pywallpaper.png"
+    readonly property string scriptPath:    Quickshell.env("HOME") + "/Pictures/Wallpapers/set_wallpaper.sh"
     // ──────────────────────────────────────────────────────────
 
     PopupAnimation {

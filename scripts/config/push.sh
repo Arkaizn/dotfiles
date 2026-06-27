@@ -6,17 +6,18 @@ TARGET_DIR="${HOME}/git/dotfiles/.config"
 
 # Never overwrite or delete these (if they exist in target, they stay as-is)
 SKIP_ALWAYS=(
-  "hypr/wallpapers/pywallpaper.png"
-  "custom/hyprland/custom.conf"
+  "custom/hyprland/custom.lua"
   "kitty/current-theme.conf"
   "hypr/hyprlock/hyprlock.sh"
-  "quickshell/Colors.qml"
+  "quickshell/services/Colors.qml"
+  "niri/config/layout.kdl"
 )
 
 # Extra excludes for "push-lite"
 LITE_EXCLUDES=(
   "custom"
-  "hyprland/monitors.conf"
+  "hypr/hyprland/monitors.lua"
+  "cava"
 )
 
 # Mode selection (gum if available, else arg or default)
