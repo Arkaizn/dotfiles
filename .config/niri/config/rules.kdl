@@ -62,17 +62,29 @@ window-rule {
     open-floating true
 }
 
+// window-rule {
+//     match app-id="zen"
+//     background-effect {
+//         xray true
+//         blur true
+//     }
+// }
 
 
 
 // ── Layer Rules ───────────────────────────────────────────────────────────
 
 layer-rule {
-    match namespace="quickshell"
-    place-within-backdrop true
-    geometry-corner-radius 12
+    match namespace="^quickshell$"
+    // place-within-backdrop true
+    geometry-corner-radius 10
     background-effect {
-        xray true
+        // xray true
         blur true
     }
+}
+
+layer-rule {
+    match namespace="^wallpaper$"
+    place-within-backdrop true
 }
