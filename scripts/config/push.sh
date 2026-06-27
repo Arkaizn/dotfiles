@@ -17,6 +17,7 @@ SKIP_ALWAYS=(
 LITE_EXCLUDES=(
   "custom"
   "hypr/hyprland/monitors.lua"
+  "niri/config/outputs.kdl"
   "cava"
 )
 
