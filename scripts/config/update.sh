@@ -74,6 +74,6 @@ done
 # ── Reload ────────────────────────────────────────────────────────────────────
 echo "Reloading…"
 hyprctl reload || true
-pkill qs      && hyprctl dispatch "hl.dsp.exec_cmd('QS_NO_RELOAD_POPUP=1 qs')" && niri msg action spawn -- sh -c 'QS_NO_RELOAD_POPUP=1 qs' || true
+pkill qs      && niri msg action spawn -- sh -c 'QS_NO_RELOAD_POPUP=1 qs' || true
 
 echo "Done ✅"
