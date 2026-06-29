@@ -16,7 +16,7 @@ binds {
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Mod+return { spawn "kitty"; }
     Mod+R { spawn "sh" "-c" "wofi --show drun -n || pkill wofi"; }
-    Super+L { spawn "Hyprlock"; }
+    Super+L { spawn "swaylock"; }
     Mod+E {spawn "nautilus"; }
     Mod+Escape { spawn "wlogout"; }
     Mod+Z { spawn "zen-browser"; }
@@ -26,6 +26,7 @@ binds {
     Mod+C repeat=false { close-window; }
     Mod+G { maximize-column; }
     Mod+F { fullscreen-window; }
+
 
 
 
