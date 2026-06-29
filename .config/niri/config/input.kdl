@@ -9,7 +9,7 @@ input {
             // For more information, see xkeyboard-config(7).
 
             // For example:
-            // layout "us,ru"
+            layout "ch"
             // options "grp:win_space_toggle,compose:ralt,ctrl:nocaps"
 
             // If this section is empty, niri will fetch xkb settings
