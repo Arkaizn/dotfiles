@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 
 import "Left"
 import "Left/Tray"
@@ -12,10 +13,30 @@ RowLayout {
     anchors.leftMargin: bar.barMarginLeft + 8
     spacing: bar.spacing
 
+     
     ArchIcon {}
-    Workspaces {}
+
+    // Workspace_niri for Niri
+    // Workspace_Hyprland for Hyprland
+    Loader {
+        sourceComponent: Quickshell.env("NIRI_SOCKET") !== null // check if socket is Niri else use hyprland
+            ? niriWorkspacesComponent
+            : hyprlandWorkspacesComponent
+    }
+    Component {
+        id: niriWorkspacesComponent
+        Workspaces_niri {}
+    }
+    Component {
+        id: hyprlandWorkspacesComponent
+        Workspaces_hyprland {}
+    }
+
     Updater {}
     Pull {}
     Push {}
     Tray {}
+
+    
+
 }

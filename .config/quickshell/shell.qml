@@ -2,6 +2,8 @@
 
 import Quickshell
 import QtQuick
+import Niri
+import Quickshell.Wayland
 // import Quickshell.Services.Notifications
 // import Quickshell.Io
 // import Quickshell.Hyprland
@@ -28,6 +30,17 @@ ShellRoot {
         model: Quickshell.screens
         Bar {}
     }
+
+    Niri {
+        id: niri
+        Component.onCompleted: connect()
+
+        onConnected: console.info("Connected to niri")
+        onErrorOccurred: function(error) {
+            console.error("Niri error:", error)
+        }
+    }
+    
 
     NotifServer {}
     NotifPopup {id: notifPopup}
