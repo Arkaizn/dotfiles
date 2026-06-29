@@ -1,0 +1,10 @@
+// window-rule {
+//     match at-startup=true
+//     open-on-output "DP-6"
+// }
+
+// spawn-at-startup "zen-browser"
+// spawn-at-startup "vscodium"
+// spawn-at-startup "obsidian"
+// spawn-sh-at-startup "/opt/teams-for-linux/teams-for-linux"
+
