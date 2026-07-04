@@ -4,31 +4,18 @@ import QtQuick
 import qs.services
 import qs.components
 
-Rectangle {
+Item {
     id: root
-    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
-    implicitHeight: bar.buttonHeight
-    radius: bar.buttonradius
+    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
+    implicitHeight: Properties.buttonHeight
 
     property bool hovered: mouseArea.containsMouse
     property string icon: "󰤭"
-
-    gradient: ButtonGradient {
-        hovered: root.hovered
-    }
-
-    Behavior on scale {
-        NumberAnimation {
-            duration: bar.bDuration
-            easing.type: Easing.OutCubic
-        }
-    }
 
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
         iconText: root.icon
-        iconSize: bar.iconSize
     }
 
     Process {
@@ -70,7 +57,7 @@ Rectangle {
     }
 
     Timer {
-        interval: bar.interval
+        interval: Properties.interval
         running: true
         repeat: true
         onTriggered: process.running = true
@@ -82,8 +69,8 @@ Rectangle {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.PointingHandCursor
-        onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = bar.onExitedButtonScale
+        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
+        onExited: buttonBackground.scale = Properties.onExitedButtonScale
         onClicked: Quickshell.execDetached(["bash", "-lc", "nm-connection-editor"])
     }
 }

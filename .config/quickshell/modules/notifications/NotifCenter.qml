@@ -33,7 +33,7 @@ PanelWindow {
         notifSection.clearAll()
     }
 
-    property bool hasBeenHovered: false
+        property bool hasBeenHovered: false
 
     BackgroundEffect.blurRegion: Region {
         item: rect

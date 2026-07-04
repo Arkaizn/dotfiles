@@ -7,13 +7,12 @@ import qs.services
 import qs.components
 
 
-Rectangle {
-    // implicitWidth: bar.buttonWidth + visualizer.width + albumArt.width
-    implicitHeight: bar.buttonHeight
-    radius: bar.buttonradius
+Item {
+    // implicitWidth: Properties.buttonWidth + visualizer.width + albumArt.width
+    implicitHeight: Properties.buttonHeight
 
-    implicitWidth: expanded ? bar.buttonWidth + visualizer.width + albumArt.width + controlsRow.width + 10
-                            : bar.buttonWidth + visualizer.width + albumArt.width 
+    implicitWidth: expanded ? Properties.buttonWidth + visualizer.width + albumArt.width + controlsRow.width + 10
+                            : Properties.buttonWidth + visualizer.width + albumArt.width 
 
     property var player: Mpris.players.values.length > 0 ? Mpris.players.values[currentPlayerIndex] : null
     property bool hovered: hoverHandler.hovered   // back to real hover for gradient
@@ -32,13 +31,10 @@ Rectangle {
         }
     }
 
-    gradient: ButtonGradient {
-        hovered: music.hovered
-    }
-
+    // needs to be here because of the albim image that cannot be passed to the buttonBackground
     Behavior on scale {
         NumberAnimation {
-            duration: bar.bDuration
+            duration: Properties.bDuration
             easing.type: Easing.OutCubic
         }
     }
@@ -145,7 +141,7 @@ Rectangle {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰒮"   // nerd font: skip-previous
-                font.pixelSize: bar.pixelSize +7 //music.height * 0.38
+                font.pixelSize: Properties.pixelSize +7 //music.height * 0.38
                 color: "white"
                 opacity: prevHover.containsMouse ? 1.0 : 0.65
 
@@ -165,7 +161,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 property bool isPlaying: music.player && music.player.playbackStatus === Mpris.Playing
                 text: player.isPlaying ? "" : ""  // pause : play
-                font.pixelSize: bar.pixelSize + 3
+                font.pixelSize: Properties.pixelSize + 3
                 color: "white"
                 opacity: playHover.containsMouse ? 1.0 : 0.65
 
@@ -192,7 +188,7 @@ Rectangle {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰒭"   // nerd font: skip-next
-                font.pixelSize: bar.pixelSize +7
+                font.pixelSize: Properties.pixelSize +7
                 color: "white"
                 opacity: nextHover.containsMouse ? 1.0 : 0.65
 
@@ -233,7 +229,7 @@ Rectangle {
     HoverHandler {
         id: hoverHandler
         cursorShape: Qt.PointingHandCursor
-        onHoveredChanged: music.scale = hovered ? bar.onEnteredButtonScale : bar.onExitedButtonScale
+        onHoveredChanged: music.scale = hovered ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
     }
 
     TapHandler {

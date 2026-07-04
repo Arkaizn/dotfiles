@@ -1,6 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import qs.services
 
 import "Middle"
 
@@ -18,7 +19,7 @@ Item {
         id: music
         anchors.verticalCenter: parent.verticalCenter
         anchors.right: clock.left
-        anchors.rightMargin: bar.spacing
+        anchors.rightMargin: Properties.spacing
     }
     // GPUusage {}
     // CPUusage {}

@@ -6,33 +6,26 @@ import QtQuick.Controls
 import qs.services
 import qs.components
 
-Rectangle {
+Item {
     id: root
-    implicitWidth: text.implicitWidth + bar.buttonWidth
-    implicitHeight: bar.buttonHeight
+    implicitWidth: text.implicitWidth + Properties.buttonWidth
+    implicitHeight: Properties.buttonHeight
     anchors.margins: 1
-    radius: bar.buttonradius
+
     property bool hovered: mouseArea.containsMouse
 
     readonly property var sink: Pipewire.defaultAudioSink
     PwObjectTracker { objects: root.sink ? [root.sink] : [] }
 
-    gradient: ButtonGradient {
-        hovered: root.hovered
-    }
-
     ButtonBackground {
         id: buttonBackground
-    }
-
-    Behavior on scale {
-        NumberAnimation {
-            duration: bar.bDuration
-            easing.type: Easing.OutCubic
-        }
+        hovered: root.hovered
+        iconText: text.text
+        iconSize: 16
     }
 
     Rectangle {
+        visible: false
         anchors.fill: parent
         anchors.margins: 1
         radius: 7
@@ -42,7 +35,7 @@ Rectangle {
             id: text
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
-            font.pixelSize: bar.pixelSize
+            font.pixelSize: Properties.pixelSize
             color: Colors.foreground
 
             text: {
@@ -66,8 +59,8 @@ Rectangle {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
 
-        onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = onExitedButtonScale
+        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
+        onExited: buttonBackground.scale = Properties.onExitedButtonScale
         // onClicked: Quickshell.execDetached(["bash", "-lc", "pavucontrol"])
 
         onWheel: (wheel) => {

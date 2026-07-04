@@ -1,13 +1,12 @@
 import QtQuick
 import qs.services
 import qs.components
-Rectangle {
+
+Item {
     id: root
     implicitWidth: row.implicitWidth
-    implicitHeight: bar.buttonHeight
-    radius: bar.buttonradius
-    gradient: ButtonGradient {
-    }
+    implicitHeight: Properties.buttonHeight
+
     ButtonBackground {
         id: buttonBackground
     }
@@ -22,18 +21,18 @@ Rectangle {
                 // Only show workspaces that belong to this bar's monitor
                 visible: model.output === bar.screen.name
                 color: Qt.rgba(0, 0, 0, 0)
-                implicitHeight: visible ? bar.buttonHeight : 0
+                implicitHeight: visible ? Properties.buttonHeight : 0
                 implicitWidth: visible ? text.implicitWidth + 10 : 0
                 property bool hovered: workspaceMouse.containsMouse
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    scale: model.isActive ? bar.onEnteredTextScale : bar.onExitedTextScale
+                    scale: model.isActive ? Properties.onEnteredTextScale : Properties.onExitedTextScale
                     Text {
                         id: text
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.verticalCenter: parent.verticalCenter
-                        font.pixelSize: bar.pixelSize
+                        font.pixelSize: Properties.pixelSize
                         text: model.name || model.index
                         color: Colors.foreground
                         opacity: model.isActive ? 1.0 : 0.5
@@ -44,12 +43,13 @@ Rectangle {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: niri.focusWorkspaceById(model.id)
-                        onEntered: if (!model.isActive) parent.scale = bar.onEnteredTextScale
-                        onExited: parent.scale = bar.onExitedTextScale
+                        onEntered: if (!model.isActive) parent.scale = Properties.onEnteredTextScale
+                        onExited: parent.scale = Properties.onExitedTextScale
                     }
+                    // needs to be here for the individual workspace hover
                     Behavior on scale {
                         NumberAnimation {
-                            duration: bar.bDuration
+                            duration: Properties.bDuration
                             easing.type: Easing.OutCubic
                         }
                     }

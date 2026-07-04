@@ -200,6 +200,8 @@ Item {
                 height: 26
                 width: pillRow.implicitWidth + 18
                 radius: 8
+                border.color: Qt.rgba(1,1,1, sourcePill.hovered ? 0.28 : 0.18)
+                border.width: 0.5
                 gradient: ButtonGradient { hovered: sourceHover.containsMouse }
                 Rectangle {
                     anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
@@ -265,7 +267,11 @@ Item {
 
                 // ── Shuffle ──────────────────────────────────────────────────
                 Rectangle {
-                    width: 34; height: 34; radius: 8
+                    width: 34
+                    height: 34
+                    radius: 8
+                    border.color: Qt.rgba(1,1,1, shuffleHover.hovered ? 0.28 : 0.18)
+                    border.width: 0.5
                     gradient: ButtonGradient { hovered: shuffleHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
@@ -296,6 +302,8 @@ Item {
                 // ── Previous ─────────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
+                    border.color: Qt.rgba(1,1,1, prevHover.hovered ? 0.28 : 0.18)
+                    border.width: 0.5
                     gradient: ButtonGradient { hovered: prevHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
@@ -323,6 +331,8 @@ Item {
                 // ── Play / Pause ─────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
+                    border.color: Qt.rgba(1,1,1, playHover.hovered ? 0.28 : 0.18)
+                    border.width: 0.5
                     gradient: ButtonGradient { hovered: playHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
@@ -353,6 +363,8 @@ Item {
                 // ── Next ─────────────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
+                    border.color: Qt.rgba(1,1,1, nextHover.hovered ? 0.28 : 0.18)
+                    border.width: 0.5
                     gradient: ButtonGradient { hovered: nextHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
@@ -381,6 +393,8 @@ Item {
                 // Cycles: MprisLoopState.None → All → Track → None
                 Rectangle {
                     width: 34; height: 34; radius: 8
+                    border.color: Qt.rgba(1,1,1, repeatHover.hovered ? 0.28 : 0.18)
+                    border.width: 0.5
                     gradient: ButtonGradient { hovered: repeatHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5

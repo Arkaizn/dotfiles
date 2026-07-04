@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import qs.services
 
 import "Left"
 import "Left/Tray"
@@ -10,8 +11,8 @@ RowLayout {
     anchors.left: parent.left
     anchors.bottom: parent.bottom
     anchors.top: parent.top
-    anchors.leftMargin: bar.barMarginLeft + 8
-    spacing: bar.spacing
+    anchors.leftMargin: Properties.barMarginLeft + 8
+    spacing: Properties.spacing
 
      
     ArchIcon {}

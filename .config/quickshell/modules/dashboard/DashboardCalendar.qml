@@ -159,7 +159,7 @@ Item {
                     id: monthPillBg
                     anchors.fill: parent
                     radius: 7
-                    color: "transparent"   // filled by the gradient layer below
+                    color: "white"   // filled by the gradient layer below
                     border.color: Qt.rgba(1,1,1, monthPillItem.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     

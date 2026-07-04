@@ -5,16 +5,16 @@ import QtQuick.Layouts
 import qs.services
 import qs.components
 
-Rectangle {
+Item {
     id: trayButton
-    radius: 8
-    implicitHeight: bar.buttonHeight
+    anchors.margins: 0.5
+    implicitHeight: Properties.buttonHeight
     implicitWidth: trayRow.width + 8
 
     property bool hovered: false
 
-    gradient: ButtonGradient {
-        hovered: trayButton.hovered
+    ButtonBackground {
+        id: buttonBackground
     }
 
     visible: repeater.count > 0
@@ -22,16 +22,7 @@ Rectangle {
     TrayMenu {
         id: customTrayMenu
     }
-
-    Rectangle {
-        anchors.fill: parent
-        anchors.margins: 1
-        radius: 7
-        color: Qt.rgba(0.12, 0.12, 0.12,
-            trayButton.hovered ? 0.30 : 0.18)
-    }
    
-
     HoverHandler {
         id: trayHoverHandler
     }
@@ -46,16 +37,16 @@ Rectangle {
             model: SystemTray.items
             delegate: Item {
                 id: delegateItem
-                implicitHeight: bar.iconSize
-                implicitWidth: bar.iconSize + 10
+                implicitHeight: Properties.iconSize
+                implicitWidth: Properties.iconSize + 10
                 
 
                 property bool hovered: ma.containsMouse
 
                 IconImage {
                     anchors.centerIn: parent
-                    width: bar.iconSize
-                    height: bar.iconSize
+                    width: Properties.iconSize
+                    height: Properties.iconSize
                     source: modelData.icon
                 }
 
@@ -66,8 +57,8 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-                    onEntered: delegateItem.scale = bar.onEnteredTextScale
-                    onExited: delegateItem.scale = bar.onExitedTextScale
+                    onEntered: delegateItem.scale = Properties.onEnteredTextScale
+                    onExited: delegateItem.scale = Properties.onExitedTextScale
 
                     onClicked: function(mouse) {
                         if (mouse.button === Qt.RightButton) {
@@ -85,7 +76,7 @@ Rectangle {
                         }
 
                         if (modelData.onlyMenu && modelData.hasMenu) {
-                            var globalPos = trayButton.mapToItem(bar.contentItem, 0, 0)
+                            var globalPos = trayButton.mapToItem(Properties.contentItem, 0, 0)
                             modelData.display(
                                 bar,
                                 globalPos.x,
@@ -102,9 +93,10 @@ Rectangle {
                     }
                 }
 
+                // needs to be here for the individial tray icon
                 Behavior on scale {
                     NumberAnimation {
-                        duration: bar.bDuration
+                        duration: Properties.bDuration
                         easing.type: Easing.OutCubic
                     }
                 }

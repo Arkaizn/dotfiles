@@ -3,31 +3,28 @@ import QtQuick
 import qs.services
 import qs.components
 
-Rectangle{
+Item{
     anchors.horizontalCenter: parent.horizontalCenter
-    implicitWidth: bar.buttonWidth + clockRow.implicitWidth
-    implicitHeight: bar.buttonHeight
-    radius: bar.buttonradius
+    implicitWidth: Properties.buttonWidth + clockRow.implicitWidth
+    implicitHeight: Properties.buttonHeight
 
     property bool hovered: mouseArea.containsMouse
 
-    gradient: ButtonGradient {
-        hovered: clock.hovered
-    }
     
     MouseArea {
             id: mouseArea
             anchors.fill: parent
             hoverEnabled: true
-            onEntered: clock.scale = onEnteredButtonScale
-            onExited: clock.scale = onExitedButtonScale
+            onEntered: clock.scale = Properties.onEnteredButtonScale
+            onExited: clock.scale = Properties.onExitedButtonScale
             cursorShape: Qt.PointingHandCursor
             onClicked: dashboard.toggle()
         }
 
+    // needs to be here because too much text, dont want to pass that through button Background rn ;/
     Behavior on scale {
             NumberAnimation {
-                duration: bar.bDuration
+                duration: Properties.bDuration
                 easing.type: Easing.OutCubic
             }
         }

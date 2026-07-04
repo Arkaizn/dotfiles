@@ -18,7 +18,7 @@ ColumnLayout {
             command: ["whoami"]
             running: true
             stdout: SplitParser {
-                onRead: data => usernameText.text = data
+                onRead: data => usernameRect.iconText = data
             }
         }
 
@@ -27,7 +27,7 @@ ColumnLayout {
             command: ["bash", "-c", "uname -r | cut -d'-' -f1"]
             running: true
             stdout: SplitParser {
-                onRead: data => kernelText.text = "󰣇 " + data
+                onRead: data => kernelRect.iconText = "󰣇 " + data
             }
         }
 
@@ -36,7 +36,7 @@ ColumnLayout {
             command: ["bash", "-c", "pacman -Q | wc -l"]
             running: true
             stdout: SplitParser {
-                onRead: data => pkgText.text = data + " "
+                onRead: data => pkgRect.iconText = data + " "
             }
         }
 
@@ -80,38 +80,18 @@ ColumnLayout {
         }
     }
 
-    Rectangle {
-        id:usernameRect
+    Item {
+        id:username
         Layout.alignment: Qt.AlignHCenter
         width: 160
         height: 50
-        radius: 10
-        gradient: ButtonGradient {
-            hovered: usernameMouseArea.containsMouse
-        }
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: 0.8
-            anchors.topMargin: 1.5
-            radius: 10
-            color: Qt.rgba(0, 0, 0, 0.1)
-        }
-        Text {
-            id: usernameText
-            anchors.fill: parent
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            text: ""
-            color: Colors.foreground
-            font.bold: true
-            font.pixelSize: 24
-        }
 
-        Behavior on scale {
-            NumberAnimation {
-                duration: Properties.duration
-                easing.type: Easing.OutCubic
-            } 
+        ButtonBackground {
+            id: usernameRect
+            hovered: root.hovered
+            iconText: ""
+            iconSize: 24
+            fontBold: true
         }
         MouseArea {
             id: usernameMouseArea
@@ -129,37 +109,16 @@ ColumnLayout {
         spacing: -10
 
             RowLayout {
-                Rectangle {
-                    id: kernelRect
+                Item {
                     width: 90
                     height: 50
-                    radius: 10
                     clip: false  // turn off clip, use layer instead
-                    gradient: ButtonGradient {
-                        hovered: kernelMouseArea.containsMouse
-                    }
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 0.8
-                        anchors.topMargin: 1.5
-                        radius: 10
-                        color: Qt.rgba(0, 0, 0, 0.1)
-                    }
-                    Text {
-                        id: kernelText
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: ""
-                        color: Colors.foreground
-                        font.pixelSize: 15
-                        font.bold: true
-                    }
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: Properties.duration
-                            easing.type: Easing.OutCubic
-                        } 
+                    ButtonBackground {
+                        id: kernelRect
+                        hovered: root.hovered
+                        iconText: ""
+                        iconSize: Properties.iconSize
+                        fontBold: true
                     }
                     MouseArea {
                         id: kernelMouseArea
@@ -170,31 +129,16 @@ ColumnLayout {
                     }
                 }
 
-                Rectangle {
-                    id: pkgRect
-                    width: 90; height: 50; radius: 10
-                    gradient: ButtonGradient {
-                        hovered: pkgMouseArea.containsMouse
-                    }
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 0.8
-                        anchors.topMargin: 1.5
-                        radius: 10
-                        color: Qt.rgba(0, 0, 0, 0.1)
-                    }
-                    Text {
-                        id: pkgText
-                        anchors.fill: parent
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        text: ""; color: Colors.foreground; font.pixelSize: 18; font.bold: true
-                    }
-                    Behavior on scale {
-                        NumberAnimation {
-                            duration: Properties.duration
-                            easing.type: Easing.OutCubic
-                        } 
+                Item {
+                    width: 90
+                    height: 50
+                    clip: false  // turn off clip, use layer instead
+                    ButtonBackground {
+                        id: pkgRect
+                        hovered: root.hovered
+                        iconText: ""
+                        iconSize: Properties.iconSize
+                        fontBold: true
                     }
                     MouseArea {
                         id: pkgMouseArea
@@ -207,36 +151,15 @@ ColumnLayout {
             }
 
         RowLayout {
-            Rectangle {
-                id: custom1Rect
+            Item {
                 width: 90
                 height: 50
-                radius: 10
-                gradient: ButtonGradient {
-                    hovered: custom1MouseArea.containsMouse
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 0.8
-                    anchors.topMargin: 1.5
-                    radius: 10
-                    color: Qt.rgba(0, 0, 0, 0.1)
-                }
-                Text {
-                    id: custom1Text
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "RDP "
-                    color: Colors.foreground
-                    font.pixelSize: 18
-                    font.bold: true
-                }
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: Properties.duration
-                        easing.type: Easing.OutCubic
-                    } 
+                ButtonBackground {
+                        id: custom1Rect
+                        hovered: root.hovered
+                        iconText: "RDP "
+                        iconSize: Properties.iconSize
+                        fontBold: true
                 }
                 MouseArea {
                     id: custom1MouseArea
@@ -249,38 +172,16 @@ ColumnLayout {
                 }
             }
             
-            Rectangle {
-                id: custom2Rect
+            Item {
                 Layout.alignment: Qt.AlignHCenter
                 width: 90
                 height: 50
-                radius: 10
-                // clip: false  // turn off clip, use layer instead
-                gradient: ButtonGradient {
-                    hovered: custom2MouseArea.containsMouse
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 0.8
-                    anchors.topMargin: 1.5
-                    radius: 10
-                    color: Qt.rgba(0, 0, 0, 0.1)
-                }
-                Text {
-                    id: custom2Text
-                    anchors.fill: parent
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    text: "RDP "
-                    color: Colors.foreground
-                    font.pixelSize: 18
-                    font.bold: true
-                }
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: Properties.duration
-                        easing.type: Easing.OutCubic
-                    } 
+                ButtonBackground {
+                        id: custom2Rect
+                        hovered: root.hovered
+                        iconText: "RDP "
+                        iconSize: Properties.iconSize
+                        fontBold: true
                 }
                 MouseArea {
                     id: custom2MouseArea

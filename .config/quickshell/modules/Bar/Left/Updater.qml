@@ -6,34 +6,23 @@ import qs.services
 import qs.components
 
 
-Rectangle {
+Item {
     id:root
-    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
-    implicitHeight: bar.buttonHeight
+    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
+    implicitHeight: Properties.buttonHeight
     anchors.margins: 1
-    radius: bar.buttonradius
+
 
     visible: root.output !== 0
 
     property bool hovered: mouseArea.containsMouse
     property int output: 0
-
-    gradient: ButtonGradient {
-        hovered: root.hovered
-    }
-        
-    Behavior on scale {
-        NumberAnimation {
-            duration: bar.bDuration
-            easing.type: Easing.OutCubic
-        } 
-    }
     
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        iconText: "󰅢  " + root.output
-        iconSize: bar.pixelSize
+        iconText: "󰅢   " + root.output
+        iconSize: 14
     }
 
     Process {
@@ -60,8 +49,8 @@ Rectangle {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.PointingHandCursor
-        onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = onExitedButtonScale
+        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
+        onExited: buttonBackground.scale = Properties.onExitedButtonScale
         onClicked: Quickshell.execDetached(["bash","-lc","kitty --class custom_hover -e bash -c 'sudo ls >/dev/null 2>&1 && sudo pacman -Syu --noconfirm && yay -Quq --aur | xargs -n 1 yay -S --noconfirm'"])
     }
 }

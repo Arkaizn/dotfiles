@@ -6,12 +6,11 @@ import Quickshell.Services.UPower
 import qs.services
 import qs.components
 
-Rectangle {
+Item {
     id: root
-    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
-    implicitHeight: bar.buttonHeight
+    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
+    implicitHeight: Properties.buttonHeight
     anchors.margins: 1
-    radius: bar.buttonradius
 
     property bool hovered: mouseArea.containsMouse
     property bool hasBattery: UPower.displayDevice !== null
@@ -23,17 +22,6 @@ Rectangle {
     readonly property real percentage: UPower.displayDevice?.percentage ?? 0 // define battery percentage
     readonly property int batteryLevel: Math.round(percentage * 100) // set battery level
     readonly property bool isCharging: battery?.state === UPowerDeviceState.Charging || battery?.state === UPowerDeviceState.FullyCharged
-
-    gradient: ButtonGradient {
-    hovered: root.hovered
-    }
-
-    Behavior on scale {
-        NumberAnimation {
-            duration: bar.bDuration
-            easing.type: Easing.OutCubic
-        }
-    }
 
     readonly property color batteryColor: {
         if (isCharging)       return "#4CAF50"  // green
@@ -56,32 +44,15 @@ Rectangle {
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        color: root.batteryColor
+        textColor: root.batteryColor
         iconText: hasBattery ? batteryIcon + batteryLevel + "%" : ""
-        iconSize: bar.pixelSize
     }
-
-    // Rectangle {
-    //     anchors.fill: parent
-    //     anchors.margins: 1
-    //     radius: 7
-    //     color: Qt.rgba(0.12, 0.12, 0.12, hovered ? 0.30 : 0.18)
-
-    //     Text {
-    //         id: text
-    //         anchors.horizontalCenter: parent.horizontalCenter
-    //         anchors.verticalCenter: parent.verticalCenter
-    //         color: root.batteryColor
-    //         font.pixelSize: bar.pixelSize
-    //         text: hasBattery ? batteryIcon + batteryLevel + "%" : ""
-    //     }
-    // }
 
     MouseArea {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
-        onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = bar.onExitedButtonScale
+        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
+        onExited: buttonBackground.scale = Properties.onExitedButtonScale
     }
 }

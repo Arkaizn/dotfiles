@@ -4,29 +4,16 @@ import QtQuick.Controls
 import qs.services
 import qs.components
 
-Rectangle {
+Item {
     id:root
-    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
-    implicitHeight: bar.buttonHeight
-    radius: bar.buttonradius
-
+    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
+    implicitHeight: Properties.buttonHeight
     property bool hovered: mouseArea.containsMouse
-
-    gradient: ButtonGradient {
-        hovered: root.hovered
-    }
-    Behavior on scale {
-        NumberAnimation {
-            duration: bar.bDuration
-            easing.type: Easing.OutCubic
-        } 
-    }
 
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
         iconText: "⏻"
-        iconSize: 30
     }
     
 
@@ -36,8 +23,8 @@ Rectangle {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton
-        onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = bar.onExitedButtonScale
+        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
+        onExited: buttonBackground.scale = Properties.onExitedButtonScale
         onClicked: Quickshell.execDetached(["bash","-lc","wlogout"])
     }
 }

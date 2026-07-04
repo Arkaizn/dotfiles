@@ -5,25 +5,17 @@ import QtQuick.Controls
 import qs.services
 import qs.components
 
-Rectangle {
+Item {
     id: notifBtn
-    implicitWidth: buttonBackground.implicitWidth + bar.buttonWidth
-    implicitHeight: bar.buttonHeight
-    radius: bar.buttonradius
+    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
+    implicitHeight: Properties.buttonHeight
 
     property bool hovered: notifMouse.containsMouse
-
-    gradient: ButtonGradient { hovered: notifBtn.hovered }
-
-    Behavior on scale {
-        NumberAnimation { duration: bar.bDuration; easing.type: Easing.OutCubic }
-    }
 
     ButtonBackground {
         id: buttonBackground
         hovered: notifBtn.hovered
         iconText: "󰂚"
-        iconSize: bar.iconSize
     }
 
     // Optional unread badge
@@ -41,8 +33,8 @@ Rectangle {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
         cursorShape: Qt.PointingHandCursor
-        onEntered: notifBtn.scale = bar.onEnteredButtonScale
-        onExited: notifBtn.scale = bar.onExitedButtonScale
+        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
+        onExited: buttonBackground.scale = Properties.onExitedButtonScale
         onClicked: notifCenter.toggle()
     }
 }
