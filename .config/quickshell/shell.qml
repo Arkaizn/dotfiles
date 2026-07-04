@@ -19,7 +19,7 @@ import Quickshell.Wayland
 import "services" as QsServices
 import "modules/Bar"
 import "modules/notifications"
-import "modules/controlcenter"
+import "modules/testing"
 import "modules/dashboard"
 import "modules/Wallpaper"
 
@@ -45,7 +45,7 @@ ShellRoot {
     NotifServer {}
     NotifPopup {id: notifPopup}
     NotifCenter { id: notifCenter }
-    ControlCenter {}
+    Testing {}
     Dashboard {id: dashboard}
     WallpaperSelector { id: wallpaperSelector }
 }
