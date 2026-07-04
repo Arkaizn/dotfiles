@@ -92,7 +92,7 @@ layer-rule {
     geometry-corner-radius 10
     background-effect {
         // xray true
-        blur true
+        // blur true
     }
 }
 
