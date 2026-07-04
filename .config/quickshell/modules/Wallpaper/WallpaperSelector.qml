@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 import qs.components
 import qs.services
 import QtQuick.Controls
@@ -20,6 +21,12 @@ PanelWindow {
     implicitHeight: 620
     color: "transparent"
     exclusiveZone: 0
+
+    BackgroundEffect.blurRegion: Region {
+        item: rect
+        bottomLeftRadius: 12
+        bottomRightRadius: 12
+    }
 
     property bool hasBeenHovered: false
 

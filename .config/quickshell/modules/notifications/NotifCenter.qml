@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
+import Quickshell.Wayland
 import Quickshell.Services.Pipewire
 import qs.services
 import qs.components
@@ -33,6 +34,12 @@ PanelWindow {
     }
 
     property bool hasBeenHovered: false
+
+    BackgroundEffect.blurRegion: Region {
+        item: rect
+        bottomLeftRadius: 12
+        bottomRightRadius: 12
+    }
 
     PopupAnimation {
         id: anim

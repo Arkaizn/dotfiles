@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Wayland
 import QtQuick
 import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
@@ -29,6 +30,13 @@ PanelWindow {
     color: "transparent"
     aboveWindows: true
 
+    BackgroundEffect.blurRegion: Region {
+        item: rectangle
+        topLeftRadius: 10
+        topRightRadius: 10
+        bottomRightRadius: BarState.popupOpenRight ? 0 : 10
+        bottomLeftRadius: BarState.popupOpenLeft ? 0 : 10
+    }
 
     // properties / settings
     property int iconSize: 18

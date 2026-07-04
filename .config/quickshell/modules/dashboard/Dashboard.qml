@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Wayland
 import qs.components
 import qs.services
 import QtQuick.Shapes
@@ -23,6 +24,12 @@ PanelWindow {
     implicitHeight: height
     color: "transparent"
     exclusiveZone: 0
+
+    BackgroundEffect.blurRegion: Region {
+        item: rect
+        bottomLeftRadius: 12
+        bottomRightRadius: 12
+    }
 
     
 
@@ -66,6 +73,7 @@ PanelWindow {
     }
 
     InverseCorner {
+        id: cornerleft
         anchors.right: rect.left
         anchors.top: rect.top
         corner: "topRight"
