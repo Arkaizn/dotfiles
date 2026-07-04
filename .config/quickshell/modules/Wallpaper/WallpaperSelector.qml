@@ -29,12 +29,25 @@ PanelWindow {
     }
 
     property bool hasBeenHovered: false
+    property bool hasScannedOnce: false
 
     // ── Paths ──────────────────────────────────────────────────
     readonly property string wallpapersDir: Quickshell.env("HOME") + "/Pictures/Wallpapers"
     readonly property string outputPath:    Quickshell.env("HOME") + "/Pictures/Wallpapers/pywallpaper.png"
     readonly property string scriptPath:    Quickshell.env("HOME") + "/Pictures/Wallpapers/set_wallpaper.sh"
+
+    // Disk cache dir for generated thumbnails — persists across quickshell restarts
+    readonly property string thumbCacheDir: Quickshell.cachePath("wallpaper_thumbs")
     // ──────────────────────────────────────────────────────────
+
+    // Simple, fast string hash (djb2) — used to derive a stable cache filename per source path
+    function hashPath(p) {
+        let h = 5381
+        for (let i = 0; i < p.length; i++) {
+            h = ((h << 5) + h + p.charCodeAt(i)) | 0
+        }
+        return (h >>> 0).toString(16)
+    }
 
     PopupAnimation {
         id: anim
@@ -51,7 +64,13 @@ PanelWindow {
         } else {
             root.visible = true
             enterTimer.start()
-            scanProc.running = true
+            // Only rescan the directory the first time, or if you want to
+            // pick up new files, call `scanProc.running = true` explicitly
+            // (e.g. bound to a refresh button). This keeps wallModel (and
+            // therefore all cached thumbnail Image items) alive between opens.
+            if (!hasScannedOnce) {
+                scanProc.running = true
+            }
         }
     }
 
@@ -81,12 +100,19 @@ PanelWindow {
         radius: 12
     }
 
+    // Ensure the thumbnail cache directory exists before anything tries to write to it
+    Process {
+        id: mkdirProc
+        command: ["mkdir", "-p", root.thumbCacheDir]
+        Component.onCompleted: running = true
+    }
+
     // ── Wallpaper model + scanner ──────────────────────────────
     ListModel { id: wallModel }
 
     Process {
         id: scanProc
-        running: true
+        running: false
         command: [
             "bash", "-c",
             "find '" + root.wallpapersDir + "' -type f " +
@@ -106,10 +132,13 @@ PanelWindow {
         }
 
         onStarted: {
+            statusText.color = "#888888"
+            statusText.text = "Scanning…"
             wallModel.clear()
         }
 
         onExited: function(code) {
+            root.hasScannedOnce = true
             statusText.color = "#888888"
             statusText.text = wallModel.count + " found"
         }
@@ -181,13 +210,26 @@ PanelWindow {
 
                 Item { Layout.fillWidth: true }
 
+                // Manual refresh button — since we no longer auto-rescan on every open
+                Text {
+                    text: "⟳"
+                    color: "#aaaaaa"
+                    font.pixelSize: 14
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: scanProc.running = true
+                    }
+                }
+
                 Text {
                     id: statusText
                     text: "Scanning…"
                     color: "#888888"
                     font.pixelSize: 11
                     elide: Text.ElideLeft
-                    Layout.maximumWidth: 240
+                    Layout.maximumWidth: 200
                 }
             }
 
@@ -235,6 +277,7 @@ PanelWindow {
                     }
 
                     delegate: Item {
+                        id: delegateRoot
                         width: grid.cellWidth
                         height: grid.cellHeight
 
@@ -242,6 +285,25 @@ PanelWindow {
                         required property string name
 
                         readonly property bool isSelected: applyProc.pickedPath === path
+
+                        // Where this wallpaper's cached thumbnail lives on disk.
+                        // Keyed by a hash of the full path so renames/moves just
+                        // regenerate rather than serving a stale image.
+                        readonly property string cacheFile: root.thumbCacheDir + "/" + root.hashPath(path) + ".png"
+
+                        property bool cacheChecked: false
+                        property bool cacheExists: false
+
+                        // Check once whether a cached thumb already exists on disk
+                        Process {
+                            id: cacheCheck
+                            command: ["test", "-f", delegateRoot.cacheFile]
+                            onExited: function(code) {
+                                delegateRoot.cacheExists = (code === 0)
+                                delegateRoot.cacheChecked = true
+                            }
+                            Component.onCompleted: running = true
+                        }
 
                         Rectangle {
                             id: tile
@@ -267,12 +329,34 @@ PanelWindow {
                             Image {
                                 id: thumb
                                 anchors.fill: parent
-                                source: "file://" + path
                                 fillMode: Image.PreserveAspectCrop
                                 asynchronous: true
                                 smooth: true
                                 sourceSize.width: rect.cellW * 2
                                 sourceSize.height: rect.cellH * 2
+
+                                // Once we know whether a cache file exists, load from
+                                // cache if possible — otherwise load the real file
+                                // (and we'll grab + save a cached copy once it's ready)
+                                source: delegateRoot.cacheChecked
+                                    ? "file://" + (delegateRoot.cacheExists ? delegateRoot.cacheFile : delegateRoot.path)
+                                    : ""
+
+                                onStatusChanged: {
+                                    if (status === Image.Ready
+                                        && delegateRoot.cacheChecked
+                                        && !delegateRoot.cacheExists) {
+                                        // Save a small cached copy so every future open
+                                        // (even after a full quickshell restart) loads
+                                        // this tiny file instead of the full-res original
+                                        grabToImage(function(result) {
+                                            if (result) {
+                                                result.saveToFile(delegateRoot.cacheFile)
+                                                delegateRoot.cacheExists = true
+                                            }
+                                        })
+                                    }
+                                }
 
                                 Rectangle {
                                     anchors.fill: parent
