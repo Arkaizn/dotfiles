@@ -4,13 +4,14 @@
 // See the binds section below for more spawn examples.
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
-spawn-sh-at-startup "/home/arkaizn/Pictures/Wallpapers/set_wallpaper.sh"
+spawn-sh-at-startup "bash ~/Pictures/Wallpapers/set_wallpaper.sh"
 spawn-at-startup "awww-daemon"
+spawn-sh-at-startup "bash ~/.config/hypr/hyprlock/hyprlock.sh"
 spawn-sh-at-startup "nm-applet --indicator"
 spawn-sh-at-startup "cliphist wipe"
 spawn-sh-at-startup "wl-paste --watch cliphist store"
 spawn-sh-at-startup "QS_NO_RELOAD_POPUP=1 qs"
-spawn-sh-at-startup "swayidle -w timeout 300 'swaylock' timeout 1800 'swaymsg \"output * dpms off\"' resume 'swaymsg \"output * dpms on\"'"
+spawn-sh-at-startup "swayidle -w timeout 300 'bash ~/.config/hypr/hyprlock/hyprlock.sh' timeout 1800 'swaymsg \"output * dpms off\"' resume 'swaymsg \"output * dpms on\"'"
 
 
 hotkey-overlay {
