@@ -4,75 +4,35 @@ set -euo pipefail
 SOURCE_DIR="$HOME/git/dotfiles/.config"
 TARGET_DIR="$HOME/.config"
 
-# ── Precious files ────────────────────────────────────────────────────────────
-# These are NEVER overwritten by rsync; copied only if missing at the end.
-PRECIOUS=(
+# Files "default" protects from overwrite; "full" ignores this list
+DEFAULT_EXCLUDES=(
+    "custom/"
     "hypr/wallpapers/pywallpaper.png"
     "hypr/wallpapers/thumbs.db"
     "kitty/current-theme.conf"
     "quickshell/services/Colors.qml"
     "niri/config/layout.kdl"
+    "hypr/hyprland/monitors.lua"
+    "hypr/hyprlock/hyprlock.sh"
+    "niri/config/output.kdl"
 )
 
-# ── Profile excludes (on top of precious + custom/) ───────────────────────────
-declare -A PROFILE_EXCLUDES=(
-    [full]=""
-    [full-lite]="hypr/hyprland/monitors.lua hypr/hyprlock/hyprlock.sh niri/config/output.kdl"
-    [standard]="hypr/"
-)
+gum spin --title "Pulling dotfiles…" -- git -C "$HOME/git/dotfiles" pull --quiet
 
-# ─────────────────────────────────────────────────────────────────────────────
-
-echo "Pulling dotfiles…"
-
-cd $HOME/git/dotfiles && git pull --quiet
-echo "Done."
-
-profile=$(gum choose "full-lite" "standard" "full")
+profile=$(gum choose "default" "full")
 echo "Profile: $profile"
 
-# Build rsync exclude args
-excludes=(--exclude="custom/")
-for p in "${PRECIOUS[@]}";          do excludes+=(--exclude="$p"); done
-for p in ${PROFILE_EXCLUDES[$profile]}; do excludes+=(--exclude="$p"); done
+if [[ "$profile" == "default" ]]; then
+    gum spin --title "Syncing…" -- \
+        rsync -av --exclude-from=<(printf '%s\n' "${DEFAULT_EXCLUDES[@]}") "$SOURCE_DIR/" "$TARGET_DIR/"
 
-# ── Main sync ─────────────────────────────────────────────────────────────────
-echo "Syncing… (precious files + custom/ are protected)"
-rsync -av "${excludes[@]}" "$SOURCE_DIR/" "$TARGET_DIR/"
-
-# ── custom/: copy only missing files, never overwrite ─────────────────────────
-if [[ -d "$SOURCE_DIR/custom" ]]; then
-    echo "Checking custom/ for missing files…"
-    while IFS= read -r -d '' src; do
-        rel="${src#"$SOURCE_DIR/"}"
-        dst="$TARGET_DIR/$rel"
-        if [[ ! -f "$dst" ]]; then
-            mkdir -p "$(dirname "$dst")"
-            cp "$src" "$dst"
-            echo "  + $rel"
-        else
-            echo "  ~ kept: $rel"
-        fi
-    done < <(find "$SOURCE_DIR/custom" -type f -print0)
+    gum spin --title "Filling in protected files (existing files kept)…" -- \
+        bash -c 'printf "%s\n" "$@" | rsync -avr --ignore-existing --files-from=- "$0/" "$1/"' \
+        "$SOURCE_DIR" "$TARGET_DIR" "${DEFAULT_EXCLUDES[@]}"
+else
+    gum spin --title "Syncing…" -- rsync -av "$SOURCE_DIR/" "$TARGET_DIR/"
 fi
 
-# ── Precious files: copy only if missing ──────────────────────────────────────
-echo "Checking precious files…"
-for rel in "${PRECIOUS[@]}"; do
-    src="$SOURCE_DIR/$rel"
-    dst="$TARGET_DIR/$rel"
-    [[ -f "$src" ]] || continue          # not in source → skip
-    if [[ ! -f "$dst" ]]; then
-        mkdir -p "$(dirname "$dst")"
-        cp "$src" "$dst"
-        echo "  + $rel"
-    else
-        echo "  ~ kept: $rel"
-    fi
-done
-
-# ── Reload ────────────────────────────────────────────────────────────────────
-echo "Reloading…"
-pkill qs && niri msg action spawn -- sh -c 'QS_NO_RELOAD_POPUP=1 qs'
+gum spin --title "Reloading…" -- bash -c 'pkill qs && niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 qs"'
 
 echo "Done ✅"
