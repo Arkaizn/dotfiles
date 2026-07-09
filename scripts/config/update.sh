@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SOURCE_DIR="$HOME/git/dotfiles/.config"
-TARGET_DIR="$HOME/.config"
+SOURCE_DIR="$HOME/git/dotfiles/.config"           # where dotfiles live in the repo
+TARGET_DIR="$HOME/.config"                        # where they get synced to
 
 # Files "default" protects from overwrite; "full" ignores this list
 DEFAULT_EXCLUDES=(
     "custom/"
-    "hypr/wallpapers/pywallpaper.png"
-    "hypr/wallpapers/thumbs.db"
     "kitty/current-theme.conf"
     "quickshell/services/Colors.qml"
     "niri/config/layout.kdl"
@@ -17,22 +15,33 @@ DEFAULT_EXCLUDES=(
     "niri/config/output.kdl"
 )
 
-gum spin --title "Pulling dotfiles…" -- git -C "$HOME/git/dotfiles" pull --quiet
-
-profile=$(gum choose "default" "full")
+gum spin --title "Pulling dotfiles…" -- git -C "$HOME/git/dotfiles" pull --quiet   # update local repo from remote
+profile=$(gum choose "default" "full")            # ask user which sync mode to use
 echo "Profile: $profile"
 
 if [[ "$profile" == "default" ]]; then
+    # copy everything except the protected files, overwriting existing configs
     gum spin --title "Syncing…" -- \
         rsync -av --exclude-from=<(printf '%s\n' "${DEFAULT_EXCLUDES[@]}") "$SOURCE_DIR/" "$TARGET_DIR/"
 
+    # for protected files only, copy from source but never overwrite what's already there
     gum spin --title "Filling in protected files (existing files kept)…" -- \
-        bash -c 'printf "%s\n" "$@" | rsync -avr --ignore-existing --files-from=- "$0/" "$1/"' \
-        "$SOURCE_DIR" "$TARGET_DIR" "${DEFAULT_EXCLUDES[@]}"
+        bash -c '
+            src="$1"; dst="$2"; shift 2                                            # split args into named vars, leave excludes in "$@"
+            printf "%s\n" "$@" | rsync -avr --ignore-existing --ignore-missing-args --files-from=- "$src/" "$dst/"
+        ' _ "$SOURCE_DIR" "$TARGET_DIR" "${DEFAULT_EXCLUDES[@]}"
 else
+    # full profile: overwrite everything, no exceptions
     gum spin --title "Syncing…" -- rsync -av "$SOURCE_DIR/" "$TARGET_DIR/"
 fi
 
-gum spin --title "Reloading…" -- bash -c 'pkill qs && niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 qs"'
+# reload compositor config and restart quickshell, depending on which session is running
+if [[ -n "${NIRI_SOCKET:-}" ]]; then
+    gum spin --title "Reloading (niri)…" -- bash -c 'pkill qs && niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 qs"'
+elif [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+    gum spin --title "Reloading (Hyprland)…" -- bash -c 'hyprctl reload || true; pkill qs && hyprctl dispatch "hl.dsp.exec_cmd(\"QS_NO_RELOAD_POPUP=1 qs\")"'
+else
+    gum style --foreground 1 "Could not detect niri or Hyprland session — skipping reload."
+fi
 
 echo "Done ✅"
