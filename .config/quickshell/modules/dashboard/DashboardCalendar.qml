@@ -224,15 +224,16 @@ Item {
             Layout.topMargin: 4
             spacing: 0
 
-            Item { width: 28 }   // spacer matching week-number column
+            Item { width: 15 }
 
             Repeater {
                 model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
                 Text {
                     Layout.fillWidth: true
+                    Layout.preferredWidth: 0
                     text: modelData
                     color: Qt.rgba(1,1,1,0.35)
-                    font.pixelSize: 10
+                    font.pixelSize: 12
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
