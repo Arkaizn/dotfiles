@@ -45,7 +45,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         font.pixelSize: Properties.pixelSize
                         text: modelData.name
-                        color: Colors.foreground
+                        color: Properties.color
                         opacity: modelData.id === Hyprland.focusedWorkspace?.id ? 1.0 : 0.5
                     }
                 }

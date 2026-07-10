@@ -42,7 +42,7 @@ Item{
         Text {
             id: hoursText
             text: Time.format("hh")
-            color: Colors.foreground
+            color: Properties.color
             font.pixelSize: 12
             font.weight: Font.Bold
             font.family: "Inter"
@@ -70,7 +70,7 @@ Item{
         Text { 
             id: minutesText
             text: Time.format("mm")
-            color: Colors.foreground
+            color: Properties.color
             font.pixelSize: 12
             font.weight: Font.Bold
             font.family: "Inter"
@@ -79,7 +79,7 @@ Item{
     Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Time.format("ddd d")
-                color: Colors.foreground
+                color: Properties.color
                 font.pixelSize: 10
                 font.weight: Font.Medium
                 font.family: "Inter"

@@ -34,7 +34,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         font.pixelSize: Properties.pixelSize
                         text: model.name || model.index
-                        color: Colors.foreground
+                        color: Properties.color
                         opacity: model.isActive ? 1.0 : 0.5
                     }
                     MouseArea {
