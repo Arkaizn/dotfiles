@@ -34,6 +34,8 @@ while IFS= read -r name; do
 done < <(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
 rsync_args+=(--exclude="*")
 
-gum spin --title "Pushing…" -- rsync "${rsync_args[@]}" "$SOURCE_DIR/" "$TARGET_DIR/"
+gum spin --title "Pushing Config …" -- rsync "${rsync_args[@]}" "$SOURCE_DIR/" "$TARGET_DIR/"
+
+gum spin --title "Pushing .zshrc" -- rsync .zshrc ~/git/dotfiles/.config
 
 echo "Push done ✅"

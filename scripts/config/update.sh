@@ -35,6 +35,8 @@ else
     gum spin --title "Syncing…" -- rsync -av "$SOURCE_DIR/" "$TARGET_DIR/"
 fi
 
+gum spin --title "Syncing .zshrc" -- rsync ~/git/dotfiles/.config/ ~/
+
 # reload compositor config and restart quickshell, depending on which session is running
 if [[ -n "${NIRI_SOCKET:-}" ]]; then
     gum spin --title "Reloading (niri)…" -- bash -c 'pkill qs && niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 qs"'
