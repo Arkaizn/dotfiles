@@ -35,7 +35,7 @@ else
     gum spin --title "Syncing…" -- rsync -av "$SOURCE_DIR/" "$TARGET_DIR/"
 fi
 
-gum spin --title "Syncing .zshrc" -- rsync ~/git/dotfiles/.config/ ~/
+gum spin --title "Syncing .zshrc" -- rsync ~/git/dotfiles/.config/.zshrc ~/
 
 # reload compositor config and restart quickshell, depending on which session is running
 if [[ -n "${NIRI_SOCKET:-}" ]]; then
