@@ -10,14 +10,17 @@ base="${filename%.*}"
 ext="${filename##*.}"
 WALLPAPER_DIR="$(dirname -- "$WALLPAPER")"
 BLURRED="${WALLPAPER_DIR}/${base}-blurred.${ext}"
-magick "$WALLPAPER" -blur 0x15 "$BLURRED"
 
-# Set wallpaper
+magick "$WALLPAPER" -resize 10% -blur 0x6 -resize 1000% "$BLURRED"
+
+# kill wallpaper
 pkill swaybg 2>/dev/null || true
 pgrep -x awww-daemon >/dev/null 2>&1 || awww-daemon >/dev/null 2>&1 &
 
-# Set wallpaper
+# Set wallpaper awww
 awww img "$WALLPAPER" --transition-type wipe --transition-angle 210 --transition-fps 60 --transition-duration .5
+
+# Set wallpaper swaybg
 swaybg -i "$BLURRED" -m fill &
 
 # Remove cache
@@ -27,13 +30,10 @@ rm -fr ~/.cache/wal/schemes
 wal -i "$WALLPAPER" -n 2>/dev/null || true
 
 # Quickshell
-[[ -e ~/.config/quickshell/services/Colors.qml ]] || rm -fr ~/.cache/wal/Colors.qml
 cp -fr ~/.cache/wal/Colors.qml ~/.config/quickshell/services/Colors.qml
 
+# Niri
 bash ~/.config/niri/niri-colors.sh
-
-# Reload Hyprland
-# hyprctl reload
 
 # OpenRGB - use pywal color directly
 export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-}"
