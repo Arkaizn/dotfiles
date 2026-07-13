@@ -32,8 +32,8 @@ PanelWindow {
     property var folderSet: ({})     // set (object) of relDirs seen during scan
 
     readonly property string wallpapersDir: Quickshell.env("HOME") + "/Pictures/Wallpapers"
-    readonly property string outputPath:    Quickshell.env("HOME") + "/Pictures/Wallpapers/pywallpaper.png"
-    readonly property string scriptPath:    Quickshell.env("HOME") + "/Pictures/Wallpapers/set_wallpaper.sh"
+    readonly property string outputPath:    Quickshell.env("HOME") + "/.local/share/backgrounds/pywallpaper.png"
+    readonly property string scriptPath:    Quickshell.env("HOME") + "/.config/quickshell/scripts/set_wallpaper.sh"
     readonly property string thumbCacheDir: Quickshell.cachePath("wallpaper_thumbs") // persists across restarts
 
     // Path relative to wallpapersDir; "" for root-level files
