@@ -4,8 +4,7 @@
 // See the binds section below for more spawn examples.
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
-spawn-sh-at-startup "bash ~/Pictures/Wallpapers/set_wallpaper.sh"
-spawn-at-startup "awww-daemon"
+spawn-sh-at-startup "bash ~/.config/quickshell/scripts/set_wallpaper.sh"
 spawn-sh-at-startup "bash ~/.config/hypr/hyprlock/hyprlock.sh"
 spawn-sh-at-startup "nm-applet --indicator"
 spawn-sh-at-startup "cliphist wipe"
