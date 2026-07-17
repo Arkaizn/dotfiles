@@ -21,6 +21,7 @@ binds {
     Mod+Escape { spawn "wlogout"; }
     Mod+Z { spawn "zen-browser"; }
     Mod+V { spawn-sh "cliphist list | wofi -S dmenu -n | cliphist decode | wl-copy"; }
+    Mod+T {spawn-sh "qs ipc call appLauncher toggle";}// new quickshell app launcher -> will replace wofi at some point
 
     Mod+TAB repeat=false { toggle-overview; }
     Mod+C repeat=false { close-window; }
