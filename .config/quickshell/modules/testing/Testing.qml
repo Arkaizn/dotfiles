@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -19,6 +20,12 @@ PanelWindow {
     color: '#00000000'
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
+    IpcHandler  {
+        target: "testing"
+        function toggle(): void  {
+            testing.visible = !testing.visible
+        }
+    }
 
     BackgroundEffect.blurRegion: Region {
         item: animatedRectangle
