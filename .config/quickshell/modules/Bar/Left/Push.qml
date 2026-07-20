@@ -26,6 +26,6 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
         onExited: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: Quickshell.execDetached(["bash","-lc","kitty --class custom_hover -e bash ~/git/dotfiles/scripts/config/push.sh"])
+        onClicked: Quickshell.execDetached(["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/push.sh"])
     }
 }

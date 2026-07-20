@@ -15,7 +15,6 @@ DEFAULT_EXCLUDES=(
     "niri/config/output.kdl"
 )
 
-gum spin --title "Pulling dotfiles…" -- git -C "$HOME/git/dotfiles" pull --quiet   # update local repo from remote
 profile=$(gum choose "default" "full")            # ask user which sync mode to use
 echo "Profile: $profile"
 
