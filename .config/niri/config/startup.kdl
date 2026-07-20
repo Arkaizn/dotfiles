@@ -9,7 +9,7 @@ spawn-sh-at-startup "bash ~/.config/hypr/hyprlock/hyprlock.sh"
 spawn-sh-at-startup "nm-applet --indicator"
 spawn-sh-at-startup "cliphist wipe"
 spawn-sh-at-startup "wl-paste --watch cliphist store"
-spawn-sh-at-startup "QS_NO_RELOAD_POPUP=1 qs"
+spawn-sh-at-startup "QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"
 spawn-sh-at-startup "tailscale systray"
 spawn-sh-at-startup "swayidle -w timeout 300 'bash ~/.config/hypr/hyprlock/hyprlock.sh' timeout 1800 'swaymsg \"output * dpms off\"' resume 'swaymsg \"output * dpms on\"'"
 

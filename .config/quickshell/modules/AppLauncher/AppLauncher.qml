@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Widgets
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -186,6 +187,13 @@ PanelWindow {
 
                             Item { Layout.fillHeight: true }
 
+                            IconImage {
+                                Layout.alignment: Qt.AlignHCenter
+                                implicitWidth: 32
+                                implicitHeight: 32
+                                source: Quickshell.iconPath(recCell.modelData.icon, "AppImage")
+                            }
+
                             Text {
                                 Layout.fillWidth: true
                                 text: recCell.modelData.name
@@ -254,6 +262,12 @@ PanelWindow {
                         anchors.fill: parent
                         anchors.margins: 8
                         spacing: 8
+                        
+                        IconImage {
+                            implicitWidth: 20
+                            implicitHeight: 20
+                            source: Quickshell.iconPath(resultCell.modelData.icon, "AppImage")
+                        }
 
                         Text {
                             text: resultCell.modelData.name

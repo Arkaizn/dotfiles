@@ -39,9 +39,9 @@ gum spin --title "Syncing .zshrc" -- rsync ~/git/dotfiles/.config/.zshrc ~/
 
 # reload compositor config and restart quickshell, depending on which session is running
 if [[ -n "${NIRI_SOCKET:-}" ]]; then
-    gum spin --title "Reloading (niri)…" -- bash -c 'pkill qs && niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 qs"'
+    gum spin --title "Reloading (niri)…" -- bash -c 'pkill qs && niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"'
 elif [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
-    gum spin --title "Reloading (Hyprland)…" -- bash -c 'hyprctl reload || true; pkill qs && hyprctl dispatch "hl.dsp.exec_cmd(\"QS_NO_RELOAD_POPUP=1 qs\")"'
+    gum spin --title "Reloading (Hyprland)…" -- bash -c 'hyprctl reload || true; pkill qs && hyprctl dispatch "hl.dsp.exec_cmd(\"QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs\")"'
 else
     gum style --foreground 1 "Could not detect niri or Hyprland session — skipping reload."
 fi
