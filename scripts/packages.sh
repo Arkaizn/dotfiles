@@ -27,29 +27,33 @@ necessary_packages=(
     lm_sensors
     gdu
 
-    # Wayland/Hyprland Desktop (Core)
-    hyprland
+    # Wayland Hyprland/ Niri Desktop (Core)
+    quickshell
     kitty
-    xdg-desktop-portal-hyprland
+    wlogout
     hyprlock
+    hyprpicker
+    qt6-5compat
+    nautilus
+
+    # Niri
+    niri 
+    xwayland-satellite 
+    xdg-desktop-portal-gnome
+    swayidle
+    qml-niri
+
+    # Hyprland
+    hyprland
+    xdg-desktop-portal-hyprland
     hypridle
     hyprcursor
     hyprshot
-    hyprquickframe-git
-    quicksnip-git
-    hyprpicker
-    qt6-5compat
 
-    # Wayland/Hyprland Extras (Launchers, File Mgr, etc.)
-    wofi
-    thunar
-    wlogout
-    swaync
+    # Wayland Extras
     nwg-look
-    quickshell
     wayvnc
     kvantum
-    satty
     cava
 
     # Audio/Bluetooth
@@ -76,6 +80,7 @@ necessary_packages=(
     # Clipboard/Wallpaper/Theming
     cliphist
     swww
+    swaybg
     pywal-git
     python-pywalfox
 
