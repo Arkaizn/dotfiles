@@ -17,5 +17,5 @@ export EDITOR='vim'
 
 alias ff='clear && fastfetch' 
 
-wal -R > /dev/null 2>&1
+wal -R -n > /dev/null 2>&1
 ff
