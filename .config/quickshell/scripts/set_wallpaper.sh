@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 WALLPAPER="${HOME}/.local/share/backgrounds/pywallpaper.png"
 HYPRLOCK_COLORS_CACHE="${HOME}/.cache/wal/hyprlock_colors"
