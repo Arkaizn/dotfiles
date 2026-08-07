@@ -106,6 +106,8 @@ necessary_packages=(
 
     # Miscellaneous Apps
     gnome-calculator
+    kdbusaddons # dependency of Nextcloud
+    nextcloud-client
 )
 
 

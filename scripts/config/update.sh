@@ -59,6 +59,10 @@ pacman -Qi wofi &>/dev/null && yay -Rns wofi --noconfirm
 pacman -Qi swaylock &>/dev/null && yay -Rns swaylock --noconfirm
 [ -d ~/.config/wofi ] && rm -fr ~/.config/wofi
 
-## 
+## 07/08/26
+
+pacman -Qi kdbusaddons &>/dev/null || yay -S kdbusaddons --noconfirm
+
+##
 
 echo "Done ✅"
