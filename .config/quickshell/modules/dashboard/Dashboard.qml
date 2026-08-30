@@ -16,22 +16,24 @@ PanelWindow {
     anchors {
         top: true
     }
-    readonly property int width: 1120
+    readonly property int width: 1150
     readonly property int height: 500
     property bool hasBeenHovered: false
+    property bool showCorners: false
 
     implicitWidth: width
     implicitHeight: height
     color: "transparent"
     exclusiveZone: 0
+    property int bottomLeftRadius: 40
+    property int bottomRightRadius: 40
+    property int radius: 30
 
     BackgroundEffect.blurRegion: Region {
         item: rect
-        bottomLeftRadius: 12
-        bottomRightRadius: 12
+        bottomLeftRadius: root.bottomLeftRadius
+        bottomRightRadius: root.bottomRightRadius
     }
-
-    
 
     PopupAnimation {
         id: anim
@@ -42,13 +44,14 @@ PanelWindow {
         onExitFinished: root.visible = false
     }
 
-
-
     function toggle() {
         if (root.visible) {
+            cornerDelayTimer.stop()
+            showCorners = false // animate corners out together with the panel
             anim.exit()
         } else {
             root.visible = true
+            showCorners = false
             enterTimer.start()
         }
     }
@@ -59,6 +62,16 @@ PanelWindow {
         repeat: false
         onTriggered: {
             anim.enter()
+            cornerDelayTimer.start()
+        }
+    }
+
+    Timer {
+        id: cornerDelayTimer
+        interval: 0 // corners start animating in 0.1s after the panel starts opening
+        repeat: false
+        onTriggered: {
+            root.showCorners = true
         }
     }
 
@@ -76,16 +89,35 @@ PanelWindow {
         id: cornerleft
         anchors.right: rect.left
         anchors.top: rect.top
+        anchors.topMargin: root.showCorners ? 0 : -16
         corner: "topRight"
         color: rect.color
-        radius: 12
+        radius: 40
+        opacity: root.showCorners ? 1 : 0
+
+        Behavior on anchors.topMargin {
+            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+        }
     }
     InverseCorner {
+        id: cornerright
         anchors.left: rect.right
         anchors.top: rect.top
+        anchors.topMargin: root.showCorners ? 0 : -16
         corner: "topLeft"
         color: rect.color
-        radius: 12
+        radius: 40
+        opacity: root.showCorners ? 1 : 0
+
+        Behavior on anchors.topMargin {
+            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+        }
+        Behavior on opacity {
+            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+        }
     }
 
     Rectangle {
@@ -98,11 +130,11 @@ PanelWindow {
             top: parent.top
             left: parent.left
             right: parent.right
-            rightMargin: 10
-            leftMargin: 10
+            rightMargin: 40
+            leftMargin: 40
         }
-        bottomLeftRadius: 12
-        bottomRightRadius: 12
+        bottomLeftRadius: root.bottomLeftRadius
+        bottomRightRadius: root.bottomRightRadius
         color: '#45000000'
 
         RowLayout {
@@ -120,7 +152,7 @@ PanelWindow {
             Rectangle {
                 Layout.fillHeight: true
                 Layout.preferredWidth: 300
-                radius: 12
+                radius: root.radius
                 color: '#45000000'
 
                 DashboardProfile {}
@@ -136,7 +168,7 @@ PanelWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 180
-                    radius: 12
+                    radius: root.radius / 4 * 3
                     color: '#45000000'
 
                     DashboardMusic {}
@@ -146,7 +178,7 @@ PanelWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    radius: 12
+                    radius: root.radius / 4 * 3
                     color: '#45000000'
 
                     DashboardCalendar {}
@@ -157,7 +189,7 @@ PanelWindow {
             Rectangle {
                 Layout.fillHeight: true
                 Layout.preferredWidth: 300
-                radius: 12
+                radius: root.radius
                 color: '#45000000'
 
                 DashboardStats {}
