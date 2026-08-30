@@ -22,7 +22,7 @@ import "modules/notifications"
 import "modules/testing"
 import "modules/dashboard"
 import "modules/Wallpaper"
-import "modules/AppLauncher"
+import "modules/Launcher"
 
 ShellRoot {
     id: root
@@ -46,7 +46,7 @@ ShellRoot {
     NotifServer {}
     NotifPopup {id: notifPopup}
     NotifCenter { id: notifCenter }
-    AppLauncher{}
+    Launcher{}
     Testing {}
     Dashboard {id: dashboard}
     WallpaperSelector { id: wallpaperSelector }
