@@ -20,10 +20,21 @@ PanelWindow {
     color: '#00000000'
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
-    IpcHandler  {
+    property int duration: 500
+
+    property bool panelOpen: false
+
+    IpcHandler {
         target: "testing"
-        function toggle(): void  {
-            testing.visible = !testing.visible
+        function toggle(): void {
+            if (testing.visible) {
+                testing.panelOpen = false
+                closeTimer.restart()
+            } else {
+                closeTimer.stop()
+                testing.visible = true
+                testing.panelOpen = true
+            }
         }
     }
 
@@ -32,36 +43,31 @@ PanelWindow {
         radius: 24
     }
 
+    Timer {
+        id: closeTimer
+        interval: testing.duration
+        repeat: false
+        onTriggered: testing.visible = false
+    }
 
     Rectangle {
         id: animatedRectangle
-        anchors.fill: parent
+        anchors { 
+            right: parent.right
+            rightMargin: 10
+        }
+        width: 200
+        height: 400
         color: "transparent"
-        radius: 12  // Rounded corners
+        radius: 12
 
-        RowLayout {
-            anchors.fill: parent
-            anchors.margins: 16
+        // slides between hidden (-400) and shown (400 - height) based on panelOpen
+        y: testing.panelOpen ? (0) : -animatedRectangle.height
 
-            TextField {
-                id: searchInput
-
-                Layout.fillWidth: true
-                placeholderText: "Type to search apps..."
-                font.pixelSize: 18
-                color: '#ffffff'
-                focus: true  // Auto-focus when window opens
-
-                background: Rectangle {
-                    color: '#8d000000'
-                    radius: 8
-                }
-
-                // For now, nothing happens on typing (as requested)
-                // You can monitor changes here later
-                onTextChanged: {
-                    // console.log("Search text:", text)  // Uncomment to debug
-                }
+        Behavior on y {
+            NumberAnimation {
+                duration: testing.duration
+                easing.type: Easing.InOutQuad
             }
         }
     }
