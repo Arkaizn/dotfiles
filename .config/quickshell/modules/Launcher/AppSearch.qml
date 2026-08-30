@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Widgets
+import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 
@@ -135,6 +136,29 @@ ColumnLayout {
         root.closeRequested()
     }
 
+    // Finds an already-open window (Toplevel) belonging to this desktop
+    // entry, if any — backs the hover "Switch to app" button below.
+    //
+    // Wayland windows only expose a raw `appId` string (e.g. "firefox" or
+    // "org.mozilla.firefox"), not a desktop-file id, so there's no direct
+    // link between a Toplevel and a DesktopEntry to compare. Instead we run
+    // it the other way: ask Quickshell's own heuristicLookup() to guess
+    // which desktop entry *each open window* belongs to, and see if that
+    // guess is the entry we're rendering. It's best-effort (same as
+    // Quickshell's taskbar-style examples use) and can occasionally miss or
+    // misfire on apps with unusual appIds, but there's no more reliable
+    // general signal available over the foreign-toplevel protocol.
+    function findToplevel(entry) {
+        if (!entry) return null
+        const toplevels = [...ToplevelManager.toplevels.values]
+        for (const t of toplevels) {
+            if (!t.appId) continue
+            const matched = DesktopEntries.heuristicLookup(t.appId)
+            if (matched && matched.id === entry.id) return t
+        }
+        return null
+    }
+
     function moveDown() { if (root.isSearching) resultsList.incrementCurrentIndex() }
     function moveUp() { if (root.isSearching) resultsList.decrementCurrentIndex() }
     function activateCurrent() { if (root.isSearching) root.launch(resultsList.currentItem?.entry) }
@@ -259,12 +283,29 @@ ColumnLayout {
             width: resultsList.width
             height: 44
 
+            // Re-evaluated whenever ToplevelManager's window list changes,
+            // since findToplevel() reads ToplevelManager.toplevels.
+            readonly property var toplevel: root.findToplevel(resultCell.entry)
+            readonly property int switchZoneWidth: 100
+
             HoverHandler {
                 id: resultHover
                 cursorShape: Qt.PointingHandCursor
             }
+
+            // Single TapHandler for the whole row, branching on *where*
+            // within the row the tap landed, rather than stacking a second
+            // TapHandler under the switch button — nested pointer handlers
+            // both trying to claim the same click get unreliable fast.
             TapHandler {
-                onTapped: root.launch(resultCell.entry)
+                onTapped: (point) => {
+                    if (resultCell.toplevel && point.position.x >= resultCell.width - resultCell.switchZoneWidth) {
+                        resultCell.toplevel.activate()
+                        root.closeRequested()
+                    } else {
+                        root.launch(resultCell.entry)
+                    }
+                }
             }
 
             readonly property bool isCurrent: resultsList.currentIndex === resultCell.index
@@ -309,6 +350,47 @@ ColumnLayout {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
                     Behavior on color { ColorAnimation { duration: 80 } }
+                }
+            }
+
+            // ── "Switch to app" — only exists as a hoverable zone; the
+            // pill itself only renders while hovered, and only if the app
+            // actually has an open window. HoverHandler is passive (it never
+            // grabs/consumes the click), so it can sit right on top of the
+            // row's TapHandler above with zero interference — the tap
+            // decision is made purely by x-position, not by which handler
+            // "wins".
+            Item {
+                id: switchZone
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                width: resultCell.switchZoneWidth
+
+                Rectangle {
+                    id: switchPill
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: resultCell.toplevel !== null
+                    height: 26
+                    radius: 6
+                    color: Qt.rgba(1, 1, 1, 0.16)
+                    border.width: 1
+                    border.color: Qt.rgba(1, 1, 1, 0.28)
+                    width: switchLabel.implicitWidth + 16
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: 80 }
+                    }
+
+                    Text {
+                        id: switchLabel
+                        anchors.centerIn: parent
+                        text: "Switch to app"
+                        font.pixelSize: 11
+                        color: "white"
+                    }
                 }
             }
         }
