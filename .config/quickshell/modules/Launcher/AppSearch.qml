@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import Quickshell.Widgets
 import Quickshell.Wayland
 import QtQuick
@@ -34,10 +35,67 @@ ColumnLayout {
     onAllAppsChanged: updateFilteredModel()
     onQueryChanged: updateFilteredModel()
 
-    // TODO: back this with real usage-frequency data (frecency) once that's
-    // tracked somewhere. For now it's just a placeholder slice of apps so the
-    // "recommended" row has something to show before you start typing.
-    property var recommendedApps: allApps.slice(0, 8)
+    // ── Usage tracking (frecency) ──
+    //
+    // Persists { [appId]: { count, lastUsed } } to disk via Quickshell's
+    // stateDir so the "recommended" row survives restarts. Score blends
+    // frequency and recency the way Firefox's address bar does: raw launch
+    // count decayed by an exponential half-life on age, so an app you
+    // opened 30 times last month doesn't permanently outrank whatever
+    // you've actually been using this week.
+    readonly property real frecencyHalfLifeMs: 7 * 24 * 60 * 60 * 1000 // 7 days
+
+    FileView {
+        id: usageFile
+        path: Quickshell.stateDir + "/launcher_app_usage.json"
+        watchChanges: true
+        onFileChanged: reload()
+        onAdapterUpdated: writeAdapter()
+
+        JsonAdapter {
+            id: usageAdapter
+            // key -> { count: int, lastUsed: epoch millis }
+            property var usage: ({})
+        }
+    }
+
+    // Bumps an app's usage stats. Reassigns the whole object (rather than
+    // mutating in place) since JsonAdapter only notices property-level
+    // changes, not mutations nested inside a `var`.
+    function recordLaunch(entry) {
+        const key = root.entryKey(entry)
+        const prev = usageAdapter.usage[key] || { count: 0, lastUsed: 0 }
+        const next = Object.assign({}, usageAdapter.usage)
+        next[key] = { count: prev.count + 1, lastUsed: Date.now() }
+        usageAdapter.usage = next
+    }
+
+    // Frecency-ranked recommendations, topped up with alphabetical apps
+    // when there isn't enough usage history yet (fresh install, etc).
+    function computeRecommended() {
+        const usage = usageAdapter.usage
+        const now = Date.now()
+
+        const scored = root.allApps
+            .map(e => {
+                const u = usage[root.entryKey(e)]
+                if (!u) return null
+                const ageMs = now - u.lastUsed
+                const score = u.count * Math.pow(0.5, ageMs / root.frecencyHalfLifeMs)
+                return { entry: e, score: score }
+            })
+            .filter(r => r !== null)
+            .sort((a, b) => b.score - a.score)
+            .map(r => r.entry)
+
+        if (scored.length >= 8) return scored.slice(0, 8)
+
+        const usedKeys = new Set(scored.map(root.entryKey))
+        const padding = root.allApps.filter(e => !usedKeys.has(root.entryKey(e)))
+        return scored.concat(padding.slice(0, 8 - scored.length))
+    }
+
+    property var recommendedApps: computeRecommended()
 
     // Escapes regex special characters so the query can be used safely inside a RegExp
     function escapeRegex(s) {
@@ -132,6 +190,7 @@ ColumnLayout {
 
     function launch(entry) {
         if (!entry) return
+        root.recordLaunch(entry)
         entry.execute()
         root.closeRequested()
     }
@@ -367,12 +426,16 @@ ColumnLayout {
                 anchors.bottom: parent.bottom
                 width: resultCell.switchZoneWidth
 
+                HoverHandler {
+                    id: switchHover
+                }
+
                 Rectangle {
                     id: switchPill
                     anchors.right: parent.right
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: resultCell.toplevel !== null
+                    visible: resultCell.toplevel !== null && switchHover.hovered
                     height: 26
                     radius: 6
                     color: Qt.rgba(1, 1, 1, 0.16)
