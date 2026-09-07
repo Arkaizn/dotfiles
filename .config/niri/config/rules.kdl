@@ -72,6 +72,13 @@ window-rule {
     }
 }
 
+window-rule {
+    match app-id="codium"
+    match app-id="zen"
+    match app-id="xfreerdp"
+    open-maximized true
+}
+
 // window-rule {
 //     match app-id="zen"
 
