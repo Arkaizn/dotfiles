@@ -4,6 +4,18 @@ set -euo pipefail
 SOURCE_DIR="$HOME/git/dotfiles/.config"           # where dotfiles live in the repo
 TARGET_DIR="$HOME/.config"                        # where they get synced to
 
+LOG_DIR="$HOME/.local/state/dotfiles-sync"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/sync-$(date +%Y%m%d-%H%M%S).log"
+
+# Prints AND appends to the log file. Plain echo, so it's not swallowed by
+# gum spin (that only hides the output of the command it wraps).
+log() {
+    printf '%s\n' "$1" | tee -a "$LOG_FILE" >/dev/null
+}
+
+log "=== Dotfiles sync started $(date) ==="
+
 # Files "default" protects from overwrite; "full" ignores this list.
 # NOTE: these are root-relative paths (relative to SOURCE_DIR).
 DEFAULT_EXCLUDES=(
@@ -29,22 +41,45 @@ if [[ "$profile" == "default" ]]; then
         anchored_excludes+=("/$e")
     done
 
+    log "[mode] default — overwriting everything except protected files"
+
     # copy everything except the protected files, overwriting existing configs
     gum spin --title "Syncing…" -- \
-        rsync -av --exclude-from=<(printf '%s\n' "${anchored_excludes[@]}") "$SOURCE_DIR/" "$TARGET_DIR/"
+        rsync -a --exclude-from=<(printf '%s\n' "${anchored_excludes[@]}") \
+            --log-file="$LOG_FILE" --log-file-format='%t [copy] %i %n' \
+            "$SOURCE_DIR/" "$TARGET_DIR/"
+
+    # log, per protected file, whether it already exists (kept) or is missing (about to be copied)
+    for f in "${DEFAULT_EXCLUDES[@]}"; do
+        if [[ -e "$TARGET_DIR/$f" ]]; then
+            log "[check] protected, exists — keeping local: $f"
+        else
+            log "[check] protected, missing — will copy from repo: $f"
+        fi
+    done
 
     # for protected files only, copy from source but never overwrite what's already there
     gum spin --title "Filling in protected files (existing files kept)…" -- \
         bash -c '
-            src="$1"; dst="$2"; shift 2                                            # split args into named vars, leave excludes in "$@"
-            printf "%s\n" "$@" | rsync -avr --ignore-existing --ignore-missing-args --files-from=- "$src/" "$dst/"
-        ' _ "$SOURCE_DIR" "$TARGET_DIR" "${DEFAULT_EXCLUDES[@]}"
+            src="$1"; dst="$2"; log="$3"; shift 3                                  # split args into named vars, leave excludes in "$@"
+            printf "%s\n" "$@" | rsync -ar --ignore-existing --ignore-missing-args --files-from=- \
+                --log-file="$log" --log-file-format="%t [protected-copy] %i %n" "$src/" "$dst/"
+        ' _ "$SOURCE_DIR" "$TARGET_DIR" "$LOG_FILE" "${DEFAULT_EXCLUDES[@]}"
 else
+    log "[mode] full — overwriting everything, no exceptions"
+
     # full profile: overwrite everything, no exceptions
-    gum spin --title "Syncing…" -- rsync -av "$SOURCE_DIR/" "$TARGET_DIR/"
+    gum spin --title "Syncing…" -- \
+        rsync -a --log-file="$LOG_FILE" --log-file-format='%t [copy] %i %n' "$SOURCE_DIR/" "$TARGET_DIR/"
 fi
 
-gum spin --title "Syncing .zshrc" -- rsync ~/git/dotfiles/.config/.zshrc ~/
+gum spin --title "Syncing .zshrc" -- \
+    rsync -a --log-file="$LOG_FILE" --log-file-format='%t [copy] %i %n' ~/git/dotfiles/.config/.zshrc ~/
+
+changed=$(grep -cE '\[(copy|protected-copy)\]' "$LOG_FILE" 2>/dev/null || echo 0)
+log ""
+log "=== Sync finished: $changed file(s) touched. Full log: $LOG_FILE ==="
+gum style --foreground 2 "$(printf '%s file(s) touched. Full log: %s' "$changed" "$LOG_FILE")"
 
 # reload compositor config and restart quickshell, depending on which session is running
 if [[ -n "${NIRI_SOCKET:-}" ]]; then
