@@ -4,7 +4,8 @@ set -euo pipefail
 SOURCE_DIR="$HOME/git/dotfiles/.config"           # where dotfiles live in the repo
 TARGET_DIR="$HOME/.config"                        # where they get synced to
 
-# Files "default" protects from overwrite; "full" ignores this list
+# Files "default" protects from overwrite; "full" ignores this list.
+# NOTE: these are root-relative paths (relative to SOURCE_DIR).
 DEFAULT_EXCLUDES=(
     "custom/"
     "kitty/current-theme.conf"
@@ -19,9 +20,18 @@ profile=$(gum choose "default" "full")            # ask user which sync mode to 
 echo "Profile: $profile"
 
 if [[ "$profile" == "default" ]]; then
+    # Build exclude patterns anchored to the source root.
+    # A leading "/" forces rsync to match only "<root>/custom/", not
+    # "<root>/anything/.../custom/" (which is what an unanchored "custom/"
+    # would do, e.g. quickshell/.../custom/ getting silently skipped).
+    anchored_excludes=()
+    for e in "${DEFAULT_EXCLUDES[@]}"; do
+        anchored_excludes+=("/$e")
+    done
+
     # copy everything except the protected files, overwriting existing configs
     gum spin --title "Syncing…" -- \
-        rsync -av --exclude-from=<(printf '%s\n' "${DEFAULT_EXCLUDES[@]}") "$SOURCE_DIR/" "$TARGET_DIR/"
+        rsync -av --exclude-from=<(printf '%s\n' "${anchored_excludes[@]}") "$SOURCE_DIR/" "$TARGET_DIR/"
 
     # for protected files only, copy from source but never overwrite what's already there
     gum spin --title "Filling in protected files (existing files kept)…" -- \
@@ -62,6 +72,10 @@ pacman -Qi swaylock &>/dev/null && yay -Rns swaylock --noconfirm
 ## 07/08/26
 
 pacman -Qi kdbusaddons &>/dev/null || yay -S kdbusaddons --noconfirm
+
+## 08/09/26
+pacman -Qi polkit &>/dev/null || sudo pacman -S polkit
+pacman -Qi polkit-gnome &>/dev/null || sudo pacman -S polkit-gnome
 
 ##
 
