@@ -43,9 +43,20 @@ if [[ "$profile" == "default" ]]; then
 
     log "[mode] default — overwriting everything except protected files"
 
+    # IMPORTANT: use a real temp file, not <(process substitution).
+    # gum runs rsync as ITS OWN subprocess, and a /dev/fd/NN path from process
+    # substitution only exists in the shell that created it — it does not
+    # survive being passed through gum to a grandchild process. rsync would
+    # fail instantly ("No such file or directory") with no visible error
+    # (gum spin hides it), and set -e would silently kill the script here —
+    # which is exactly what was happening.
+    EXCLUDE_FILE=$(mktemp)
+    trap 'rm -f "$EXCLUDE_FILE"' EXIT
+    printf '%s\n' "${anchored_excludes[@]}" > "$EXCLUDE_FILE"
+
     # copy everything except the protected files, overwriting existing configs
     gum spin --title "Syncing…" -- \
-        rsync -a --exclude-from=<(printf '%s\n' "${anchored_excludes[@]}") \
+        rsync -a --exclude-from="$EXCLUDE_FILE" \
             --log-file="$LOG_FILE" --log-file-format='%t [copy] %i %n' \
             "$SOURCE_DIR/" "$TARGET_DIR/"
 
