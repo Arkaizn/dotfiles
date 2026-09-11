@@ -108,6 +108,8 @@ necessary_packages=(
     gnome-calculator
     kdbusaddons # dependency of Nextcloud
     nextcloud-client
+    polkit
+    polkit-gnome
 )
 
 

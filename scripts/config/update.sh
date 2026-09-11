@@ -101,19 +101,7 @@ else
     gum style --foreground 1 "Could not detect niri or Hyprland session — skipping reload."
 fi
 
-# temp (delete after a while / 1 Month?)
-
-## 20/07/26
-pacman -Qi niri &>/dev/null || sudo pacman -S niri --noconfirm
-pacman -Qi xwayland-satellite &>/dev/null || sudo pacman -S xwayland-satellite --noconfirm
-pacman -Qi xdg-desktop-portal-gnome &>/dev/null || sudo pacman -S xdg-desktop-portal-gnome --noconfirm
-pacman -Qi swaybg &>/dev/null || sudo pacman -S swaybg --noconfirm
-pacman -Qi swayidle &>/dev/null || sudo pacman -S swayidle --noconfirm
-pacman -Qi qml-niri &>/dev/null || yay -S qml-niri --noconfirm
-
-pacman -Qi wofi &>/dev/null && yay -Rns wofi --noconfirm
-pacman -Qi swaylock &>/dev/null && yay -Rns swaylock --noconfirm
-[ -d ~/.config/wofi ] && rm -fr ~/.config/wofi
+# temp (delete after a while / 2 Month?)
 
 ## 07/08/26
 
@@ -122,6 +110,13 @@ pacman -Qi kdbusaddons &>/dev/null || yay -S kdbusaddons --noconfirm
 ## 08/09/26
 pacman -Qi polkit &>/dev/null || sudo pacman -S polkit
 pacman -Qi polkit-gnome &>/dev/null || sudo pacman -S polkit-gnome
+
+## 11/09/26
+pacman -Qi ttf-jetbrains-mono-nerd &>/dev/null || sudo pacman -S ttf-jetbrains-mono-nerd
+pacman -Qi ttf-nerd-fonts-symbols-mono &>/dev/null || sudo pacman -S ttf-nerd-fonts-symbols-mono
+pacman -Qi noto-fonts-cjk &>/dev/null || sudo pacman -S noto-fonts-cjk
+pacman -Qi noto-fonts-emoji &>/dev/null || sudo pacman -S noto-fonts-emoji
+pacman -Qi noto-fonts &>/dev/null || sudo pacman -S noto-fonts
 
 ##
 
