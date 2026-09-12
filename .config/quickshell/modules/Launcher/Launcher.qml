@@ -77,12 +77,15 @@ PanelWindow {
         function toggleClipboard(): void {
             root.toggle("clipboard")
         }
+        function toggleStartMenu(): void {
+            root.toggle("startMenu")
+        }
     }
 
     BackgroundEffect.blurRegion: Region {
         item: card
-        topLeftRadius: 12
-        topRightRadius: 12
+        topLeftRadius: 22
+        topRightRadius: 22
     }
 
     PopupAnimation {
