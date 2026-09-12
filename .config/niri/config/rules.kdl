@@ -78,6 +78,7 @@ window-rule {
     match app-id="xfreerdp"
     match app-id="feishin"
     match app-id="steam"
+    match app-id="vesktop"
     open-maximized true
 }
 
