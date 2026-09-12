@@ -435,24 +435,23 @@ ColumnLayout {
                     anchors.right: parent.right
                     anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
-                    visible: resultCell.toplevel !== null && switchHover.hovered
+                    visible: resultCell.toplevel !== null
                     height: 26
                     radius: 6
-                    color: Qt.rgba(1, 1, 1, 0.16)
+                    color: switchHover.hovered ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
                     border.width: 1
-                    border.color: Qt.rgba(1, 1, 1, 0.28)
+                    border.color: switchHover.hovered ? Qt.rgba(1, 1, 1, 0.28) : Qt.rgba(1, 1, 1, 0.14)
                     width: switchLabel.implicitWidth + 16
 
-                    Behavior on opacity {
-                        NumberAnimation { duration: 80 }
-                    }
+                    Behavior on color { ColorAnimation { duration: 80 } }
 
                     Text {
                         id: switchLabel
                         anchors.centerIn: parent
                         text: "Switch to app"
                         font.pixelSize: 11
-                        color: "white"
+                        color: switchHover.hovered ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                        Behavior on color { ColorAnimation { duration: 80 } }
                     }
                 }
             }
