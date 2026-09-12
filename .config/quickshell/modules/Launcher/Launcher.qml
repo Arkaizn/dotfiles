@@ -89,8 +89,8 @@ PanelWindow {
         id: anim
         target: rect
         direction: "top"
-        enterDuration: 150
-        exitDuration: 150
+        enterDuration: 280
+        exitDuration: 180
         onExitFinished: root.visible = false
     }
 
@@ -117,16 +117,23 @@ PanelWindow {
             return
         }
 
-        // Fresh opens always land on "apps" (or whatever targetMode was
-        // explicitly requested) — deliberately NOT `root.mode`, so the panel
-        // never "remembers" that you were on the clipboard tab last time.
+        card.skipHeightAnim = true
         root.mode = targetMode || "apps"
         root.visible = true
         searchField.text = ""
-        // `active` on ClipboardHistory only refreshes on the 0->1 edge, so
-        // if we're reopening while still parked on the clipboard tab from
-        // last time, force a refresh — otherwise you'd see a stale list.
         if (root.mode === "clipboard") clipboardView.refresh()
+
+        // Reopening after a close remaps a brand-new Wayland surface, which
+        // doesn't inherit the old mask/blur region attachment. If card's
+        // geometry is identical to how it was last time (same mode, empty
+        // query), nothing about `card` actually changes value, so the
+        // Region bound to it never re-fires and the region never gets
+        // resent to the new surface — card renders with no mask/blur,
+        // i.e. looks invisible. Force one real bounds change so it always
+        // gets resent, then snap it back before it's visible.
+        card.width -= 1
+        Qt.callLater(() => card.width += 1)
+
         enterTimer.start()
     }
 
@@ -137,6 +144,7 @@ PanelWindow {
         onTriggered: {
             anim.enter()
             searchField.forceActiveFocus()
+            card.skipHeightAnim = false
         }
     }
 
@@ -147,19 +155,19 @@ PanelWindow {
 
     // ── Stable wrapper for the open/close slide animation ──
     // Fixed size, fills the whole (fixed-size) surface. PopupAnimation
-    // targets THIS, not the dynamically-sized card below. Reason:
-    // PopupAnimation almost certainly animates `y` (or `scale`) directly for
-    // its slide effect, and the moment something animates `y` on an item,
-    // QML silently breaks that item's `anchors.bottom` binding. `card` below
-    // is bottom-anchored with a *variable* height, so if PopupAnimation
-    // targeted it directly, the entrance animation would finish by
-    // hard-setting `y` to some value, permanently detaching it from
-    // `parent.height - card.height` — which is exactly why it flashed open
-    // then vanished. By keeping the open/close animation on a target that
-    // never resizes, there's nothing for it to conflict with.
+    // targets THIS, not the dynamically-sized card below.
+    //
+    // IMPORTANT: this uses explicit width/height, NOT anchors.fill. As soon
+    // as PopupAnimation.enter()/exit() assign target.x / target.y directly,
+    // any anchor on that axis (anchors.fill, anchors.top, anchors.bottom,
+    // etc.) re-asserts itself and silently stomps the assignment back to 0
+    // on the next binding evaluation — which is exactly what made the slide
+    // never actually appear. width/height alone don't touch x/y, so the
+    // item keeps its correct size while staying free to animate position.
     Item {
         id: rect
-        anchors.fill: parent
+        width: parent.width
+        height: parent.height
 
         // ── The visible card ──
         // This is the piece that actually grows/shrinks on screen, nested
@@ -167,6 +175,7 @@ PanelWindow {
         // interacts with the open/close slide.
         Rectangle {
             id: card
+            property bool skipHeightAnim: false
             anchors {
                 left: parent.left
                 right: parent.right
@@ -177,6 +186,7 @@ PanelWindow {
             radius: 12
 
             Behavior on height {
+                enabled: !card.skipHeightAnim
                 NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
             }
 

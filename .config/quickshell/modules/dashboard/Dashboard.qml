@@ -38,7 +38,7 @@ PanelWindow {
     PopupAnimation {
         id: anim
         target: rect
-        direction: "top"
+        direction: "bottom"
         enterDuration: 150
         exitDuration: 150
         onExitFinished: root.visible = false
@@ -127,7 +127,6 @@ PanelWindow {
         opacity: 0
         y: -height
         anchors {
-            top: parent.top
             left: parent.left
             right: parent.right
             rightMargin: 40
