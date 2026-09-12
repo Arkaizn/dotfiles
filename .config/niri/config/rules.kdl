@@ -63,16 +63,6 @@ window-rule {
 }
 
 window-rule {
-    match app-id="wofi"
-    open-floating true
-    background-effect {
-        xray true
-        blur true
-        saturation 1
-    }
-}
-
-window-rule {
     match app-id="codium"
     match app-id="zen"
     match app-id="xfreerdp"
