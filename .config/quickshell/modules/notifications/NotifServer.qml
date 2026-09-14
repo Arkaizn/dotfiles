@@ -1,6 +1,10 @@
 import Quickshell.Services.Notifications
 
 NotificationServer {
+        actionsSupported:    true
+        bodySupported:        true
+        bodyMarkupSupported: true
+        imageSupported:       true
         keepOnReload: false
         onNotification: notif => {
             // console.log("notif from:", notif.appName)
