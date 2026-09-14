@@ -118,6 +118,9 @@ pacman -Qi noto-fonts-cjk &>/dev/null || sudo pacman -S noto-fonts-cjk
 pacman -Qi noto-fonts-emoji &>/dev/null || sudo pacman -S noto-fonts-emoji
 pacman -Qi noto-fonts &>/dev/null || sudo pacman -S noto-fonts
 
-##
+## 14/09/26
+pacman -Qi netbird &>/dev/null || yay -S netbird
+pacman -Qi netbird-ui-bin &>/dev/null || yay -S netbird-ui-bin
+
 
 echo "Done ✅"
