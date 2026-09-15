@@ -122,5 +122,7 @@ pacman -Qi noto-fonts &>/dev/null || sudo pacman -S noto-fonts
 pacman -Qi netbird &>/dev/null || yay -S netbird
 pacman -Qi netbird-ui-bin &>/dev/null || yay -S netbird-ui-bin
 
+sudo sed -i 's|--daemon-addr unix:///var/run/netbird/main.sock||' /usr/share/applications/netbird.desktop
+
 
 echo "Done ✅"
