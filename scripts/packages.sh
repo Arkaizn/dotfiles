@@ -83,6 +83,12 @@ necessary_packages=(
     swaybg
     pywal-git
     python-pywalfox
+    satty
+    grim
+    slurp
+    tesseract
+    tesseract-data-eng
+    tesseract-data-deu
 
     # Browser
     zen-browser-bin

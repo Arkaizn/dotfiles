@@ -258,9 +258,11 @@ binds {
     // Mod+Space       { switch-layout "next"; }
     // Mod+Shift+Space { switch-layout "prev"; }
 
-    Print { screenshot; }
-    Ctrl+Print { screenshot-screen; }
-    Alt+Print { screenshot-window; }
+    Print { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
+    Ctrl+Print { spawn-sh "grim -t ppm - | satty --filename -"; }
+    // Alt+Print { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
+    Super+Shift+S { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
+    Super+Shift+T { spawn-sh "grim -t png -g \"$(slurp)\" - | tesseract - - -l eng+deu | wl-copy && notify-send 'OCR' 'Text copied'"; }
 
     // Applications such as remote-desktop clients and software KVM switches may
     // request that niri stops processing the keyboard shortcuts defined here
