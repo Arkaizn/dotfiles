@@ -123,7 +123,8 @@ pacman -Qi netbird &>/dev/null || yay -S netbird --noconfirm
 pacman -Qi netbird-ui-bin &>/dev/null || yay -S netbird-ui-bin --noconfirm
 
 sudo sed -i 's|--daemon-addr unix:///var/run/netbird/main.sock||' /usr/share/applications/netbird.desktop
-
+sudo netbird service install
+sudo systemctl enable --now netbird
 
 ## 18/09/26
 pacman -Qi satty &>/dev/null || yay -S satty --noconfirm
