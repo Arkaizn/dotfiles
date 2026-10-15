@@ -8,6 +8,8 @@ import Quickshell.Wayland
 import qs.components
 import qs.services
 import QtQuick.Effects
+import QtQuick.Shapes
+import "../../components/outline.js" as Outline
 
 // ── Root of the launcher ──
 // Owns the PanelWindow/layer-shell surface, the open/close slide animation,
@@ -24,7 +26,10 @@ PanelWindow {
     anchors {
         bottom: true
     }
-    implicitWidth: 640
+    // card width + room for the inverted corners on both sides
+    readonly property int cardWidth: 640
+    readonly property int flare: Properties.flareRadius
+    implicitWidth: cardWidth + flare * 2
 
     // ── Why the surface size is a constant, not a binding ──
     // implicitHeight here drives the *real* Wayland layer-shell surface
@@ -95,6 +100,10 @@ PanelWindow {
         }
     }
 
+    // Card + the two inverted corners where it meets the screen edge
+    // (each = its square minus a circle), so the corners get blurred too.
+    readonly property int cardBottom: rect.y + card.y + card.height
+
     BackgroundEffect.blurRegion: Region {
         x: rect.x + card.x
         y: rect.y + card.y
@@ -102,6 +111,25 @@ PanelWindow {
         height: card.height
         topLeftRadius: Properties.panelRadius
         topRightRadius: Properties.panelRadius
+
+        Region {
+            x: rect.x + card.x - root.flare; y: root.cardBottom - root.flare
+            width: root.flare; height: root.flare
+            Region {
+                shape: RegionShape.Ellipse; intersection: Intersection.Subtract
+                x: rect.x + card.x - root.flare * 2; y: root.cardBottom - root.flare * 2
+                width: root.flare * 2; height: root.flare * 2
+            }
+        }
+        Region {
+            x: rect.x + card.x + card.width; y: root.cardBottom - root.flare
+            width: root.flare; height: root.flare
+            Region {
+                shape: RegionShape.Ellipse; intersection: Intersection.Subtract
+                x: rect.x + card.x + card.width; y: root.cardBottom - root.flare * 2
+                width: root.flare * 2; height: root.flare * 2
+            }
+        }
     }
 
     PopupAnimation {
@@ -181,6 +209,36 @@ PanelWindow {
         // This is the piece that actually grows/shrinks on screen, nested
         // inside the stable `rect` above so its own height animation never
         // interacts with the open/close slide.
+        // ── Card outline ──
+        // Same shape as the bar popups (components/outline.js), flipped
+        // vertically: attached edge + inverted corners at the bottom screen
+        // edge, rounded corners at the top. Follows card's animated height.
+        Shape {
+            id: outline
+            x: 0
+            y: card.y
+            width: rect.width
+            height: card.height
+            preferredRendererType: Shape.CurveRenderer
+            transform: Scale { origin.y: outline.height / 2; yScale: -1 }
+
+            readonly property string path: Outline.panel(
+                root.flare, root.flare + card.width, card.height,
+                root.flare, root.flare, Properties.panelRadius, Properties.panelBorderWidth / 2)
+
+            ShapePath {
+                fillColor: Properties.panelColor
+                strokeColor: "transparent"
+                PathSvg { path: outline.path + "Z" }
+            }
+            ShapePath {
+                fillColor: "transparent"
+                strokeColor: Properties.panelBorder
+                strokeWidth: Properties.panelBorderWidth
+                PathSvg { path: outline.path }
+            }
+        }
+
         Rectangle {
             id: card
             property bool skipHeightAnim: false
@@ -188,14 +246,13 @@ PanelWindow {
                 left: parent.left
                 right: parent.right
                 bottom: parent.bottom
+                leftMargin: root.flare
+                rightMargin: root.flare
             }
             height: content.implicitHeight + 32
             // sits on the bottom screen edge → only the top corners are rounded
-            color: Properties.panelColor
-            topLeftRadius: Properties.panelRadius
-            topRightRadius: Properties.panelRadius
-            border.width: Properties.panelBorderWidth
-            border.color: Properties.panelBorder
+            // drawn by `outline` below (fill + border incl. the inverted corners)
+            color: "transparent"
 
             Behavior on height {
                 enabled: !card.skipHeightAnim
