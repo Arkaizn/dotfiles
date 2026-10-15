@@ -39,6 +39,7 @@ Rectangle {
     property color panelColor: '#50000000'
     property color panelBorder: Qt.rgba(1, 1, 1, 0.13)
     property real panelBorderWidth: 1
+    property color cardBorder: Qt.rgba(1, 1, 1, 0.10)   // outline of inner cards (dashboard, notif center)
     property int barRadius: 15       // bar corners
     property int popupRadius: 12     // notification popup cards
     property int panelRadius: 30     // big widgets: dashboard, notification center, wallpapers, launcher

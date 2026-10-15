@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell.Services.Pipewire
@@ -10,6 +11,8 @@ Rectangle {
     implicitHeight: outputInner.implicitHeight + 24
     radius: 10
     color: "#27000000"
+    border.width: Properties.panelBorderWidth
+    border.color: Properties.cardBorder
 
     // Reactive list of real output devices
     property var outputSinks: {

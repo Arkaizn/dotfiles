@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
@@ -40,6 +41,8 @@ Rectangle {
 
     radius: 10
     color: "#27000000"
+    border.width: Properties.panelBorderWidth
+    border.color: Properties.cardBorder
     clip: true
 
     // ── Header (always visible) ───────────────────────────────

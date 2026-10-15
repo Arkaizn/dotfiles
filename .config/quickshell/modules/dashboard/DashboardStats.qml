@@ -296,6 +296,8 @@ ColumnLayout {
         height: 42
         radius: 8
         color: Qt.rgba(1, 1, 1, 0.05)
+        border.width: Properties.panelBorderWidth
+        border.color: Properties.cardBorder
 
         property string uptime: "—"
         property string osAge: "—"

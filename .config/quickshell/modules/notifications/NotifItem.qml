@@ -37,6 +37,8 @@ Item {
         height: content.implicitHeight + 20
         radius: 9
         color: hover.hovered ? "#1affffff" : "#0dffffff"
+        border.width: Properties.panelBorderWidth
+        border.color: Properties.cardBorder
         opacity: root.reveal
         x: root.closing ? root.width * 0.5 : 0
 

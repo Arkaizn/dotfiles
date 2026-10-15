@@ -39,7 +39,7 @@ Item {
         radius: 12
         color: "#27000000"
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, headerHover.hovered ? 0.16 : 0.08)
+        border.color: headerHover.hovered ? Qt.rgba(1, 1, 1, 0.18) : Properties.cardBorder
 
         // slide in from the right on add, out to the right on removal
         x: 60

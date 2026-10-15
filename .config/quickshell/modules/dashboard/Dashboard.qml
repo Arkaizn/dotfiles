@@ -31,6 +31,8 @@ BarPopup {
             Layout.preferredWidth: 300
             radius: root.radius
             color: '#45000000'
+            border.width: Properties.panelBorderWidth
+            border.color: Properties.cardBorder
 
             DashboardProfile {}
         }
@@ -47,8 +49,20 @@ BarPopup {
                 Layout.preferredHeight: 180
                 radius: root.radius / 4 * 3
                 color: '#45000000'
+                border.width: Properties.panelBorderWidth
+                border.color: Properties.cardBorder
 
                 DashboardMusic {}
+
+                // The album-art background fills this card and would cover its
+                // border, so draw the outline again on top.
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    color: "transparent"
+                    border.width: Properties.panelBorderWidth
+                    border.color: Properties.cardBorder
+                }
             }
 
             // Calendar
@@ -57,6 +71,8 @@ BarPopup {
                 Layout.fillHeight: true
                 radius: root.radius / 4 * 3
                 color: '#45000000'
+                border.width: Properties.panelBorderWidth
+                border.color: Properties.cardBorder
 
                 DashboardCalendar {}
             }
@@ -68,6 +84,8 @@ BarPopup {
             Layout.preferredWidth: 300
             radius: root.radius
             color: '#45000000'
+            border.width: Properties.panelBorderWidth
+            border.color: Properties.cardBorder
 
             DashboardStats {}
         }
