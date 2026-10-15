@@ -1,16 +1,38 @@
 import Quickshell
-import Quickshell.Io
+import Quickshell.Networking
 import QtQuick
 import qs.services
 import qs.components
 
+// Left click: control center · right click: Wi-Fi on/off
 Item {
     id: root
     implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
     implicitHeight: Properties.buttonHeight
 
     property bool hovered: mouseArea.containsMouse
-    property string icon: "󰤭"
+
+    readonly property var wired: Networking.devices.values.find(d => d.type === DeviceType.Wired) ?? null
+    readonly property var wifi: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
+    readonly property var wifiNetwork: wifi?.networks?.values.find(n => n.connected) ?? null
+
+    readonly property string wifiIcon: {
+        const raw = wifiNetwork?.signalStrength ?? 0
+        const s = raw > 1 ? raw / 100 : raw
+        if (s > 0.75) return "󰤨"
+        if (s > 0.5) return "󰤥"
+        if (s > 0.25) return "󰤢"
+        return "󰤟"
+    }
+
+    // One icon per active connection (Ethernet and/or Wi-Fi);
+    // nothing connected → crossed-out globe.
+    readonly property string icon: {
+        const parts = []
+        if (wired?.connected) parts.push("󰌗")
+        if (wifiNetwork) parts.push(wifiIcon)
+        return parts.length ? parts.join("  ") : "󰪎"
+    }
 
     ButtonBackground {
         id: buttonBackground
@@ -18,62 +40,20 @@ Item {
         iconText: root.icon
     }
 
-    Process {
-        id: process
-        command: ["nmcli", "-t", "-f", "TYPE,STATE", "device"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var raw = this.text.trim()
-                var lines = raw.split("\n")
-                var ethernetUp = false
-                var wifiUp = false
-
-                for (var i = 0; i < lines.length; i++) {
-                    var parts = lines[i].trim().split(":")
-                    if (parts.length < 2)
-                        continue
-
-                    var type = parts[0]
-                    var state = parts[1]
-
-                    if (state === "connected" || state === "connecting (getting IP address)" || state === "connecting (checking IP connectivity)") {
-                        if (type === "ethernet")
-                            ethernetUp = true
-                        else if (type === "wifi")
-                            wifiUp = true
-                    }
-                }
-
-                if (ethernetUp) {
-                    root.icon = "󰌗"
-                } else if (wifiUp) {
-                    root.icon = "󰤨"
-                } else {
-                    root.icon = "󰤭"
-                }
-            }
-        }
-    }
-
-    Timer {
-        interval: Properties.interval
-        running: true
-        repeat: true
-        onTriggered: process.running = true
-    }
-
     MouseArea {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
         onExited: buttonBackground.scale = Properties.onExitedButtonScale
         onPressed: buttonBackground.scale = Properties.onPressedButtonScale
         onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
         onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: Quickshell.execDetached(["bash", "-lc", "nm-connection-editor"])
+        onClicked: mouse => {
+            if (mouse.button === Qt.RightButton) Networking.wifiEnabled = !Networking.wifiEnabled
+            else controlCenter.toggle(bar.screen)
+        }
     }
 }

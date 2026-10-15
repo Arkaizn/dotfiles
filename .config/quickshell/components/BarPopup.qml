@@ -7,13 +7,13 @@ import qs.services
 import "outline.js" as Outline
 
 // ── A popup that hangs under the bar ──
-// Shared by the notification center, dashboard and wallpaper selector.
+// Shared by the control center, dashboard and wallpaper selector.
 //
 //   BarPopup {
 //       side: "right"              // flush with the bar's right end
 //       panelWidth: 400
 //       panelHeight: col.implicitHeight + padding * 2
-//       ipcName: "notifCenter"     // → qs ipc call notifCenter toggle
+//       ipcName: "controlCenter"   // → qs ipc call controlCenter toggle
 //       ColumnLayout { id: col; anchors { left: parent.left; right: parent.right } ... }
 //   }
 //

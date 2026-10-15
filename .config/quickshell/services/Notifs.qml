@@ -135,6 +135,11 @@ Singleton {
         if (i >= 0) groupModel.setProperty(i, "expanded", !groupModel.get(i).expanded)
     }
 
+    function collapseAll() {
+        for (let i = 0; i < groupModel.count; i++)
+            if (groupModel.get(i).expanded) groupModel.setProperty(i, "expanded", false)
+    }
+
     function dismissGroup(appName) {
         const i = _groupIndex(appName)
         if (i < 0) return

@@ -11,6 +11,7 @@ Item {
     property int iconSize: Properties.iconSize
     property color textColor: Properties.color
     property bool fontBold: Properties.fontBold
+    property string fontFamily: Properties.fontFamily
 
     // Item doesnt have implicit size so we use the text implicitwidth
     implicitWidth: text.implicitWidth

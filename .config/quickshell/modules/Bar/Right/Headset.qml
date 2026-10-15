@@ -1,42 +1,24 @@
 import Quickshell
-import Quickshell.Io
 import QtQuick
-import QtQuick.Controls
 import qs.services
 import qs.components
 
+// Headset battery (from CustomBatteries); hidden while the headset is off.
 Item {
-    id:root
+    id: root
     implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
     implicitHeight: Properties.buttonHeight
     anchors.margins: 1
-    visible: root.output !== "" && root.output !== "null"
+
+    readonly property int level: CustomBatteries.levelOf("HS80")
+    visible: level >= 0
 
     property bool hovered: mouseArea.containsMouse
-    property string output: ""
-    
+
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        iconText: "  󰁹 " + root.output + "%"
-    }
-
-    Process {
-        id: process
-        command: ["bash", "-c", "curl -s http://127.0.0.1:27003/api/batteryStats | jq -r --arg k 1786e76c000400da '.data[$k].Level'"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.output = this.text.trim() 
-            }
-        }
-    }
-
-    Timer {
-        interval: 10000 // battery level changes slowly, no need for the 500ms bar rate
-        running: true
-        repeat: true
-        onTriggered: process.running = true  // Rerun process
+        iconText: "  󰁹 " + root.level + "%"
     }
 
     MouseArea {
@@ -50,7 +32,6 @@ Item {
         onPressed: buttonBackground.scale = Properties.onPressedButtonScale
         onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
         onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: Quickshell.execDetached(["bash","-lc","pavucontrol"])    
+        onClicked: controlCenter.toggle(bar.screen)
     }
 }
-

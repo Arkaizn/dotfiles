@@ -7,3 +7,5 @@ singleton Colors Colors.qml
 
 singleton Notifs Notifs.qml
 singleton Updates Updates.qml
+singleton CustomBatteries CustomBatteries.qml
+singleton BluetoothPower BluetoothPower.qml

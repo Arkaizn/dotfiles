@@ -24,11 +24,8 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
-        cursorShape: Qt.PointingHandCursor
+        // no click action for now; hover/press animation only
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
-        onClicked: {
-            wallpaperSelector.toggle(bar.screen)
-        }
         onExited: {
             buttonBackground.scale = Properties.onExitedButtonScale
         }

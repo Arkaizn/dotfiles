@@ -49,14 +49,15 @@ PanelWindow {
     // compositing, not a surface reconfigure, so it can animate as smoothly
     // as any other QtQuick property — including when switching modes.
     readonly property int maxResultsHeight: 360
+    readonly property int wallpaperMaxHeight: 520 // the wallpaper grid gets more room
     readonly property int contentSpacing: 8
-    readonly property int modeBarHeight: 28
+    readonly property int modeBarHeight: Properties.buttonHeight
     readonly property int contentMargins: 16 + 26 // matches content's anchors.margins + bottomMargin below
 
     // tallest results list + search bar + mode-switcher row + the two gaps
     // between them (content always has exactly 3 visible children: one of
     // the two views, the search field, and the mode bar) + outer margins.
-    implicitHeight: maxResultsHeight + contentSpacing * 2 + Properties.buttonHeight + modeBarHeight + contentMargins
+    implicitHeight: Math.max(maxResultsHeight, wallpaperMaxHeight) + contentSpacing * 2 + Properties.buttonHeight + modeBarHeight + contentMargins
 
     color: '#00000000'
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
@@ -79,9 +80,9 @@ PanelWindow {
     // closed without searching. Binding to rect.x/rect.y fixes that.
     mask: Region {
         x: rect.x + card.x
-        y: rect.y + card.y
+        y: root.cardTop
         width: card.width
-        height: card.height
+        height: root.cardBottom - root.cardTop
     }
 
     IpcHandler {
@@ -98,17 +99,33 @@ PanelWindow {
         function toggleStartMenu(): void {
             root.toggle("startMenu")
         }
+        function toggleWallpapers(): void {
+            root.toggle("wallpapers")
+        }
+    }
+
+    // Old wallpaper-selector IPC target, kept so existing keybinds still work
+    IpcHandler {
+        target: "wallpapers"
+        function toggle(): void { root.toggle("wallpapers") }
+        function open(): void { if (!root.visible || root.mode !== "wallpapers") root.toggle("wallpapers") }
+        function close(): void { if (root.visible) anim.exit() }
     }
 
     // Card + the two inverted corners where it meets the screen edge
     // (each = its square minus a circle), so the corners get blurred too.
-    readonly property int cardBottom: rect.y + card.y + card.height
+    // Whole-pixel card edges for the Regions (they only take ints). Rounding
+    // y and height separately while the card's height animates (typing)
+    // could leave the region a pixel short of the screen edge, so the
+    // lowest pixel row lost its blur; floor the top, ceil the bottom.
+    readonly property int cardTop: Math.floor(rect.y + card.y)
+    readonly property int cardBottom: Math.ceil(rect.y + card.y + card.height)
 
     BackgroundEffect.blurRegion: Region {
         x: rect.x + card.x
-        y: rect.y + card.y
+        y: root.cardTop
         width: card.width
-        height: card.height
+        height: root.cardBottom - root.cardTop
         topLeftRadius: Properties.panelRadius
         topRightRadius: Properties.panelRadius
 
@@ -142,19 +159,54 @@ PanelWindow {
     }
 
     // Which sub-view is showing.
-    property string mode: "apps" // "apps" | "clipboard"
+    property string mode: "apps" // "apps" | "clipboard" | "wallpapers"
+    readonly property var modes: ["apps", "clipboard", "wallpapers"]
 
     // Switching modes always clears the search text — carrying an "apps"
     // query like "steam" over into clipboard search would just be
     // confusing. Delete this if you'd rather the query persist across modes.
-    onModeChanged: searchField.text = ""
+    onModeChanged: {
+        searchField.text = ""
+        // Slide the new view in from the side its icon sits on, relative
+        // to the previous mode (apps | clipboard | wallpapers, left → right).
+        // Skipped while (re)opening, the panel just rises from the bottom then.
+        const dir = root.modes.indexOf(root.mode) > root.modes.indexOf(root.prevMode) ? 1 : -1
+        root.prevMode = root.mode
+        if (root.visible && !card.collapsed) {
+            slideAnim.stop()
+            slideAnim.view = root.activeView()
+            slideAnim.from = dir * root.slideDistance
+            slideAnim.start()
+        }
+    }
+    property string prevMode: "apps"
+    readonly property int slideDistance: 80
+
+    ParallelAnimation {
+        id: slideAnim
+        property Item view: null
+        property real from: 0
+        NumberAnimation { target: slideAnim.view; property: "slideX"; from: slideAnim.from; to: 0; duration: 220; easing.type: Easing.OutCubic }
+        NumberAnimation { target: slideAnim.view; property: "opacity"; from: 0; to: 1; duration: 180; easing.type: Easing.OutCubic }
+    }
+
+    // Reset to the small collapsed state whenever the launcher goes away
+    // (Esc, launching an app, …), so the next open always grows up from
+    // the bottom instead of starting at the last view's size.
+    onVisibleChanged: if (!visible) {
+        slideAnim.stop()
+        for (const v of [appSearchView, clipboardView, wallpaperView]) { v.slideX = 0; v.opacity = 1 }
+        card.skipHeightAnim = true
+        card.collapsed = true
+    }
 
     // Opens the launcher (optionally straight into a given mode), or closes
     // it if already open. Passing a mode while the launcher is already open
     // just switches views in place instead of closing — that's what makes
     // toggleClipboard() above useful as its own hotkey rather than only a
     // fresh-open action.
-    function toggle(targetMode) {
+    // `scr` (optional): open on that screen, e.g. the bar that was clicked.
+    function toggle(targetMode, scr) {
         if (root.visible) {
             if (targetMode && targetMode !== root.mode) {
                 root.mode = targetMode
@@ -164,6 +216,7 @@ PanelWindow {
             return
         }
 
+        if (scr) root.screen = scr
         card.skipHeightAnim = true
         root.mode = targetMode || "apps"
         root.visible = true
@@ -181,12 +234,15 @@ PanelWindow {
             anim.enter()
             searchField.forceActiveFocus()
             card.skipHeightAnim = false
+            card.collapsed = false
         }
     }
 
     // Routes keyboard nav to whichever view is currently visible.
     function activeView() {
-        return root.mode === "apps" ? appSearchView : clipboardView
+        return root.mode === "apps" ? appSearchView
+             : root.mode === "clipboard" ? clipboardView
+             : wallpaperView
     }
 
     // ── Stable wrapper for the open/close slide animation ──
@@ -242,6 +298,11 @@ PanelWindow {
         Rectangle {
             id: card
             property bool skipHeightAnim: false
+            // collapsed = only search field + mode bar; the "original" state
+            // every open starts from
+            property bool collapsed: true
+            readonly property real collapsedHeight: Properties.buttonHeight + root.modeBarHeight + root.contentSpacing + root.contentMargins
+            clip: true
             anchors {
                 left: parent.left
                 right: parent.right
@@ -249,14 +310,14 @@ PanelWindow {
                 leftMargin: root.flare
                 rightMargin: root.flare
             }
-            height: content.implicitHeight + 32
+            height: collapsed ? collapsedHeight : content.implicitHeight + root.contentMargins
             // sits on the bottom screen edge → only the top corners are rounded
             // drawn by `outline` below (fill + border incl. the inverted corners)
             color: "transparent"
 
             Behavior on height {
                 enabled: !card.skipHeightAnim
-                NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
             }
 
             ColumnLayout {
@@ -268,26 +329,20 @@ PanelWindow {
                 anchors.bottomMargin: 26
                 spacing: root.contentSpacing
 
-                // ── The two views, both always instantiated ──
-                // Same opacity/visible pattern your original file used for
-                // recommendedFlow vs resultsList: whichever isn't active
-                // fades to opacity 0 and gets `visible: false`, which drops
-                // it out of the ColumnLayout's height calculation entirely.
-                // That's what lets `card` smoothly animate its height when
-                // you switch between a tall clipboard list and a short apps
-                // grid, instead of snapping.
+                // ── The three views, all always instantiated ──
+                // Only the active one is visible; the others drop out of the
+                // ColumnLayout's height entirely, so `card` animates straight
+                // to the new view's height. The incoming view slides in
+                // sideways via its `slideX` (see slideAnim).
                 AppSearch {
                     id: appSearchView
                     Layout.fillWidth: true
                     maxHeight: root.maxResultsHeight
                     query: searchField.text
-                    opacity: root.mode === "apps" ? 1 : 0
-                    visible: opacity > 0
+                    visible: root.mode === "apps"
+                    property real slideX: 0
+                    transform: Translate { x: appSearchView.slideX }
                     onCloseRequested: { root.visible = false; searchField.text = "" }
-
-                    Behavior on opacity {
-                        NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-                    }
                 }
 
                 ClipboardHistory {
@@ -296,20 +351,33 @@ PanelWindow {
                     maxHeight: root.maxResultsHeight
                     query: searchField.text
                     active: root.mode === "clipboard"
-                    opacity: root.mode === "clipboard" ? 1 : 0
-                    visible: opacity > 0
+                    visible: root.mode === "clipboard"
+                    property real slideX: 0
+                    transform: Translate { x: clipboardView.slideX }
                     onCloseRequested: { root.visible = false; searchField.text = "" }
+                }
 
-                    Behavior on opacity {
-                        NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-                    }
+                WallpaperPicker {
+                    id: wallpaperView
+                    Layout.fillWidth: true
+                    maxHeight: root.wallpaperMaxHeight
+                    Layout.preferredHeight: root.wallpaperMaxHeight
+                    Layout.maximumHeight: root.wallpaperMaxHeight
+                    query: searchField.text
+                    active: root.mode === "wallpapers"
+                    visible: root.mode === "wallpapers"
+                    property real slideX: 0
+                    transform: Translate { x: wallpaperView.slideX }
+                    onCloseRequested: anim.exit()
                 }
 
                 TextField {
                     id: searchField
                     Layout.fillWidth: true
                     Layout.preferredHeight: Properties.buttonHeight
-                    placeholderText: root.mode === "apps" ? "Search apps" : "Search clipboard history"
+                    placeholderText: root.mode === "apps" ? "Search apps"
+                                   : root.mode === "clipboard" ? "Search clipboard history"
+                                   : "Search wallpapers"
                     placeholderTextColor: Qt.rgba(1, 1, 1, 0.35)
                     color: Properties.color
                     font.pixelSize: 13
@@ -342,11 +410,11 @@ PanelWindow {
                     Keys.onUpPressed: root.activeView().moveUp()
                     Keys.onReturnPressed: root.activeView().activateCurrent()
 
-                    // Tab switches between apps <-> clipboard without
+                    // Tab cycles apps -> clipboard -> wallpapers without
                     // touching the mouse. Remove if you'd rather Tab do the
                     // usual focus-chain thing.
                     Keys.onTabPressed: (event) => {
-                        root.mode = root.mode === "apps" ? "clipboard" : "apps"
+                        root.mode = root.modes[(root.modes.indexOf(root.mode) + 1) % root.modes.length]
                         event.accepted = true
                     }
 
@@ -363,7 +431,7 @@ PanelWindow {
                     }
                 }
 
-                // ── Mode switcher — the two icon buttons from the sketch ──
+                // ── Mode switcher + wallpaper tools ──
                 RowLayout {
                     id: modeBar
                     Layout.fillWidth: true
@@ -372,43 +440,49 @@ PanelWindow {
 
                     Repeater {
                         model: [
-                            { value: "apps", glyph: "⌕" },
-                            { value: "clipboard", glyph: "⎘" }
+                            { value: "apps",       glyph: "󰀻", tip: "Apps" },
+                            { value: "clipboard",  glyph: "󰅍", tip: "Clipboard history" },
+                            { value: "wallpapers", glyph: "󰸉", tip: "Wallpapers" }
                         ]
 
-                        Item {
-                            id: modeBtn
+                        IconButton {
                             required property var modelData
-                            readonly property bool isActive: root.mode === modelData.value
-                            width: root.modeBarHeight
-                            height: root.modeBarHeight
-
-                            HoverHandler { id: modeHover; cursorShape: Qt.PointingHandCursor }
-                            TapHandler { onTapped: root.mode = modeBtn.modelData.value }
-
-                            // Persistent soft fill + border on the active
-                            // mode, plain hover fill on the other — same
-                            // visual language as the result rows below.
-                            Rectangle {
-                                anchors.fill: parent
-                                radius: 6
-                                color: modeBtn.isActive ? Qt.rgba(1, 1, 1, 0.14)
-                                     : modeHover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-                                border.width: modeBtn.isActive ? 1 : 0
-                                border.color: Qt.rgba(1, 1, 1, 0.22)
-                                Behavior on color { ColorAnimation { duration: 80 } }
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: modeBtn.modelData.glyph
-                                font.pixelSize: 14
-                                color: modeBtn.isActive ? "white" : Qt.rgba(1, 1, 1, 0.6)
-                            }
+                            icon: modelData.glyph
+                            tooltip: modelData.tip
+                            active: root.mode === modelData.value
+                            onClicked: root.mode = modelData.value
                         }
                     }
 
                     Item { Layout.fillWidth: true }
+
+                    // Wallpaper tools, only in wallpaper mode
+                    IconButton {
+                        visible: root.mode === "wallpapers"
+                        icon: "󰡍"
+                        tooltip: "Expand / collapse all folders"
+                        onClicked: wallpaperView.toggleExpandAll()
+                    }
+                    IconButton {
+                        visible: root.mode === "wallpapers"
+                        icon: "󰉋"
+                        tooltip: "Open wallpapers folder"
+                        onClicked: wallpaperView.openFolder()
+                    }
+                    IconButton {
+                        visible: root.mode === "wallpapers"
+                        icon: "󰑐"
+                        tooltip: "Rescan wallpapers"
+                        onClicked: wallpaperView.rescan()
+                    }
+                    IconButton {
+                        visible: root.mode === "wallpapers"
+                        icon: "󰓛"
+                        tooltip: "Stop the running wallpaper command"
+                        interactive: wallpaperView.applying
+                        textColor: wallpaperView.applying ? "#f38ba8" : Properties.color
+                        onClicked: wallpaperView.stop()
+                    }
                 }
             }
         }

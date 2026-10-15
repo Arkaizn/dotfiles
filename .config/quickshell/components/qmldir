@@ -4,3 +4,4 @@ InverseCorner InverseCorner.qml
 ButtonBackground ButtonBackground.qml
 ButtonGradient ButtonGradient.qml
 BarPopup BarPopup.qml
+IconButton IconButton.qml

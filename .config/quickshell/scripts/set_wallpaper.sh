@@ -14,13 +14,16 @@ magick "$WALLPAPER" -resize 10% -blur 0x6 -resize 1000% "$BLURRED"
 
 # kill wallpaper
 pkill swaybg 2>/dev/null || true
-pgrep -x awww-daemon >/dev/null 2>&1 || awww-daemon >/dev/null 2>&1 &
+# setsid -f: fully detached, so stopping this script from quickshell leaves them running
+pgrep -x awww-daemon >/dev/null 2>&1 || setsid -f awww-daemon >/dev/null 2>&1
+# wait (max ~2s) for the daemon to answer before sending it an image
+for _ in {1..20}; do awww query >/dev/null 2>&1 && break; sleep 0.1; done
 
 # Set wallpaper awww
 awww img "$WALLPAPER" --transition-type wipe --transition-angle 210 --transition-fps 60 --transition-duration .5
 
 # Set wallpaper swaybg
-swaybg -i "$BLURRED" -m fill &
+setsid -f swaybg -i "$BLURRED" -m fill >/dev/null 2>&1
 
 # Remove cache
 rm -fr ~/.cache/wal/schemes

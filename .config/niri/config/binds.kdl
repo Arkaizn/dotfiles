@@ -24,6 +24,7 @@ binds {
     Mod+R {spawn-sh "qs ipc call Launcher toggleAppSearch";}
     Mod+V {spawn-sh "qs ipc call Launcher toggleClipboard";}
     Mod+T {spawn-sh "qs ipc call testing toggle";}
+    Mod+W {spawn-sh "qs ipc call Launcher toggleWallpapers";}
 
 
     Mod+TAB repeat=false { toggle-overview; }
@@ -248,7 +249,7 @@ binds {
     // Toggle tabbed column display mode.
     // Windows in this column will appear as vertical tabs,
     // rather than stacked on top of each other.
-    Mod+W { toggle-column-tabbed-display; }
+    // Mod+W { toggle-column-tabbed-display; }
 
     // Actions to switch layouts.
     // Note: if you uncomment these, make sure you do NOT have

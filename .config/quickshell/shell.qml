@@ -21,8 +21,8 @@ import "modules/Bar"
 import "modules/notifications"
 import "modules/testing"
 import "modules/dashboard"
-import "modules/Wallpaper"
 import "modules/Launcher"
+import "modules/controlcenter"
 
 ShellRoot {
     id: root
@@ -44,9 +44,8 @@ ShellRoot {
     
 
     NotifPopup {id: notifPopup}
-    NotifCenter { id: notifCenter }
-    Launcher{}
+    ControlCenter { id: controlCenter }
+    Launcher { id: launcher }
     Testing {}
     Dashboard {id: dashboard}
-    WallpaperSelector { id: wallpaperSelector }
 }

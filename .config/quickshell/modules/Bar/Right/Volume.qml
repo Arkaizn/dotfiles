@@ -1,55 +1,40 @@
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.Pipewire
 import QtQuick
-import QtQuick.Controls
 import qs.services
 import qs.components
 
+// Left click: control center · right click: mute · wheel: ±5%
 Item {
     id: root
-    implicitWidth: text.implicitWidth + Properties.buttonWidth
+    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
     implicitHeight: Properties.buttonHeight
     anchors.margins: 1
 
     property bool hovered: mouseArea.containsMouse
 
     readonly property var sink: Pipewire.defaultAudioSink
+    readonly property var audio: sink?.audio ?? null
     PwObjectTracker { objects: root.sink ? [root.sink] : [] }
+
+    readonly property string label: {
+        if (!audio) return "󰖁 --%"
+        const v = isNaN(audio.volume) ? 0 : Math.round(audio.volume * 100)
+        if (audio.muted) return "󰝟 " + v + "%"
+        const name = (sink.name + " " + (sink.description ?? "")).toLowerCase()
+        // headphones keep their own icon, speakers follow the level
+        const icon = name.includes("headset") || name.includes("headphone") ? "󰋋"
+                   : v < 34 ? "󰕿"
+                   : v < 67 ? "󰖀"
+                   : "󰕾"
+        return icon + " " + v + "%"
+    }
 
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        iconText: text.text
+        iconText: root.label
         iconSize: 16
-    }
-
-    Rectangle {
-        visible: false
-        anchors.fill: parent
-        anchors.margins: 1
-        radius: 7
-        color: "transparent"
-
-        Text {
-            id: text
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            font.pixelSize: Properties.pixelSize
-            color: Colors.foreground
-
-            text: {
-                if (root.sink?.audio?.muted) return "󰝟";
-                if (!root.sink?.ready || !root.sink?.audio) return "󰓃 --%";
-
-                let name = root.sink.name.toLowerCase();
-                let isHeadset = name.includes("headset") || name.includes("phone");
-                let icon = isHeadset ? "󰋋" : "󰓃";
-                let v = root.sink.audio.volume;
-                let pct = isNaN(v) ? "0" : Math.round(v * 100);
-                return icon + " " + pct + "%";
-            }
-        }
     }
 
     MouseArea {
@@ -64,21 +49,19 @@ Item {
         onPressed: buttonBackground.scale = Properties.onPressedButtonScale
         onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
         onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        // onClicked: Quickshell.execDetached(["bash", "-lc", "pavucontrol"])
 
-        onWheel: (wheel) => {
-            if (root.sink?.ready && root.sink?.audio) {
-                let delta = wheel.angleDelta.y > 0 ? 0.05 : -0.05;
-                root.sink.audio.volume = Math.max(0, Math.min(1.0, root.sink.audio.volume + delta));
-            }
+        onWheel: wheel => {
+            if (!root.audio) return
+            const delta = wheel.angleDelta.y > 0 ? 0.05 : -0.05
+            root.audio.volume = Math.max(0, Math.min(1.0, root.audio.volume + delta))
         }
 
         // onClicked (not onPressed) so the press animation plays before the action
-        onClicked: (mouse) => {
-            if (mouse.button === Qt.LeftButton) {
-                Quickshell.execDetached(["bash", "-lc", "pavucontrol"])
-            } else if (mouse.button === Qt.RightButton) {
-                if (root.sink?.audio) root.sink.audio.muted = !root.sink.audio.muted;
+        onClicked: mouse => {
+            if (mouse.button === Qt.RightButton) {
+                if (root.audio) root.audio.muted = !root.audio.muted
+            } else {
+                controlCenter.toggle(bar.screen)
             }
         }
     }
