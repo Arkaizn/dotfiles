@@ -32,7 +32,8 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 // screenshot-path null
 
 blur {
-    passes 2      // more passes = smoother blur (default is 2)
+    passes 3      // more passes = smoother blur (default is 2)
+    offset 6      // blur radius per pass: bigger = blur spreads over a wider area
 }
 
 prefer-no-csd
