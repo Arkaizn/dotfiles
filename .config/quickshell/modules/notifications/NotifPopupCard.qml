@@ -103,10 +103,11 @@ Item {
         id: card
         width: root.width
         height: content.implicitHeight + 24
-        radius: 12
-        color: "#30000000"
-        border.width: 1
-        border.color: root.critical ? "#a0ff5f5f" : Qt.rgba(1, 1, 1, cardHover.hovered ? 0.2 : 0.1)
+        radius: Properties.popupRadius
+        color: Properties.panelColor
+        border.width: Properties.panelBorderWidth
+        border.color: root.critical ? "#a0ff5f5f"
+                    : cardHover.hovered ? Qt.lighter(Properties.panelBorder, 1.6) : Properties.panelBorder
         // fade as it's dragged away
         opacity: 1 - Math.max(0, x) / (root.width * 1.4)
 

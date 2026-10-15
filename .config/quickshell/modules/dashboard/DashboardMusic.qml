@@ -219,10 +219,16 @@ Item {
                         Layout.preferredHeight: 14
                         sourceSize.width: 14
                         sourceSize.height: 14
+                        // Local icon theme lookup via the player's .desktop entry. (Was a CDN
+                        // URL: a network fetch on every reload that 404'd for some players,
+                        // and the only async image load in the config — a suspect for the
+                        // reload crash in QQuickPixmap::connectFinished.)
                         source: {
                             if (!root.player) return ""
-                            var name = (root.player.desktopEntry || root.player.identity || "").toLowerCase().trim()
-                            return name !== "" ? ("https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/" + name + ".png") : ""
+                            var id = (root.player.desktopEntry || root.player.identity || "").trim()
+                            if (id === "") return ""
+                            var icon = DesktopEntries.byId(id)?.icon ?? id.toLowerCase()
+                            return Quickshell.iconPath(icon, true)
                         }
                         fillMode: Image.PreserveAspectFit
                         smooth: true

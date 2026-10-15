@@ -18,7 +18,7 @@ Item{
             onEntered: clock.scale = Properties.onEnteredButtonScale
             onExited: clock.scale = Properties.onExitedButtonScale
             cursorShape: Qt.PointingHandCursor
-            onClicked: dashboard.toggle()
+            onClicked: dashboard.toggle(bar.screen)
         }
 
     // needs to be here because too much text, dont want to pass that through button Background rn ;/

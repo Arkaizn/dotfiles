@@ -100,8 +100,8 @@ PanelWindow {
         y: rect.y + card.y
         width: card.width
         height: card.height
-        topLeftRadius: 22
-        topRightRadius: 22
+        topLeftRadius: Properties.panelRadius
+        topRightRadius: Properties.panelRadius
     }
 
     PopupAnimation {
@@ -190,8 +190,12 @@ PanelWindow {
                 bottom: parent.bottom
             }
             height: content.implicitHeight + 32
-            color: "transparent"
-            radius: 12
+            // sits on the bottom screen edge → only the top corners are rounded
+            color: Properties.panelColor
+            topLeftRadius: Properties.panelRadius
+            topRightRadius: Properties.panelRadius
+            border.width: Properties.panelBorderWidth
+            border.color: Properties.panelBorder
 
             Behavior on height {
                 enabled: !card.skipHeightAnim

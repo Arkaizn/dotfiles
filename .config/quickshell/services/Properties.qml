@@ -34,6 +34,16 @@ Rectangle {
     property double onEnteredButtonScale: 1.1
     property double onExitedButtonScale: 1.0
 
+    // Panels — the bar and every popup attached to it (BarPopup)
+    property color panelColor: '#50000000'
+    property color panelBorder: Qt.rgba(1, 1, 1, 0.13)
+    property real panelBorderWidth: 1
+    property int barRadius: 10       // bar corners
+    property int popupRadius: 12     // notification popup cards
+    property int panelRadius: 30     // big widgets: dashboard, notification center, wallpapers, launcher
+    property int flareRadius: 30     // inverted corners where a popup meets the bar
+    property int barInset: 12        // gap between screen edge and the bar
+
     // Button settings
     property int buttonHeight: 32
     property int buttonWidth: 20

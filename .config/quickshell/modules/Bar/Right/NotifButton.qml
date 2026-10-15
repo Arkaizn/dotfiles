@@ -35,6 +35,6 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
         onExited: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: notifCenter.toggle()
+        onClicked: notifCenter.toggle(bar.screen)
     }
 }

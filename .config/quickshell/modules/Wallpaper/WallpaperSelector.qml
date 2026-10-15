@@ -9,22 +9,22 @@ import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import "."
 
-PanelWindow {
+// Wallpaper picker. Window/shape/animation all come from BarPopup.
+BarPopup {
     id: root
-    visible: false
-    anchors { top: true; left: true }
-    implicitWidth: 800
-    implicitHeight: 820
-    color: "transparent"
-    exclusiveZone: 0
+    side: "left"
+    ipcName: "wallpapers"
+    panelWidth: 780
+    panelHeight: 800
+
+    // Rescan only on first open; use the refresh button to pick up new files later,
+    // so thumbnails stay cached/alive between opens.
+    onOpening: if (!hasScannedOnce) scanProc.running = true
 
     // Layer-shell panels get no keyboard input by default; OnDemand lets the
     // search field grab focus on click without the panel being always-focused.
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
-    BackgroundEffect.blurRegion: Region { item: rect; bottomLeftRadius: 12; bottomRightRadius: 12 }
-
-    property bool hasBeenHovered: false
     property bool hasScannedOnce: false
 
     property string searchText: ""
@@ -80,43 +80,7 @@ PanelWindow {
             w.relDir === relDir && (needle === "" || w.name.toLowerCase().indexOf(needle) !== -1))
     }
 
-    PopupAnimation {
-        id: anim
-        target: rect
-        direction: "top"
-        enterDuration: 150
-        exitDuration: 150
-        onExitFinished: root.visible = false
-    }
-
-    function toggle() {
-        if (root.visible) {
-            anim.exit()
-            return
-        }
-        root.visible = true
-        enterTimer.start()
-        // Rescan only on first open; use the refresh button to pick up new files later,
-        // so thumbnails stay cached/alive between opens.
-        if (!hasScannedOnce) scanProc.running = true
-    }
-
-    Timer { id: enterTimer; interval: 50; repeat: false; onTriggered: anim.enter() }
-    Timer {
-        id: autoCloseTimer
-        interval: 500
-        repeat: false
-        onTriggered: { anim.exit(); hasBeenHovered = false }
-    }
     Timer { id: statusClearTimer; interval: 2500; repeat: false; onTriggered: statusText.text = "" }
-
-    InverseCorner {
-        anchors.left: rect.right
-        anchors.top: rect.top
-        corner: "topLeft"
-        color: rect.color
-        radius: 12
-    }
 
     Process { id: mkdirProc; command: ["mkdir", "-p", root.thumbCacheDir]; Component.onCompleted: running = true }
 
@@ -173,23 +137,15 @@ PanelWindow {
 
     Process { id: openFolderProc; running: false; command: ["xdg-open", root.wallpapersDir] }
 
-    Rectangle {
+    Item {
         id: rect
-        implicitHeight: parent.height - 20
-        clip: true
-        opacity: 0
-        y: -height
-        anchors { top: parent.top; left: parent.left; right: parent.right; leftMargin: 10; rightMargin: 10 }
-        bottomLeftRadius: 12
-        bottomRightRadius: 12
-        color: '#45000000'
+        anchors.fill: parent
 
-        readonly property real cellW: (rect.width - 40) / 3
+        readonly property real cellW: (rect.width - 20) / 3
         readonly property real cellH: cellW * 0.58
 
         ColumnLayout {
-            anchors { bottom: parent.bottom; left: parent.left; right: parent.right; margins: 10 }
-            height: rect.implicitHeight - 20
+            anchors.fill: parent
             spacing: 6
 
             RowLayout {
@@ -269,7 +225,7 @@ PanelWindow {
                 }
 
                 ColumnLayout {
-                    width: rect.width - 20
+                    width: rect.width
                     spacing: 10
 
                     Text {
@@ -368,14 +324,6 @@ PanelWindow {
                         }
                     }
                 }
-            }
-        }
-
-        HoverHandler {
-            id: rectHover
-            onHoveredChanged: {
-                if (hovered) { hasBeenHovered = true; autoCloseTimer.stop() }
-                else if (hasBeenHovered) autoCloseTimer.start()
             }
         }
     }

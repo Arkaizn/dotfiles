@@ -27,7 +27,7 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
         onClicked: {
-            wallpaperSelector.toggle()
+            wallpaperSelector.toggle(bar.screen)
         }
         onExited: {
             buttonBackground.scale = Properties.onExitedButtonScale

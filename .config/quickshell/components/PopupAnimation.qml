@@ -32,7 +32,6 @@ Item {
         var off = root._offset()
         target.x = off.x
         target.y = off.y
-        console.log("enter() offset:", off.x, off.y, "target size:", target.width, target.height, "target.y after set:", target.y)
         target.opacity = 1
         enterGroup.start()
     }
