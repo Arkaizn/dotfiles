@@ -62,8 +62,21 @@ PanelWindow {
     // version doesn't support `mask` on PanelWindow, just delete this block —
     // everything else works without it, you'd just get a slightly larger
     // invisible click-catching area above the card.
+    //
+    // Both this and the blur region below use explicit window-space geometry
+    // instead of `item: card`. A Region with `item` only recomputes when that
+    // item's *own* x/y/width/height change — but the slide animation moves
+    // `rect` (card's parent), so card's own geometry never changes during
+    // open/close. After a close, the region got stuck at the slid-out
+    // position (below the surface), and on the next open nothing re-fired it,
+    // so the blurred background stayed off-screen = "invisible" panel. Typing
+    // a search changed card's height, which is why it only happened when you
+    // closed without searching. Binding to rect.x/rect.y fixes that.
     mask: Region {
-        item: card
+        x: rect.x + card.x
+        y: rect.y + card.y
+        width: card.width
+        height: card.height
     }
 
     IpcHandler {
@@ -83,7 +96,10 @@ PanelWindow {
     }
 
     BackgroundEffect.blurRegion: Region {
-        item: card
+        x: rect.x + card.x
+        y: rect.y + card.y
+        width: card.width
+        height: card.height
         topLeftRadius: 22
         topRightRadius: 22
     }
@@ -125,17 +141,6 @@ PanelWindow {
         root.visible = true
         searchField.text = ""
         if (root.mode === "clipboard") clipboardView.refresh()
-
-        // Reopening after a close remaps a brand-new Wayland surface, which
-        // doesn't inherit the old mask/blur region attachment. If card's
-        // geometry is identical to how it was last time (same mode, empty
-        // query), nothing about `card` actually changes value, so the
-        // Region bound to it never re-fires and the region never gets
-        // resent to the new surface — card renders with no mask/blur,
-        // i.e. looks invisible. Force one real bounds change so it always
-        // gets resent, then snap it back before it's visible.
-        card.width -= 1
-        Qt.callLater(() => card.width += 1)
 
         enterTimer.start()
     }
