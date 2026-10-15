@@ -9,6 +9,16 @@ import Quickshell
 Singleton {
     property var attachments: []
 
+    // screen name -> true while the pointer is over that screen's bar
+    // (BarPopup won't auto-close while the pointer is on the bar)
+    property var hoveredBars: ({})
+
+    function setBarHovered(screen, hovered) {
+        const next = Object.assign({}, hoveredBars)
+        next[screen] = hovered
+        hoveredBars = next
+    }
+
     function attach(id, screen, x0, x1, side) {
         attachments = attachments.filter(a => a.id !== id).concat([{ id, screen, x0, x1, side }])
     }

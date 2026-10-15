@@ -64,30 +64,20 @@ Item {
                     onCanceled: delegateItem.scale = Properties.onExitedTextScale
 
                     onClicked: function(mouse) {
-                        if (mouse.button === Qt.RightButton) {
-                            if (modelData.hasMenu || modelData.onlyMenu) {
-                                var globalPos = delegateItem.mapToItem(null, 0, delegateItem.height + 4)
-                                customTrayMenu.openFor(modelData, globalPos.x, globalPos.y)
-                            }
-                            return
-                        }
+                        // centre of this icon in screen coordinates (the bar spans the screen)
+                        const centerX = delegateItem.mapToItem(null, delegateItem.width / 2, 0).x
 
                         if (mouse.button === Qt.MiddleButton) {
-                            if (modelData.secondaryActivate)
-                                modelData.secondaryActivate()
+                            modelData.secondaryActivate()
                             return
                         }
-
-                        if (modelData.onlyMenu && modelData.hasMenu) {
-                            var globalPos = trayButton.mapToItem(Properties.contentItem, 0, 0)
-                            modelData.display(
-                                bar,
-                                globalPos.x,
-                                globalPos.y + trayButton.height + 4
-                            )
-                        } else {
-                            modelData.activate()
+                        // right click, or left click on menu-only apps → our menu
+                        if (mouse.button === Qt.RightButton || modelData.onlyMenu) {
+                            if (modelData.hasMenu)
+                                customTrayMenu.toggleFor(modelData, bar.screen, centerX)
+                            return
                         }
+                        modelData.activate()
                     }
 
                     onWheel: function(wheel) {

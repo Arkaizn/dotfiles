@@ -29,7 +29,8 @@ PanelWindow {
     id: root
 
     // ── Config ────────────────────────────────────────────────
-    property string side: "right"      // "left" | "right" | "center"
+    property string side: "right"      // "left" | "right" | "center" | "at"
+    property real atX: 0               // side "at": screen x the panel is centred under (clamped to the bar)
     property int panelWidth: 400
     property real panelHeight: 300     // fully open height, including padding
     property int maxHeight: Math.ceil(panelHeight) // surface height; set ≥ panelHeight if content grows
@@ -43,6 +44,16 @@ PanelWindow {
     property bool shown: false         // logical state; `visible` lags during the close animation
     property real reveal: 0            // 0 = closed, 1 = fully open
     property bool hasBeenHovered: false
+
+    // Auto-close only counts down once the pointer is off the popup AND off
+    // the bar on this screen (moving popup → bar keeps it open).
+    readonly property bool _barHovered: BarState.hoveredBars[screen?.name ?? ""] === true
+    on_BarHoveredChanged: _updateAutoClose()
+    function _updateAutoClose() {
+        if (!autoClose || !shown) return
+        if (popupHover.hovered || _barHovered) autoCloseTimer.stop()
+        else if (hasBeenHovered) autoCloseTimer.restart()
+    }
 
     signal opening()
     signal popupClosed()
@@ -59,7 +70,9 @@ PanelWindow {
     visible: false
     color: "transparent"
     exclusiveZone: 0
-    anchors { top: true; left: side === "left"; right: side === "right" }
+    // side "at" spans the whole width and moves the panel inside the surface
+    // (see `ox`), so moving to a new spot is a smooth animation, not a jump.
+    anchors { top: true; left: side === "left" || side === "at"; right: side === "right" || side === "at" }
     margins {
         left: side === "left" ? Properties.barInset : 0
         right: side === "right" ? Properties.barInset : 0
@@ -106,11 +119,27 @@ PanelWindow {
     // ── Internals ─────────────────────────────────────────────
     readonly property string _id: "barpopup:" + (ipcName || String(root))
 
+    // side "at": left edge of the surface (incl. flares), kept on the bar
+    readonly property int _atLeft: {
+        const sw = screen?.width ?? 0
+        const x = Math.round(atX - implicitWidth / 2)
+        return Math.max(Properties.barInset, Math.min(sw - Properties.barInset - implicitWidth, x))
+    }
+
+    // x of the panel (incl. flares) inside the surface; animates for side "at"
+    property real ox: side === "at" ? _atLeft : 0
+    Behavior on ox {
+        enabled: root.shown && root.side === "at"
+        NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+    }
+    onOxChanged: if (shown) _attach()
+
     function _attach() {
         const s = screen
         if (!s) return
         const w = implicitWidth
         const x0 = side === "left" ? Properties.barInset
+                 : side === "at" ? ox
                  : side === "right" ? s.width - Properties.barInset - w
                  : Math.floor((s.width - w) / 2)
         BarState.attach(_id, s.name, x0, x0 + w, side)
@@ -169,25 +198,25 @@ PanelWindow {
     // Body (rounded bottom) + each flare = its square minus a circle,
     // so the inverted corners are blurred too.
     BackgroundEffect.blurRegion: Region {
-        x: root.flareL; y: 0
+        x: root.ox + root.flareL; y: 0
         width: root.panelWidth; height: Math.ceil(root.h)
         bottomLeftRadius: root.r; bottomRightRadius: root.r
 
         Region {
-            x: root.flareL - root.fl; y: 0
+            x: root.ox + root.flareL - root.fl; y: 0
             width: root.fl; height: root.fl
             Region {
                 shape: RegionShape.Ellipse; intersection: Intersection.Subtract
-                x: root.flareL - root.fl * 2; y: 0
+                x: root.ox + root.flareL - root.fl * 2; y: 0
                 width: root.fl * 2; height: root.fl * 2
             }
         }
         Region {
-            x: root.flareL + root.panelWidth; y: 0
+            x: root.ox + root.flareL + root.panelWidth; y: 0
             width: root.fr; height: root.fr
             Region {
                 shape: RegionShape.Ellipse; intersection: Intersection.Subtract
-                x: root.flareL + root.panelWidth; y: 0
+                x: root.ox + root.flareL + root.panelWidth; y: 0
                 width: root.fr * 2; height: root.fr * 2
             }
         }
@@ -196,19 +225,17 @@ PanelWindow {
     // ── Visuals ───────────────────────────────────────────────
     Item {
         id: frame
-        width: root.width
+        x: root.ox
+        width: root.implicitWidth
         height: Math.ceil(root.h)
         clip: true
 
         HoverHandler {
+            id: popupHover
             enabled: root.autoClose
             onHoveredChanged: {
-                if (hovered) {
-                    root.hasBeenHovered = true
-                    autoCloseTimer.stop()
-                } else if (root.hasBeenHovered && root.shown) {
-                    autoCloseTimer.start()
-                }
+                if (hovered) root.hasBeenHovered = true
+                root._updateAutoClose()
             }
         }
 
