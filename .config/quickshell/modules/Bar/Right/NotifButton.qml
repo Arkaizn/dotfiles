@@ -20,7 +20,7 @@ Item {
 
     // Optional unread badge
     Rectangle {
-        visible: notifCenter.groupCount > 0
+        visible: Notifs.count > 0
         anchors { top: parent.top; right: parent.right; margins: 4 }
         width: 8; height: 8
         radius: 4

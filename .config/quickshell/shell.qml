@@ -43,7 +43,6 @@ ShellRoot {
     }
     
 
-    NotifServer {}
     NotifPopup {id: notifPopup}
     NotifCenter { id: notifCenter }
     Launcher{}
