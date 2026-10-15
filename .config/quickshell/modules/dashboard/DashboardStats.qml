@@ -71,16 +71,28 @@ ColumnLayout {
     }
     Process {
         id: uptimeProc
-        command: ["bash", "-lc", "uptime -p | sed 's/up //'"]
+        command: ["cat", "/proc/uptime"]
         running: true
-        stdout: SplitParser { onRead: data => infoBar.uptime = data.trim() }
+        stdout: SplitParser { onRead: data => info.uptimeSecs = parseFloat(data) || 0 }
     }
     Process {
         id: osAgeProc
         command: ["bash", "-lc",
             "birth=$(stat -c %W / 2>/dev/null); now=$(date +%s); diff=$((now-birth)); echo \"$((diff/86400))d\""]
         running: true
-        stdout: SplitParser { onRead: data => infoBar.osAge = data.trim() }
+        stdout: SplitParser { onRead: data => info.osAge = data.trim() }
+    }
+
+    Process {
+        id: diskProc
+        command: ["df", "-B1", "--output=used,size", "/"]
+        running: true
+        stdout: SplitParser { onRead: data => {
+            const p = data.trim().split(/\s+/)
+            if (isNaN(parseFloat(p[0]))) return // header line
+            info.diskUsed = parseFloat(p[0])
+            info.diskSize = parseFloat(p[1])
+        }}
     }
 
     // ── Refresh timers ────────────────────────────────────────────
@@ -102,6 +114,7 @@ ColumnLayout {
         onTriggered: {
             uptimeProc.running = false; uptimeProc.running = true
             osAgeProc.running  = false; osAgeProc.running  = true
+            diskProc.running   = false; diskProc.running   = true
         }
     }
 
@@ -288,60 +301,63 @@ ColumnLayout {
         }
     }
 
-    // ── Info bar (uptime + OS age) ────────────────────────────────
+    // ── Info tiles: uptime + OS age, disk usage ───────────────────
+    // Fills whatever height the gauges leave over.
 
-    Rectangle {
-        id: infoBar
+    ColumnLayout {
+        id: info
         Layout.fillWidth: true
-        height: 42
-        radius: 8
-        color: Qt.rgba(1, 1, 1, 0.05)
-        border.width: Properties.panelBorderWidth
-        border.color: Properties.cardBorder
+        Layout.fillHeight: true
+        Layout.topMargin: 2
+        spacing: 6
 
-        property string uptime: "—"
+        property real uptimeSecs: 0
         property string osAge: "—"
+        property real diskUsed: 0
+        property real diskSize: 0
+        readonly property real diskPct: diskSize > 0 ? diskUsed / diskSize : 0
+
+        // 3h 14m / 2d 5h / 42m
+        function shortDuration(s) {
+            const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60)
+            if (d > 0) return d + "d " + h + "h"
+            if (h > 0) return h + "h " + m + "m"
+            return m + "m"
+        }
+        function bytes(b) {
+            const t = 1024 ** 4, g = 1024 ** 3
+            return b >= t ? (b / t).toFixed(1) + "T" : Math.round(b / g) + "G"
+        }
 
         RowLayout {
-            anchors.fill: parent
-            anchors.margins: 8
-            spacing: 4
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            spacing: 6
 
-            // Uptime
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 1
-                Text {
-                    text: "󰔚 " + infoBar.uptime
-                    color: Qt.rgba(1,1,1,0.75)
-                    font.pixelSize: 14; font.bold: true
-                    elide: Text.ElideRight
-                    Layout.fillWidth: true
-                }
-                Text {
-                    text: "uptime"
-                    color: Qt.rgba(1,1,1,0.3)
-                    font.pixelSize: 12; font.letterSpacing: 1
-                }
-            }
+            InfoTile { icon: "󰔚"; label: "UPTIME"; value: info.uptimeSecs > 0 ? info.shortDuration(info.uptimeSecs) : "—" }
+            InfoTile { icon: "󰣇"; label: "OS AGE"; value: info.osAge }
+        }
 
-            Rectangle { width: 1; Layout.fillHeight: true; color: Qt.rgba(1,1,1,0.1); Layout.topMargin: 3; Layout.bottomMargin: 3 }
+        InfoTile {
+            icon: "󰋊"
+            label: "DISK  /"
+            value: info.diskSize > 0
+                ? info.bytes(info.diskUsed) + " / " + info.bytes(info.diskSize) + "   ·   " + Math.round(info.diskPct * 100) + "%"
+                : "—"
 
-            // OS age
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 1
-                Text {
-                    Layout.alignment: Qt.AlignRight
-                    text: "󰅐 " + infoBar.osAge
-                    color: Qt.rgba(1,1,1,0.75)
-                    font.pixelSize: 14; font.bold: true
-                }
-                Text {
-                    Layout.alignment: Qt.AlignRight
-                    text: "os age"
-                    color: Qt.rgba(1,1,1,0.3)
-                    font.pixelSize: 12; font.letterSpacing: 1
+            // usage bar — turns amber/red as the disk fills up
+            Rectangle {
+                width: parent.width
+                height: 6
+                radius: 3
+                color: Qt.rgba(1, 1, 1, 0.08)
+
+                Rectangle {
+                    height: parent.height
+                    radius: 3
+                    width: parent.width * info.diskPct
+                    color: info.diskPct > 0.9 ? "#e05252" : info.diskPct > 0.75 ? "#e0a052" : "#52e0a0"
+                    Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
                 }
             }
         }
