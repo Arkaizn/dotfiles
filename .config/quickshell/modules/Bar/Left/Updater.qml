@@ -1,5 +1,4 @@
 import Quickshell
-import Quickshell.Io
 import QtQuick
 import QtQuick.Controls
 import qs.services
@@ -13,34 +12,15 @@ Item {
     anchors.margins: 1
 
 
-    visible: root.output !== 0
+    visible: Updates.count > 0
 
     property bool hovered: mouseArea.containsMouse
-    property int output: 0
     
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        iconText: "󰅢   " + root.output
+        iconText: "󰅢   " + Updates.count
         iconSize: 14
-    }
-
-    Process {
-        id: process
-        command: ["bash", "-lc", "checkupdates | wc -l"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.output = this.text.trim() 
-            }
-        }
-    }
-
-    Timer {
-        interval: 10800000  // Update every 3 hours
-        running: true
-        repeat: true
-        onTriggered: process.running = true  // Rerun process
     }
 
     MouseArea {
@@ -54,7 +34,7 @@ Item {
         onPressed: buttonBackground.scale = Properties.onPressedButtonScale
         onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
         onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: Quickshell.execDetached(["bash","-lc","kitty --class custom_hover -e bash -c 'sudo ls >/dev/null 2>&1 && sudo pacman -Syu --noconfirm && yay -Quq --aur | xargs -n 1 yay -S --noconfirm'"])
+        onClicked: Updates.upgrade()
     }
 }
 
