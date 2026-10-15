@@ -51,6 +51,9 @@ Item {
         cursorShape: Qt.PointingHandCursor
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
         onExited: buttonBackground.scale = Properties.onExitedButtonScale
+        onPressed: buttonBackground.scale = Properties.onPressedButtonScale
+        onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
+        onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
         onClicked: Quickshell.execDetached(["bash","-lc","kitty --class custom_hover -e bash -c 'sudo ls >/dev/null 2>&1 && sudo pacman -Syu --noconfirm && yay -Quq --aur | xargs -n 1 yay -S --noconfirm'"])
     }
 }

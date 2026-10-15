@@ -4,6 +4,7 @@ import Quickshell.Widgets
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
+import qs.services
 
 // App search + "recommended apps" grid.
 //
@@ -249,6 +250,7 @@ ColumnLayout {
                     cursorShape: Qt.PointingHandCursor
                 }
                 TapHandler {
+                    id: recTap
                     onTapped: root.launch(recCell.modelData)
                 }
 
@@ -256,7 +258,7 @@ ColumnLayout {
                 Behavior on scale {
                     NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                 }
-                scale: recHover.hovered ? 1.20 : 1.0
+                scale: recTap.pressed ? Properties.onPressedButtonScale : recHover.hovered ? 1.20 : 1.0
 
                 // ── Hover highlight — soft fill only, no border/gradient ──
                 Rectangle {

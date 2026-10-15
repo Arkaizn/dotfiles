@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Io
 import Qt5Compat.GraphicalEffects
 import "."
+import qs.services
 
 // A single wallpaper thumbnail tile: disk-cached preview image, hover
 // zoom/overlay with filename, selection border, and an "Applying…" state.
@@ -62,7 +63,7 @@ Item {
         radius: 10
         clip: true
         color: "#1a1a2e"
-        scale: tileArea.containsMouse ? 1.06 : 1.0
+        scale: tileArea.pressed ? Properties.onPressedButtonScale : tileArea.containsMouse ? 1.06 : 1.0
         Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
         layer.enabled: true

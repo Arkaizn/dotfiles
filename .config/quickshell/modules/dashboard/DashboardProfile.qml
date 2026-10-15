@@ -99,6 +99,9 @@ ColumnLayout {
             hoverEnabled: true
             onEntered: usernameRect.scale = 1.1
             onExited: usernameRect.scale = 1.0
+            onPressed: usernameRect.scale = Properties.onPressedButtonScale
+            onReleased: usernameRect.scale = containsMouse ? 1.1 : 1.0
+            onCanceled: usernameRect.scale = 1.0
         }
 
         
@@ -126,6 +129,9 @@ ColumnLayout {
                         hoverEnabled: true
                         onEntered: kernelRect.scale = 1.1
                         onExited: kernelRect.scale = 1.0
+                        onPressed: kernelRect.scale = Properties.onPressedButtonScale
+                        onReleased: kernelRect.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: kernelRect.scale = 1.0
                     }
                 }
 
@@ -146,6 +152,9 @@ ColumnLayout {
                         hoverEnabled: true
                         onEntered: pkgRect.scale = 1.1
                         onExited: pkgRect.scale = 1.0
+                        onPressed: pkgRect.scale = Properties.onPressedButtonScale
+                        onReleased: pkgRect.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: pkgRect.scale = 1.0
                     }
                 }
             }
@@ -168,6 +177,9 @@ ColumnLayout {
                     cursorShape: Qt.PointingHandCursor
                     onEntered: custom1Rect.scale = 1.1
                     onExited: custom1Rect.scale = 1.0
+                    onPressed: custom1Rect.scale = Properties.onPressedButtonScale
+                    onReleased: custom1Rect.scale = containsMouse ? 1.1 : 1.0
+                    onCanceled: custom1Rect.scale = 1.0
                     onClicked: Quickshell.execDetached(["bash", "-lc", "~/.config/custom/scripts/rdp-home.sh"])
                 }
             }
@@ -190,6 +202,9 @@ ColumnLayout {
                     cursorShape: Qt.PointingHandCursor
                     onEntered: custom2Rect.scale = 1.1
                     onExited: custom2Rect.scale = 1.0
+                    onPressed: custom2Rect.scale = Properties.onPressedButtonScale
+                    onReleased: custom2Rect.scale = containsMouse ? 1.1 : 1.0
+                    onCanceled: custom2Rect.scale = 1.0
                     onClicked: Quickshell.execDetached(["bash", "-lc", "~/.config/custom/scripts/rdp-work.sh"])
                 }
             }

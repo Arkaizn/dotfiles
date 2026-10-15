@@ -7,10 +7,10 @@ import qs.components
 
 Rectangle {
     id:root
-    implicitWidth: text.implicitWidth + bar.buttonWidth
-    implicitHeight: bar.buttonHeight
+    implicitWidth: text.implicitWidth + Properties.buttonWidth
+    implicitHeight: Properties.buttonHeight
     anchors.margins: 1
-    radius: bar.buttonradius
+    radius: Properties.buttonradius
 
     property bool hovered: mouseArea.containsMouse
     property int output: 0
@@ -21,7 +21,7 @@ Rectangle {
     
     Behavior on scale {
         NumberAnimation {
-            duration: bar.bduration
+            duration: Properties.bDuration
             easing.type: Easing.OutCubic
         } 
     }
@@ -36,7 +36,7 @@ Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.verticalCenter: parent.verticalCenter
             text: "󰢮  " + root.output + "%"
-            font.pixelSize: bar.pixelSize
+            font.pixelSize: Properties.pixelSize
             color: root.hovered ? Colors.color6 : Colors.foreground
         }
     }
@@ -53,7 +53,7 @@ Rectangle {
     }
 
     Timer {
-        interval: bar.interval
+        interval: Properties.interval
         running: true
         repeat: true
         onTriggered: process.running = true  // Rerun process
@@ -64,8 +64,11 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
-        onEntered: root.scale = bar.onEnteredButtonScale
-        onExited: root.scale = onExitedButtonScale
+        onEntered: root.scale = Properties.onEnteredButtonScale
+        onExited: root.scale = Properties.onExitedButtonScale
+        onPressed: root.scale = Properties.onPressedButtonScale
+        onReleased: root.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
+        onCanceled: root.scale = Properties.onExitedButtonScale
     }
 }
 

@@ -61,6 +61,9 @@ Item {
 
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
         onExited: buttonBackground.scale = Properties.onExitedButtonScale
+        onPressed: buttonBackground.scale = Properties.onPressedButtonScale
+        onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
+        onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
         // onClicked: Quickshell.execDetached(["bash", "-lc", "pavucontrol"])
 
         onWheel: (wheel) => {
@@ -70,12 +73,13 @@ Item {
             }
         }
 
-        onPressed: (mouse) => {
-        if (mouse.button === Qt.LeftButton) {
-            Quickshell.execDetached(["bash", "-lc", "pavucontrol"])
-        } else if (mouse.button === Qt.RightButton) {
-            if (root.sink?.audio) root.sink.audio.muted = !root.sink.audio.muted;
+        // onClicked (not onPressed) so the press animation plays before the action
+        onClicked: (mouse) => {
+            if (mouse.button === Qt.LeftButton) {
+                Quickshell.execDetached(["bash", "-lc", "pavucontrol"])
+            } else if (mouse.button === Qt.RightButton) {
+                if (root.sink?.audio) root.sink.audio.muted = !root.sink.audio.muted;
+            }
         }
-    }
     }
 }

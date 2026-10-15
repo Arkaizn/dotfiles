@@ -33,7 +33,9 @@ Item {
     Item {
         id: content
         anchors.fill: parent
-        scale: mouseArea.containsMouse && root.interactive ? 1.12 : 1.0
+        scale: !root.interactive ? 1.0
+             : mouseArea.pressed ? Properties.onPressedButtonScale
+             : mouseArea.containsMouse ? 1.12 : 1.0
         Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
         Rectangle {

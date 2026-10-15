@@ -17,6 +17,9 @@ Item{
             hoverEnabled: true
             onEntered: clock.scale = Properties.onEnteredButtonScale
             onExited: clock.scale = Properties.onExitedButtonScale
+            onPressed: clock.scale = Properties.onPressedButtonScale
+            onReleased: clock.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
+            onCanceled: clock.scale = Properties.onExitedButtonScale
             cursorShape: Qt.PointingHandCursor
             onClicked: dashboard.toggle(bar.screen)
         }

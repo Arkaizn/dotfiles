@@ -59,6 +59,9 @@ Item {
 
                     onEntered: delegateItem.scale = Properties.onEnteredTextScale
                     onExited: delegateItem.scale = Properties.onExitedTextScale
+                    onPressed: delegateItem.scale = Properties.onPressedButtonScale
+                    onReleased: delegateItem.scale = containsMouse ? Properties.onEnteredTextScale : Properties.onExitedTextScale
+                    onCanceled: delegateItem.scale = Properties.onExitedTextScale
 
                     onClicked: function(mouse) {
                         if (mouse.button === Qt.RightButton) {

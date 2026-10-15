@@ -36,7 +36,13 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent" // for testing -> Qt.rgba(0, 0, 0, modelData.id === Hyprland.focusedWorkspace?.id ? 0 : 0)
-                    scale: modelData.id === Hyprland.focusedWorkspace?.id ? Properties.onEnteredTextScale : Properties.onExitedTextScale
+                    // one binding for every state (active / hover / pressed)
+                    scale: workspaceMouse.pressed ? Properties.onPressedButtonScale
+                         : (modelData.id === Hyprland.focusedWorkspace?.id || workspaceMouse.containsMouse) ? Properties.onEnteredTextScale
+                         : Properties.onExitedTextScale
+                    Behavior on scale {
+                        NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic }
+                    }
 
 
                     Text {
@@ -57,8 +63,6 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: modelData.activate()
 
-                    onEntered: modelData.id === Hyprland.focusedWorkspace?.id ? 1 : parent.scale = Properties.onEnteredTextScale
-                    onExited: parent.scale = Properties.onExitedTextScale
                 }
                 // needs to be here for the individual workspace hover
                 Behavior on scale {

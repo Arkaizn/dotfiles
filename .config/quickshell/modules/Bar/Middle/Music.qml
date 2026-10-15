@@ -229,10 +229,14 @@ Item {
     HoverHandler {
         id: hoverHandler
         cursorShape: Qt.PointingHandCursor
-        onHoveredChanged: music.scale = hovered ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
     }
 
+    scale: tapHandler.pressed ? Properties.onPressedButtonScale
+         : hoverHandler.hovered ? Properties.onEnteredButtonScale
+         : Properties.onExitedButtonScale
+
     TapHandler {
+        id: tapHandler
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onTapped: (eventPoint, button) => {
             if (button === Qt.RightButton)

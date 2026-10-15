@@ -4,6 +4,7 @@ import QtQuick.Shapes
 import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import qs.components
+import qs.services
 
 Item {
     id: root
@@ -104,12 +105,12 @@ Item {
                     id: prevHover
                     cursorShape: Qt.PointingHandCursor
                 }
-                TapHandler   { onTapped: root.prevMonth() }
+                TapHandler   { id: prevTap; onTapped: root.prevMonth() }
 
                 Behavior on scale {
                     NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
                 }
-                scale: prevHover.hovered ? 1.10 : 1.0
+                scale: prevTap.pressed ? Properties.onPressedButtonScale : prevHover.hovered ? 1.10 : 1.0
 
                 Rectangle {
                     id: prevBtnBg
@@ -147,12 +148,12 @@ Item {
                     id: monthPillHover 
                     cursorShape: Qt.PointingHandCursor
                 }
-                TapHandler   { onTapped: root.goToToday() }
+                TapHandler   { id: monthTap; onTapped: root.goToToday() }
 
                 Behavior on scale {
                     NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
                 }
-                scale: monthPillItem.hovered ? 1.08 : 1.0
+                scale: monthTap.pressed ? Properties.onPressedButtonScale : monthPillItem.hovered ? 1.08 : 1.0
 
                 // Gradient background
                 Rectangle {
@@ -189,12 +190,12 @@ Item {
                     id: nextHover 
                     cursorShape: Qt.PointingHandCursor
                     }
-                TapHandler   { onTapped: root.nextMonth() }
+                TapHandler   { id: nextTap; onTapped: root.nextMonth() }
 
                 Behavior on scale {
                     NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
                 }
-                scale: nextHover.hovered ? 1.10 : 1.0
+                scale: nextTap.pressed ? Properties.onPressedButtonScale : nextHover.hovered ? 1.10 : 1.0
 
                 Rectangle {
                     id: nextBtnBg
@@ -296,7 +297,8 @@ Item {
                             Behavior on scale {
                                 NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                             }
-                            scale: (dayHover.hovered && !dayCell.isOther) ? 1.20 : 1.0
+                            scale: dayTap.pressed ? Properties.onPressedButtonScale
+                                 : (dayHover.hovered && !dayCell.isOther) ? 1.20 : 1.0
 
                             // ── Today — always-visible soft fill (same feel as hover) ──
                             Rectangle {
@@ -345,6 +347,7 @@ Item {
                             }
 
                             TapHandler {
+                                id: dayTap
                                 enabled: !dayCell.isOther
                                 acceptedButtons: Qt.LeftButton
                                 onTapped: {

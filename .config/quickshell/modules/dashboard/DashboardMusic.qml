@@ -260,6 +260,9 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onEntered: sourcePill.scale = 1.05
                     onExited:  sourcePill.scale = 1.0
+                    onPressed: sourcePill.scale = Properties.onPressedButtonScale
+                    onReleased: sourcePill.scale = containsMouse ? 1.05 : 1.0
+                    onCanceled: sourcePill.scale = 1.0
                     onClicked: root.nextPlayer()
                 }
             }
@@ -299,6 +302,9 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onEntered: parent.scale = 1.1
                         onExited:  parent.scale = 1.0
+                        onPressed: parent.scale = Properties.onPressedButtonScale
+                        onReleased: parent.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: parent.scale = 1.0
                         onClicked: {
                             if (root.player) root.player.shuffle = !root.player.shuffle
                         }
@@ -330,6 +336,9 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onEntered: parent.scale = 1.1
                         onExited:  parent.scale = 1.0
+                        onPressed: parent.scale = Properties.onPressedButtonScale
+                        onReleased: parent.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: parent.scale = 1.0
                         onClicked: if (root.player && root.player.canGoPrevious) root.player.previous()
                     }
                 }
@@ -358,6 +367,9 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onEntered: parent.scale = 1.1
                         onExited:  parent.scale = 1.0
+                        onPressed: parent.scale = Properties.onPressedButtonScale
+                        onReleased: parent.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: parent.scale = 1.0
                         onClicked: {
                             if (!root.player) return
                             if (root.player.isPlaying) root.player.pause()
@@ -391,6 +403,9 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onEntered: parent.scale = 1.1
                         onExited:  parent.scale = 1.0
+                        onPressed: parent.scale = Properties.onPressedButtonScale
+                        onReleased: parent.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: parent.scale = 1.0
                         onClicked: if (root.player && root.player.canGoNext) root.player.next()
                     }
                 }
@@ -431,6 +446,9 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onEntered: parent.scale = 1.1
                         onExited:  parent.scale = 1.0
+                        onPressed: parent.scale = Properties.onPressedButtonScale
+                        onReleased: parent.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: parent.scale = 1.0
                         onClicked: {
                             if (!root.player) return
                             // Cycle: None → All → Track → None

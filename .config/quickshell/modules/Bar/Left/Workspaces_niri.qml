@@ -27,7 +27,11 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     color: "transparent"
-                    scale: model.isActive ? Properties.onEnteredTextScale : Properties.onExitedTextScale
+                    // one binding for every state — the old onEntered/onExited assignments
+                    // overwrote this, so the active workspace lost its size after a hover
+                    scale: workspaceMouse.pressed ? Properties.onPressedButtonScale
+                         : (model.isActive || workspaceMouse.containsMouse) ? Properties.onEnteredTextScale
+                         : Properties.onExitedTextScale
                     Text {
                         id: text
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -43,8 +47,6 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: niri.focusWorkspaceById(model.id)
-                        onEntered: if (!model.isActive) parent.scale = Properties.onEnteredTextScale
-                        onExited: parent.scale = Properties.onExitedTextScale
                     }
                     // needs to be here for the individual workspace hover
                     Behavior on scale {
