@@ -222,6 +222,9 @@ ColumnLayout {
                 anchors.centerIn: parent
                 width: 130; height: 130; radius: 65
                 color: Qt.rgba(0.32, 0.87, 0.63, 0.05)
+                // thin outline around the gauge circle
+                border.width: Properties.panelBorderWidth
+                border.color: Properties.cardBorder
             }
 
             // Download track (left half: 180°→360°, i.e. startAngle=180, sweep=180)
@@ -280,19 +283,16 @@ ColumnLayout {
                 anchors.centerIn: parent
                 spacing: 0
                 Text {
-                    Layout.alignment: Qt.AlignHCenter
                     text: "NET"
                     color: Qt.rgba(1,1,1,0.4)
                     font.pixelSize: 11; font.letterSpacing: 2; font.bold: true
                 }
                 Text {
-                    Layout.alignment: Qt.AlignHCenter
                     text: "↓ " + (netGauge.rxKb >= 1024 ? (netGauge.rxKb/1024).toFixed(1)+"M" : netGauge.rxKb+"K")
                     color: "#52e0a0"
                     font.pixelSize: 12; font.bold: true
                 }
                 Text {
-                    Layout.alignment: Qt.AlignHCenter
                     text: "↑ " + (netGauge.txKb >= 1024 ? (netGauge.txKb/1024).toFixed(1)+"M" : netGauge.txKb+"K")
                     color: "#e05252"
                     font.pixelSize: 12; font.bold: true
@@ -398,6 +398,9 @@ ColumnLayout {
             anchors.centerIn: parent
             width: 130; height: 130; radius: 65
             color: Qt.rgba(gauge.primaryColor.r, gauge.primaryColor.g, gauge.primaryColor.b, 0.06)
+            // thin outline around the gauge circle
+            border.width: Properties.panelBorderWidth
+            border.color: Properties.cardBorder
         }
 
         // Shapes fill the Item exactly — center (65,65), outer r=50, inner r=36
