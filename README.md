@@ -62,6 +62,11 @@ To get started with this project, follow these simple steps.
    ./install.sh
    ```
 
+3. (Optional) Install the extras (apps, zsh, nvidia, openrgb, greetd):
+   ```sh
+   ./postinstall.sh
+   ```
+
 ## Screenshots
 <!-- Screenshots  -->
 ![alt text](images/image-1.png)
@@ -80,24 +85,26 @@ To get started with this project, follow these simple steps.
     │   └── hypr/
     │       ├── hyprland.conf
     │       └── ...
-    ├── additions/
-    │   ├── apps.sh
-    │   ├── openrgb/
-    │   │   └── openrgb.sh
-    │   └── nvidia.sh
+    ├── additions/              # misc scripts & notes (not run by the installers)
     ├── images/
     │   └── ...
     ├── scripts/
-    │   ├── config.sh
-    │   ├── icons.sh
-    │   ├── packages.sh
-    │   ├── theme.sh
-    │   └── zshinstall.sh
+    │   ├── lib.sh              # shared gum helpers
+    │   ├── install/            # steps run by install.sh
+    │   │   ├── packages.sh
+    │   │   ├── config.sh
+    │   │   └── themes.sh
+    │   ├── postinstall/        # steps run by postinstall.sh
+    │   │   ├── apps.sh
+    │   │   ├── zsh.sh
+    │   │   ├── nvidia.sh
+    │   │   ├── greetd.sh
+    │   │   └── openrgb/
+    │   └── config/             # pull / push / update dotfiles
     ├── LICENSE
     ├── README.md
     ├── install.sh
-    ├── postinstall.sh
-    └── refresh.sh
+    └── postinstall.sh
 ```
 
 <!-- LICENSE -->

@@ -1,26 +1,18 @@
 #!/bin/bash
 
-magenta=170
-blue=26
-red=196
-green=34
+cd "$(dirname "$0")" || exit 1
 
-elevate_terminal() {
-    sudo ls >/dev/null 2>&1
-}
+# install dependency gum (needed before anything else)
+if ! command -v gum &>/dev/null; then
+    echo "Installing gum..."
+    sudo pacman -Sy --needed --noconfirm gum || exit 1
+fi
 
-# install dependency gum 
-install_gum() {
-    if ! command -v gum &>/dev/null; then
-        gum style --foreground 170 "Installing gum..."
-        sudo pacman -Sy --noconfirm gum >/dev/null 2>&1
-        gum spin --spinner dot --title "Installing gum..." -- sudo pacman -Sy --noconfirm gum
-    fi
-}
+source ./scripts/lib.sh
 
 # Function: show menu with gum
 menu() {
-    MENUCHOICE=$(gum choose \
+    MENUCHOICE=$(gum choose --header "Dotfiles installer" \
         "Run all steps" \
         "Update system" \
         "Install essential packages" \
@@ -32,76 +24,54 @@ menu() {
         "Run all steps") run_all_steps ;;
         "Update system") update_system ;;
         "Install essential packages") install_packages ;;
-        "Apply configuration files") apply_configs ;;
-        "Set theme and icons") set_theme ;;
-        "Exit") exit 0 ;;
+        "Apply configuration files") apply_config ;;
+        "Set theme and icons") set_theme_and_icons ;;
+        *) exit 0 ;;
     esac
 }
 
-
 output() {
-    if gum confirm "Do you want to have full output during config installation?"; then
-    output=yes
+    if gum confirm "Do you want to have full output during installation?" --default=false; then
+        export VERBOSE=yes
     else
-    output=no
+        export VERBOSE=no
     fi
 }
 
 # System update
 update_system() {
-    gum style --foreground $magenta "🔄 Updating system..."
-    if [[$ouput == yes]] ;then
-    sudo pacman -Syu --noconfirm
-    else
-    gum spin --spinner dot --title "Updating System" -- sudo pacman -Syu --noconfirm
-    fi
+    title "🔄 Updating system..."
+    run "Updating system" sudo pacman -Syu --noconfirm && ok "System updated"
 }
 
 # Install necessary packages
 install_packages() {
-    gum style --foreground $magenta "📦 Installing essential packages..."
-    if [[$ouput == yes]] ;then
-    bash ./scripts/packages.sh
-    else
-    bash ./scripts/packages.sh --silent
-    fi
+    title "📦 Installing essential packages..."
+    bash ./scripts/install/packages.sh
 }
 
 # Apply configuration files
 apply_config() {
-    gum style --foreground $magenta "⚙️ Applying configuration files..."
-    if [[ "$SILENTS" == "--silent" ]]; then
-    gum spin --spinner dot --title "Copying Config" -- bash ./scripts/config.sh
-    else
-    bash ./scripts/config.sh
-    fi
+    title "⚙️ Applying configuration files..."
+    run "Copying config" bash ./scripts/install/config.sh && ok "Config applied"
 }
 
 # Set theme and icons
 set_theme_and_icons() {
-    gum style --foreground $magenta "🎨 Setting themes and icons..."
-    if [[$ouput == yes]] ;then
-    bash ./scripts/themes.sh
-    else
-    bash ./scripts/themes.sh --silent
-    fi
+    title "🎨 Setting themes and icons..."
+    bash ./scripts/install/themes.sh
 }
 
-# Run all remaining steps
+# Run all steps
 run_all_steps() {
-    update_system && 
-    install_packages && 
-    apply_config && 
+    update_system &&
+    install_packages &&
+    apply_config &&
     set_theme_and_icons &&
-    gum style --foreground $green "✅ All steps completed!"
+    gum style --foreground "$green" --bold "✅ All steps completed! Run ./postinstall.sh for the extras."
 }
 
-elevate_terminal
-
-# install gum if needed
-install_gum
-
-# Menu 
+keep_sudo_alive
 output
 
 while true; do
