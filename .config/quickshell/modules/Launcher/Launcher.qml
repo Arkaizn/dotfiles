@@ -371,40 +371,14 @@ PanelWindow {
                     onCloseRequested: anim.exit()
                 }
 
-                TextField {
+                SearchField {
                     id: searchField
                     Layout.fillWidth: true
                     Layout.preferredHeight: Properties.buttonHeight
+                    icon: root.mode === "apps" ? "󰍉" : root.mode === "clipboard" ? "󰅍" : "󰸉"
                     placeholderText: root.mode === "apps" ? "Search apps"
                                    : root.mode === "clipboard" ? "Search clipboard history"
                                    : "Search wallpapers"
-                    placeholderTextColor: Qt.rgba(1, 1, 1, 0.35)
-                    color: Properties.color
-                    font.pixelSize: 13
-                    verticalAlignment: TextInput.AlignVCenter
-
-                    background: Rectangle {
-                        radius: Properties.radius
-                        color: Qt.rgba(0, 0, 0, 0.18)
-                        border.width: 1.5
-                        border.color: Qt.rgba(1, 1, 1, searchField.activeFocus ? 0.28 : 0.18)
-                        gradient: ButtonGradient { hovered: searchField.activeFocus }
-                    }
-
-                    Text {
-                        id: clearIcon
-                        text: "✕"
-                        color: Qt.rgba(1, 1, 1, 0.5)
-                        font.pixelSize: 11
-                        visible: searchField.text.length > 0
-                        anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                        MouseArea {
-                            anchors.fill: parent
-                            anchors.margins: -6
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: searchField.text = ""
-                        }
-                    }
 
                     Keys.onDownPressed: root.activeView().moveDown()
                     Keys.onUpPressed: root.activeView().moveUp()

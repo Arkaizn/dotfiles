@@ -23,6 +23,7 @@ import "modules/testing"
 import "modules/dashboard"
 import "modules/Launcher"
 import "modules/controlcenter"
+import "modules/lockscreen"
 
 ShellRoot {
     id: root
@@ -45,6 +46,7 @@ ShellRoot {
 
     NotifPopup {id: notifPopup}
     ControlCenter { id: controlCenter }
+    LockScreen { id: lockScreen }
     Launcher { id: launcher }
     Testing {}
     Dashboard {id: dashboard}

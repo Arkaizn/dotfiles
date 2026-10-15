@@ -188,23 +188,14 @@ ColumnLayout {
                             visible: row.askingPassword
                             spacing: 6
 
-                            TextField {
+                            SearchField {
                                 id: pw
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: 28
+                                Layout.preferredHeight: 30
                                 placeholderText: "Password"
-                                placeholderTextColor: Qt.rgba(1, 1, 1, 0.35)
-                                echoMode: showPw.active ? TextInput.Normal : TextInput.Password
-                                color: Properties.color
+                                icon: "󰌾"
+                                password: !showPw.on
                                 font.pixelSize: 12
-                                leftPadding: 10
-                                verticalAlignment: TextInput.AlignVCenter
-                                background: Rectangle {
-                                    radius: Properties.radius
-                                    color: Qt.rgba(0, 0, 0, 0.18)
-                                    border.width: 1.5
-                                    border.color: Qt.rgba(1, 1, 1, pw.activeFocus ? 0.28 : 0.18)
-                                }
                                 onAccepted: connectBtn.clicked()
                                 Keys.onEscapePressed: root.passwordFor = ""
                             }

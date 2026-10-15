@@ -18,7 +18,7 @@ RowLayout {
 
     readonly property var actions: [
         { id: "lock",     icon: "󰌾", tip: "Lock",      confirm: false,
-          cmd: "bash ~/.config/hypr/hyprlock/hyprlock.sh" },
+          cmd: "bash ~/.config/quickshell/scripts/lock.sh" },
         { id: "suspend",  icon: "󰤄", tip: "Suspend",   confirm: false,
           cmd: "systemctl suspend || loginctl suspend" },
         { id: "logout",   icon: "󰍃", tip: "Log out",   confirm: true,
