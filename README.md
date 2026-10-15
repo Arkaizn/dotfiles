@@ -69,12 +69,32 @@ To get started with this project, follow these simple steps.
 
 ## Screenshots
 <!-- Screenshots  -->
-![alt text](images/image-1.png)
-![alt text](images/image-2.png)
-![alt text](images/image-3.png)
-![alt text](images/image-4.png)
-![alt text](images/image-5.png)
-![alt text](images/image-6.png)
+niri + Quickshell. Older screenshots live in [`images/archive/`](images/archive/).
+
+**Desktop** — bar, fastfetch and btop on a fresh workspace
+![Desktop](images/01-desktop.png)
+
+**Launcher** — app search with frecency-ranked recommendations (Tab switches to clipboard / wallpapers)
+![Launcher](images/02-launcher.png)
+
+**Wallpaper picker** — inside the launcher; picking one re-themes everything with pywal
+![Wallpaper picker](images/03-wallpapers.png)
+
+**Dashboard** — profile, music player, calendar and system stats
+![Dashboard](images/04-dashboard.png)
+
+**Control center** — power, Wi-Fi, Bluetooth, screenshot / OCR / color picker, volume mixer, notifications
+![Control center](images/05-controlcenter.png)
+
+**Tray menu** — themed tray menus hanging from the bar
+![Tray menu](images/06-traymenu.png)
+
+**Notifications** — popups slide in from the top right
+![Notification](images/07-notification.png)
+
+**Lockscreen** — clock, media and notifications; any key opens the password prompt
+![Lockscreen](images/08-lockscreen.png)
+![Lockscreen password](images/09-lockscreen-auth.png)
 
 <!-- Project Structure -->
 ## Project Structure
@@ -86,8 +106,8 @@ To get started with this project, follow these simple steps.
     │       ├── hyprland.conf
     │       └── ...
     ├── additions/              # misc scripts & notes (not run by the installers)
-    ├── images/
-    │   └── ...
+    ├── images/                 # README screenshots
+    │   └── archive/            # older screenshots
     ├── scripts/
     │   ├── lib.sh              # shared gum helpers
     │   ├── install/            # steps run by install.sh
