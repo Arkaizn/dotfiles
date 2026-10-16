@@ -40,8 +40,22 @@ Scope {
         onTriggered: if (!capsProc.running) capsProc.running = true
     }
 
+    // YubiKey OTP login is set up: pam_yubico is active in system-auth and the
+    // current user has a key in its authfile. Re-checked on every lock.
+    property bool yubikey: false
+    Process {
+        id: yubikeyProc
+        command: ["sh", "-c",
+            "line=$(grep -E '^[[:space:]]*-?auth[[:space:]].*pam_yubico\\.so' /etc/pam.d/system-auth) || exit 1; " +
+            "file=$(printf '%s' \"$line\" | grep -oE 'authfile=[^[:space:]]+' | cut -d= -f2); " +
+            "grep -q \"^$USER:\" \"${file:-$HOME/.yubico/authorized_yubikeys}\" 2>/dev/null"]
+        onExited: code => root.yubikey = code === 0
+    }
+    Component.onCompleted: yubikeyProc.running = true
+
     function lock() {
         if (sessionLock.locked) return
+        yubikeyProc.running = true
         authOpen = false
         password = ""
         checking = false
@@ -71,6 +85,7 @@ Scope {
         failed = false
         checking = true
         status = "Checking…"
+        pam.lastMessage = ""
         pam.start()
     }
 
@@ -87,7 +102,11 @@ Scope {
         configDirectory: Quickshell.shellDir + "/pam"
         config: "password.conf"
 
+        // last info/error text from PAM (e.g. pam_faillock's "account is locked")
+        property string lastMessage: ""
+
         onResponseRequiredChanged: if (responseRequired) respond(root.password)
+        onMessageChanged: if (!responseRequired && message) lastMessage = message
 
         onCompleted: result => {
             root.checking = false
@@ -96,7 +115,8 @@ Scope {
                 root.unlocking = true
                 unlockTimer.restart()
             } else {
-                root.fail(result === PamResult.MaxTries ? "Too many attempts, wait a moment" : "Wrong password")
+                const locked = /lock/i.test(lastMessage)
+                root.fail(result === PamResult.MaxTries || locked ? "Too many attempts, wait a moment" : "Wrong password")
             }
         }
         onError: error => {

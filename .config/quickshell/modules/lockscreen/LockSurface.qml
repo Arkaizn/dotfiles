@@ -252,7 +252,7 @@ Item {
                         Layout.fillWidth: true
                         icon: "󰌾"
                         password: true
-                        placeholderText: "Password"
+                        placeholderText: root.lock.yubikey ? "Password or YubiKey" : "Password"
                         enabled: !root.lock.checking
                         error: root.lock.failed
                         text: root.lock.password
