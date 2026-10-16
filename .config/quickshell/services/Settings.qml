@@ -11,6 +11,7 @@ import QtQuick
 //   properties → applied by Properties.qml (defaults = the values written there)
 //   niri       → written to niri's override file by NiriSettings.qml
 //   monitors   → written to niri's outputs file by Monitors.qml
+//   calendar   → reminder / sync options, read by CalendarStore.qml
 Singleton {
     id: root
 
@@ -18,6 +19,7 @@ Singleton {
     property var properties: ({})
     property var niri: ({})
     property var monitors: ({})
+    property var calendar: ({})
     property bool loaded: false
 
     function has(group, key) { return root[group][key] !== undefined }
@@ -55,6 +57,7 @@ Singleton {
             root.properties = o.properties ?? {}
             root.niri = o.niri ?? {}
             root.monitors = o.monitors ?? {}
+            root.calendar = o.calendar ?? {}
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }
@@ -65,7 +68,7 @@ Singleton {
     Timer {
         id: saveTimer
         interval: 400
-        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, monitors: root.monitors }, null, 2) + "\n")
+        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, monitors: root.monitors, calendar: root.calendar }, null, 2) + "\n")
     }
 
     Component.onCompleted: parse(file.text())

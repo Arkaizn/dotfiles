@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Calendar
+GenericName=Calendar
+Comment=iCloud, CalDAV, Google / Outlook and local calendars
+Icon=x-office-calendar
+Exec=qs ipc call calendar open
+Terminal=false
+Categories=Office;Calendar;
+Keywords=calendar;events;icloud;caldav;agenda;schedule;
+StartupNotify=false

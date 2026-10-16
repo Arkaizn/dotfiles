@@ -19,11 +19,14 @@ Item {
     implicitHeight: Properties.buttonHeight
     opacity: interactive ? 1 : 0.4
 
+    // the whole button scales (background and text together)
+    scale: !interactive ? 1
+         : mouse.pressed ? Properties.onPressedButtonScale
+         : mouse.containsMouse ? 1 + (Properties.onEnteredButtonScale - 1) * 0.4 : 1
+    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+
     ButtonBackground {
         hovered: root.interactive && (root.primary || mouse.containsMouse)
-        scale: !root.interactive ? 1
-             : mouse.pressed ? Properties.onPressedButtonScale
-             : mouse.containsMouse ? 1.04 : 1
     }
 
     RowLayout {

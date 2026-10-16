@@ -15,6 +15,8 @@ Item {
     signal clicked()
 
     implicitHeight: Properties.buttonHeight + 4
+    scale: mouse.pressed ? Properties.onPressedButtonScale : mouse.containsMouse ? 1.02 : 1
+    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
 
     Rectangle {
         anchors.fill: parent
@@ -31,8 +33,6 @@ Item {
         anchors.leftMargin: 10
         anchors.rightMargin: 10
         spacing: 10
-        scale: mouse.pressed ? 0.97 : 1
-        Behavior on scale { NumberAnimation { duration: 100 } }
 
         Text {
             Layout.preferredWidth: 20

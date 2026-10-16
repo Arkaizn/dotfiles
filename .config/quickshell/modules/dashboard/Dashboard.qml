@@ -74,7 +74,33 @@ BarPopup {
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
 
-                DashboardCalendar {}
+                // month grid + the picked day's events (when the calendar app has accounts)
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 0
+                    readonly property bool hasEvents: CalendarStore.accounts.length > 0
+
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        DashboardCalendar { id: dashCal }
+                    }
+                    Rectangle {
+                        visible: parent.hasEvents
+                        Layout.preferredWidth: 1
+                        Layout.fillHeight: true
+                        Layout.topMargin: 14
+                        Layout.bottomMargin: 14
+                        color: Properties.cardBorder
+                    }
+                    DashboardEvents {
+                        visible: parent.hasEvents
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: Math.round(parent.width * 0.40)
+                        day: dashCal.selectedDate
+                    }
+                }
             }
         }
 

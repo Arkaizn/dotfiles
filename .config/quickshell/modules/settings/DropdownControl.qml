@@ -6,7 +6,8 @@ import qs.services
 import "../controlcenter"
 
 // Button that opens a list to pick from.
-//   options: [{ label, value, hint? }]   value: the selected value
+//   options: [{ label, value, hint?, color? }]   value: the selected value
+//   (color: a dot in front, e.g. the calendar's color)
 Item {
     id: root
 
@@ -19,9 +20,11 @@ Item {
     implicitWidth: 200
     implicitHeight: Properties.buttonHeight
 
+    scale: mouse.pressed ? Properties.onPressedButtonScale : mouse.containsMouse ? 1 + (Properties.onEnteredButtonScale - 1) * 0.4 : 1
+    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+
     ButtonBackground {
         hovered: mouse.containsMouse || list.visible
-        scale: mouse.pressed ? Properties.onPressedButtonScale : 1
     }
 
     RowLayout {
@@ -29,6 +32,14 @@ Item {
         anchors.leftMargin: 12
         anchors.rightMargin: 10
         spacing: 8
+        Rectangle {
+            visible: !!root.current?.color
+            Layout.preferredWidth: 10
+            Layout.preferredHeight: 10
+            radius: 5
+            color: root.current?.color ?? "transparent"
+            Behavior on color { ColorAnimation { duration: 150 } }
+        }
         Text {
             Layout.fillWidth: true
             text: root.current?.label ?? "—"
@@ -82,6 +93,14 @@ Item {
                     anchors.fill: parent
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
+                    spacing: 8
+                    Rectangle {
+                        visible: !!entry.modelData.color
+                        Layout.preferredWidth: 10
+                        Layout.preferredHeight: 10
+                        radius: 5
+                        color: entry.modelData.color ?? "transparent"
+                    }
                     Text {
                         Layout.fillWidth: true
                         text: entry.modelData.label

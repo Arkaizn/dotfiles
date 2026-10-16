@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Shapes
@@ -20,6 +21,9 @@ Item {
         "January","February","March","April","May","June",
         "July","August","September","October","November","December"
     ]
+
+    // the picked day, or today — DashboardEvents lists its events
+    readonly property date selectedDate: selectedDay > 0 ? new Date(curYear, curMonth, selectedDay) : todayDate
 
     readonly property var calCells:       buildCells()
     readonly property int numWeeks:       calCells.length / 7
@@ -71,20 +75,42 @@ Item {
         return                           new Date(curYear, curMonth + 1, cell.d)
     }
 
+    // close the dashboard and run a calendar app IPC call for that day
+    function calendarCall(fn, d) {
+        const iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")
+        Quickshell.execDetached(["sh", "-c", 'qs ipc call dashboard close; qs ipc call calendar "$1" "$2"', "sh", fn, iso])
+    }
+
     function prevMonth() {
         if (curMonth === 0) { curMonth = 11; curYear-- } else curMonth--
         selectedDay = -1
+        slide(-1)
     }
 
     function nextMonth() {
         if (curMonth === 11) { curMonth = 0; curYear++ } else curMonth++
         selectedDay = -1
+        slide(1)
     }
 
     function goToToday() {
+        const dir = Math.sign((todayDate.getFullYear() - curYear) * 12 + todayDate.getMonth() - curMonth)
         curYear     = todayDate.getFullYear()
         curMonth    = todayDate.getMonth()
         selectedDay = -1
+        if (dir !== 0) slide(dir)
+    }
+
+    // month change: the weeks slide in from that side
+    function slide(dir) {
+        monthSlide.stop()
+        monthSlideX.from = dir * 30
+        monthSlide.start()
+    }
+    ParallelAnimation {
+        id: monthSlide
+        NumberAnimation { id: monthSlideX; target: weeksShift; property: "x"; to: 0; duration: 260; easing.type: Easing.OutCubic }
+        NumberAnimation { target: weeksCol; property: "opacity"; from: 0.15; to: 1; duration: 240; easing.type: Easing.OutCubic }
     }
 
     // ── Layout ───────────────────────────────────────────────
@@ -133,14 +159,17 @@ Item {
                 }
             }
 
-            Item { Layout.fillWidth: true }
 
             // Month + year pill with gradient and hover scale
             Item {
                 id: monthPillItem
                 height: 26
-                // Measure the text so the pill is always snug
-                implicitWidth: monthLabel.implicitWidth + 28
+                // takes the room between the buttons; short month name when narrow
+                Layout.fillWidth: true
+                Layout.minimumWidth: 60
+                Layout.maximumWidth: longName.implicitWidth + 28
+                Layout.alignment: Qt.AlignHCenter
+                implicitWidth: longName.implicitWidth + 28
 
                 property bool hovered: monthPillHover.hovered
 
@@ -170,17 +199,63 @@ Item {
                     
                 }
 
+                // full-length name, only measured
+                Text {
+                    id: longName
+                    visible: false
+                    text: root.monthNames[root.curMonth] + "   " + root.curYear
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                }
                 Text {
                     id: monthLabel
                     anchors.centerIn: parent
-                    text: root.monthNames[root.curMonth] + "   " + root.curYear
+                    text: (monthPillItem.width < longName.implicitWidth + 28 ? root.monthNames[root.curMonth].slice(0, 3)
+                                                                             : root.monthNames[root.curMonth]) + "   " + root.curYear
+                    Behavior on text {
+                        SequentialAnimation {
+                            NumberAnimation { target: monthLabel; property: "opacity"; to: 0; duration: 90 }
+                            PropertyAction {}
+                            NumberAnimation { target: monthLabel; property: "opacity"; to: 1; duration: 140 }
+                        }
+                    }
                     color: "white"
                     font.pixelSize: 13
                     font.weight: Font.Medium
                 }
             }
 
-            Item { Layout.fillWidth: true }
+            // Today: back to the current month and today's events
+            Item {
+                id: todayBtn
+                readonly property bool away: root.curYear !== root.todayDate.getFullYear()
+                                          || root.curMonth !== root.todayDate.getMonth() || root.selectedDay > 0
+                height: 26
+                implicitWidth: todayLabel.implicitWidth + 14
+                opacity: away ? 1 : 0.45
+                scale: todayTap.pressed ? Properties.onPressedButtonScale : todayHover.hovered ? 1.08 : 1.0
+                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: 7
+                    border.color: Qt.rgba(1, 1, 1, todayHover.hovered || todayBtn.away ? 0.28 : 0.18)
+                    border.width: 0.5
+                    gradient: ButtonGradient { hovered: todayHover.hovered || todayBtn.away }
+                }
+                Text {
+                    id: todayLabel
+                    anchors.centerIn: parent
+                    text: "Today"
+                    color: "white"
+                    font.pixelSize: 11
+                    font.weight: Font.Medium
+                }
+                HoverHandler { id: todayHover; cursorShape: Qt.PointingHandCursor }
+                TapHandler { id: todayTap; onTapped: root.goToToday() }
+            }
+
 
             // Next button
             Item {
@@ -242,9 +317,11 @@ Item {
 
         // ── Week rows ─────────────────────────────────────────
         ColumnLayout {
+            id: weeksCol
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 3
+            transform: Translate { id: weeksShift }
 
             Repeater {
                 model: root.numWeeks
@@ -346,14 +423,39 @@ Item {
                                      : Qt.rgba(1,1,1,0.75)
                             }
 
+                            // calendar app events: a dot per calendar (max 3)
+                            Row {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                anchors.top: parent.verticalCenter
+                                anchors.topMargin: 8           // just under the number
+                                spacing: 2
+                                visible: !dayCell.isOther
+                                Repeater {
+                                    model: [...new Set(CalendarStore.eventsOn(root.cellDate(dayCell.cell)).map(e => e.calendar))].slice(0, 3)
+                                    Rectangle {
+                                        required property string modelData
+                                        width: 3; height: 3; radius: 1.5
+                                        color: CalendarStore.calendarMap[modelData]?.color ?? "white"
+                                    }
+                                }
+                            }
+
+                            // left: show the day's events · double: open it in the
+                            // calendar · right: new event on that day
                             TapHandler {
                                 id: dayTap
                                 enabled: !dayCell.isOther
-                                acceptedButtons: Qt.LeftButton
-                                onTapped: {
-                                    root.selectedDay = (root.selectedDay === dayCell.cell.d)
-                                        ? -1
-                                        : dayCell.cell.d
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                onTapped: (point, button) => {
+                                    if (button === Qt.RightButton) {
+                                        root.selectedDay = dayCell.cell.d
+                                        root.calendarCall("newEvent", root.cellDate(dayCell.cell))
+                                    } else {
+                                        root.selectedDay = (root.selectedDay === dayCell.cell.d) ? -1 : dayCell.cell.d
+                                    }
+                                }
+                                onDoubleTapped: (point, button) => {
+                                    if (button === Qt.LeftButton) root.calendarCall("openDate", root.cellDate(dayCell.cell))
                                 }
                             }
                         }

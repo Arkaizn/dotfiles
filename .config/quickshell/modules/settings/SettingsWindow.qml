@@ -16,17 +16,27 @@ Scope {
     id: root
 
     property bool open: false
+
+    // open, or bring the already open window to the front (niri focuses it,
+    // switching workspace / monitor if needed)
+    function show() {
+        if (root.open)
+            Quickshell.execDetached(["sh", "-c",
+                'id=$(niri msg -j windows | jq -r --arg t "$1" \'first(.[] | select(.title == $t) | .id) // empty\'); '
+                + '[ -n "$id" ] && niri msg action focus-window --id "$id"', "sh", NiriSettings.windowTitle])
+        root.open = true
+    }
     property string pageId: "appearance"
 
     IpcHandler {
         target: "settings"
         function toggle(): void { root.open = !root.open }
-        function open(): void { root.open = true }
+        function open(): void { root.show() }
         function close(): void { root.open = false }
         // e.g. qs ipc call settings openPage niriInput
         function openPage(id: string): void {
             if (root.pages.some(p => p.id === id)) root.pageId = id
-            root.open = true
+            root.show()
         }
     }
 
@@ -68,7 +78,7 @@ Scope {
                 { key: "panelBorderWidth", type: "real", min: 0, max: 4, step: 0.5, label: "Border width" } ] },
             { title: "Corners", items: [
                 { key: "panelRadius", type: "int", min: 0, max: 48, label: "Big panels",
-                  desc: "Dashboard, notification center, launcher, lockscreen, this window" },
+                  desc: "Dashboard, notification center, launcher, lockscreen" },
                 { key: "popupRadius", type: "int", min: 0, max: 32, label: "Notification popups" },
                 { key: "flareRadius", type: "int", min: 0, max: 48, label: "Bar flares",
                   desc: "Inverted corners where a popup meets the bar" } ] } ] },
@@ -94,6 +104,27 @@ Scope {
 
         { id: "monitors", group: "Niri", icon: "󰍹", title: "Monitors", custom: "monitors",
           desc: "Arrange screens, resolution, refresh rate and scale" },
+
+        { id: "calendar", group: "Apps", icon: "󰃭", title: "Calendar", store: "calendar",
+          desc: "Reminders and syncing of the calendar app",
+          sections: [
+            { title: "Reminders", items: [
+                { key: "reminders", type: "bool", def: true, label: "Reminders",
+                  desc: "Notification before an event starts" },
+                { key: "defaultReminder", type: "choice", def: "10", options: ["off", "5", "10", "15", "30", "60"],
+                  dependsOn: "reminders", label: "Default reminder (minutes before)",
+                  desc: "For events that don't have their own reminder" },
+                { key: "allDayReminder", type: "bool", def: false, dependsOn: "reminders",
+                  label: "All-day events", desc: "Remind at 09:00 on the day" } ] },
+            { title: "View", items: [
+                { key: "defaultView", type: "choice", def: "month", options: ["day", "week", "month", "agenda"],
+                  label: "Open in", desc: "View when the calendar starts" },
+                { key: "dayStart", type: "choice", def: "7", options: ["6", "7", "8", "9", "10"],
+                  label: "Day starts at", desc: "Where the day and week views scroll to" },
+                { key: "weekNumbers", type: "bool", def: true, label: "Week numbers" } ] },
+            { title: "Sync", items: [
+                { key: "syncMinutes", type: "choice", def: "15", options: ["5", "15", "30", "60"],
+                  label: "Sync every (minutes)", desc: "In the background too, for the dashboard and reminders" } ] } ] },
 
         { id: "niriLayout", group: "Niri", icon: "󰕰", title: "Layout", store: "niri",
           desc: "How windows are placed",
@@ -125,7 +156,7 @@ Scope {
           desc: "Animations and blur",
           sections: [
             { title: "Animations", items: [ { key: "animationsOn" }, { key: "slowdown", dependsOn: "animationsOn" } ] },
-            { title: "Blur", items: [ { key: "blurPasses" }, { key: "blurOffset" } ] } ] },
+            { title: "Blur", items: [ { key: "appBlur" }, { key: "blurPasses" }, { key: "blurOffset" } ] } ] },
 
         { id: "niriInput", group: "Niri", icon: "󰌌", title: "Input", store: "niri",
           desc: "Keyboard, touchpad, mouse and cursor",
@@ -136,6 +167,19 @@ Scope {
 
     function fullSpec(store, item) {
         return store === "niri" ? Object.assign({}, NiriSettings.spec(item.key), item) : item
+    }
+
+    // current value of a setting in any store (for dependsOn)
+    function valueOf(store, key) {
+        if (store === "niri") return NiriSettings.value(key)
+        if (store === "calendar") {
+            const v = Settings.calendar[key]
+            if (v !== undefined) return v
+            const p = pages.find(p => p.store === "calendar")
+            for (const s of p.sections) for (const i of s.items) if (i.key === key) return i.def
+            return undefined
+        }
+        return Properties[key]
     }
 
     function pageKeys(page) {
@@ -187,10 +231,9 @@ Scope {
             Rectangle {
                 id: bg
                 anchors.fill: parent
-                radius: Properties.panelRadius
+                radius: NiriSettings.appRadius          // same corners as niri's windows
                 color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
-                border.width: Properties.panelBorderWidth
-                border.color: Properties.panelBorder
+                // no own border: niri draws the window's border (one inside got clipped at the corners)
 
                 RowLayout {
                     anchors.fill: parent
@@ -201,7 +244,7 @@ Scope {
                     Rectangle {
                         Layout.preferredWidth: 230
                         Layout.fillHeight: true
-                        radius: Math.max(0, Properties.panelRadius - 14)
+                        radius: Math.max(6, NiriSettings.appRadius - 2)
                         color: "#27000000"
                         border.width: Properties.panelBorderWidth
                         border.color: Properties.cardBorder
@@ -250,7 +293,7 @@ Scope {
                             }
 
                             Repeater {
-                                model: ["Shell", "Niri"]
+                                model: ["Shell", "Apps", "Niri"]
                                 ColumnLayout {
                                     id: group
                                     required property string modelData
@@ -278,7 +321,7 @@ Scope {
                                             label: modelData.title
                                             selected: win.query === "" && win.pageId === modelData.id
                                             changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
-                                                .filter(k => (modelData.store === "niri" ? Settings.niri : Settings.properties)[k] !== undefined).length
+                                                .filter(k => Settings[modelData.store]?.[k] !== undefined).length
                                             onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
                                         }
                                     }
@@ -345,11 +388,11 @@ Scope {
                                     icon: "󰑓"
                                     tooltip: win.page.store === "niri" ? "Reset page to your niri config" : "Reset page to defaults"
                                     interactive: root.pageKeys(win.page)
-                                        .some(k => (win.page.store === "niri" ? Settings.niri : Settings.properties)[k] !== undefined)
+                                        .some(k => Settings[win.page.store ?? "properties"]?.[k] !== undefined)
                                     onClicked: {
                                         for (const k of root.pageKeys(win.page)) {
                                             if (win.page.store === "niri") NiriSettings.reset(k)
-                                            else Settings.reset("properties", k)
+                                            else Settings.reset(win.page.store, k)
                                         }
                                     }
                                 }
@@ -478,7 +521,7 @@ Scope {
                                                             spec: root.fullSpec(section.modelData.store, entry.modelData)
                                                             sub: entry.modelData.dependsOn !== undefined
                                                             parentOn: entry.modelData.dependsOn === undefined
-                                                                      || !!NiriSettings.value(entry.modelData.dependsOn)
+                                                                      || !!root.valueOf(section.modelData.store, entry.modelData.dependsOn)
                                                         }
                                                     }
                                                 }

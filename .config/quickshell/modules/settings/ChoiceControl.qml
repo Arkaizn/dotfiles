@@ -22,9 +22,12 @@ RowLayout {
             implicitWidth: label.implicitWidth + 22
             implicitHeight: Properties.buttonHeight
 
+            scale: mouse.pressed ? Properties.onPressedButtonScale : mouse.containsMouse ? Properties.onEnteredButtonScale : 1
+            z: mouse.containsMouse ? 1 : 0
+            Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+
             ButtonBackground {
                 hovered: opt.selected || mouse.containsMouse
-                scale: mouse.pressed ? Properties.onPressedButtonScale : 1
             }
             Text {
                 id: label

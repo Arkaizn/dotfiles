@@ -10,6 +10,7 @@ import qs.services
 //            min, max, step, options }
 //   store: "properties" → Properties.qml values
 //          "niri"       → niri config (NiriSettings)
+//          "calendar"   → calendar app options (Settings.calendar, default = spec.def)
 Item {
     id: root
 
@@ -19,8 +20,10 @@ Item {
     property bool parentOn: true         // that toggle is on
 
     readonly property bool isNiri: store === "niri"
-    readonly property var current: isNiri ? NiriSettings.value(spec.key) : Properties[spec.key]
-    readonly property bool changed: (isNiri ? Settings.niri : Settings.properties)[spec.key] !== undefined
+    readonly property var current: isNiri ? NiriSettings.value(spec.key)
+                                 : store === "calendar" ? (Settings.calendar[spec.key] ?? spec.def)
+                                 : Properties[spec.key]
+    readonly property bool changed: (isNiri ? Settings.niri : Settings[store])[spec.key] !== undefined
 
     function hex2(x) { return Math.round(x * 255).toString(16).padStart(2, "0") }
 
@@ -30,12 +33,12 @@ Item {
             v = "#" + (c.a < 1 ? hex2(c.a) : "") + hex2(c.r) + hex2(c.g) + hex2(c.b)
         }
         if (isNiri) NiriSettings.set(spec.key, v)
-        else Settings.set("properties", spec.key, v)
+        else Settings.set(store, spec.key, v)
     }
 
     function reset() {
         if (isNiri) NiriSettings.reset(spec.key)
-        else Settings.reset("properties", spec.key)
+        else Settings.reset(store, spec.key)
     }
 
     implicitHeight: Math.max(52, row.implicitHeight + 18)

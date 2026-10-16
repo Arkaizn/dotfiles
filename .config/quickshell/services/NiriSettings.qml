@@ -77,6 +77,8 @@ Singleton {
           label: "Animations", desc: "Window and workspace animations" },
         { key: "slowdown", path: "animations/slowdown", type: "real", def: 1.0, min: 0.1, max: 4, step: 0.1,
           label: "Slowdown", desc: "Above 1 is slower, below 1 is faster" },
+        { key: "appBlur", path: "", type: "bool", def: true,
+          label: "Blur behind Quickshell windows", desc: "Settings and calendar windows (off if it causes artifacts)" },
         { key: "blurPasses", path: "blur/passes", type: "int", def: 2, min: 1, max: 8,
           label: "Blur passes", desc: "More passes = smoother blur" },
         { key: "blurOffset", path: "blur/offset", type: "real", def: 3, min: 0, max: 20, step: 0.5,
@@ -95,6 +97,13 @@ Singleton {
     ]
 
     function spec(key) { return schema.find(s => s.key === key) }
+
+    // corner radius of the shell's app windows (settings, calendar): the same
+    // as niri's window corners (layout → window corner radius), 12 if unset
+    readonly property int appRadius: {
+        const v = Settings.niri.cornerRadius ?? effective.cornerRadius
+        return v !== undefined && v > 0 ? Math.round(v) : 12
+    }
 
     function value(key) {
         const o = Settings.niri
@@ -295,11 +304,24 @@ Singleton {
         return t
     }
 
+    function windowRule(title, w, h) {
+        return "window-rule {\n"
+            + "    match title=\"^" + title + "$\"\n"
+            + "    open-floating true\n"
+            + "    default-column-width { fixed " + w + "; }\n"
+            + "    default-window-height { fixed " + h + "; }\n"
+            + "    geometry-corner-radius " + root.appRadius + "\n"
+            + "    clip-to-geometry true\n"
+            + "    draw-border-with-background false\n"
+            + ((Settings.niri.appBlur ?? true) ? "    background-effect { blur true; }\n" : "")
+            + "}\n\n"
+    }
+
     function generate() {
         const tree = { children: new Map(), lines: [] }
         const o = Settings.niri
         for (const s of schema) {
-            if (o[s.key] === undefined) continue
+            if (o[s.key] === undefined || s.path === "") continue
             const parts = s.path.split("/")
             const leaf = parts.pop()
             let n = tree
@@ -315,17 +337,9 @@ Singleton {
             + "// the rest of the config. Change them in the app, or remove the include\n"
             + "// line from config.kdl to drop all of them.\n\n"
             + render(tree, "")
-            + "\n// the settings window itself\n"
-            + "window-rule {\n"
-            + "    match title=\"^" + windowTitle + "$\"\n"
-            + "    open-floating true\n"
-            + "    default-column-width { fixed 980; }\n"
-            + "    default-window-height { fixed 680; }\n"
-            + "    geometry-corner-radius " + Math.round(Properties.panelRadius) + "\n"
-            + "    clip-to-geometry true\n"
-            + "    draw-border-with-background false\n"
-            + "    background-effect { blur true; }\n"
-            + "}\n\n"
+            + "\n// the settings and calendar windows\n"
+            + windowRule(windowTitle, 980, 680)
+            + windowRule("Quickshell Calendar", 1240, 800)
             + "binds {\n"
             + "    Mod+S hotkey-overlay-title=\"Settings\" { spawn-sh \"qs ipc call settings toggle\"; }\n"
             + "}\n"
@@ -360,9 +374,16 @@ Singleton {
         }
     }
 
-    // the settings window's corners follow panelRadius
+    // read the config (for appRadius) and bring the override file up to date
+    // at startup (only written if it differs)
+    Component.onCompleted: { refresh(); applyTimer.restart() }
+
+    // settings.json edited by hand → regenerate too (writes are skipped when nothing changed)
     Connections {
-        target: Properties
-        function onPanelRadiusChanged() { applyTimer.restart() }
+        target: Settings
+        function onNiriChanged() { applyTimer.restart() }
     }
+
+    // the app windows' corners follow niri's window corner radius
+    onAppRadiusChanged: applyTimer.restart()
 }

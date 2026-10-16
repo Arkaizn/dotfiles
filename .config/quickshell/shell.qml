@@ -25,9 +25,14 @@ import "modules/Launcher"
 import "modules/controlcenter"
 import "modules/lockscreen"
 import "modules/settings"
+import "modules/calendar"
 
 ShellRoot {
     id: root
+
+    // start the niri settings service with the shell, so its override file
+    // follows settings.json even when the settings app isn't open
+    readonly property string niriConfig: QsServices.NiriSettings.configDir
 
     Variants {
         model: Quickshell.screens
@@ -52,4 +57,5 @@ ShellRoot {
     Testing {}
     Dashboard {id: dashboard}
     SettingsWindow { id: settingsWindow }
+    CalendarWindow { id: calendarWindow }
 }
