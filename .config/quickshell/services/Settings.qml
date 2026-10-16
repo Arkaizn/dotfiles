@@ -5,16 +5,19 @@ import QtQuick
 
 // User settings changed in the settings app (modules/settings), stored in
 // settings.json next to shell.qml:
-//   { "properties": { key: value }, "niri": { key: value } }
+//   { "properties": { key: value }, "niri": { key: value },
+//     "monitors": { "<make model serial>": { mode, scale, ... } } }
 // Only changed values are stored; everything else keeps its default.
 //   properties → applied by Properties.qml (defaults = the values written there)
 //   niri       → written to niri's override file by NiriSettings.qml
+//   monitors   → written to niri's outputs file by Monitors.qml
 Singleton {
     id: root
 
     readonly property string path: Quickshell.shellDir + "/settings.json"
     property var properties: ({})
     property var niri: ({})
+    property var monitors: ({})
     property bool loaded: false
 
     function has(group, key) { return root[group][key] !== undefined }
@@ -34,6 +37,11 @@ Singleton {
         saveTimer.restart()
     }
 
+    function setGroup(group, obj) {
+        root[group] = obj
+        saveTimer.restart()
+    }
+
     function resetGroup(group) {
         root[group] = {}
         saveTimer.restart()
@@ -46,6 +54,7 @@ Singleton {
             const o = text.trim() === "" ? {} : JSON.parse(text)
             root.properties = o.properties ?? {}
             root.niri = o.niri ?? {}
+            root.monitors = o.monitors ?? {}
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }
@@ -56,7 +65,7 @@ Singleton {
     Timer {
         id: saveTimer
         interval: 400
-        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri }, null, 2) + "\n")
+        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, monitors: root.monitors }, null, 2) + "\n")
     }
 
     Component.onCompleted: parse(file.text())

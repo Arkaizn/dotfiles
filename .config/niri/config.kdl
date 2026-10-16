@@ -8,6 +8,8 @@
 
 include "./config/input.kdl"
 
+// Quickshell settings app: monitors (must stay BEFORE output.kdl, first match wins)
+include "./config/quickshell-outputs.kdl"
 include "./config/output.kdl"
 
 include "./config/layout.kdl"

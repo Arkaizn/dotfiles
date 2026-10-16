@@ -74,7 +74,7 @@ RowLayout {
             y: swatch.height + 6
             x: Math.min(0, -(width - swatch.width) / 2)
             padding: 12
-            closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
+            closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape   // the button itself toggles it
 
             background: Rectangle {
                 radius: Properties.popupRadius

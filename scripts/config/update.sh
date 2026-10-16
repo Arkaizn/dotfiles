@@ -26,6 +26,11 @@ DEFAULT_EXCLUDES=(
     "hypr/hyprland/monitors.lua"
     "hypr/hyprlock/hyprlock.sh"
     "niri/config/output.kdl"
+    # per-device files of the quickshell settings app; the repo only holds
+    # neutral defaults so a fresh install works (niri errors on missing includes)
+    "quickshell/settings.json"
+    "niri/config/quickshell.kdl"
+    "niri/config/quickshell-outputs.kdl"
 )
 
 profile=$(gum choose "default" "full")            # ask user which sync mode to use

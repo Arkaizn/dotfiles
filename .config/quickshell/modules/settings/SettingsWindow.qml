@@ -92,6 +92,9 @@ Scope {
                 { key: "onPressedButtonScale", type: "real", min: 0.7, max: 1, step: 0.01, label: "Press shrink" },
                 { key: "onEnteredTextScale", type: "real", min: 1, max: 1.5, step: 0.01, label: "Workspace & tray hover zoom" } ] } ] },
 
+        { id: "monitors", group: "Niri", icon: "󰍹", title: "Monitors", custom: "monitors",
+          desc: "Arrange screens, resolution, refresh rate and scale" },
+
         { id: "niriLayout", group: "Niri", icon: "󰕰", title: "Layout", store: "niri",
           desc: "How windows are placed",
           sections: [
@@ -137,7 +140,7 @@ Scope {
 
     function pageKeys(page) {
         const keys = []
-        for (const s of page.sections)
+        for (const s of page.sections ?? [])
             for (const i of s.items) keys.push(i.key)
         return keys
     }
@@ -164,10 +167,10 @@ Scope {
             readonly property var sections: {
                 const q = query.trim().toLowerCase()
                 if (q === "")
-                    return page.sections.map(s => ({ title: s.title, store: page.store, items: s.items }))
+                    return (page.sections ?? []).map(s => ({ title: s.title, store: page.store, items: s.items }))
                 const out = []
                 for (const p of root.pages) {
-                    for (const s of p.sections) {
+                    for (const s of p.sections ?? []) {
                         const hits = s.items.filter(i => {
                             const sp = root.fullSpec(p.store, i)
                             return (sp.label + " " + (sp.desc ?? "") + " " + p.title + " " + s.title).toLowerCase().includes(q)
@@ -274,7 +277,7 @@ Scope {
                                             icon: modelData.icon
                                             label: modelData.title
                                             selected: win.query === "" && win.pageId === modelData.id
-                                            changes: root.pageKeys(modelData)
+                                            changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
                                                 .filter(k => (modelData.store === "niri" ? Settings.niri : Settings.properties)[k] !== undefined).length
                                             onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
                                         }
@@ -287,7 +290,7 @@ Scope {
                             Text {
                                 Layout.fillWidth: true
                                 Layout.leftMargin: 8
-                                text: "Changes apply right away.\nThe dot marks changed values."
+                                text: "Changes apply right away (monitors after Apply).\nThe dot marks changed values."
                                 color: Qt.rgba(1, 1, 1, 0.35)
                                 font.pixelSize: 10
                                 font.family: Properties.fontFamily
@@ -338,7 +341,7 @@ Scope {
                                 }
 
                                 IconButton {
-                                    visible: win.query === ""
+                                    visible: win.query === "" && !win.page.custom
                                     icon: "󰑓"
                                     tooltip: win.page.store === "niri" ? "Reset page to your niri config" : "Reset page to defaults"
                                     interactive: root.pageKeys(win.page)
@@ -413,6 +416,13 @@ Scope {
                                 id: content
                                 width: flick.width
                                 spacing: 18
+
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "monitors"
+                                    visible: active
+                                    sourceComponent: MonitorsPage {}
+                                }
 
                                 Repeater {
                                     model: win.sections

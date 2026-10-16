@@ -14,6 +14,11 @@ DEFAULT_EXCLUDES=(
 "hypr/hyprland/monitors.lua"
 "niri/config/output.kdl"
 "cava"
+# per-device files of the quickshell settings app (repo keeps neutral defaults)
+"quickshell/settings.json"
+"niri/config/quickshell.kdl"
+"niri/config/quickshell-outputs.kdl"
+"niri/config.kdl.bak-*"
 )
 
 profile=$(gum choose "default" "full")              # ask user which push mode to use

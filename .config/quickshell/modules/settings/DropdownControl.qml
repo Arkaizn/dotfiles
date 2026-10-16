@@ -1,0 +1,111 @@
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import qs.components
+import qs.services
+import "../controlcenter"
+
+// Button that opens a list to pick from.
+//   options: [{ label, value, hint? }]   value: the selected value
+Item {
+    id: root
+
+    property var options: []
+    property var value
+    signal edited(var value)
+
+    readonly property var current: options.find(o => o.value === value)
+
+    implicitWidth: 200
+    implicitHeight: Properties.buttonHeight
+
+    ButtonBackground {
+        hovered: mouse.containsMouse || list.visible
+        scale: mouse.pressed ? Properties.onPressedButtonScale : 1
+    }
+
+    RowLayout {
+        anchors.fill: parent
+        anchors.leftMargin: 12
+        anchors.rightMargin: 10
+        spacing: 8
+        Text {
+            Layout.fillWidth: true
+            text: root.current?.label ?? "—"
+            color: "white"
+            font.pixelSize: 12
+            font.family: Properties.fontFamily
+            elide: Text.ElideRight
+        }
+        Chevron { open: list.visible }
+    }
+
+    MouseArea {
+        id: mouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: list.visible ? list.close() : list.open()
+    }
+
+    Popup {
+        id: list
+        y: root.height + 4
+        width: Math.max(root.width, 160)
+        height: Math.min(view.contentHeight + 12, 260)
+        padding: 6
+        closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape   // the button itself toggles it
+        onOpened: view.positionViewAtIndex(Math.max(0, root.options.indexOf(root.current)), ListView.Center)
+
+        background: Rectangle {
+            radius: Properties.radius + 2
+            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+            border.width: Properties.panelBorderWidth
+            border.color: Properties.panelBorder
+        }
+
+        ListView {
+            id: view
+            anchors.fill: parent
+            clip: true
+            model: root.options
+            boundsBehavior: Flickable.StopAtBounds
+            delegate: Rectangle {
+                id: entry
+                required property var modelData
+                readonly property bool selected: modelData.value === root.value
+                width: ListView.view.width
+                height: 28
+                radius: Properties.radius
+                color: hover.hovered ? Qt.rgba(1, 1, 1, 0.08) : selected ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: 10
+                    anchors.rightMargin: 10
+                    Text {
+                        Layout.fillWidth: true
+                        text: entry.modelData.label
+                        color: entry.selected ? Colors.color6 : "white"
+                        font.pixelSize: 12
+                        font.bold: entry.selected
+                        font.family: Properties.fontFamily
+                    }
+                    Text {
+                        visible: text !== ""
+                        text: entry.modelData.hint ?? ""
+                        color: Qt.rgba(1, 1, 1, 0.4)
+                        font.pixelSize: 10
+                        font.family: Properties.fontFamily
+                    }
+                }
+                HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
+                TapHandler {
+                    onTapped: {
+                        list.close()
+                        if (!entry.selected) root.edited(entry.modelData.value)
+                    }
+                }
+            }
+        }
+    }
+}

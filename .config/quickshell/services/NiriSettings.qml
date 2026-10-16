@@ -331,17 +331,21 @@ Singleton {
             + "}\n"
     }
 
+    // sh -c script: args $1 = text, $2 = target file. Checks the text with
+    // `niri validate` and only then moves it into place; errors go to stderr.
+    // (A file with only some sections is a valid config on its own.)
+    readonly property string installScript:
+        'tmp=$(mktemp "$2.XXXXXX") || exit 1\n'
+        + 'printf "%s" "$1" > "$tmp"\n'
+        + 'if out=$(niri validate -c "$tmp" 2>&1); then mv "$tmp" "$2"\n'
+        + 'else rm -f "$tmp"; printf "%s\\n" "$out" | sed "s/\\x1b\\[[0-9;]*m//g" | grep -vE " (DEBUG|INFO) " >&2; exit 1; fi'
+
     function apply() {
         if (applyProc.running) { applyTimer.restart(); return }
         const text = generate()
         if (text === readFile(overridePath)) { root.error = ""; return }
         root.applying = true
-        applyProc.command = ["sh", "-c",
-            'tmp=$(mktemp "$2.XXXXXX") || exit 1\n'
-            + 'printf "%s" "$1" > "$tmp"\n'
-            + 'if out=$(niri validate -c "$tmp" 2>&1); then mv "$tmp" "$2"\n'
-            + 'else rm -f "$tmp"; printf "%s\\n" "$out" | sed "s/\\x1b\\[[0-9;]*m//g" | grep -vE " (DEBUG|INFO) " >&2; exit 1; fi',
-            "sh", text, overridePath]
+        applyProc.command = ["sh", "-c", installScript, "sh", text, overridePath]
         applyProc.running = true
     }
 
