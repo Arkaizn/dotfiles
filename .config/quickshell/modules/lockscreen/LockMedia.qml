@@ -19,7 +19,7 @@ Rectangle {
     readonly property var player: (selectedPlayer && Mpris.players.values.includes(selectedPlayer) ? selectedPlayer : null)
         ?? Mpris.players.values.find(p => p.isPlaying) ?? Mpris.players.values[0] ?? null
     // remember whatever is shown, so pausing it doesn't fall back to another player
-    onPlayerChanged: if (player) selectedPlayer = player
+    onPlayerChanged: Qt.callLater(() => { if (player && selectedPlayer !== player) selectedPlayer = player })
 
     // switch to a player when it starts playing
     Instantiator {

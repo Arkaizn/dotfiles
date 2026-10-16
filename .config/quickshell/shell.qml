@@ -24,6 +24,7 @@ import "modules/dashboard"
 import "modules/Launcher"
 import "modules/controlcenter"
 import "modules/lockscreen"
+import "modules/settings"
 
 ShellRoot {
     id: root
@@ -50,4 +51,5 @@ ShellRoot {
     Launcher { id: launcher }
     Testing {}
     Dashboard {id: dashboard}
+    SettingsWindow { id: settingsWindow }
 }

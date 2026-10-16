@@ -1,5 +1,6 @@
 pragma Singleton
 import QtQuick
+import qs.services
 
 Rectangle {
     id: root
@@ -58,6 +59,44 @@ Rectangle {
     property color buttonColorIfHovered: root.hovered ? Qt.rgba(0, 0, 0, 0.31) : Qt.rgba(0, 0, 0, 0.3)
     property color textColorIfHovered: root.hovered ? Colors.color6 : Colors.foreground
 
-    
+
+    // ── Settings app ─────────────────────────────────────────────────────────
+    // The values above are the defaults. The settings app stores changes in
+    // settings.json (services/Settings.qml); they're applied on top of these
+    // and reverting one puts the default back.
+    readonly property var settingKeys: [
+        "iconSize", "spacing", "radius", "interval", "bDuration", "color",
+        "pixelSize", "fontFamily", "fontBold",
+        "barMarginLeft", "barMarginRight",
+        "onEnteredTextScale", "onEnteredButtonScale", "onPressedButtonScale",
+        "panelColor", "panelBorder", "panelBorderWidth", "cardBorder",
+        "barRadius", "popupRadius", "panelRadius", "flareRadius", "barInset",
+        "buttonHeight", "buttonWidth", "buttonradius"
+    ]
+    property var defaults: ({})
+
+    function applySettings() {
+        if (Object.keys(defaults).length === 0) {
+            const d = {}
+            // colors read from a property are live references to it, so copy them;
+            // otherwise the "default" changes along with the property
+            for (const k of settingKeys) {
+                const v = root[k]
+                d[k] = typeof v === "object" ? Qt.rgba(v.r, v.g, v.b, v.a) : v
+            }
+            defaults = d
+        }
+        const o = Settings.properties
+        for (const k of settingKeys) {
+            const v = o[k] !== undefined ? o[k] : defaults[k]
+            if (root[k] !== v) root[k] = v
+        }
+    }
+
+    Component.onCompleted: applySettings()
+    Connections {
+        target: Settings
+        function onPropertiesChanged() { root.applySettings() }
+    }
 }
 

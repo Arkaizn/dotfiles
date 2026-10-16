@@ -1,0 +1,43 @@
+// This config is in the KDL format: https://kdl.dev
+// "/-" comments out the following node.
+// Check the wiki for a full description of the configuration:
+// https://niri-wm.github.io/niri/Configuration:-Introduction
+
+
+// include "~/.cache/wal/colors.kdl"
+
+include "./config/input.kdl"
+
+include "./config/output.kdl"
+
+include "./config/layout.kdl"
+
+include "./config/startup.kdl"
+
+include "./config/animations.kdl"
+
+include "./config/rules.kdl"
+
+include "./config/binds.kdl"
+
+include "~/.config/custom/niri/custom.kdl"
+
+
+// You can change the path where screenshots are saved.
+// A ~ at the front will be expanded to the home directory.
+// The path is formatted with strftime(3) to give you the screenshot date and time.
+screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
+
+// You can also set this to null to disable saving screenshots to disk.
+// screenshot-path null
+
+blur {
+    passes 3      // more passes = smoother blur (default is 2)
+    offset 6      // blur radius per pass: bigger = blur spreads over a wider area
+}
+
+prefer-no-csd
+
+debug {
+    disable-direct-scanout
+}

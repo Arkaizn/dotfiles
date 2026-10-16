@@ -87,6 +87,9 @@ fi
 gum spin --title "Syncing .zshrc" -- \
     rsync -a --log-file="$LOG_FILE" --log-file-format='%t [copy] %i %n' ~/git/dotfiles/.config/.zshrc ~/
 
+# link launcher entries (~/.config/*/applications/*.desktop) if they aren't linked yet
+"$HOME/git/dotfiles/scripts/config/desktop-entries.sh" | tee -a "$LOG_FILE"
+
 changed=$(grep -cE '\[(copy|protected-copy)\]' "$LOG_FILE" 2>/dev/null || echo 0)
 log ""
 log "=== Sync finished: $changed file(s) touched. Full log: $LOG_FILE ==="

@@ -6,3 +6,6 @@ source "$(dirname "$0")/../lib.sh"
 mkdir -p ~/.config
 cp -rf "$DOTFILES_DIR/.config/." ~/.config/
 cp -f "$DOTFILES_DIR/.config/.zshrc" ~/.zshrc
+
+# link launcher entries into ~/.local/share/applications
+"$DOTFILES_DIR/scripts/config/desktop-entries.sh"

@@ -39,19 +39,14 @@ window-rule {
 
 // ── Floating apps ───────────────────────────────────────────────────────────
 // Apps that work better as floating windows.
-window-rule {
-    match app-id="pavucontrol"
-    open-floating true
-}
-window-rule {
-    match app-id="nm-connection-editor"
-    open-floating true
-}
-window-rule {
-    match app-id=r#"^org\.gnome\.Calculator$"#
-    open-floating true
-}
-
+// window-rule {
+//     match app-id="pavucontrol"
+//     open-floating true
+// }
+// window-rule {
+//     match app-id="nm-connection-editor"
+//     open-floating true
+// }
 window-rule {
     match app-id=r#"^org\.gnome\.Calculator$"#
     open-floating true

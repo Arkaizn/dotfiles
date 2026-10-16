@@ -61,6 +61,15 @@ RowLayout {
         }
     }
 
+    IconButton {
+        icon: "󰒓"
+        tooltip: "Settings"
+        onClicked: {
+            root.actionStarted()
+            Quickshell.execDetached(["qs", "ipc", "call", "settings", "open"])
+        }
+    }
+
     Repeater {
         model: root.actions
         IconButton {

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Shell Settings
+GenericName=Settings
+Comment=Change the Quickshell and niri settings
+Icon=preferences-system
+Exec=qs ipc call settings open
+Terminal=false
+Categories=Settings;
+Keywords=quickshell;niri;settings;preferences;config;bar;
+StartupNotify=false

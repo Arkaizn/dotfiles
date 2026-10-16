@@ -41,3 +41,6 @@ prefer-no-csd
 debug {
     disable-direct-scanout
 }
+
+// Quickshell settings app overrides (generated, keep this last)
+include "./config/quickshell.kdl"

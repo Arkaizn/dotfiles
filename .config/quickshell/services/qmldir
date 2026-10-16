@@ -9,3 +9,5 @@ singleton Notifs Notifs.qml
 singleton Updates Updates.qml
 singleton CustomBatteries CustomBatteries.qml
 singleton BluetoothPower BluetoothPower.qml
+singleton Settings Settings.qml
+singleton NiriSettings NiriSettings.qml
