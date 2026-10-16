@@ -375,7 +375,7 @@ ColumnLayout {
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: 2
-                radius: 6
+                radius: 12
                 visible: resultCell.isCurrent
                 color: Qt.rgba(1, 1, 1, 0.13)
                 border.color: Qt.rgba(1, 1, 1, 0.22)
@@ -386,7 +386,7 @@ ColumnLayout {
             Rectangle {
                 anchors.fill: parent
                 anchors.margins: 2
-                radius: 6
+                radius: 12
                 visible: resultHover.hovered && !resultCell.isCurrent
                 color: Qt.rgba(1, 1, 1, 0.08)
                 Behavior on color { ColorAnimation { duration: 80 } }
