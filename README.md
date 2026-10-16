@@ -13,8 +13,6 @@
 
 ## Screenshots
 
-Click an image to see it full size.
-
 <table>
   <tr>
     <td align="center"><a href="images/01-desktop.png"><img src="images/01-desktop.png" alt="Desktop"></a><br><sub><b>Desktop</b>: bar, fastfetch, btop</sub></td>
