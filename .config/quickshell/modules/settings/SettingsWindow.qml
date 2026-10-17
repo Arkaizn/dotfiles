@@ -157,9 +157,9 @@ Scope {
           desc: "Search, change, disable and add keybinds" },
         { id: "autostart", group: wmGroup, icon: "󰐊", title: "Autostart", custom: "autostart",
           desc: "Programs started at login" },
-        { id: "syntax", group: wmGroup, icon: "󰅩", title: "Syntax", custom: "syntax",
+        { id: "syntax", group: "Developer", icon: "󰅩", title: "Syntax", custom: "syntax",
           desc: "How the shell writes the compositor config" },
-        { id: "import", group: wmGroup, icon: "󰋺", title: "Import custom", custom: "import",
+        { id: "import", group: "Developer", icon: "󰋺", title: "Import custom", custom: "import",
           desc: "Move autostart and keybinds from ~/.config/custom into the settings" },
 
         { id: "monitors", group: wmGroup, icon: "󰍹", title: "Monitors", custom: "monitors",
@@ -516,7 +516,7 @@ Scope {
                                     spacing: 6
 
                                     Repeater {
-                                        model: ["Shell", "System", "Apps", root.wmGroup]
+                                        model: ["Shell", "System", "Apps", root.wmGroup, "Developer"]   // Developer: config syntax / import, last
                                         ColumnLayout {
                                             id: group
                                             required property string modelData
