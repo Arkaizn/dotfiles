@@ -1,5 +1,5 @@
--- Prints Hyprland's keybinds as JSON, for the keybind cheatsheet
--- (services/Keybinds.qml).
+-- Prints Hyprland's keybinds (and login autostart commands) as JSON, for the
+-- keybind cheatsheet and the settings app (services/Keybinds.qml).
 --
 --   lua hypr-binds.lua ~/.config/hypr/hyprland.lua
 --
@@ -9,11 +9,20 @@
 -- dofile work exactly like in Hyprland; everything else hl.* does nothing.
 -- Commands are never run: os.execute / io.popen / hl.exec_cmd are disabled.
 --
--- Output: [{ "keys": "SUPER + C", "dsp": "window.close", "args": [...],
---            "description": "...", "submap": "", "mouse": false }, ...]
+-- Output: { "binds": [{ "keys": "SUPER + C", "dsp": "window.close", "args": [...],
+--             "description": "...", "submap": "", "mouse": false,
+--             "opts": { locked = … }, "file": "/path/of/the/file.lua" }, ...],
+--           "autostart": [{ "cmd": "...", "file": "..." }] }
+-- hl.unbind removes earlier binds with the same keys, like in Hyprland.
 
 local binds = {}
+local autostart = {}
 local submap = ""
+local inStart = false            -- inside an hl.on("hyprland.start", …) handler
+
+-- "SUPER + SHIFT + c" and "super+shift+C" are the same bind
+local function norm(keys) return (tostring(keys):gsub("%s", ""):upper()) end
+local function caller() local i = debug.getinfo(3, "S"); return i and i.source:gsub("^@", "") or "" end
 
 -- hl.dsp.window.close({ ... }) → { dsp = "window.close", args = { ... } }
 local function dispatcherTable(path)
@@ -34,8 +43,10 @@ hl = setmetatable({
     dsp = dispatcherTable(""),
     bind = function(keys, action, opts)
         opts = type(opts) == "table" and opts or {}
+        local rest = {}
+        for k, v in pairs(opts) do if k ~= "description" and type(v) ~= "function" then rest[k] = v end end
         local entry = { keys = tostring(keys), submap = submap, mouse = opts.mouse == true,
-                        description = opts.description }
+                        description = opts.description, opts = rest, file = caller() }
         if type(action) == "table" and action.dsp then
             entry.dsp, entry.args = action.dsp, action.args
         else
@@ -43,6 +54,21 @@ hl = setmetatable({
         end
         binds[#binds + 1] = entry
         return noop
+    end,
+    unbind = function(keys)
+        local n = norm(keys)
+        for i = #binds, 1, -1 do if norm(binds[i].keys) == n and binds[i].submap == submap then table.remove(binds, i) end end
+    end,
+    on = function(event, fn)
+        if event == "hyprland.start" and type(fn) == "function" then
+            inStart = true
+            pcall(fn)
+            inStart = false
+        end
+        return noop
+    end,
+    exec_cmd = function(cmd)
+        if inStart then autostart[#autostart + 1] = { cmd = tostring(cmd), file = caller() } end
     end,
     define_submap = function(name, fn)
         local prev = submap
@@ -88,5 +114,5 @@ end
 -- ── Run ──────────────────────────────────────────────────────────────────────
 local ok, err = pcall(dofile, arg[1])
 if not ok then io.stderr:write(tostring(err), "\n") end
-io.write(json(binds), "\n")
+io.write("{\"binds\":", json(binds), ",\"autostart\":", json(autostart), "}\n")
 os.exit(ok and 0 or 2)

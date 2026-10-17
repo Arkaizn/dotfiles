@@ -20,7 +20,9 @@ import qs.services
 Singleton {
     id: root
 
-    property var binds: []
+    property var binds: []             // rows for the cheatsheet (merged, described)
+    property var all: []               // every single bind, with its exact action (for editing)
+    property var autostart: []         // login programs from your config: [{ cmd, file }]
     property string error: ""
 
     // the "Most important" card of the cheatsheet: the first bind matching
@@ -64,16 +66,21 @@ Singleton {
             return
         }
         const found = new Map()            // normalized keys → bind; later ones win, like in niri
+        niriAutostart = []
         let err = ""
         try {
             collect(NiriSettings.mainConfig, found, 0)
         } catch (e) {
             err = "Couldn't read the niri config: " + e
         }
-        const list = fold(Array.from(found.values()).filter(b => b.title !== null))
+        const raw = Array.from(found.values())
+        root.all = raw
+        root.autostart = niriAutostart
+        const list = fold(raw.filter(b => b.title !== null))
         root.error = err || (list.length === 0 ? "No binds found in " + NiriSettings.mainConfig : "")
         root.binds = rows(list)
     }
+    property var niriAutostart: []
 
     // binds → rows; binds that do the same thing share a row
     function rows(list) {
@@ -82,8 +89,8 @@ Singleton {
         for (const b of list) {
             const desc = describe(b), cat = category(b)
             const id = cat + "|" + desc
-            if (byDesc.has(id)) { byDesc.get(id).combos.push(b.keys); continue }
-            const row = { combos: [b.keys], desc: desc, category: cat }
+            if (byDesc.has(id)) { byDesc.get(id).combos.push(b.keys); byDesc.get(id).items.push(b); continue }
+            const row = { combos: [b.keys], desc: desc, category: cat, items: [b] }
             byDesc.set(id, row)
             rows.push(row)
         }
@@ -92,6 +99,77 @@ Singleton {
 
     Component.onCompleted: refresh()
 
+    // ── Combos ───────────────────────────────────────────────────────────────
+    // one spelling for comparing: "mod+ctrl+shift+s" (Super/Win/SUPER = mod)
+    readonly property var modAlias: ({ mod: "mod", super: "mod", win: "mod", mod4: "mod", ctrl: "ctrl", control: "ctrl",
+                                       alt: "alt", mod1: "alt", shift: "shift" })
+    readonly property var modOrder: ["mod", "ctrl", "alt", "shift"]
+    function normKeys(keys) {
+        const mods = [], rest = []
+        for (const k of keys) {
+            const m = modAlias[k.toLowerCase()]
+            if (m) { if (!mods.includes(m)) mods.push(m) } else rest.push(k.toLowerCase())
+        }
+        mods.sort((a, b) => modOrder.indexOf(a) - modOrder.indexOf(b))
+        return mods.concat(rest).join("+")
+    }
+
+    // typed text → keys in niri spelling, or null if it isn't a combo:
+    // "super shift s", "Mod+Shift+S", "SUPER + SHIFT + S" → ["Mod", "Shift", "S"]
+    readonly property var keyWords: ({ enter: "Return", return: "Return", esc: "Escape", escape: "Escape", tab: "Tab",
+                                       space: "space", del: "Delete", delete: "Delete", backspace: "BackSpace",
+                                       left: "Left", right: "Right", up: "Up", down: "Down", print: "Print",
+                                       pgup: "Page_Up", pgdn: "Page_Down", home: "Home", end: "End" })
+    function parseCombo(text) {
+        const parts = text.trim().split(/\s*\+\s*|\s+/).filter(p => p !== "")
+        if (parts.length === 0) return null
+        const nice = { mod: "Mod", ctrl: "Ctrl", alt: "Alt", shift: "Shift" }
+        const out = []
+        let mods = 0
+        for (const p of parts) {
+            const m = modAlias[p.toLowerCase()]
+            if (m) { out.push(nice[m]); mods++; continue }
+            const w = keyWords[p.toLowerCase()]
+            out.push(w ?? (p.length === 1 ? p.toUpperCase() : /^f\d{1,2}$/i.test(p) ? p.toUpperCase() : p))
+        }
+        // needs a modifier (or a single special key) to count as a combo
+        return mods > 0 && out.length > mods ? out : null
+    }
+
+    // the bind using these keys (raw), or null
+    function bindFor(keys) {
+        const n = normKeys(keys)
+        // (a disabled bind — hidden, does nothing — counts as free)
+        return all.find(b => (b.submap ?? "") === "" && b.title !== null && normKeys(b.keys) === n) ?? null
+    }
+
+    function isShellFile(f) { return f === NiriSettings.overridePath || f === HyprSettings.overridePath }
+
+    // the action of a bind, as config text for re-creating it under other keys
+    function rawFor(b) {
+        if (b.hypr) return { hypr: "hl.dsp." + b.action + "(" + b.args.map(a => Syntax.lua(a)).join(", ") + ")" }
+        return { niri: b.rawAction }
+    }
+
+    // Settings.keybinds.binds for one compositor, ready to write:
+    // enabled, meant for it, valid, one per key combo (the last wins), and
+    // not on the shell's own Mod+S (settings) — that would clash in one file
+    function effectiveCustom(wm) {
+        const byKeys = new Map()
+        for (const b of Settings.keybinds.binds ?? []) {
+            if (b.enabled === false || !Array.isArray(b.keys) || b.keys.length === 0) continue
+            const on = b.on ?? "both"
+            if (on !== "both" && on !== wm) continue
+            if (b.kind === "original" && !(wm === "niri" ? b.raw?.niri : b.raw?.hypr)) continue
+            if (!["disable", "original"].includes(b.kind) && !b.cmd) continue
+            const n = normKeys(b.keys)
+            if (n === "mod+s") continue
+            byKeys.delete(n)
+            byKeys.set(n, b)
+        }
+        return Array.from(byKeys.values())
+    }
+
     // ── Hyprland ─────────────────────────────────────────────────────────────
     Process {
         id: hyprProc
@@ -99,16 +177,21 @@ Singleton {
         stdout: StdioCollector { id: hyprOut }
         stderr: StdioCollector { id: hyprErr }
         onExited: code => {
-            let raw = []
-            try { raw = JSON.parse(hyprOut.text) } catch (e) {}
-            const list = fold(raw.map(b => ({
+            let out = {}
+            try { out = JSON.parse(hyprOut.text) } catch (e) {}
+            const raw = (out.binds ?? []).map(b => ({
                 keys: b.keys.split("+").map(k => k.trim()).filter(k => k !== ""),
                 title: b.description ?? "",
                 action: b.dsp,
                 args: b.args ?? [],
+                opts: Array.isArray(b.opts) ? {} : (b.opts ?? {}),
                 submap: b.submap ?? "",
+                file: b.file ?? "",
                 hypr: true
-            })))
+            }))
+            root.all = raw
+            root.autostart = out.autostart ?? []
+            const list = fold(raw)
             root.binds = rows(list)
             // a config that fails halfway still gives the binds before the error
             root.error = list.length > 0 ? ""
@@ -125,7 +208,7 @@ Singleton {
         const stack = [top]
         let cur = null
         let skipNext = false
-        const node = name => ({ name: name, args: [], props: {}, children: [], skip: skipNext })
+        const node = name => ({ name: name, args: [], rawArgs: [], props: {}, rawProps: [], children: [], skip: skipNext })
         function finish() { if (cur) { stack[stack.length - 1].children.push(cur); cur = null } }
         for (const tok of toks) {
             switch (tok.t) {
@@ -133,10 +216,13 @@ Singleton {
             case "word":
             case "str":
                 if (!cur) { cur = node(tok.v); skipNext = false }
-                else cur.args.push(tok.v)
+                else { cur.args.push(tok.v); cur.rawArgs.push(tok.t === "str" ? JSON.stringify(tok.v) : tok.v) }
                 break
             case "prop":
-                if (cur) cur.props[tok.k] = tok.quoted || tok.v !== "null" ? tok.v : null
+                if (cur) {
+                    cur.props[tok.k] = tok.quoted || tok.v !== "null" ? tok.v : null
+                    cur.rawProps.push(tok.k + "=" + (tok.quoted ? JSON.stringify(tok.v) : tok.v))
+                }
                 break
             case "end": finish(); break
             case "{": {
@@ -161,6 +247,11 @@ Singleton {
             if (n.skip) continue
             if (n.name === "include" && n.args.length > 0) {
                 collect(NiriSettings.expand(n.args[n.args.length - 1], baseDir), found, depth + 1)
+            } else if (n.name === "spawn-sh-at-startup" && n.args.length > 0) {
+                niriAutostart.push({ cmd: n.args[0], file: file })
+            } else if (n.name === "spawn-at-startup" && n.args.length > 0) {
+                const a = n.args
+                niriAutostart.push({ cmd: a[0] === "sh" && a[1] === "-c" && a.length > 2 ? a[2] : a.join(" "), file: file })
             } else if (n.name === "binds") {
                 for (const b of n.children) {
                     if (b.skip || b.name === "") continue
@@ -172,7 +263,11 @@ Singleton {
                         keys: b.name.split("+"),
                         title: title === undefined ? "" : title,
                         action: act.name,
-                        args: act.args
+                        args: act.args,
+                        // exactly as written, to re-create it under other keys
+                        rawAction: [act.name].concat(act.rawArgs).join(" "),
+                        rawProps: b.rawProps.filter(x => !x.startsWith("hotkey-overlay-title=")).join(" "),
+                        file: file
                     })
                 }
             }

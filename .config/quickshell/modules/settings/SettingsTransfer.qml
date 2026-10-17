@@ -25,8 +25,10 @@ Rectangle {
     property var pending: null               // checked file content, while mode === "confirm"
 
     readonly property string defaultPath: Quickshell.env("HOME") + "/quickshell-settings.json"
-    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network", "battery", "profile"]
-    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar", network: "network page", battery: "battery", profile: "profile" })
+    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network", "battery", "profile",
+                                   "autostart", "keybinds", "syntax"]
+    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar", network: "network page", battery: "battery", profile: "profile",
+                                         autostart: "autostart", keybinds: "keybinds", syntax: "syntax" })
     // the network page's own preferences (not spec-driven)
     readonly property var networkSpecs: ({
         hideVirtual: { type: "bool" }, safeApply: { type: "bool" },
@@ -134,6 +136,7 @@ Rectangle {
             if (!groups.includes(g)) { err([g], "unknown group \"" + g + "\" (expected " + groups.join(", ") + ")"); continue }
             if (!isObj(v[g])) { err([g], "\"" + g + "\" should be an object { … }"); continue }
             if (g === "monitors") { checkMonitors(v[g], err); continue }
+            if (g === "autostart" || g === "keybinds" || g === "syntax") { checkLists(g, v[g], err); continue }
             for (const k of Object.keys(v[g])) {
                 const sp = specFor(g, k)
                 if (!sp) { err([g, k], g + ": unknown setting \"" + k + "\""); continue }
@@ -190,6 +193,32 @@ Rectangle {
             return "expected a color like \"#ff8800\"" + (canLink ? " or { \"wal\": \"color4\" }" : "") + ", got " + str(x)
         default:   // string, font
             return typeof x === "string" ? "" : "expected text in quotes, got " + str(x)
+        }
+    }
+
+    // autostart.items / keybinds.binds / syntax.templates + paths: just the shape
+    function checkLists(g, o, err) {
+        const isObj = x => x !== null && typeof x === "object" && !Array.isArray(x)
+        if (g === "syntax") {
+            for (const k of Object.keys(o)) {
+                if (!["templates", "paths"].includes(k)) { err([g, k], "syntax: unknown part \"" + k + "\""); continue }
+                if (!isObj(o[k]) || Object.values(o[k]).some(x => typeof x !== "string"))
+                    err([g, k], "syntax." + k + ": expected { name: \"text\" }")
+            }
+            return
+        }
+        const listKey = g === "autostart" ? "items" : "binds"
+        for (const k of Object.keys(o)) {
+            if (k !== listKey) { err([g, k], g + ": unknown part \"" + k + "\""); continue }
+            if (!Array.isArray(o[k])) { err([g, k], g + "." + k + ": expected a list"); continue }
+            o[k].forEach((e, i) => {
+                if (!isObj(e)) { err([g, k, i], g + "." + k + "[" + i + "]: expected an object"); return }
+                if (g === "autostart" && typeof e.cmd !== "string") err([g, k, i], "autostart: entry " + (i + 1) + " needs a \"cmd\" text")
+                if (g === "keybinds" && (!Array.isArray(e.keys) || e.keys.some(x => typeof x !== "string")))
+                    err([g, k, i], "keybinds: entry " + (i + 1) + " needs \"keys\" like [\"Mod\", \"T\"]")
+                if (g === "keybinds" && !["command", "original", "disable"].includes(e.kind))
+                    err([g, k, i], "keybinds: entry " + (i + 1) + " has an unknown kind " + str(e.kind))
+            })
         }
     }
 

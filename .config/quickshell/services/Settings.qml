@@ -17,6 +17,11 @@ import QtQuick
 //   network    → network page preferences (hidden interfaces, safe apply)
 //   battery    → low-battery notifications, read by BatteryAlerts.qml
 //   profile    → display name + picture revision (dashboard, lockscreen)
+//   autostart  → programs started at login: { items: [{ id, name, cmd, enabled, on }] }
+//   keybinds   → own / changed keybinds: { binds: [{ id, keys, name, kind, … }] }
+//   syntax     → edited config templates / option paths (Syntax.qml)
+// (both compositors' override files are generated from niri / hyprland /
+//  autostart / keybinds / syntax)
 Singleton {
     id: root
 
@@ -29,7 +34,14 @@ Singleton {
     property var network: ({})
     property var battery: ({})
     property var profile: ({})
+    property var autostart: ({})
+    property var keybinds: ({})
+    property var syntax: ({})
     property bool loaded: false
+
+    // every group, in the order they're written
+    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network",
+                                   "battery", "profile", "autostart", "keybinds", "syntax"]
 
     function has(group, key) { return root[group][key] !== undefined }
 
@@ -63,14 +75,7 @@ Singleton {
         if (saveTimer.running) return
         try {
             const o = text.trim() === "" ? {} : JSON.parse(text)
-            root.properties = o.properties ?? {}
-            root.niri = o.niri ?? {}
-            root.hyprland = o.hyprland ?? {}
-            root.monitors = o.monitors ?? {}
-            root.calendar = o.calendar ?? {}
-            root.network = o.network ?? {}
-            root.battery = o.battery ?? {}
-            root.profile = o.profile ?? {}
+            for (const g of root.groups) root[g] = o[g] ?? {}
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }
@@ -81,7 +86,11 @@ Singleton {
     Timer {
         id: saveTimer
         interval: 400
-        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, hyprland: root.hyprland, monitors: root.monitors, calendar: root.calendar, network: root.network, battery: root.battery, profile: root.profile }, null, 2) + "\n")
+        onTriggered: {
+            const o = {}
+            for (const g of root.groups) o[g] = root[g]
+            file.setText(JSON.stringify(o, null, 2) + "\n")
+        }
     }
 
     Component.onCompleted: parse(file.text())

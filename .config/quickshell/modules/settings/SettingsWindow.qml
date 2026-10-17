@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import qs.components
 import qs.services
 import "network"
+import "wm"
 
 // Settings app: a normal (floating) window to change the Properties.qml
 // values and some compositor settings. Changes apply live and are saved to
@@ -44,12 +45,20 @@ Scope {
             if (root.visiblePages.some(p => p.id === id)) root.pageId = id
             root.show()
         }
+        // the cheatsheet's edit button: Keybinds page with that bind's editor
+        // (keys normalized like Keybinds.normKeys, e.g. "mod+shift+s")
+        function editKeybind(keys: string): void {
+            root.pendingKeybind = keys
+            root.pageId = "keybinds"
+            root.show()
+        }
     }
 
     // ── Pages ────────────────────────────────────────────────────────────────
     // "properties" items are complete here; "niri" / "hyprland" items only name
     // a key of NiriSettings.schema / HyprSettings.schema and add layout hints
     // (sub / dependsOn). Pages with `wm` only show on that compositor.
+    property string pendingKeybind: ""
     readonly property string wm: Compositor.isHyprland ? "hyprland" : "niri"
     readonly property string wmGroup: Compositor.isHyprland ? "Hyprland" : "Niri"
     readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm)
@@ -140,6 +149,13 @@ Scope {
 
         { id: "network", group: "System", icon: "󰛳", title: "Network", custom: "network",
           desc: "Interfaces, IP settings, DNS and profiles (NetworkManager)" },
+
+        { id: "keybinds", group: wmGroup, icon: "󰌌", title: "Keybinds", custom: "keybinds",
+          desc: "Search, change, disable and add keybinds" },
+        { id: "autostart", group: wmGroup, icon: "󰐊", title: "Autostart", custom: "autostart",
+          desc: "Programs started at login" },
+        { id: "syntax", group: wmGroup, icon: "󰅩", title: "Syntax", custom: "syntax",
+          desc: "How the shell writes the compositor config" },
 
         { id: "monitors", group: wmGroup, icon: "󰍹", title: "Monitors", custom: "monitors",
           desc: "Arrange screens, resolution, refresh rate and scale" },
@@ -614,6 +630,28 @@ Scope {
                                     active: win.query === "" && win.page.custom === "monitors"
                                     visible: active
                                     sourceComponent: MonitorsPage {}
+                                }
+
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "keybinds"
+                                    visible: active
+                                    sourceComponent: KeybindsPage {
+                                        focusKeys: root.pendingKeybind
+                                        onFocusConsumed: root.pendingKeybind = ""
+                                    }
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "autostart"
+                                    visible: active
+                                    sourceComponent: AutostartPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "syntax"
+                                    visible: active
+                                    sourceComponent: SyntaxPage {}
                                 }
 
                                 Loader {

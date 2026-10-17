@@ -97,6 +97,8 @@ Singleton {
     ]
 
     function spec(key) { return schema.find(s => s.key === key) }
+    // option path, unless changed on the Syntax page
+    function pathOf(s) { return Syntax.path("niri", s.key, s.path) }
 
     // corner radius of the shell's app windows (settings, calendar): the same
     // as niri's window corners (layout → window corner radius), 12 if unset
@@ -268,13 +270,14 @@ Singleton {
 
         const eff = {}
         for (const s of schema) {
-            if (s.path.endsWith("/@enabled")) {
-                const sec = s.path.slice(0, -"/@enabled".length)
+            const sp = pathOf(s)
+            if (sp.endsWith("/@enabled")) {
+                const sec = sp.slice(0, -"/@enabled".length)
                 const on = out[sec + "/on"], off = out[sec + "/off"]
                 if (on || off) eff[s.key] = (on ? on.order : -1) > (off ? off.order : -1)
                 continue
             }
-            const n = out[s.path]
+            const n = out[sp]
             if (!n) continue
             const a = n.args[0]
             if (s.type === "bool") eff[s.key] = a === undefined || a === "true"
@@ -325,8 +328,8 @@ Singleton {
         const tree = { children: new Map(), lines: [] }
         const o = Settings.niri
         for (const s of schema) {
-            if (o[s.key] === undefined || s.path === "") continue
-            const parts = s.path.split("/")
+            if (o[s.key] === undefined || pathOf(s) === "") continue
+            const parts = pathOf(s).split("/")
             const leaf = parts.pop()
             let n = tree
             for (const p of parts) {
@@ -345,8 +348,37 @@ Singleton {
             + windowRule(windowTitle, 980, 680)
             + windowRule("Quickshell Calendar", 1240, 800)
             + "binds {\n"
-            + "    Mod+S hotkey-overlay-title=\"Settings\" { spawn-sh \"qs ipc call settings toggle\"; }\n"
+            + "    " + Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),
+                                               title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Settings") }),
+                                               action: Syntax.fmt("niri.spawnSh", { cmd: Syntax.kdlString("qs ipc call settings toggle") }) }) + "\n"
+            + generateBinds()
             + "}\n"
+            + generateAutostart()
+    }
+
+    // keybinds from the Keybinds page (Settings.keybinds.binds), inside the
+    // binds block: this file is included last, so the same keys here win over
+    // your config. "Disabled" binds become a bind that does nothing.
+    function generateBinds() {
+        let t = ""
+        for (const b of Keybinds.effectiveCustom("niri")) {
+            const keys = Syntax.niriKeys(b.keys)
+            if (b.kind === "disable") { t += "    " + Syntax.fmt("niri.disable", { keys: keys }) + "\n"; continue }
+            const action = b.kind === "original" ? b.raw.niri : Syntax.fmt("niri.spawnSh", { cmd: Syntax.kdlString(b.cmd) })
+            t += "    " + Syntax.fmt("niri.bind", {
+                keys: keys + (b.kind === "original" && b.props ? " " + b.props : ""),
+                title: b.name ? Syntax.fmt("niri.title", { title: Syntax.kdlString(b.name) }) : "",
+                action: action }) + "\n"
+        }
+        return t
+    }
+
+    // programs started at login (Settings.autostart.items)
+    function generateAutostart() {
+        const items = (Settings.autostart.items ?? []).filter(a => a.enabled !== false && a.cmd && (a.on ?? "both") !== "hyprland")
+        if (items.length === 0) return ""
+        return "\n// started at login (Autostart page)\n"
+            + items.map(a => Syntax.fmt("niri.autostart", { cmd: Syntax.kdlString(a.cmd) })).join("\n") + "\n"
     }
 
     // sh -c script: args $1 = text, $2 = target file. Checks the text with
@@ -376,6 +408,7 @@ Singleton {
         onExited: code => {
             root.applying = false
             root.error = code === 0 ? "" : (applyErr.text.trim() || "niri validate failed")
+            if (code === 0 && Compositor.isNiri) Keybinds.refresh()
         }
     }
 
@@ -387,6 +420,9 @@ Singleton {
     Connections {
         target: Settings
         function onNiriChanged() { applyTimer.restart() }
+        function onAutostartChanged() { applyTimer.restart() }
+        function onKeybindsChanged() { applyTimer.restart() }
+        function onSyntaxChanged() { applyTimer.restart() }
     }
 
     // the app windows' corners follow niri's window corner radius

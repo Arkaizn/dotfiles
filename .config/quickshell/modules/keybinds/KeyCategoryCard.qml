@@ -8,6 +8,8 @@ Rectangle {
     id: card
     property var category
     property bool compact: false
+    property bool editable: false
+    signal editRequested(var item)
     implicitHeight: cardCol.implicitHeight + 20
     radius: 12
     color: '#45000000'
@@ -53,6 +55,8 @@ Rectangle {
                 Layout.fillWidth: true
                 bind: modelData
                 compact: card.compact
+                editable: card.editable
+                onEditRequested: item => card.editRequested(item)
             }
         }
     }

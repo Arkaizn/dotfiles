@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -22,11 +23,21 @@ Item {
     // re-read the compositor config each time the tab opens
     onActiveChanged: if (active) { Keybinds.refresh(); flick.contentY = 0 }
 
+    // the pencil on a row: Settings → Keybinds with that bind's editor
+    function edit(item) {
+        if (!item) return
+        Quickshell.execDetached(["qs", "ipc", "call", "settings", "editKeybind", Keybinds.normKeys(item.keys)])
+        root.closeRequested()
+    }
+
     function moveDown() { wheel.scrollBy(90) }
     function moveUp() { wheel.scrollBy(-90) }
     function activateCurrent() {}
 
+    // typed keys ("super shift s") match that exact combo, anything else the text
+    readonly property var combo: Keybinds.parseCombo(query)
     function matches(b, catName) {
+        if (combo) return b.items.some(x => Keybinds.normKeys(x.keys) === Keybinds.normKeys(combo))
         const q = query.trim().toLowerCase()
         return q === "" || (b.desc + " " + catName + " " + b.combos.map(k => k.map(x => Keybinds.keyLabel(x)).join(" ")).join(" "))
             .toLowerCase().includes(q)
@@ -124,6 +135,8 @@ Item {
                                 Layout.fillWidth: true
                                 Layout.preferredWidth: 1      // equal columns
                                 bind: modelData
+                                editable: true
+                                onEditRequested: item => root.edit(item)
                             }
                         }
                     }
@@ -150,6 +163,8 @@ Item {
                                 Layout.fillWidth: true
                                 category: modelData
                                 compact: true
+                                editable: true
+                                onEditRequested: item => root.edit(item)
                             }
                         }
                     }

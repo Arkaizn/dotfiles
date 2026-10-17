@@ -106,6 +106,8 @@ Singleton {
     ]
 
     function spec(key) { return schema.find(s => s.key === key) }
+    // option path, unless changed on the Syntax page
+    function pathOf(s) { return Syntax.path("hyprland", s.key, s.path) }
 
     // corner radius of the shell's app windows: Hyprland's window rounding, 12 if 0
     readonly property int appRadius: {
@@ -160,7 +162,7 @@ Singleton {
         if (Compositor.isHyprland && !optionsProc.running) {
             optionsProc.command = ["sh", "-c",
                 'for o in "$@"; do printf "%s\\t" "$o"; hyprctl -j getoption "$o" | tr -d "\\n"; echo; done',
-                "sh"].concat(schema.map(s => s.path))
+                "sh"].concat(schema.map(s => root.pathOf(s)))
             optionsProc.running = true
         }
     }
@@ -195,7 +197,7 @@ Singleton {
                 for (const line of text.split("\n")) {
                     const tab = line.indexOf("\t")
                     if (tab < 0) continue
-                    const s = root.schema.find(x => x.path === line.slice(0, tab))
+                    const s = root.schema.find(x => root.pathOf(x) === line.slice(0, tab))
                     if (!s) continue
                     let j
                     try { j = JSON.parse(line.slice(tab + 1)) } catch (e) { continue }   // "no such option"
@@ -245,7 +247,7 @@ Singleton {
         const o = Settings.hyprland
         for (const s of schema) {
             if (o[s.key] === undefined) continue
-            const parts = s.path.split(".")
+            const parts = pathOf(s).split(".")
             const leaf = parts.pop()
             let n = tree
             for (const p of parts) {
@@ -259,14 +261,43 @@ Singleton {
             + "-- get overwritten. Loaded last by hyprland.lua, so these values win over\n"
             + "-- the rest of the config. Change them in the app, or remove the dofile\n"
             + "-- line from hyprland.lua to drop all of them.\n\n"
-            + (tree.size > 0 ? "hl.config(" + render(tree, "") + ")\n\n" : "")
+            + (tree.size > 0 ? Syntax.fmt("hypr.config", { body: render(tree, "") }) + "\n\n" : "")
             + "-- the settings and calendar windows\n"
             + windowRule("quickshell-settings", windowTitle, 980, 680)
             + windowRule("quickshell-calendar", "Quickshell Calendar", 1240, 800)
-            + 'hl.bind("SUPER + S", hl.dsp.exec_cmd("qs ipc call settings toggle"), { description = "Settings" })\n'
-            + '\n'
+            + Syntax.fmt("hypr.bind", { keys: Syntax.luaString(Syntax.hyprKeys(["Mod", "S"])),
+                                        action: Syntax.fmt("hypr.exec", { cmd: Syntax.luaString("qs ipc call settings toggle") }),
+                                        opts: Syntax.lua({ description: "Settings" }) }) + "\n\n"
+            + generateBinds()
+            + generateAutostart()
             + "-- monitor setup from the Monitors page\n"
             + "pcall(dofile, " + Compositor.luaString(monitorsPath) + ")\n"
+    }
+
+    // keybinds from the Keybinds page (Settings.keybinds.binds): own binds,
+    // binds from your config moved to other keys, and disabled ones
+    function generateBinds() {
+        const list = Keybinds.effectiveCustom("hyprland")
+        if (list.length === 0) return ""
+        let t = "-- keybinds from the Keybinds page\n"
+        for (const b of list) {
+            const keys = Syntax.luaString(Syntax.hyprKeys(b.keys))
+            // unbind first: Hyprland would run both binds of the same keys
+            t += Syntax.fmt("hypr.unbind", { keys: keys }) + "\n"
+            if (b.kind === "disable") continue
+            const action = b.kind === "original" ? b.raw.hypr : Syntax.fmt("hypr.exec", { cmd: Syntax.luaString(b.cmd) })
+            const opts = Object.assign({}, b.kind === "original" ? (b.opts ?? {}) : {}, b.name ? { description: b.name } : {})
+            t += Syntax.fmt("hypr.bind", { keys: keys, action: action, opts: Syntax.lua(opts) }) + "\n"
+        }
+        return t + "\n"
+    }
+
+    // programs started at login (Settings.autostart.items)
+    function generateAutostart() {
+        const items = (Settings.autostart.items ?? []).filter(a => a.enabled !== false && a.cmd && (a.on ?? "both") !== "niri")
+        if (items.length === 0) return ""
+        return "-- started at login (Autostart page)\n"
+            + items.map(a => Syntax.fmt("hypr.autostart", { cmd: Syntax.luaString(a.cmd) })).join("\n") + "\n\n"
     }
 
     // sh -c script: args $1 = text, $2 = target file. Checks the text with
@@ -305,7 +336,7 @@ Singleton {
         onExited: code => {
             root.applying = false
             root.error = code === 0 ? "" : (applyErr.text.trim() || "Hyprland --verify-config failed")
-            if (code === 0) refreshTimer.restart()
+            if (code === 0) { refreshTimer.restart(); if (Compositor.isHyprland) Keybinds.refresh() }
         }
     }
 
@@ -320,5 +351,8 @@ Singleton {
     Connections {
         target: Settings
         function onHyprlandChanged() { applyTimer.restart() }
+        function onAutostartChanged() { applyTimer.restart() }
+        function onKeybindsChanged() { applyTimer.restart() }
+        function onSyntaxChanged() { applyTimer.restart() }
     }
 }

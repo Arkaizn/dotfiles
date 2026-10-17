@@ -5,10 +5,13 @@ import qs.services
 // One shortcut: what it does on the left, its key combo(s) on the right
 // (alternatives stacked). `bind` is a row from Keybinds.binds.
 // Compact (narrow columns): several or long combos go below the text.
+// `editable`: a pencil shows on hover → editRequested(the first raw bind).
 Rectangle {
     id: row
     property var bind
     property bool compact: false
+    property bool editable: false
+    signal editRequested(var item)
     readonly property bool stacked: compact && (bind.combos.length > 1 || bind.combos.some(c => c.length > 2))
     implicitHeight: Math.max(compact ? 26 : 30, rowLayout.implicitHeight + 8)
     radius: 8
@@ -34,21 +37,43 @@ Rectangle {
             wrapMode: Text.WordWrap
         }
 
-        ColumnLayout {
+        RowLayout {
             Layout.alignment: Qt.AlignRight
             spacing: 4
-            Repeater {
-                model: row.bind.combos
-                RowLayout {
-                    required property var modelData
-                    Layout.alignment: Qt.AlignRight
-                    spacing: row.compact ? 3 : 4
-                    Repeater {
-                        model: modelData
-                        Keycap {
-                            required property string modelData
-                            key: modelData
-                            compact: row.compact
+
+            Text {
+                visible: row.editable
+                text: "󰏫"
+                color: editMouse.containsMouse ? Colors.color6 : Qt.rgba(1, 1, 1, 0.6)
+                opacity: rowHover.hovered ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 120 } }
+                font.pixelSize: 13
+                font.family: Properties.fontFamily
+                MouseArea {
+                    id: editMouse
+                    anchors.fill: parent
+                    anchors.margins: -4
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: row.editRequested(row.bind.items?.[0] ?? null)
+                }
+            }
+
+            ColumnLayout {
+                spacing: 4
+                Repeater {
+                    model: row.bind.combos
+                    RowLayout {
+                        required property var modelData
+                        Layout.alignment: Qt.AlignRight
+                        spacing: row.compact ? 3 : 4
+                        Repeater {
+                            model: modelData
+                            Keycap {
+                                required property string modelData
+                                key: modelData
+                                compact: row.compact
+                            }
                         }
                     }
                 }
