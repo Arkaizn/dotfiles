@@ -22,7 +22,6 @@ include "./config/rules.kdl"
 
 include "./config/binds.kdl"
 
-include "~/.config/custom/niri/custom.kdl"
 
 
 // You can change the path where screenshots are saved.

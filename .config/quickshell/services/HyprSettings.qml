@@ -233,13 +233,8 @@ Singleton {
     }
 
     function windowRule(name, title, w, h) {
-        return "hl.window_rule({\n"
-            + "    name = " + Compositor.luaString(name) + ",\n"
-            + "    match = { title = " + Compositor.luaString("^" + title + "$") + " },\n"
-            + "    float = true,\n"
-            + "    center = true,\n"
-            + "    size = { " + w + ", " + h + " },\n"
-            + "})\n\n"
+        return Syntax.fmt("hypr.windowRule", { name: Compositor.luaString(name), title: Compositor.luaString("^" + title + "$"),
+                                                width: String(w), height: String(h) }) + "\n\n"
     }
 
     function generate() {

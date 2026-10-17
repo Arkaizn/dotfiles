@@ -334,7 +334,7 @@ Item {
                     required property var modelData
                     implicitWidth: batText.implicitWidth + 20
                     implicitHeight: 30
-                    radius: 15
+                    radius: Properties.radius              // like the buttons, not a full pill
                     color: Properties.panelColor
                     border.width: Properties.panelBorderWidth
                     border.color: Properties.panelBorder

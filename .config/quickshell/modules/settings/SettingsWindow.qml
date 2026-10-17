@@ -156,6 +156,8 @@ Scope {
           desc: "Programs started at login" },
         { id: "syntax", group: wmGroup, icon: "󰅩", title: "Syntax", custom: "syntax",
           desc: "How the shell writes the compositor config" },
+        { id: "import", group: wmGroup, icon: "󰋺", title: "Import custom", custom: "import",
+          desc: "Move autostart and keybinds from ~/.config/custom into the settings" },
 
         { id: "monitors", group: wmGroup, icon: "󰍹", title: "Monitors", custom: "monitors",
           desc: "Arrange screens, resolution, refresh rate and scale" },
@@ -646,6 +648,12 @@ Scope {
                                     active: win.query === "" && win.page.custom === "autostart"
                                     visible: active
                                     sourceComponent: AutostartPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "import"
+                                    visible: active
+                                    sourceComponent: ImportPage {}
                                 }
                                 Loader {
                                     Layout.fillWidth: true

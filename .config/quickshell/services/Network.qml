@@ -393,6 +393,53 @@ Singleton {
             servers.length === 0 ? "Global DNS off, every network uses its own" : "Global DNS set to " + servers.join(", "))
     }
 
+    // ── /etc/hosts ───────────────────────────────────────────────────────────
+    // The shell's entries (Settings.network.hosts: [{ id, ip, names, enabled }])
+    // live in a marked block of /etc/hosts; the rest of the file is left alone
+    // and shown read-only. Writing asks for the password (pkexec → polkit
+    // agent) and keeps the previous file as /etc/hosts.quickshell.bak.
+    readonly property string hostsBegin: "# >>> quickshell hosts (managed by the Quickshell settings app, edit it there)"
+    readonly property string hostsEnd: "# <<< quickshell hosts"
+    property var hostsOther: []        // [{ ip, names }] outside the block
+    property var hostsActive: []       // [{ ip, names }] in the block right now
+
+    function readHosts() {
+        run(["cat", "/etc/hosts"], (code, out) => {
+            const other = [], active = []
+            let inBlock = false
+            for (const raw of out.split("\n")) {
+                if (raw.startsWith("# >>> quickshell hosts")) { inBlock = true; continue }
+                if (raw.startsWith(hostsEnd)) { inBlock = false; continue }
+                const line = raw.replace(/#.*/, "").trim()
+                if (line === "") continue
+                const parts = line.split(/\s+/)
+                const e = { ip: parts[0], names: parts.slice(1).join(" ") }
+                ;(inBlock ? active : other).push(e)
+            }
+            root.hostsOther = other
+            root.hostsActive = active
+        })
+    }
+
+    readonly property string hostsScript:
+        'f=/etc/hosts\n'
+        + 'cp -f "$f" /etc/hosts.quickshell.bak || exit 1\n'
+        + 'tmp=$(mktemp) || exit 1\n'
+        + 'awk -v b="# >>> quickshell hosts" -v e="# <<< quickshell hosts" \'index($0, b) == 1 { skip = 1 } !skip { if ($0 == "") n++; else { while (n > 0) { print ""; n-- } print } } index($0, e) == 1 { skip = 0 }\' "$f" > "$tmp"\n'
+        + 'printf "%s" "$1" >> "$tmp"\n'
+        + 'cat "$tmp" > "$f"; rm -f "$tmp"\n'
+        + 'command -v resolvectl >/dev/null && resolvectl flush-caches 2>/dev/null; exit 0'
+
+    // writes the enabled entries (asks for the password)
+    function applyHosts(entries) {
+        const on = entries.filter(e => e.enabled !== false && e.ip && e.names)
+        const block = on.length === 0 ? ""
+            : "\n" + hostsBegin + "\n" + on.map(e => e.ip + "\t" + e.names.trim().split(/\s+/).join(" ")).join("\n") + "\n" + hostsEnd + "\n"
+        act(["pkexec", "sh", "-c", hostsScript, "sh", block],
+            on.length === 0 ? "Removed the shell's hosts entries" : "Hosts file updated (" + on.length + (on.length === 1 ? " entry)" : " entries)"),
+            () => readHosts())
+    }
+
     // ── DNS tools ────────────────────────────────────────────────────────────
     // cb(ok, text)
     function lookup(name, cb) {

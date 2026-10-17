@@ -12,7 +12,8 @@
 -- Output: { "binds": [{ "keys": "SUPER + C", "dsp": "window.close", "args": [...],
 --             "description": "...", "submap": "", "mouse": false,
 --             "opts": { locked = … }, "file": "/path/of/the/file.lua" }, ...],
---           "autostart": [{ "cmd": "...", "file": "..." }] }
+--           "autostart": [{ "cmd": "...", "file": "...", "line": n }],
+--           "rules": [{ "kind": "window rule", "file": "...", "line": n }] }
 -- hl.unbind removes earlier binds with the same keys, like in Hyprland.
 
 local binds = {}
@@ -23,6 +24,9 @@ local inStart = false            -- inside an hl.on("hyprland.start", …) handl
 -- "SUPER + SHIFT + c" and "super+shift+C" are the same bind
 local function norm(keys) return (tostring(keys):gsub("%s", ""):upper()) end
 local function caller() local i = debug.getinfo(3, "S"); return i and i.source:gsub("^@", "") or "" end
+local function callerLine() local i = debug.getinfo(3, "l"); return i and i.currentline or 0 end
+local rules = {}                 -- window / workspace / layer rules: { kind, file, line } (import page)
+local function rule(kind) return function() rules[#rules + 1] = { kind = kind, file = caller(), line = callerLine() }; return noop end end
 
 -- hl.dsp.window.close({ ... }) → { dsp = "window.close", args = { ... } }
 local function dispatcherTable(path)
@@ -46,7 +50,7 @@ hl = setmetatable({
         local rest = {}
         for k, v in pairs(opts) do if k ~= "description" and type(v) ~= "function" then rest[k] = v end end
         local entry = { keys = tostring(keys), submap = submap, mouse = opts.mouse == true,
-                        description = opts.description, opts = rest, file = caller() }
+                        description = opts.description, opts = rest, file = caller(), line = callerLine() }
         if type(action) == "table" and action.dsp then
             entry.dsp, entry.args = action.dsp, action.args
         else
@@ -68,8 +72,11 @@ hl = setmetatable({
         return noop
     end,
     exec_cmd = function(cmd)
-        if inStart then autostart[#autostart + 1] = { cmd = tostring(cmd), file = caller() } end
+        if inStart then autostart[#autostart + 1] = { cmd = tostring(cmd), file = caller(), line = callerLine() } end
     end,
+    window_rule = rule("window rule"),
+    workspace_rule = rule("workspace rule"),
+    layer_rule = rule("layer rule"),
     define_submap = function(name, fn)
         local prev = submap
         submap = name
@@ -114,5 +121,5 @@ end
 -- ── Run ──────────────────────────────────────────────────────────────────────
 local ok, err = pcall(dofile, arg[1])
 if not ok then io.stderr:write(tostring(err), "\n") end
-io.write("{\"binds\":", json(binds), ",\"autostart\":", json(autostart), "}\n")
+io.write("{\"binds\":", json(binds), ",\"autostart\":", json(autostart), ",\"rules\":", json(rules), "}\n")
 os.exit(ok and 0 or 2)

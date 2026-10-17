@@ -12,7 +12,8 @@ import "Net.js" as Net
 //               click, DHCP lease, connect / renew / hide
 //   Profiles    saved connections: new, import (VPN / WireGuard), duplicate,
 //               delete, and the full editor (ProfileEditor)
-//   DNS & host  global DNS override, resolvers in use, lookup test, hostname
+//   DNS         global DNS override, resolvers in use, lookup test, hostname
+//   Hosts       own /etc/hosts entries (remap a name to an IP on this computer)
 // Changes to an active connection are applied live and reverted after 20s
 // unless kept ("safe apply", can be turned off), so a typo can't lock you out.
 ColumnLayout {
@@ -28,6 +29,7 @@ ColumnLayout {
     Component.onCompleted: {
         Network.watchers++
         Network.refresh()
+        Network.readHosts()
         sync(deviceModel, deviceOrder, "name")
         sync(profileModel, profileOrder, "uuid")
     }
@@ -55,7 +57,7 @@ ColumnLayout {
 
     // tabs slide in from the side they sit on: a tab to the right comes in
     // from the right, one to the left from the left
-    readonly property var tabOrder: ["interfaces", "profiles", "dns"]
+    readonly property var tabOrder: ["interfaces", "profiles", "dns", "hosts"]
     property int tabDir: 1
     function setTab(t) {
         if (t === tab) return
@@ -114,7 +116,8 @@ ColumnLayout {
         Segmented {
             options: [{ label: "Interfaces", value: "interfaces", icon: "󰈀" },
                       { label: "Profiles", value: "profiles", icon: "󰒓" },
-                      { label: "DNS & host", value: "dns", icon: "󰇖" }]
+                      { label: "DNS", value: "dns", icon: "󰇖" },
+                      { label: "Hosts", value: "hosts", icon: "󰒋" }]
             value: netPage.tab
             onEdited: v => { netPage.setTab(v); if (v !== "profiles") netPage.editing = "" }
         }
@@ -918,6 +921,201 @@ ColumnLayout {
                     text: "Set"
                     interactive: hostField.text !== Network.hostname && Net.domain(hostField.text) === ""
                     onClicked: Network.setHostname(hostField.text)
+                }
+            }
+        }
+    }
+
+    // ── Hosts file ──────────────────────────────────────────────────────────
+    TabView {
+        id: hostsTab
+        key: "hosts"
+
+        // editable copy of Settings.network.hosts until Apply
+        property var draft: []
+        property bool dirty: false
+        function load() { draft = JSON.parse(JSON.stringify(Settings.network.hosts ?? [])); dirty = false }
+        function change(list) { draft = list; dirty = true }
+        function update(id, patch) { change(draft.map(e => e.id === id ? Object.assign({}, e, patch) : e)) }
+        Component.onCompleted: load()
+
+        function problem(e) {
+            if (Net.ip(e.ip ?? "") !== "") return "IP: " + Net.ip(e.ip ?? "")
+            const names = (e.names ?? "").trim().split(/\s+/).filter(x => x)
+            if (names.length === 0) return "needs a name"
+            for (const n of names) if (Net.domain(n) !== "") return "\"" + n + "\" isn't a valid name"
+            return ""
+        }
+        readonly property bool valid: draft.every(e => problem(e) === "")
+        // what's in /etc/hosts now vs. what's saved
+        readonly property bool inSync: {
+            const want = (Settings.network.hosts ?? []).filter(e => e.enabled !== false).map(e => e.ip + " " + e.names.trim().split(/\s+/).join(" "))
+            const have = Network.hostsActive.map(e => e.ip + " " + e.names)
+            return want.length === have.length && want.every((w, i) => w === have[i])
+        }
+
+        Text {
+            Layout.fillWidth: true
+            Layout.leftMargin: 6
+            text: "Like the hosts file on Windows: these names resolve to the IP you set, only on this computer (/etc/hosts). "
+                  + "Browsers with secure DNS (DNS over HTTPS) can skip it."
+            color: Qt.rgba(1, 1, 1, 0.5)
+            font.pixelSize: 11
+            font.family: Properties.fontFamily
+            wrapMode: Text.WordWrap
+        }
+
+        NetCard {
+            id: hostsCard
+            Layout.fillWidth: true
+            title: "Your entries" + (hostsTab.draft.length > 0 ? "  ·  " + hostsTab.draft.length : "")
+            icon: "󰒋"
+            header: [
+                Text {
+                    visible: !hostsTab.dirty
+                    text: hostsTab.inSync ? "in /etc/hosts" : "not applied"
+                    color: hostsTab.inSync ? Colors.color6 : "#f9e2af"
+                    font.pixelSize: 11
+                    font.bold: true
+                    font.family: Properties.fontFamily
+                }
+            ]
+
+            Repeater {
+                model: hostsTab.draft
+                ColumnLayout {
+                    id: hrow
+                    required property var modelData
+                    required property int index
+                    readonly property var e: modelData
+                    readonly property string err: hostsTab.problem(e)
+                    property string testResult: ""
+                    property bool testOk: true
+                    Layout.fillWidth: true
+                    spacing: 0
+                    NetRow {
+                        first: hrow.index === 0
+                        opacity: hrow.e.enabled === false ? 0.5 : 1
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                        SearchField {
+                            implicitWidth: 150
+                            implicitHeight: Properties.buttonHeight
+                            icon: ""
+                            clearable: false
+                            placeholderText: "192.168.0.5"
+                            text: hrow.e.ip ?? ""
+                            error: (hrow.e.ip ?? "") !== "" && Net.ip(hrow.e.ip) !== ""
+                            onEditingFinished: if (text.trim() !== hrow.e.ip) hostsTab.update(hrow.e.id, { ip: text.trim() })
+                        }
+                        Text { text: "→"; color: Qt.rgba(1, 1, 1, 0.4); font.pixelSize: 13; font.family: Properties.fontFamily }
+                        SearchField {
+                            Layout.fillWidth: true
+                            implicitWidth: 240
+                            implicitHeight: Properties.buttonHeight
+                            icon: ""
+                            clearable: false
+                            placeholderText: "google.com www.google.com"
+                            text: hrow.e.names ?? ""
+                            onEditingFinished: if (text.trim() !== hrow.e.names) hostsTab.update(hrow.e.id, { names: text.trim() })
+                        }
+                        IconButton {
+                            icon: "󰍉"
+                            tooltip: "Test: what does this name resolve to now?"
+                            onClicked: {
+                                const name = (hrow.e.names ?? "").trim().split(/\s+/)[0]
+                                if (!name) return
+                                hrow.testResult = "…"
+                                Network.lookup(name, (ok, text) => { hrow.testOk = ok; hrow.testResult = text })
+                            }
+                        }
+                        IconButton {
+                            icon: "󰆴"
+                            tooltip: "Remove"
+                            textColor: "#f38ba8"
+                            onClicked: hostsTab.change(hostsTab.draft.filter(x => x.id !== hrow.e.id))
+                        }
+                        ToggleSwitch {
+                            checked: hrow.e.enabled !== false
+                            onToggled: v => hostsTab.update(hrow.e.id, { enabled: v })
+                        }
+                    }
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 16
+                        Layout.bottomMargin: 8
+                        visible: hrow.err !== "" && ((hrow.e.ip ?? "") !== "" || (hrow.e.names ?? "") !== "")
+                        text: "󰀦  " + hrow.err
+                        color: "#f38ba8"
+                        font.pixelSize: 11
+                        font.family: Properties.fontFamily
+                    }
+                    Reveal {
+                        open: hrow.testResult !== ""
+                        Text {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 16
+                            Layout.rightMargin: 16
+                            Layout.bottomMargin: 8
+                            text: hrow.testResult
+                            color: hrow.testOk ? Qt.rgba(1, 1, 1, 0.7) : "#f38ba8"
+                            font.pixelSize: 11
+                            font.family: Properties.fontFamily
+                            wrapMode: Text.WrapAnywhere
+                        }
+                    }
+                }
+            }
+
+            NetRow {
+                first: hostsTab.draft.length === 0
+                ActionButton {
+                    icon: "󰐕"
+                    text: "Add entry"
+                    onClicked: hostsTab.change(hostsTab.draft.concat([{ id: "h" + Date.now(), ip: "", names: "", enabled: true }]))
+                }
+                Item { Layout.fillWidth: true }
+                ActionButton {
+                    visible: hostsTab.dirty
+                    icon: "󰕌"
+                    text: "Undo"
+                    onClicked: hostsTab.load()
+                }
+                ActionButton {
+                    icon: "󰌾"
+                    text: "Apply"
+                    primary: hostsTab.dirty || !hostsTab.inSync
+                    interactive: (hostsTab.dirty || !hostsTab.inSync) && hostsTab.valid && !Network.busy
+                    onClicked: {
+                        Settings.set("network", "hosts", hostsTab.draft)
+                        Network.applyHosts(hostsTab.draft)
+                        hostsTab.dirty = false
+                    }
+                }
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            Layout.leftMargin: 6
+            text: "Apply asks for your password (it writes /etc/hosts; the previous file is kept as /etc/hosts.quickshell.bak)."
+            color: Qt.rgba(1, 1, 1, 0.4)
+            font.pixelSize: 11
+            font.family: Properties.fontFamily
+            wrapMode: Text.WordWrap
+        }
+
+        NetCard {
+            Layout.fillWidth: true
+            title: "Already in /etc/hosts  ·  read-only"
+            icon: "󰈙"
+            Repeater {
+                model: Network.hostsOther
+                NetRow {
+                    required property var modelData
+                    required property int index
+                    first: index === 0
+                    label: modelData.names
+                    Chip { text: modelData.ip }
                 }
             }
         }

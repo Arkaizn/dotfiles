@@ -28,7 +28,7 @@ Singleton {
         return custom !== "" ? custom : configDir + "/config.kdl"
     }
     readonly property string overridePath: configDir + "/config/quickshell.kdl"
-    readonly property string includeLine: 'include "./config/quickshell.kdl"'
+    readonly property string includeLine: Syntax.fmt("niri.include", { path: Syntax.kdlString("./config/quickshell.kdl") })
 
     // title the settings window uses; the override file makes niri float it
     readonly property string windowTitle: "Quickshell Settings"
@@ -291,37 +291,34 @@ Singleton {
     }
 
     // ── Writing the override file ────────────────────────────────────────────
+    // one setting as config text (templates on the Syntax page)
     function line(s, leaf, v) {
-        if (leaf === "@enabled") return v ? "on" : "off"
+        if (leaf === "@enabled") return Syntax.fmt(v ? "niri.sectionOn" : "niri.sectionOff", {})
         switch (s.type) {
-        case "bool":   return v ? leaf : leaf + " false"
-        case "int":    return leaf + " " + Math.round(v)
-        case "real":   return leaf + " " + Number(Number(v).toFixed(3))
-        case "color":  return leaf + ' "' + toNiriColor(v) + '"'
-        default:       return leaf + " " + JSON.stringify(String(v))
+        case "bool":   return Syntax.fmt(v ? "niri.flagOn" : "niri.flagOff", { name: leaf })
+        case "int":    return Syntax.fmt("niri.option", { name: leaf, value: String(Math.round(v)) })
+        case "real":   return Syntax.fmt("niri.option", { name: leaf, value: String(Number(Number(v).toFixed(3))) })
+        case "color":  return Syntax.fmt("niri.option", { name: leaf, value: Syntax.kdlString(toNiriColor(v)) })
+        default:       return Syntax.fmt("niri.option", { name: leaf, value: Syntax.kdlString(String(v)) })
         }
     }
 
-    function render(node, indent) {
+    // every line of `t` indented one level
+    function indented(t) { return t.split("\n").map(l => l === "" ? l : "    " + l).join("\n") }
+
+    function render(node) {
         let t = ""
-        for (const l of node.lines) t += indent + l + "\n"
-        for (const [name, child] of node.children) {
-            t += indent + name + " {\n" + render(child, indent + "    ") + indent + "}\n"
-        }
+        for (const l of node.lines) t += l + "\n"
+        for (const [name, child] of node.children)
+            t += Syntax.fmt("niri.section", { name: name, body: indented(render(child)) }) + "\n"
         return t
     }
 
     function windowRule(title, w, h) {
-        return "window-rule {\n"
-            + "    match title=\"^" + title + "$\"\n"
-            + "    open-floating true\n"
-            + "    default-column-width { fixed " + w + "; }\n"
-            + "    default-window-height { fixed " + h + "; }\n"
-            + "    geometry-corner-radius " + root.appRadius + "\n"
-            + "    clip-to-geometry true\n"
-            + "    draw-border-with-background false\n"
-            + ((Settings.niri.appBlur ?? true) ? "    background-effect { blur true; }\n" : "")
-            + "}\n\n"
+        return Syntax.fmt("niri.windowRule", {
+            title: Syntax.kdlString("^" + title + "$"), width: String(w), height: String(h), radius: String(root.appRadius),
+            blur: (Settings.niri.appBlur ?? true) ? Syntax.fmt("niri.windowBlur", {}) : ""
+        }) + "\n\n"
     }
 
     function generate() {
@@ -343,16 +340,15 @@ Singleton {
             + "// get overwritten. Included last by config.kdl, so these values win over\n"
             + "// the rest of the config. Change them in the app, or remove the include\n"
             + "// line from config.kdl to drop all of them.\n\n"
-            + render(tree, "")
+            + render(tree)
             + "\n// the settings and calendar windows\n"
             + windowRule(windowTitle, 980, 680)
             + windowRule("Quickshell Calendar", 1240, 800)
-            + "binds {\n"
-            + "    " + Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),
-                                               title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Settings") }),
-                                               action: Syntax.fmt("niri.spawnSh", { cmd: Syntax.kdlString("qs ipc call settings toggle") }) }) + "\n"
-            + generateBinds()
-            + "}\n"
+            + Syntax.fmt("niri.bindsBlock", { body: indented(
+                  Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),
+                                            title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Settings") }),
+                                            action: Syntax.fmt("niri.spawnSh", { cmd: Syntax.kdlString("qs ipc call settings toggle") }) }) + "\n"
+                  + generateBinds()) }) + "\n"
             + generateAutostart()
     }
 
@@ -363,9 +359,9 @@ Singleton {
         let t = ""
         for (const b of Keybinds.effectiveCustom("niri")) {
             const keys = Syntax.niriKeys(b.keys)
-            if (b.kind === "disable") { t += "    " + Syntax.fmt("niri.disable", { keys: keys }) + "\n"; continue }
+            if (b.kind === "disable") { t += Syntax.fmt("niri.disable", { keys: keys }) + "\n"; continue }
             const action = b.kind === "original" ? b.raw.niri : Syntax.fmt("niri.spawnSh", { cmd: Syntax.kdlString(b.cmd) })
-            t += "    " + Syntax.fmt("niri.bind", {
+            t += Syntax.fmt("niri.bind", {
                 keys: keys + (b.kind === "original" && b.props ? " " + b.props : ""),
                 title: b.name ? Syntax.fmt("niri.title", { title: Syntax.kdlString(b.name) }) : "",
                 action: action }) + "\n"

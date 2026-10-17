@@ -74,6 +74,20 @@ BarPopup {
     readonly property var btAdapter: Bluetooth.defaultAdapter
     readonly property var btConnected: (btAdapter?.devices?.values ?? []).filter(d => d.connected)
 
+    // batteries: laptop, custom sources, Bluetooth devices (shown in the header, under the clock)
+    readonly property var batteryItems: {
+        const out = []
+        const d = UPower.displayDevice
+        if (d?.isLaptopBattery)
+            out.push({ icon: "󰁹", name: "Battery", level: Math.round(d.percentage * 100) })
+        for (const b of CustomBatteries.available)
+            out.push({ icon: b.icon, name: b.name, level: b.level })
+        for (const dev of root.btConnected)
+            if (dev.batteryAvailable)
+                out.push({ icon: "󰂯", name: dev.name, level: Math.round(dev.battery * 100) })
+        return out
+    }
+
     // Close first, so the panel isn't in the screenshot / color pick
     function runTool(cmd) {
         root.close()
@@ -101,6 +115,7 @@ BarPopup {
                 implicitHeight: header.implicitHeight + 24
                 CCHeader {
                     id: header
+                    batteries: root.batteryItems
                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 12 }
                     onActionStarted: root.close()
                 }
@@ -212,49 +227,6 @@ BarPopup {
                     onToggled: root.runTool(
                         "c=$(hyprpicker -a -f hex) && [ -n \"$c\" ]"
                         + " && notify-send -a 'Control center' 'Color picker' \"$c copied to clipboard\"")
-                }
-            }
-
-            // ── Batteries (laptop, custom sources, Bluetooth devices) ──
-            Flow {
-                id: batteries
-                Layout.fillWidth: true
-                spacing: 8
-
-                readonly property var items: {
-                    const out = []
-                    const d = UPower.displayDevice
-                    if (d?.isLaptopBattery)
-                        out.push({ icon: "󰁹", name: "Battery", level: Math.round(d.percentage * 100) })
-                    for (const b of CustomBatteries.available)
-                        out.push({ icon: b.icon, name: b.name, level: b.level })
-                    for (const dev of root.btConnected)
-                        if (dev.batteryAvailable)
-                            out.push({ icon: "󰂯", name: dev.name, level: Math.round(dev.battery * 100) })
-                    return out
-                }
-                visible: items.length > 0
-
-                Repeater {
-                    model: batteries.items
-                    delegate: Rectangle {
-                        required property var modelData
-                        implicitWidth: chip.implicitWidth + 20
-                        implicitHeight: 30
-                        radius: 15
-                        color: "#27000000"
-                        border.width: Properties.panelBorderWidth
-                        border.color: Properties.cardBorder
-
-                        Text {
-                            id: chip
-                            anchors.centerIn: parent
-                            text: modelData.icon + "  " + modelData.name + "  " + modelData.level + "%"
-                            color: modelData.level <= 15 ? "#f38ba8" : modelData.level <= 30 ? "#fab387" : "white"
-                            font.pixelSize: 12
-                            font.family: Properties.fontFamily
-                        }
-                    }
                 }
             }
 

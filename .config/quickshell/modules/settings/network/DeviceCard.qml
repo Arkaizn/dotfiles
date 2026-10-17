@@ -33,6 +33,17 @@ Rectangle {
     property var draftDns: []
 
     readonly property string method: profile?.settings["ipv4.method"] ?? ""
+    // "Ignore DNS from DHCP" also ignores the DHCP search domain
+    readonly property bool ignoresDhcpDns: (profile?.settings["ipv4.ignore-auto-dns"] ?? "") === "yes"
+    readonly property var manualDomains: Net.splitList(profile?.settings["ipv4.dns-search"])
+    // the search domains in use, each with where it comes from
+    readonly property var domains: {
+        const out = d.search4.map(x => ({ name: x, from: manualDomains.includes(x) ? "set by hand"
+                                                        : x === d.dhcp?.domain ? "from DHCP " + (d.dhcp?.server ?? "") : "automatic" }))
+        // set in the profile but not active (yet)
+        for (const m of manualDomains) if (!d.search4.includes(m)) out.push({ name: m, from: "set by hand, not active" })
+        return out
+    }
     readonly property string shownMethod: draftMethod !== "" ? draftMethod : method
     readonly property bool dirty: draftMethod !== "" && (draftMethod !== method || draftMethod === "manual")
 
@@ -212,6 +223,10 @@ Rectangle {
                 model: card.expanded ? card.d.ip6 : card.d.ip6.slice(0, 1)
                 Chip { required property string modelData; label: "IPv6"; text: modelData }
             }
+            Repeater {
+                model: card.d.search4
+                Chip { required property string modelData; label: "DOMAIN"; text: modelData }
+            }
             Chip { visible: card.d.mac !== "" && card.d.type !== "loopback"; label: "MAC"; text: card.d.mac }
         }
 
@@ -366,7 +381,7 @@ Rectangle {
                                     Chip { required property string modelData; text: modelData }
                                 }
                                 Text {
-                                    visible: (card.profile?.settings["ipv4.ignore-auto-dns"] ?? "") === "yes"
+                                    visible: card.ignoresDhcpDns
                                     text: "ignored, this profile uses its own"
                                     color: "#f9e2af"
                                     font.pixelSize: 10
@@ -374,8 +389,21 @@ Rectangle {
                                     topPadding: 5
                                 }
                             }
-                            Info { visible: (card.d.dhcp?.domain ?? "") !== ""; text: "Domain" }
-                            Chip { visible: (card.d.dhcp?.domain ?? "") !== ""; text: card.d.dhcp?.domain ?? "" }
+                            Info { visible: (card.d.dhcp?.domain ?? "") !== ""; text: "Domain offered" }
+                            Flow {
+                                Layout.fillWidth: true
+                                visible: (card.d.dhcp?.domain ?? "") !== ""
+                                spacing: 6
+                                Chip { text: card.d.dhcp?.domain ?? "" }
+                                Text {
+                                    visible: card.ignoresDhcpDns
+                                    text: "ignored, this profile uses its own"
+                                    color: "#f9e2af"
+                                    font.pixelSize: 10
+                                    font.family: Properties.fontFamily
+                                    topPadding: 5
+                                }
+                            }
                         }
                     }
 
@@ -406,6 +434,40 @@ Rectangle {
                                 primary: true
                                 interactive: card.valid && !Network.busy
                                 onClicked: card.apply()
+                            }
+                        }
+                    }
+                }
+            }
+
+            // search domains in use and where they come from
+            RowLayout {
+                Layout.fillWidth: true
+                visible: card.managedHere && card.profile !== null && card.domains.length > 0
+                spacing: 10
+                Text {
+                    Layout.alignment: Qt.AlignTop
+                    Layout.topMargin: 4
+                    text: "Search domain"
+                    color: Qt.rgba(1, 1, 1, 0.5)
+                    font.pixelSize: 11
+                    font.family: Properties.fontFamily
+                }
+                Flow {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    Repeater {
+                        model: card.domains
+                        Row {
+                            required property var modelData
+                            spacing: 6
+                            Chip { text: modelData.name; accent: modelData.from.startsWith("set by hand") }
+                            Text {
+                                text: modelData.from
+                                color: Qt.rgba(1, 1, 1, 0.45)
+                                font.pixelSize: 10
+                                font.family: Properties.fontFamily
+                                topPadding: 5
                             }
                         }
                     }

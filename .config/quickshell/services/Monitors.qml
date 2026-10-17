@@ -27,7 +27,7 @@ Singleton {
 
     readonly property string outputsPath: NiriSettings.configDir + "/config/quickshell-outputs.kdl"
     readonly property string includeLine: Compositor.isHyprland ? HyprSettings.includeLine
-                                                                : 'include "./config/quickshell-outputs.kdl"'
+                                                                : Syntax.fmt("niri.include", { path: Syntax.kdlString("./config/quickshell-outputs.kdl") })
     readonly property var transforms: ["normal", "90", "180", "270", "flipped", "flipped-90", "flipped-180", "flipped-270"]
 
     // live state from niri, one object per output:
@@ -277,14 +277,16 @@ Singleton {
 
     // hl.monitor({…}) for one output; `output` is a Lua string
     function hyprMonitorCall(c, output) {
-        if (!c.enabled) return "hl.monitor({ output = " + output + ", disabled = true })"
+        if (!c.enabled) return Syntax.fmt("hypr.monitorOff", { output: output })
         const mode = typeof c.mode === "string" ? c.mode : modeString(c.width, c.height, c.refresh)
-        return "hl.monitor({ output = " + output
-            + ", mode = " + Compositor.luaString(mode)
-            + ", position = " + Compositor.luaString(Math.round(c.x) + "x" + Math.round(c.y))
-            + ", scale = " + Number(Number(c.scale).toFixed(3))
-            + ", transform = " + Math.max(0, transforms.indexOf(c.transform))
-            + ", vrr = " + (c.vrr ? 1 : 0) + " })"
+        return Syntax.fmt("hypr.monitor", {
+            output: output,
+            mode: Compositor.luaString(mode),
+            position: Compositor.luaString(Math.round(c.x) + "x" + Math.round(c.y)),
+            scale: String(Number(Number(c.scale).toFixed(3))),
+            transform: String(Math.max(0, transforms.indexOf(c.transform))),
+            vrr: c.vrr ? "1" : "0"
+        })
     }
 
     // Hyprland matches "desc:" by the start of "make model serial"
@@ -311,15 +313,15 @@ Singleton {
         const m = Settings.monitors
         for (const id of Object.keys(m).sort()) {
             const c = m[id]
+            const lines = []
+            if (!c.enabled) lines.push(Syntax.fmt("niri.outputOff", {}))
+            lines.push(Syntax.fmt("niri.outputMode", { mode: Syntax.kdlString(c.mode) }))
+            lines.push(Syntax.fmt("niri.outputScale", { scale: String(Number(Number(c.scale).toFixed(3))) }))
+            lines.push(Syntax.fmt("niri.outputTransform", { transform: Syntax.kdlString(c.transform) }))
+            lines.push(Syntax.fmt("niri.outputPosition", { x: String(c.x), y: String(c.y) }))
+            if (c.vrr) lines.push(Syntax.fmt("niri.outputVrr", {}))
             t += "\n// " + (c.name ?? "") + "\n"
-            t += "output " + JSON.stringify(id) + " {\n"
-            if (!c.enabled) t += "    off\n"
-            t += "    mode " + JSON.stringify(c.mode) + "\n"
-            t += "    scale " + Number(Number(c.scale).toFixed(3)) + "\n"
-            t += "    transform " + JSON.stringify(c.transform) + "\n"
-            t += "    position x=" + c.x + " y=" + c.y + "\n"
-            if (c.vrr) t += "    variable-refresh-rate\n"
-            t += "}\n"
+            t += Syntax.fmt("niri.output", { name: Syntax.kdlString(id), body: lines.map(l => "    " + l + "\n").join("") }) + "\n"
         }
         return t
     }

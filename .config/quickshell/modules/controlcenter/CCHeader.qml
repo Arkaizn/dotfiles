@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import qs.components
 import qs.services
 
-// Time/date on the left; on the right two rows: power actions, and below
+// Time/date (and batteries under it) on the left; on the right two rows: power actions, and below
 // them shortcuts to the shell's apps (add more to `shortcuts`, they wrap
 // onto further rows, right-aligned, so the panel never gets wider).
 // Logout / reboot / shut down need a second click within 3s to confirm.
@@ -12,6 +12,7 @@ RowLayout {
     id: root
 
     signal actionStarted()   // lets the control center close itself
+    property var batteries: []   // [{ icon, name, level }] from the control center
 
     spacing: 6
 
@@ -66,6 +67,33 @@ RowLayout {
                 : Time.format("dddd, d. MMMM")
             color: root.armed !== "" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.6)
             font.pixelSize: 12
+        }
+        // batteries
+        Flow {
+            Layout.fillWidth: true
+            Layout.topMargin: 8
+            visible: root.batteries.length > 0
+            spacing: 6
+            Repeater {
+                model: root.batteries
+                delegate: Rectangle {
+                    required property var modelData
+                    implicitWidth: chip.implicitWidth + 16
+                    implicitHeight: 24
+                    radius: Properties.radius
+                    color: "#27000000"
+                    border.width: Properties.panelBorderWidth
+                    border.color: Properties.cardBorder
+                    Text {
+                        id: chip
+                        anchors.centerIn: parent
+                        text: modelData.icon + "  " + modelData.name + "  " + modelData.level + "%"
+                        color: modelData.level <= 15 ? "#f38ba8" : modelData.level <= 30 ? "#fab387" : "white"
+                        font.pixelSize: 11
+                        font.family: Properties.fontFamily
+                    }
+                }
+            }
         }
     }
 

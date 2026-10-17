@@ -32,7 +32,8 @@ Rectangle {
     // the network page's own preferences (not spec-driven)
     readonly property var networkSpecs: ({
         hideVirtual: { type: "bool" }, safeApply: { type: "bool" },
-        showDevices: { type: "list" }, hideDevices: { type: "list" }
+        showDevices: { type: "list" }, hideDevices: { type: "list" },
+        hosts: { type: "objects" }          // [{ id, ip, names, enabled }]
     })
     readonly property var walNames: ["foreground", "background", "color0", "color1", "color2", "color3", "color4",
         "color5", "color6", "color7", "color8", "color9", "color10", "color11", "color12", "color13", "color14", "color15"]
@@ -176,6 +177,8 @@ Rectangle {
             return range()
         case "bool":
             return typeof x === "boolean" ? "" : "expected true or false, got " + str(x)
+        case "objects":
+            return Array.isArray(x) && x.every(v => v !== null && typeof v === "object" && !Array.isArray(v)) ? "" : "expected a list of { … } entries, got " + str(x)
         case "list":
             return Array.isArray(x) && x.every(v => typeof v === "string") ? "" : "expected a list of names like [\"docker0\"], got " + str(x)
         case "choice":
@@ -201,7 +204,7 @@ Rectangle {
         const isObj = x => x !== null && typeof x === "object" && !Array.isArray(x)
         if (g === "syntax") {
             for (const k of Object.keys(o)) {
-                if (!["templates", "paths"].includes(k)) { err([g, k], "syntax: unknown part \"" + k + "\""); continue }
+                if (!["templates", "words", "paths"].includes(k)) { err([g, k], "syntax: unknown part \"" + k + "\""); continue }
                 if (!isObj(o[k]) || Object.values(o[k]).some(x => typeof x !== "string"))
                     err([g, k], "syntax." + k + ": expected { name: \"text\" }")
             }

@@ -165,8 +165,10 @@ ColumnLayout {
             property string source: "app"       // app | command | shell
             property string cmd: ""
             property string on: "both"
+            property bool replaceOk: false       // "Replace it" clicked for a taken combo
 
             function load() {
+                replaceOk = false
                 const e = entry, b = item
                 keys = (e?.keys ?? b?.keys ?? []).slice()
                 keysText = keys.join("+")
@@ -179,8 +181,10 @@ ColumnLayout {
 
             readonly property var other: keys.length > 0 ? Keybinds.bindFor(keys) : null
             readonly property bool replacesOther: other !== null && !(item && Keybinds.normKeys(other.keys) === Keybinds.normKeys(item.keys))
+            readonly property bool conflict: replacesOther && !replaceOk
             readonly property string problem: keys.length === 0 ? "Pick keys: record them or type e.g. Mod+Shift+Y"
                 : Keybinds.normKeys(keys) === "mod+s" ? "Mod+S opens the settings (the shell's own bind)"
+                : conflict ? "Already used by: " + Keybinds.describe(other)
                 : (fromConfig || entry?.kind === "original") ? ""
                 : cmd.trim() === "" ? (source === "app" ? "Pick an app" : source === "shell" ? "Pick an action" : "Type a command")
                 : ""
@@ -189,7 +193,8 @@ ColumnLayout {
                 first: true
                 wide: true
                 label: "Keys"
-                desc: editor.replacesOther ? "Replaces: " + Keybinds.describe(editor.other) : editor.keys.length > 0 ? "Free" : ""
+                desc: editor.replacesOther ? (editor.replaceOk ? "Replaces: " : "󰀦 Already used by: ") + Keybinds.describe(editor.other)
+                    : editor.keys.length > 0 ? "Free" : ""
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
@@ -204,9 +209,9 @@ ColumnLayout {
                         clearable: false
                         placeholderText: "Mod+Shift+Y"
                         text: editor.keysText
-                        onTextEdited: { editor.keysText = text; editor.keys = Keybinds.parseCombo(text) ?? [] }
+                        onTextEdited: { editor.keysText = text; editor.keys = Keybinds.parseCombo(text) ?? []; editor.replaceOk = false }
                     }
-                    KeyRecorder { onRecorded: k => { editor.keys = k; editor.keysText = k.join("+") } }
+                    KeyRecorder { onRecorded: k => { editor.keys = k; editor.keysText = k.join("+"); editor.replaceOk = false } }
                 }
             }
             NetRow {
@@ -289,10 +294,20 @@ ColumnLayout {
             }
             NetRow {
                 Text {
+                    Layout.fillWidth: true
                     text: editor.problem
-                    color: Qt.rgba(1, 1, 1, 0.45)
+                    color: editor.conflict ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.45)
                     font.pixelSize: 11
+                    font.bold: editor.conflict
                     font.family: Properties.fontFamily
+                    wrapMode: Text.WordWrap
+                }
+                ActionButton {
+                    visible: editor.conflict
+                    icon: "󰛔"
+                    text: "Replace it"
+                    textColor: "#f38ba8"
+                    onClicked: editor.replaceOk = true
                 }
                 ActionButton {
                     visible: editor.fromConfig

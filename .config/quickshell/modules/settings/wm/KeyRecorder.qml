@@ -1,3 +1,5 @@
+import Quickshell
+import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -6,8 +8,10 @@ import ".."
 
 // Button that records the next key combo pressed (Esc cancels).
 // Emits keys in niri spelling: ["Mod", "Shift", "Y"].
-// Combos the compositor already uses never reach the shell (niri / Hyprland
-// handle them first), so this finds free combos; taken ones can be typed.
+// While recording, the window asks the compositor to pass all shortcuts to it
+// (keyboard-shortcuts-inhibit), so combos niri / Hyprland already use are
+// recorded instead of run. (Binds marked allow-inhibiting=false in niri still
+// run — e.g. an escape hatch.)
 Item {
     id: root
     property bool recording: false
@@ -41,6 +45,13 @@ Item {
     }
 
     function start() { recording = true; catcher.forceActiveFocus() }
+
+    // compositor shortcuts off while recording
+    ShortcutInhibitor {
+        window: root.QsWindow.window
+        enabled: root.recording
+        onCancelled: root.recording = false
+    }
 
     Item {
         id: catcher

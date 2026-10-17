@@ -19,7 +19,10 @@ dofile(dots .. "rules.lua")
 
 
 -- Custom
-dofile(home .. "/.config/custom/hyprland/custom.lua")
+-- per-device extras, only if the file exists (errors inside it are still reported)
+local custom = home .. "/.config/custom/hyprland/custom.lua"
+local cf = io.open(custom)
+if cf then cf:close(); dofile(custom) end
 
 -- Quickshell settings app: its settings, monitor setup and binds (loaded last, so they win)
 pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell.lua")
