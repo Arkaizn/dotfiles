@@ -20,7 +20,7 @@ hl.window_rule({
 --- Apps ---
 
 -- Stay focused: app menus
-hl.window_rule({ match = { class = "(rofi|wofi|Vncviewer)" }, stay_focused = true })
+hl.window_rule({ match = { class = "(rofi|Vncviewer)" }, stay_focused = true })
 hl.window_rule({ match = { class = "Vncviewer" }, center = true })
 
 -- pavucontrol - audio
@@ -122,9 +122,6 @@ hl.layer_rule({ match = { namespace = "quickshell" }, blur = true, xray = true, 
 
 -- waybar
 hl.layer_rule({ match = { namespace = "waybar" }, blur = true, ignore_alpha = 0.5 })
-
--- wofi
-hl.layer_rule({ match = { namespace = "wofi" }, blur = true, ignore_alpha = 0.5 })
 
 -- swaync
 hl.layer_rule({ match = { namespace = "swaync-control-center" },       blur = true, ignore_alpha = 0.5 })

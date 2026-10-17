@@ -2,7 +2,6 @@
 
 terminal = "kitty"
 fileManager = "nautilus"
-menu = "wofi --show drun -n"
 browser = "zen-browser"
 
 ------ General ------
