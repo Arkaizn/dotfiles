@@ -15,9 +15,12 @@ Rectangle {
     // the player shown: the one that last started playing or was picked with
     // the switch button. Sticks when paused/stopped so it doesn't jump to
     // another player; only changes when a player starts playing or it closes.
+    // all players except playerctld: it only mirrors the active player, so
+    // that one would show up twice (e.g. two "Mozilla zen")
+    readonly property var players: Mpris.players.values.filter(p => !(p.dbusName || "").includes("playerctld"))
     property var selectedPlayer: null
-    readonly property var player: (selectedPlayer && Mpris.players.values.includes(selectedPlayer) ? selectedPlayer : null)
-        ?? Mpris.players.values.find(p => p.isPlaying) ?? Mpris.players.values[0] ?? null
+    readonly property var player: (selectedPlayer && root.players.includes(selectedPlayer) ? selectedPlayer : null)
+        ?? root.players.find(p => p.isPlaying) ?? root.players[0] ?? null
     // remember whatever is shown, so pausing it doesn't fall back to another player
     onPlayerChanged: Qt.callLater(() => { if (player && selectedPlayer !== player) selectedPlayer = player })
 
@@ -50,7 +53,7 @@ Rectangle {
     }
 
     function nextPlayer() {
-        const players = Mpris.players.values
+        const players = root.players
         if (players.length < 2) return
         root.selectedPlayer = players[(players.indexOf(root.player) + 1) % players.length]
     }
@@ -196,7 +199,7 @@ Rectangle {
                 // only shown when there's more than one player to switch between
                 IconButton {
                     implicitWidth: 30; implicitHeight: 30
-                    visible: Mpris.players.values.length > 1
+                    visible: root.players.length > 1
                     icon: "󰓃"
                     tooltip: root.player?.identity ?? "Switch player"
                     onClicked: root.nextPlayer()

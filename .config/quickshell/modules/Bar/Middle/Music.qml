@@ -14,7 +14,10 @@ Item {
     implicitWidth: expanded ? Properties.buttonWidth + visualizer.width + albumArt.width + controlsRow.width + 10
                             : Properties.buttonWidth + visualizer.width + albumArt.width 
 
-    property var player: Mpris.players.values.length > 0 ? Mpris.players.values[currentPlayerIndex] : null
+    // all players except playerctld: it only mirrors the active player, so
+    // that one would show up twice (e.g. two "Mozilla zen")
+    readonly property var players: Mpris.players.values.filter(p => !(p.dbusName || "").includes("playerctld"))
+    property var player: players.length > 0 ? players[Math.min(currentPlayerIndex, players.length - 1)] : null
     property bool hovered: hoverHandler.hovered   // back to real hover for gradient
     property bool expanded: false
     property int pulse: 0
@@ -40,8 +43,8 @@ Item {
     }
 
     function nextPlayer() {
-        if (Mpris.players.values.length > 0) {
-            music.currentPlayerIndex = (music.currentPlayerIndex + 1) % Mpris.players.values.length
+        if (music.players.length > 0) {
+            music.currentPlayerIndex = (music.currentPlayerIndex + 1) % music.players.length
         }
     }
 

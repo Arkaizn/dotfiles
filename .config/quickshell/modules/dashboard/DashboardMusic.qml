@@ -13,8 +13,11 @@ Item {
 
     // ── Player selection ─────────────────────────────────────────────────────
     property int currentPlayerIndex: 0
-    property var player: Mpris.players.values.length > 0
-                         ? Mpris.players.values[currentPlayerIndex]
+    // all players except playerctld: it only mirrors the active player, so
+    // that one would show up twice (e.g. two "Mozilla zen")
+    readonly property var players: Mpris.players.values.filter(p => !(p.dbusName || "").includes("playerctld"))
+    property var player: players.length > 0
+                         ? players[Math.min(currentPlayerIndex, players.length - 1)]
                          : null
 
     // ── Local position tracking ───────────────────────────────────────────────
@@ -33,10 +36,30 @@ Item {
         }
     }
 
+    // Bring the player to the front: MPRIS Raise first (Firefox / Zen switch to
+    // the playing tab), then focus its window through niri — on Wayland an app
+    // usually can't put itself in front. The window is found by app id
+    // (desktop entry or player name); with several windows (browser), the one
+    // whose title has the track in it wins (= the playing tab).
+    function jumpToPlayer() {
+        const p = root.player
+        if (!p) return
+        if (p.canRaise) p.raise()
+        const key = (p.desktopEntry || p.identity || "").toLowerCase().replace(/^mozilla\s+/, "")
+        Quickshell.execDetached(["sh", "-c",
+            'sleep 0.3; '                                   // let the browser switch tab (title changes)
+            + 'id=$(niri msg -j windows | jq -r --arg k "$1" --arg t "$2" \''
+            + '[.[] | select((.app_id // "" | ascii_downcase) as $a | $a != "" and $k != "" and (($a | contains($k)) or ($k | contains($a))))]'
+            + ' | (map(select($t != "" and ((.title // "") | contains($t)))) + .) | first | .id // empty\'); '
+            + '[ -n "$id" ] && niri msg action focus-window --id "$id"; '
+            + 'qs ipc call dashboard close',
+            "sh", key, p.trackTitle || ""])
+    }
+
     function nextPlayer() {
-        if (Mpris.players.values.length > 0) {
+        if (root.players.length > 0) {
             root.localPosition = 0
-            currentPlayerIndex = (currentPlayerIndex + 1) % Mpris.players.values.length
+            currentPlayerIndex = (currentPlayerIndex + 1) % root.players.length
             playerSwitchSync.restart()
         }
     }
@@ -183,22 +206,28 @@ Item {
                     font.bold: true
                     elide: Text.ElideRight
                 }
+                // always takes its line (even without an artist), so the
+                // buttons below don't move between tracks / players
                 Text {
                     Layout.fillWidth: true
-                    text: root.player ? (root.player.trackArtist || "") : ""
+                    text: root.player ? (root.player.trackArtist || " ") : " "
                     color: Qt.rgba(1, 1, 1, 0.55)
                     font.pixelSize: 12
                     elide: Text.ElideRight
-                    visible: text !== ""
                 }
             }
 
-            // Source selector pill
+            // source pill (switches player) + jump to the player
+            RowLayout {
+                Layout.alignment: Qt.AlignLeft
+                spacing: 6
+
             Rectangle {
                 id: sourcePill
                 Layout.alignment: Qt.AlignLeft
-                height: 26
-                width: pillRow.implicitWidth + 18
+                // implicit size: the row lays it out to fit the icon + player name
+                implicitHeight: 26
+                implicitWidth: pillRow.implicitWidth + 18
                 radius: 8
                 border.color: Qt.rgba(1,1,1, sourcePill.hovered ? 0.28 : 0.18)
                 border.width: 0.5
@@ -267,9 +296,48 @@ Item {
                 }
             }
 
+            // jump to the player: its window (and in a browser the playing tab)
+            Rectangle {
+                id: jumpBtn
+                visible: root.player !== null
+                implicitWidth: 26; implicitHeight: 26
+                radius: 8
+                border.color: Qt.rgba(1,1,1, jumpHover.containsMouse ? 0.28 : 0.18)
+                border.width: 0.5
+                gradient: ButtonGradient { hovered: jumpHover.containsMouse }
+                Rectangle {
+                    anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
+                    radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                }
+                Text {
+                    anchors.centerIn: parent
+                    text: "󰏌"
+                    font.pixelSize: 13
+                    color: Colors.foreground
+                }
+                Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                MouseArea {
+                    id: jumpHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: jumpBtn.scale = 1.1
+                    onExited:  jumpBtn.scale = 1.0
+                    onPressed: jumpBtn.scale = Properties.onPressedButtonScale
+                    onReleased: jumpBtn.scale = containsMouse ? 1.1 : 1.0
+                    onCanceled: jumpBtn.scale = 1.0
+                    onClicked: root.jumpToPlayer()
+                }
+            }
+            }
+
+            // fixed gap: the controls sit at the same place whatever is shown above
+            Item { Layout.preferredHeight: 6 }
+
             // Controls row — shuffle / prev / play / next / repeat
             RowLayout {
                 Layout.fillWidth: true
+                transform: Translate { y: -4 }      // a touch higher, with the bar below
                 spacing: 4
 
                 Item { Layout.fillWidth: true }
