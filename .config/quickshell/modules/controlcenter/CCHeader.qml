@@ -30,10 +30,10 @@ RowLayout {
           cmd: "systemctl poweroff || loginctl poweroff" }
     ]
 
-    // opened with `qs ipc call <ipc> open`
+    // each runs `qs ipc call <call…>`
     readonly property var shortcuts: [
-        { icon: "󰌌", tip: "Keybinds", ipc: "keybinds" },
-        { icon: "󰒓", tip: "Settings", ipc: "settings" }
+        { icon: "󰌌", tip: "Keybinds", call: ["Launcher", "toggleKeybinds"] },
+        { icon: "󰒓", tip: "Settings", call: ["settings", "open"] }
     ]
 
     function run(a) {
@@ -108,7 +108,7 @@ RowLayout {
                     tooltip: modelData.tip
                     onClicked: {
                         root.actionStarted()
-                        Quickshell.execDetached(["qs", "ipc", "call", modelData.ipc, "open"])
+                        Quickshell.execDetached(["qs", "ipc", "call"].concat(modelData.call))
                     }
                 }
             }

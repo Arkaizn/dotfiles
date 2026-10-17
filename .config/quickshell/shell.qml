@@ -26,7 +26,6 @@ import "modules/controlcenter"
 import "modules/lockscreen"
 import "modules/settings"
 import "modules/calendar"
-import "modules/keybinds"
 import "modules/polkit"
 
 ShellRoot {
@@ -63,6 +62,5 @@ ShellRoot {
     Dashboard {id: dashboard}
     SettingsWindow { id: settingsWindow }
     CalendarWindow { id: calendarWindow }
-    Cheatsheet { id: cheatsheet }
     PolkitDialog {}
 }

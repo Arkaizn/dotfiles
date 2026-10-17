@@ -32,7 +32,7 @@ PanelWindow {
     // only the visible card animates between the two widths.
     readonly property int cardWidth: 640
     readonly property int wallpaperCardWidth: 960
-    readonly property int shownCardWidth: mode === "wallpapers" ? wallpaperCardWidth : cardWidth
+    readonly property int shownCardWidth: mode === "wallpapers" || mode === "keybinds" ? wallpaperCardWidth : cardWidth
     readonly property int flare: Properties.flareRadius
     implicitWidth: Math.max(cardWidth, wallpaperCardWidth) + flare * 2
 
@@ -107,6 +107,10 @@ PanelWindow {
         function toggleWallpapers(): void {
             root.toggle("wallpapers")
         }
+        // the keybind cheatsheet tab (the control center's keyboard button)
+        function toggleKeybinds(): void {
+            root.toggle("keybinds")
+        }
     }
 
     // Old wallpaper-selector IPC target, kept so existing keybinds still work
@@ -164,8 +168,8 @@ PanelWindow {
     }
 
     // Which sub-view is showing.
-    property string mode: "apps" // "apps" | "clipboard" | "wallpapers"
-    readonly property var modes: ["apps", "clipboard", "wallpapers"]
+    property string mode: "apps" // "apps" | "clipboard" | "wallpapers" | "keybinds"
+    readonly property var modes: ["apps", "clipboard", "wallpapers", "keybinds"]
 
     // Switching modes always clears the search text — carrying an "apps"
     // query like "steam" over into clipboard search would just be
@@ -200,7 +204,7 @@ PanelWindow {
     // the bottom instead of starting at the last view's size.
     onVisibleChanged: if (!visible) {
         slideAnim.stop()
-        for (const v of [appSearchView, clipboardView, wallpaperView]) { v.slideX = 0; v.opacity = 1 }
+        for (const v of [appSearchView, clipboardView, wallpaperView, keybindsView]) { v.slideX = 0; v.opacity = 1 }
         card.skipHeightAnim = true
         card.collapsed = true
     }
@@ -247,6 +251,7 @@ PanelWindow {
     function activeView() {
         return root.mode === "apps" ? appSearchView
              : root.mode === "clipboard" ? clipboardView
+             : root.mode === "keybinds" ? keybindsView
              : wallpaperView
     }
 
@@ -379,20 +384,35 @@ PanelWindow {
                     onCloseRequested: anim.exit()
                 }
 
+                KeybindsView {
+                    id: keybindsView
+                    Layout.fillWidth: true
+                    maxHeight: root.wallpaperMaxHeight
+                    Layout.preferredHeight: root.wallpaperMaxHeight
+                    Layout.maximumHeight: root.wallpaperMaxHeight
+                    query: searchField.text
+                    active: root.mode === "keybinds"
+                    visible: root.mode === "keybinds"
+                    property real slideX: 0
+                    transform: Translate { x: keybindsView.slideX }
+                    onCloseRequested: anim.exit()
+                }
+
                 SearchField {
                     id: searchField
                     Layout.fillWidth: true
                     Layout.preferredHeight: Properties.buttonHeight
-                    icon: root.mode === "apps" ? "󰍉" : root.mode === "clipboard" ? "󰅍" : "󰸉"
+                    icon: root.mode === "apps" ? "󰍉" : root.mode === "clipboard" ? "󰅍" : root.mode === "keybinds" ? "󰌌" : "󰸉"
                     placeholderText: root.mode === "apps" ? "Search apps"
                                    : root.mode === "clipboard" ? "Search clipboard history"
+                                   : root.mode === "keybinds" ? "Search keybinds"
                                    : "Search wallpapers"
 
                     Keys.onDownPressed: root.activeView().moveDown()
                     Keys.onUpPressed: root.activeView().moveUp()
                     Keys.onReturnPressed: root.activeView().activateCurrent()
 
-                    // Tab cycles apps -> clipboard -> wallpapers without
+                    // Tab cycles apps -> clipboard -> wallpapers -> keybinds without
                     // touching the mouse. Remove if you'd rather Tab do the
                     // usual focus-chain thing.
                     Keys.onTabPressed: (event) => {
@@ -424,7 +444,8 @@ PanelWindow {
                         model: [
                             { value: "apps",       glyph: "󰀻", tip: "Apps" },
                             { value: "clipboard",  glyph: "󰅍", tip: "Clipboard history" },
-                            { value: "wallpapers", glyph: "󰸉", tip: "Wallpapers" }
+                            { value: "wallpapers", glyph: "󰸉", tip: "Wallpapers" },
+                            { value: "keybinds",   glyph: "󰌌", tip: "Keybinds" }
                         ]
 
                         IconButton {
@@ -437,6 +458,14 @@ PanelWindow {
                     }
 
                     Item { Layout.fillWidth: true }
+
+                    // Keybinds: re-read the compositor config
+                    IconButton {
+                        visible: root.mode === "keybinds"
+                        icon: "󰑐"
+                        tooltip: "Reload from " + (Compositor.name || "niri") + " config"
+                        onClicked: Keybinds.refresh()
+                    }
 
                     // Wallpaper tools, only in wallpaper mode
                     IconButton {

@@ -264,7 +264,7 @@ Singleton {
             + windowRule("quickshell-settings", windowTitle, 980, 680)
             + windowRule("quickshell-calendar", "Quickshell Calendar", 1240, 800)
             + 'hl.bind("SUPER + S", hl.dsp.exec_cmd("qs ipc call settings toggle"), { description = "Settings" })\n'
-            + 'hl.bind("SUPER + F1", hl.dsp.exec_cmd("qs ipc call keybinds toggle"), { description = "Keybind cheatsheet" })\n\n'
+            + '\n'
             + "-- monitor setup from the Monitors page\n"
             + "pcall(dofile, " + Compositor.luaString(monitorsPath) + ")\n"
     }

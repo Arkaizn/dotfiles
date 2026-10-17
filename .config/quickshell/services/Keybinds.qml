@@ -23,6 +23,26 @@ Singleton {
     property var binds: []
     property string error: ""
 
+    // the "Most important" card of the cheatsheet: the first bind matching
+    // each of these (in this order), at most `importantMax`
+    readonly property int importantMax: 10
+    readonly property var importantPatterns: [
+        /^App launcher$/, /^Open (kitty|alacritty|foot|wezterm|ghostty|konsole|gnome-terminal|terminal)/i,
+        /^Close window$/, /^Fullscreen window$/, /^(Maximize column|Maximize window)$/, /^Float \/ tile window$/,
+        /^Overview$/, /^Focus workspace [0-9]+–[0-9]+$/, /^Move (column|window) to workspace [0-9]+–[0-9]+$/,
+        /^Clipboard history$/, /^Screenshot of a region$/, /^Settings$/, /^Wallpaper picker$/,
+        /^Lock screen$/, /^(Power menu|Logout screen|Quit niri|Quit Hyprland)$/
+    ]
+    readonly property var important: {
+        const out = []
+        for (const re of importantPatterns) {
+            const b = binds.find(x => re.test(x.desc) && !out.includes(x))
+            if (b) out.push(b)
+            if (out.length >= importantMax) break
+        }
+        return out
+    }
+
     // shown in this order, with these icons
     readonly property var categories: [
         { name: "Apps", icon: "󰀻" },
@@ -212,6 +232,7 @@ Singleton {
         "settings.toggle": "Settings",
         "settings.open": "Settings",
         "keybinds.toggle": "Keybind cheatsheet",
+        "Launcher.toggleKeybinds": "Keybind cheatsheet",
         "dashboard.toggle": "Dashboard",
         "controlCenter.toggle": "Control center",
         "testing.toggle": "Testing panel"

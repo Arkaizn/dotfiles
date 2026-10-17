@@ -346,7 +346,6 @@ Singleton {
             + windowRule("Quickshell Calendar", 1240, 800)
             + "binds {\n"
             + "    Mod+S hotkey-overlay-title=\"Settings\" { spawn-sh \"qs ipc call settings toggle\"; }\n"
-            + "    Mod+F1 hotkey-overlay-title=\"Keybind cheatsheet\" { spawn-sh \"qs ipc call keybinds toggle\"; }\n"
             + "}\n"
     }
 
