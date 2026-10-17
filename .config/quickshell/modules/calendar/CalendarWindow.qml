@@ -18,8 +18,15 @@ import "CalUtil.js" as U
 Scope {
     id: root
 
-    property bool open: false
-    property string view: "month"          // day | week | month | agenda
+    // kept across shell reloads (config edits etc.): an open window comes back
+    property alias open: persist.open
+    property alias view: persist.view      // day | week | month | agenda
+    PersistentProperties {
+        id: persist
+        reloadableId: "calendarWindow"
+        property bool open: false
+        property string view: "month"
+    }
 
     IpcHandler {
         target: "calendar"

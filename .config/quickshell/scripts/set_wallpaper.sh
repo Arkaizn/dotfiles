@@ -31,8 +31,9 @@ rm -fr ~/.cache/wal/schemes
 # Run pywal
 wal -i "$WALLPAPER" -n 2>/dev/null || true
 
-# Quickshell
-cp -fr ~/.cache/wal/Colors.qml ~/.config/quickshell/services/Colors.qml
+# Quickshell: services/Colors.qml reads ~/.cache/wal/colors.json (written by wal
+# above) and updates live — no generated QML copied in, so the shell doesn't
+# reload and open windows (settings, calendar) stay open.
 
 # Niri
 bash ~/.config/niri/niri-colors.sh

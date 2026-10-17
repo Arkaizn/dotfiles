@@ -15,7 +15,15 @@ import qs.services
 Scope {
     id: root
 
-    property bool open: false
+    // kept across shell reloads (config edits etc.): an open window comes back
+    property alias open: persist.open
+    property alias pageId: persist.pageId
+    PersistentProperties {
+        id: persist
+        reloadableId: "settingsWindow"
+        property bool open: false
+        property string pageId: "appearance"
+    }
 
     // open, or bring the already open window to the front (niri focuses it,
     // switching workspace / monitor if needed)
@@ -26,7 +34,6 @@ Scope {
                 + '[ -n "$id" ] && niri msg action focus-window --id "$id"', "sh", NiriSettings.windowTitle])
         root.open = true
     }
-    property string pageId: "appearance"
 
     IpcHandler {
         target: "settings"
