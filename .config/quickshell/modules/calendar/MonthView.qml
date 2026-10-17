@@ -156,6 +156,7 @@ ColumnLayout {
                         readonly property bool inMonth: day.getMonth() === root.shownMonth.getMonth()
                         readonly property bool today: U.isToday(day)
                         readonly property bool isSel: U.sameDay(day, root.cursor)
+                        readonly property bool weekend: index >= 5
                         readonly property var evs: CalendarStore.eventsOn(day).slice().sort((a, b) =>
                             (U.fullDay(b, day) - U.fullDay(a, day)) || a.start - b.start)
                         readonly property int fits: Math.max(0, Math.floor((height - 30) / 22))
@@ -166,7 +167,10 @@ ColumnLayout {
                         Layout.preferredWidth: 1
                         radius: 12
                         clip: true
-                        color: isSel ? Qt.rgba(1, 1, 1, 0.09) : inMonth ? "#27000000" : "#14000000"
+                        // weekend: a shade darker
+                        color: isSel ? Qt.rgba(1, 1, 1, 0.09)
+                             : inMonth ? (weekend ? "#3a000000" : "#27000000")
+                             : (weekend ? "#22000000" : "#14000000")
                         border.width: Properties.panelBorderWidth
                         border.color: isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6)
                                     : hover.hovered ? Qt.rgba(1, 1, 1, 0.16) : Properties.cardBorder
@@ -192,7 +196,8 @@ ColumnLayout {
                                 id: num
                                 anchors.centerIn: parent
                                 text: cell.day.getDate() === 1 ? cell.day.getDate() + ". " + U.monthNames[cell.day.getMonth()].slice(0, 3) : cell.day.getDate()
-                                color: cell.today ? U.onColor(Colors.color6) : cell.inMonth ? "white" : Qt.rgba(1, 1, 1, 0.3)
+                                color: cell.today ? U.onColor(Colors.color6)
+                                     : cell.inMonth ? (cell.weekend ? Qt.rgba(1, 1, 1, 0.6) : "white") : Qt.rgba(1, 1, 1, 0.3)
                                 font.pixelSize: 11
                                 font.bold: cell.today || cell.day.getDate() === 1
                                 font.family: Properties.fontFamily

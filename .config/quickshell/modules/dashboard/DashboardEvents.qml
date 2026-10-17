@@ -126,6 +126,11 @@ Item {
             spacing: 4
             boundsBehavior: Flickable.StopAtBounds
             model: root.events
+            // rows grow a little on hover: keep them off the clipping edges
+            leftMargin: 4
+            rightMargin: 4
+            topMargin: 2
+            bottomMargin: 2
 
             delegate: Rectangle {
                 id: row
@@ -133,7 +138,7 @@ Item {
                 readonly property color calColor: CalendarStore.calendarMap[modelData.calendar]?.color ?? Colors.color6
                 readonly property bool past: !modelData.allDay && modelData.end < root.now
                 readonly property bool live: !modelData.allDay && modelData.start <= root.now && modelData.end > root.now
-                width: ListView.view.width
+                width: ListView.view.width - 8
                 height: 40
                 radius: 9
                 color: mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07)

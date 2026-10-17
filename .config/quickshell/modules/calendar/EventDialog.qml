@@ -134,12 +134,15 @@ Modal {
         titleField.forceActiveFocus()
     }
 
-    function edit() {
+    // which = "this" (only this occurrence) | "all" (the series) | "" (not a series)
+    property string editScope: ""
+    function edit(which) {
         fillForm(ev)
         editing = true
         error = ""
         askScope = false
         scope = ""
+        editScope = ev && ev.recurring ? (which || "") : ""
     }
 
     function fillForm(e) {
@@ -183,6 +186,7 @@ Modal {
         const rule = buildRule()
         if (rule !== rOriginal) payload.setRrule = rule
         // a series: this occurrence or all of them? (a new repeat rule is always for all)
+        if (editScope !== "") scope = editScope === "this" && rule === rOriginal ? "this" : "all"
         if (ev && ev.recurring && scope === "" && rule === rOriginal && fCalendar === ev.calendar) {
             askScope = true
             return
@@ -518,12 +522,19 @@ Modal {
                     onClicked: root.confirmDelete = false
                 }
                 Item { Layout.fillWidth: true }
+                // a series: edit this occurrence or all of them
+                ActionButton {
+                    visible: !root.confirmDelete && (root.ev?.recurring ?? false)
+                    icon: "󰏫"
+                    text: "Edit this event"
+                    onClicked: root.edit("this")
+                }
                 ActionButton {
                     visible: !root.confirmDelete
-                    icon: "󰏫"
-                    text: "Edit"
+                    icon: (root.ev?.recurring ?? false) ? "󰑖" : "󰏫"
+                    text: (root.ev?.recurring ?? false) ? "Edit series" : "Edit"
                     primary: true
-                    onClicked: root.edit()
+                    onClicked: root.edit("all")
                 }
             }
         }
@@ -538,7 +549,8 @@ Modal {
                 Layout.fillWidth: true
                 Text {
                     Layout.fillWidth: true
-                    text: root.ev ? "Edit event" : "New event"
+                    text: !root.ev ? "New event" : root.editScope === "this" ? "Edit this event"
+                        : root.editScope === "all" ? "Edit series" : "Edit event"
                     color: "white"
                     font.pixelSize: 17
                     font.bold: true
@@ -564,7 +576,8 @@ Modal {
             Text {
                 Layout.fillWidth: true
                 visible: root.ev?.recurring ?? false
-                text: "󰑖  This event repeats — changes apply to every repeat."
+                text: root.editScope === "this" ? "󰑖  Only this occurrence changes — the rest of the series stays as it is."
+                    : "󰑖  Changes apply to every event of the series."
                 color: Qt.rgba(1, 1, 1, 0.55)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
@@ -625,6 +638,7 @@ Modal {
                         }
                     }
                     Rectangle {
+                        visible: root.editScope !== "this"
                         Layout.fillWidth: true
                         Layout.leftMargin: 16
                         Layout.rightMargin: 16
@@ -632,6 +646,7 @@ Modal {
                         color: Qt.rgba(1, 1, 1, 0.06)
                     }
                     FormRow {
+                        visible: root.editScope !== "this"      // this occurrence only: no repeat options
                         label: "Repeat"
                         DropdownControl {
                             implicitWidth: 200
@@ -644,7 +659,7 @@ Modal {
                         }
                     }
                     FormRow {
-                        visible: root.rFreq !== "none" && root.rFreq !== "custom"
+                        visible: root.rFreq !== "none" && root.rFreq !== "custom" && root.editScope !== "this"
                         label: "Every"
                         Stepper {
                             value: root.rInterval
@@ -660,7 +675,7 @@ Modal {
                         }
                     }
                     FormRow {
-                        visible: root.rFreq === "weekly"
+                        visible: root.rFreq === "weekly" && root.editScope !== "this"
                         label: "On"
                         Repeater {
                             model: root.dayCodes
@@ -695,7 +710,7 @@ Modal {
                         }
                     }
                     FormRow {
-                        visible: root.rFreq !== "none" && root.rFreq !== "custom"
+                        visible: root.rFreq !== "none" && root.rFreq !== "custom" && root.editScope !== "this"
                         label: "Until"
                         ChoiceControl {
                             options: ["never", "after", "until"]

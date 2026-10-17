@@ -154,6 +154,7 @@ Singleton {
                 root.errors = res.errors
                 root.lastSync = Date.now()
                 saveCache()
+                applyServerColors(res.colors ?? {})
             } else {
                 root.errors = [{ calendar: "", account: "", message: res.error }]
             }
@@ -226,7 +227,29 @@ Singleton {
         saveAccounts()
     }
 
+    // colors changed on another device (CalDAV: the server's calendar-color)
+    function applyServerColors(colors) {
+        let changed = false
+        const accs = root.accounts.map(a => Object.assign({}, a, {
+            calendars: a.calendars.map(c => {
+                const sc = colors[c.id]
+                if (!sc || sc.toLowerCase() === String(c.color).toLowerCase()) return c
+                changed = true
+                return Object.assign({}, c, { color: sc })
+            })
+        }))
+        if (changed) { root.accounts = accs; saveAccounts() }
+    }
+
     function setCalendar(calId, patch) {
+        // a new color also goes to the server (CalDAV), so other devices get it
+        if (patch.color !== undefined) {
+            const acc = accountOf(calId)
+            if (acc && acc.type === "caldav")
+                run("set-color", { account: acc, calendar: calendarOf(calId), color: patch.color }, res => {
+                    if (!res.ok) root.lastError = "Color not saved on the server: " + res.error
+                })
+        }
         let resync = false
         root.accounts = root.accounts.map(a => Object.assign({}, a, {
             calendars: a.calendars.map(c => {

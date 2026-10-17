@@ -57,17 +57,21 @@ Item {
         }
         MouseArea { anchors.fill: parent }   // clicks on the card don't close it
 
-        // scrolls when the content is taller than the window
+        // scrolls when the content is taller than the window. The clip edge
+        // sits 8 px outside the content (10 + 8 = the 18 px card padding), so
+        // buttons that grow on hover near the edge aren't cut off.
         Flickable {
             anchors.fill: parent
-            anchors.margins: 18
-            contentHeight: inner.childrenRect.height
+            anchors.margins: 10
+            contentHeight: inner.childrenRect.height + 16
             boundsBehavior: Flickable.StopAtBounds
             clip: true
             interactive: contentHeight > height
             Item {
                 id: inner
-                width: parent.width
+                x: 8
+                y: 8
+                width: parent.width - 16
                 height: childrenRect.height
             }
         }

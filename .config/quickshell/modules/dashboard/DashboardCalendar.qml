@@ -305,10 +305,12 @@ Item {
             Repeater {
                 model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
                 Text {
+                    required property string modelData
+                    required property int index
                     Layout.fillWidth: true
                     Layout.preferredWidth: 0
                     text: modelData
-                    color: Qt.rgba(1,1,1,0.35)
+                    color: index >= 5 ? Qt.rgba(1,1,1,0.2) : Qt.rgba(1,1,1,0.35)
                     font.pixelSize: 12
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -420,6 +422,7 @@ Item {
                                 color: dayCell.isOther    ? Qt.rgba(1,1,1,0.15)
                                      : dayCell.isSelected ? "white"
                                      : dayCell.isToday    ? "white"
+                                     : dayCell.index >= 5 ? Qt.rgba(1,1,1,0.45)     // weekend
                                      : Qt.rgba(1,1,1,0.75)
                             }
 

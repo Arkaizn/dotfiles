@@ -18,6 +18,7 @@ Usage:  calsync.py <command>   with the request JSON in $CAL_REQUEST,
   sync          {accounts, start, end}           -> {events: [...], errors: [...]}
   save          {account, calendar, event}       -> {}
   delete        {account, calendar, event, occurrence: bool}
+  set-color     {account, calendar, color}       -> {}   (CalDAV: writes the calendar's color)
   store-secret  {id, label, password}
   forget-secret {id}
 """
@@ -624,13 +625,27 @@ def sync(req):
         except Exception as e:  # keep the other calendars going
             return [], {"calendar": c["id"], "account": a.get("name", ""), "message": f"{type(e).__name__}: {e}"}
 
+    # colors changed on another device (iPhone, web) come along with every sync
+    def color_of(job):
+        a, c = job
+        if a["type"] != "caldav":
+            return None
+        try:
+            return c["id"], read_color(a, c)
+        except Exception:
+            return None
+
+    colors = {}
     with ThreadPoolExecutor(max_workers=6) as pool:
         for evs, err in pool.map(run, jobs):
             events.extend(evs)
             if err:
                 errors.append(err)
+        for r in pool.map(color_of, jobs):
+            if r and r[1]:
+                colors[r[0]] = r[1]
     events.sort(key=lambda e: (e["start"], not e["allDay"]))
-    return {"events": events, "errors": errors}
+    return {"events": events, "errors": errors, "colors": colors}
 
 
 # ── Writing ──────────────────────────────────────────────────────────────────
@@ -1071,6 +1086,47 @@ def delete(req):
     return {}
 
 
+# ── Calendar colors (Apple's calendar-color property, used by iCloud and most servers) ──
+
+PROPFIND_COLOR = """<?xml version="1.0" encoding="utf-8"?>
+<d:propfind xmlns:d="DAV:" xmlns:a="http://apple.com/ns/ical/"><d:prop><a:calendar-color/></d:prop></d:propfind>"""
+
+
+def read_color(account, cal):
+    """Color of one CalDAV calendar on the server, '#rrggbb' or None."""
+    user, pw = credentials(account)
+    status, _, body, _ = http("PROPFIND", cal["href"], user, pw, PROPFIND_COLOR, depth=0)
+    if status != 207:
+        return None
+    el = xml_root(body).find(".//a:calendar-color", NS)
+    c = (el.text or "").strip() if el is not None else ""
+    return c[:7].lower() if re.fullmatch(r"#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?", c) else None
+
+
+def set_color(req):
+    account, cal, color = req["account"], req["calendar"], req.get("color", "")
+    if account["type"] != "caldav":
+        return {}            # subscriptions / local files: the color only lives in the app
+    if not re.fullmatch(r"#[0-9a-fA-F]{6}", color or ""):
+        raise CalError("Not a color: " + str(color))
+    body = f"""<?xml version="1.0" encoding="utf-8"?>
+<d:propertyupdate xmlns:d="DAV:" xmlns:a="http://apple.com/ns/ical/">
+  <d:set><d:prop><a:calendar-color>{color.upper()}FF</a:calendar-color></d:prop></d:set>
+</d:propertyupdate>"""
+    user, pw = credentials(account)
+    status, _, resp, _ = http("PROPPATCH", cal["href"], user, pw, body)
+    check_auth(status)
+    if status == 207:
+        # the multistatus says per property whether it worked
+        st = xml_root(resp).find(".//d:propstat/d:status", NS)
+        if st is not None and st.text and " 200 " not in st.text + " ":
+            raise CalError("The server didn't take the color (" + st.text.strip() + ")")
+        return {}
+    if status not in (200, 204):
+        raise CalError(f"The server didn't take the color (status {status})")
+    return {}
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -1086,6 +1142,8 @@ def main():
             res = save(req)
         elif cmd == "delete":
             res = delete(req)
+        elif cmd == "set-color":
+            res = set_color(req)
         elif cmd == "store-secret":
             secret_store(req["id"], req.get("label") or "Quickshell calendar", req.get("password") or "")
             res = {}

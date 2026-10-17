@@ -173,8 +173,32 @@ Scope {
             readonly property date shownMonth: root.view === "month" && viewLoader.item?.shownMonth
                 ? viewLoader.item.shownMonth : U.monthStart(cursor)
 
+            // switching views slides too, in the order of the buttons
+            // (day · week · month · agenda): a view to the right comes in from the right
+            readonly property var viewOrder: ["day", "week", "month", "agenda"]
+            property string lastView: root.view
+            Connections {
+                target: root
+                function onViewChanged() {
+                    const dir = Math.sign(win.viewOrder.indexOf(root.view) - win.viewOrder.indexOf(win.lastView))
+                    win.lastView = root.view
+                    if (dir !== 0) Qt.callLater(win.slideIn, dir)     // once the new view is built
+                }
+            }
+
+            // is today in what's shown? (the Today buttons are dimmed when not)
+            readonly property bool showingToday: {
+                const t = new Date()
+                if (root.view === "week") return U.sameDay(U.weekStart(cursor), U.weekStart(t))
+                if (root.view === "month") return U.sameDay(shownMonth, U.monthStart(t))
+                return U.isToday(cursor)
+            }
+
             // content slides in from the side we're going to
             function slideIn(dir) {
+                viewIn.stop()                    // no fade/zoom mixed into the slide
+                viewLoader.opacity = 1
+                viewLoader.scale = 1
                 slide.stop()
                 slideX.from = dir * 46
                 slide.start()
@@ -310,6 +334,8 @@ Scope {
                                     implicitHeight: Properties.buttonHeight + 4
                                     icon: "󰃶"
                                     text: "Today"
+                                    opacity: win.showingToday ? 1 : 0.45
+                                    Behavior on opacity { NumberAnimation { duration: 150 } }
                                     onClicked: win.goToday()
                                 }
                             }
@@ -348,16 +374,22 @@ Scope {
                                 }
                             }
 
+                            // 4 px wider than the column on each side, list inset by the same:
+                            // same look, but hover-grown buttons at the edge aren't clipped
                             Flickable {
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
-                                contentHeight: accCol.implicitHeight
+                                Layout.leftMargin: -4
+                                Layout.rightMargin: -4
+                                contentHeight: accCol.implicitHeight + 8
                                 clip: true
                                 boundsBehavior: Flickable.StopAtBounds
 
                                 ColumnLayout {
                                     id: accCol
-                                    width: parent.width
+                                    x: 4
+                                    y: 4
+                                    width: parent.width - 8
                                     spacing: 8
 
                                     // empty state
@@ -470,7 +502,9 @@ Scope {
 
                                 ActionButton {
                                     text: "Today"
-                                    primary: U.isToday(win.cursor)
+                                    primary: win.showingToday
+                                    opacity: win.showingToday ? 1 : 0.45
+                                    Behavior on opacity { NumberAnimation { duration: 150 } }
                                     onClicked: win.goToday()
                                 }
                                 IconButton {
@@ -525,8 +559,10 @@ Scope {
                                     anchors.fill: parent
                                     sourceComponent: root.view === "month" ? monthView
                                                    : root.view === "agenda" ? agendaView : timeView
-                                    // switching views: fade + settle in
-                                    onLoaded: viewIn.restart()
+                                    // only the first view when the window opens fades + settles in;
+                                    // switching views only slides (onViewChanged), never both
+                                    property bool first: true
+                                    onLoaded: if (first) { first = false; viewIn.restart() }
                                 }
                             }
                             ParallelAnimation {

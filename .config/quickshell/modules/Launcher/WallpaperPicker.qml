@@ -41,7 +41,7 @@ ColumnLayout {
 
     // thumbnails per row (the Flow below has 8 px gaps, plus a little slack)
     readonly property int columns: 4
-    readonly property real cellW: (width - (columns - 1) * 8 - 4) / columns
+    readonly property real cellW: (width - 16 - (columns - 1) * 8 - 4) / columns     // 16 = side insets below
     readonly property real cellH: cellW * 0.58
     // thumbnails are decoded once at the wide card's cell size
     readonly property real thumbW: 230
@@ -240,8 +240,11 @@ ColumnLayout {
             }
         }
 
+        // inset 8 px from the scroll area's (clipping) edges: thumbnails grow
+        // a little on hover and would be cut off at the sides otherwise
         ColumnLayout {
-            width: scrollArea.availableWidth
+            x: 8
+            width: scrollArea.availableWidth - 16
             spacing: 10
 
             Text {
@@ -318,7 +321,8 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.preferredHeight: thumbs.implicitHeight * folderSection.openness
                         visible: folderSection.openness > 0.001
-                        clip: true
+                        // clip only while opening / closing (hover-grown tiles at rest aren't cut)
+                        clip: folderSection.openness < 0.999
 
                         Flow {
                             id: thumbs
@@ -349,6 +353,7 @@ ColumnLayout {
                     }
                 }
             }
+            Item { implicitHeight: 4 }    // room for the last row's hover
         }
     }
 }

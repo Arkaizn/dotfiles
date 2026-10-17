@@ -61,12 +61,14 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 implicitHeight: 44
 
+                // centered over its column in the week; day view: on the left, under the title
                 RowLayout {
-                    anchors.centerIn: parent
+                    anchors.verticalCenter: parent.verticalCenter
+                    x: root.days === 1 ? 6 : (parent.width - width) / 2
                     spacing: 8
                     Text {
                         text: root.days === 1 ? U.dayNames[U.weekday(head.modelData)] : U.dayShort[U.weekday(head.modelData)]
-                        color: head.today ? Colors.color6 : Qt.rgba(1, 1, 1, 0.5)
+                        color: head.today ? Colors.color6 : U.weekday(head.modelData) >= 5 ? Qt.rgba(1, 1, 1, 0.32) : Qt.rgba(1, 1, 1, 0.5)
                         font.pixelSize: 12
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -80,7 +82,7 @@ ColumnLayout {
                             id: dnum
                             anchors.centerIn: parent
                             text: head.modelData.getDate()
-                            color: head.today ? U.onColor(Colors.color6) : "white"
+                            color: head.today ? U.onColor(Colors.color6) : U.weekday(head.modelData) >= 5 ? Qt.rgba(1, 1, 1, 0.6) : "white"
                             font.pixelSize: 16
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -99,6 +101,9 @@ ColumnLayout {
         Layout.fillWidth: true
         readonly property var perDay: root.dayList.map(d => CalendarStore.eventsOn(d).filter(e => U.fullDay(e, d)))
         readonly property int rows: Math.min(4, Math.max(1, ...perDay.map(l => l.length)))
+        readonly property bool any: perDay.some(l => l.length > 0)
+        // only there when the shown days have all-day events
+        visible: any
         implicitHeight: rows * 22 + 10
         radius: 12
         color: "#27000000"
@@ -252,12 +257,29 @@ ColumnLayout {
                         Item {
                             id: col
                             required property var modelData
+                            required property int index
                             readonly property bool today: U.isToday(modelData)
                             readonly property var items: U.layoutDay(
                                 CalendarStore.eventsOn(modelData).filter(e => !U.fullDay(e, modelData)), modelData)
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             Layout.preferredWidth: 1
+
+                            // line between the days (in the middle of the 4 px gap)
+                            Rectangle {
+                                visible: root.days > 1 && col.index > 0
+                                x: -2.5
+                                width: 1
+                                height: parent.height
+                                color: Qt.rgba(1, 1, 1, 0.09)
+                            }
+
+                            // weekend: a shade darker
+                            Rectangle {
+                                anchors.fill: parent
+                                visible: root.days > 1 && U.weekday(col.modelData) >= 5
+                                color: "#22000000"
+                            }
 
                             // today tint
                             Rectangle {

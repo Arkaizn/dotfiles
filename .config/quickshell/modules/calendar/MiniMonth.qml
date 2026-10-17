@@ -70,11 +70,12 @@ ColumnLayout {
             model: U.dayShort
             Text {
                 required property string modelData
+                required property int index
                 width: grid.cell
                 height: 20
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData.slice(0, 2)
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: index >= 5 ? Qt.rgba(1, 1, 1, 0.25) : Qt.rgba(1, 1, 1, 0.4)
                 font.pixelSize: 10
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -108,7 +109,8 @@ ColumnLayout {
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: cell.evs.length > 0 ? -2 : 0
                     text: cell.day.getDate()
-                    color: cell.isSel ? U.onColor(Colors.color6) : cell.inMonth ? "white" : Qt.rgba(1, 1, 1, 0.3)
+                    color: cell.isSel ? U.onColor(Colors.color6)
+                         : cell.inMonth ? (cell.index % 7 >= 5 ? Qt.rgba(1, 1, 1, 0.55) : "white") : Qt.rgba(1, 1, 1, 0.3)
                     font.pixelSize: 11
                     font.bold: cell.today || cell.isSel
                     font.family: Properties.fontFamily

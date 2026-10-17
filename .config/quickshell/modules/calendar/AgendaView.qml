@@ -65,7 +65,7 @@ Item {
                     Text {
                         anchors.right: parent.right
                         text: group.modelData.day.getDate()
-                        color: group.today ? Colors.color6 : "white"
+                        color: group.today ? Colors.color6 : U.weekday(group.modelData.day) >= 5 ? Qt.rgba(1, 1, 1, 0.6) : "white"
                         font.pixelSize: 26
                         font.bold: true
                         font.family: Properties.fontFamily
