@@ -74,6 +74,15 @@ Rectangle {
         "buttonHeight", "buttonWidth", "buttonradius"
     ]
     property var defaults: ({})
+    property var walLinked: ({})   // keys currently bound to a pywal color
+
+    // A color setting can be a hex string or a link to a pywal color:
+    //   { "wal": "color4", "alpha": 0.8 }   (alpha optional)
+    // A link is a binding, so it follows Colors on every wallpaper change.
+    function walColor(link) {
+        const c = Colors[link.wal] ?? Colors.foreground
+        return Qt.rgba(c.r, c.g, c.b, link.alpha ?? 1)
+    }
 
     function applySettings() {
         if (Object.keys(defaults).length === 0) {
@@ -87,10 +96,17 @@ Rectangle {
             defaults = d
         }
         const o = Settings.properties
+        const linked = {}
         for (const k of settingKeys) {
             const v = o[k] !== undefined ? o[k] : defaults[k]
-            if (root[k] !== v) root[k] = v
+            if (v?.wal !== undefined) {
+                root[k] = Qt.binding(() => root.walColor(v))
+                linked[k] = true
+            } else if (walLinked[k] || root[k] !== v) {
+                root[k] = v   // also drops a previous pywal binding
+            }
         }
+        walLinked = linked
     }
 
     Component.onCompleted: applySettings()

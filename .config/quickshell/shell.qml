@@ -26,6 +26,7 @@ import "modules/controlcenter"
 import "modules/lockscreen"
 import "modules/settings"
 import "modules/calendar"
+import "modules/keybinds"
 
 ShellRoot {
     id: root
@@ -58,4 +59,5 @@ ShellRoot {
     Dashboard {id: dashboard}
     SettingsWindow { id: settingsWindow }
     CalendarWindow { id: calendarWindow }
+    Cheatsheet { id: cheatsheet }
 }

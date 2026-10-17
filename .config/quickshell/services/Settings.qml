@@ -8,7 +8,8 @@ import QtQuick
 //   { "properties": { key: value }, "niri": { key: value },
 //     "monitors": { "<make model serial>": { mode, scale, ... } } }
 // Only changed values are stored; everything else keeps its default.
-//   properties → applied by Properties.qml (defaults = the values written there)
+//   properties → applied by Properties.qml (defaults = the values written there);
+//                a color can also be { "wal": "color4", "alpha": 0.8 } to follow pywal
 //   niri       → written to niri's override file by NiriSettings.qml
 //   monitors   → written to niri's outputs file by Monitors.qml
 //   calendar   → reminder / sync options, read by CalendarStore.qml

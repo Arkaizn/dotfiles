@@ -299,43 +299,81 @@ Scope {
                                 Keys.onEscapePressed: text = ""
                             }
 
-                            Repeater {
-                                model: ["Shell", "Apps", "Niri"]
-                                ColumnLayout {
-                                    id: group
-                                    required property string modelData
-                                    Layout.fillWidth: true
-                                    spacing: 3
+                            // the tabs scroll when the window is too short for all of them
+                            Flickable {
+                                id: navFlick
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                // reach into the sidebar padding so the hover scale isn't clipped
+                                Layout.leftMargin: -4
+                                Layout.rightMargin: -4
+                                contentHeight: nav.implicitHeight
+                                clip: true
+                                boundsBehavior: Flickable.StopAtBounds
 
-                                    Text {
-                                        Layout.topMargin: 6
-                                        Layout.leftMargin: 8
-                                        Layout.bottomMargin: 2
-                                        text: group.modelData.toUpperCase()
-                                        color: Qt.rgba(1, 1, 1, 0.4)
-                                        font.pixelSize: 10
-                                        font.bold: true
-                                        font.letterSpacing: 1.2
-                                        font.family: Properties.fontFamily
-                                    }
+                                ColumnLayout {
+                                    id: nav
+                                    x: 4
+                                    width: navFlick.width - 8
+                                    spacing: 6
 
                                     Repeater {
-                                        model: root.pages.filter(p => p.group === group.modelData)
-                                        NavItem {
-                                            required property var modelData
+                                        model: ["Shell", "Apps", "Niri"]
+                                        ColumnLayout {
+                                            id: group
+                                            required property string modelData
                                             Layout.fillWidth: true
-                                            icon: modelData.icon
-                                            label: modelData.title
-                                            selected: win.query === "" && win.pageId === modelData.id
-                                            changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
-                                                .filter(k => Settings[modelData.store]?.[k] !== undefined).length
-                                            onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
+                                            spacing: 3
+
+                                            Text {
+                                                Layout.topMargin: 6
+                                                Layout.leftMargin: 8
+                                                Layout.bottomMargin: 2
+                                                text: group.modelData.toUpperCase()
+                                                color: Qt.rgba(1, 1, 1, 0.4)
+                                                font.pixelSize: 10
+                                                font.bold: true
+                                                font.letterSpacing: 1.2
+                                                font.family: Properties.fontFamily
+                                            }
+
+                                            Repeater {
+                                                model: root.pages.filter(p => p.group === group.modelData)
+                                                NavItem {
+                                                    required property var modelData
+                                                    Layout.fillWidth: true
+                                                    icon: modelData.icon
+                                                    label: modelData.title
+                                                    selected: win.query === "" && win.pageId === modelData.id
+                                                    changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
+                                                        .filter(k => Settings[modelData.store]?.[k] !== undefined).length
+                                                    onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
 
-                            Item { Layout.fillHeight: true }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Layout.topMargin: 6
+                                spacing: 6
+                                ActionButton {
+                                    Layout.fillWidth: true
+                                    icon: "󰈝"
+                                    text: "Export"
+                                    interactive: transfer.mode !== "busy"
+                                    onClicked: transfer.exportSettings()
+                                }
+                                ActionButton {
+                                    Layout.fillWidth: true
+                                    icon: "󰋺"
+                                    text: "Import"
+                                    interactive: transfer.mode !== "busy"
+                                    onClicked: transfer.importSettings()
+                                }
+                            }
 
                             Text {
                                 Layout.fillWidth: true
@@ -409,6 +447,13 @@ Scope {
                                     onClicked: root.open = false
                                 }
                             }
+                        }
+
+                        // export / import result; an import waits here for confirmation
+                        SettingsTransfer {
+                            id: transfer
+                            Layout.fillWidth: true
+                            pages: root.pages
                         }
 
                         // niri status: missing include / rejected config

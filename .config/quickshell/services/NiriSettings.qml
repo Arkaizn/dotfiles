@@ -197,13 +197,17 @@ Singleton {
             while (i < n && !/[\s;{}"]/.test(src[i])) w += src[i++]
             const eq = w.indexOf("=")
             if (eq >= 0) {
-                // property like key=value / key="value" / key=r#"value"#: skip it
-                const val = w.slice(eq + 1)
+                // property like key=value / key="value" / key=r#"value"#
+                // (parseInto skips them; Keybinds reads hotkey-overlay-title)
+                let val = w.slice(eq + 1)
+                let quoted = false
                 if (i < n && src[i] === '"' && (val === "" || /^r#*$/.test(val))) {
                     const r = readString(src, i + 1, val === "" ? -1 : val.length - 1)
                     i = r[1]
+                    val = r[0]
+                    quoted = true
                 }
-                toks.push({ t: "prop" })
+                toks.push({ t: "prop", k: w.slice(0, eq), v: val, quoted: quoted })
                 continue
             }
             toks.push({ t: "word", v: w })
@@ -342,6 +346,7 @@ Singleton {
             + windowRule("Quickshell Calendar", 1240, 800)
             + "binds {\n"
             + "    Mod+S hotkey-overlay-title=\"Settings\" { spawn-sh \"qs ipc call settings toggle\"; }\n"
+            + "    Mod+F1 hotkey-overlay-title=\"Keybind cheatsheet\" { spawn-sh \"qs ipc call keybinds toggle\"; }\n"
             + "}\n"
     }
 

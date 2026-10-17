@@ -13,3 +13,4 @@ singleton Settings Settings.qml
 singleton NiriSettings NiriSettings.qml
 singleton Monitors Monitors.qml
 singleton CalendarStore CalendarStore.qml
+singleton Keybinds Keybinds.qml

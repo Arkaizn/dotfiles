@@ -62,6 +62,15 @@ RowLayout {
     }
 
     IconButton {
+        icon: "󰌌"
+        tooltip: "Keybinds"
+        onClicked: {
+            root.actionStarted()
+            Quickshell.execDetached(["qs", "ipc", "call", "keybinds", "open"])
+        }
+    }
+
+    IconButton {
         icon: "󰒓"
         tooltip: "Settings"
         onClicked: {

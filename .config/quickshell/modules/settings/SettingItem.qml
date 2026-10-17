@@ -36,6 +36,11 @@ Item {
         else Settings.set(store, spec.key, v)
     }
 
+    // follow a pywal color (see Properties.walColor)
+    function setLink(name, alpha) {
+        Settings.set(store, spec.key, alpha < 1 ? { wal: name, alpha: alpha } : { wal: name })
+    }
+
     function reset() {
         if (isNiri) NiriSettings.reset(spec.key)
         else Settings.reset(store, spec.key)
@@ -142,7 +147,10 @@ Item {
         id: colorPicker
         ColorControl {
             value: root.current
+            canLink: root.store === "properties"   // only Properties resolves links
+            link: canLink ? (Settings.properties[root.spec.key]?.wal ?? "") : ""
             onEdited: v => root.set(v)
+            onLinked: (name, alpha) => root.setLink(name, alpha)
         }
     }
     Component {

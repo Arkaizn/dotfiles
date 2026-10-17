@@ -8,11 +8,17 @@ import "../controlcenter"
 // Color value: swatch + hex field. The swatch opens a picker with the
 // pywal palette (Colors) and an opacity slider.
 // Hex is #rrggbb or #aarrggbb (Qt order, alpha first).
+// With canLink, a pywal chip links the setting to that palette slot instead
+// of copying its hex, so it follows every wallpaper change; typing a hex
+// sets a fixed color again.
 RowLayout {
     id: root
 
     property color value: "white"
+    property bool canLink: false
+    property string link: ""     // pywal color name it follows ("color4"), "" = fixed
     signal edited(color value)
+    signal linked(string name, real alpha)
 
     spacing: 8
 
@@ -57,6 +63,25 @@ RowLayout {
                 border.color: parent.border.color
             }
         }
+        // follows the wallpaper
+        Rectangle {
+            visible: root.link !== ""
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.margins: -3
+            width: 14; height: 14; radius: 7
+            color: Colors.background
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.3)
+            Text {
+                anchors.centerIn: parent
+                text: "󰸉"
+                color: "white"
+                font.pixelSize: 8
+                font.family: Properties.fontFamily
+            }
+        }
+
         scale: swatchMouse.pressed ? Properties.onPressedButtonScale
              : swatchMouse.containsMouse ? Properties.onEnteredButtonScale : 1
         Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
@@ -87,7 +112,7 @@ RowLayout {
                 spacing: 10
 
                 Text {
-                    text: "Palette"
+                    text: root.canLink ? "Wallpaper colors (follow wallpaper changes)" : "Palette"
                     color: Qt.rgba(1, 1, 1, 0.55)
                     font.pixelSize: 11
                     font.bold: true
@@ -98,19 +123,22 @@ RowLayout {
                     columns: 10
                     spacing: 6
                     Repeater {
-                        model: [Colors.foreground, Colors.background, "#ffffff", "#000000",
-                                Colors.color1, Colors.color2, Colors.color3, Colors.color4, Colors.color5, Colors.color6,
-                                Colors.color7, Colors.color8, Colors.color9, Colors.color10, Colors.color11, Colors.color12,
-                                Colors.color13, Colors.color14, Colors.color15, Colors.color0]
+                        // name = Colors property it links to; white/black are always fixed
+                        model: ["foreground", "background", "#ffffff", "#000000",
+                                "color1", "color2", "color3", "color4", "color5", "color6",
+                                "color7", "color8", "color9", "color10", "color11", "color12",
+                                "color13", "color14", "color15", "color0"]
                         Rectangle {
                             id: chip
-                            required property color modelData
+                            required property string modelData
+                            readonly property bool isWal: !modelData.startsWith("#")
+                            readonly property bool selected: isWal && root.link === modelData
                             width: 22
                             height: 22
                             radius: 6
-                            color: modelData
-                            border.width: 1.5
-                            border.color: Qt.rgba(1, 1, 1, chipMouse.containsMouse ? 0.6 : 0.18)
+                            color: isWal ? Colors[modelData] : modelData
+                            border.width: selected ? 2 : 1.5
+                            border.color: selected ? "white" : Qt.rgba(1, 1, 1, chipMouse.containsMouse ? 0.6 : 0.18)
                             scale: chipMouse.containsMouse ? 1.12 : 1
                             Behavior on scale { NumberAnimation { duration: 100 } }
                             MouseArea {
@@ -119,8 +147,14 @@ RowLayout {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 // keep the current opacity
-                                onClicked: root.edited(root.withAlpha(chip.modelData, root.value.a))
+                                onClicked: {
+                                    if (chip.isWal && root.canLink) root.linked(chip.modelData, root.value.a)
+                                    else root.edited(root.withAlpha(chip.color, root.value.a))
+                                }
                             }
+                            ToolTip.visible: chip.isWal && chipMouse.containsMouse
+                            ToolTip.text: chip.modelData
+                            ToolTip.delay: 400
                         }
                     }
                 }
@@ -137,7 +171,11 @@ RowLayout {
                     CCSlider {
                         Layout.fillWidth: true
                         value: root.value.a
-                        onMoved: root.edited(root.withAlpha(root.value, Math.round(value * 100) / 100))
+                        onMoved: {
+                            const a = Math.round(value * 100) / 100
+                            if (root.link !== "") root.linked(root.link, a)
+                            else root.edited(root.withAlpha(root.value, a))
+                        }
                     }
                     Text {
                         Layout.preferredWidth: 34
@@ -161,10 +199,17 @@ RowLayout {
         leftPadding: 10
         rightPadding: 10
         font.capitalization: Font.AllUppercase
-        text: root.toHex(root.value)
+        // a linked color shows its pywal name; typing a hex makes it fixed
+        function shown() { return root.link !== "" ? root.link : root.toHex(root.value) }
+        text: shown()
+        onActiveFocusChanged: if (activeFocus && root.link !== "") text = root.toHex(root.value)
         onEditingFinished: {
-            if (/^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(text)) root.edited(text)
-            text = Qt.binding(() => root.toHex(root.value))
+            const hex = root.toHex(root.value)
+            // leaving a linked color's field untouched keeps the link
+            if (/^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(text)
+                    && !(root.link !== "" && text.toLowerCase() === hex.toLowerCase()))
+                root.edited(text)
+            text = Qt.binding(() => field.shown())
         }
     }
 }
