@@ -25,8 +25,13 @@ Rectangle {
     property var pending: null               // checked file content, while mode === "confirm"
 
     readonly property string defaultPath: Quickshell.env("HOME") + "/quickshell-settings.json"
-    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar"]
-    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar" })
+    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network"]
+    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar", network: "network page" })
+    // the network page's own preferences (not spec-driven)
+    readonly property var networkSpecs: ({
+        hideVirtual: { type: "bool" }, safeApply: { type: "bool" },
+        showDevices: { type: "list" }, hideDevices: { type: "list" }
+    })
     readonly property var walNames: ["foreground", "background", "color0", "color1", "color2", "color3", "color4",
         "color5", "color6", "color7", "color8", "color9", "color10", "color11", "color12", "color13", "color14", "color15"]
 
@@ -142,6 +147,7 @@ Rectangle {
     function specFor(group, key) {
         if (group === "niri") return NiriSettings.spec(key)
         if (group === "hyprland") return HyprSettings.spec(key)
+        if (group === "network") return networkSpecs[key] ?? null
         for (const p of pages)
             if (p.store === group)
                 for (const s of p.sections) for (const i of s.items) if (i.key === key) return i
@@ -166,6 +172,8 @@ Rectangle {
             return range()
         case "bool":
             return typeof x === "boolean" ? "" : "expected true or false, got " + str(x)
+        case "list":
+            return Array.isArray(x) && x.every(v => typeof v === "string") ? "" : "expected a list of names like [\"docker0\"], got " + str(x)
         case "choice":
             return sp.options.includes(x) ? "" : str(x) + " isn't one of " + sp.options.map(str).join(", ")
         case "color":

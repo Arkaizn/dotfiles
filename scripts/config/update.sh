@@ -132,6 +132,12 @@ pacman -Qi tesseract &>/dev/null || yay -S tesseract --noconfirm
 pacman -Qi tesseract-data-eng &>/dev/null || yay -S tesseract-data-eng --noconfirm
 pacman -Qi tesseract-data-deu &>/dev/null || yay -S tesseract-data-deu --noconfirm
 
+## 17/10/26
+# calendar app: calsync.py needs dateutil, account passwords go to the keyring (secret-tool)
+pacman -Qi python-dateutil &>/dev/null || sudo pacman -S python-dateutil --noconfirm
+pacman -Qi libsecret &>/dev/null || sudo pacman -S libsecret --noconfirm
+pacman -Qi gnome-keyring &>/dev/null || sudo pacman -S gnome-keyring --noconfirm
+
 
 
 echo "Done ✅"

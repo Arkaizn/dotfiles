@@ -91,6 +91,11 @@ necessary_packages=(
     ripgrep
     lazygit
 
+    # Calendar app (Quickshell): CalDAV sync script + password keyring
+    python-dateutil
+    libsecret
+    gnome-keyring
+
     # Miscellaneous Apps
     gnome-calculator
     kdbusaddons # dependency of Nextcloud

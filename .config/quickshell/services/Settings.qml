@@ -14,6 +14,7 @@ import QtQuick
 //   hyprland   → written to Hyprland's override file by HyprSettings.qml
 //   monitors   → written to niri's / Hyprland's monitor file by Monitors.qml
 //   calendar   → reminder / sync options, read by CalendarStore.qml
+//   network    → network page preferences (hidden interfaces, safe apply)
 Singleton {
     id: root
 
@@ -23,6 +24,7 @@ Singleton {
     property var hyprland: ({})
     property var monitors: ({})
     property var calendar: ({})
+    property var network: ({})
     property bool loaded: false
 
     function has(group, key) { return root[group][key] !== undefined }
@@ -62,6 +64,7 @@ Singleton {
             root.hyprland = o.hyprland ?? {}
             root.monitors = o.monitors ?? {}
             root.calendar = o.calendar ?? {}
+            root.network = o.network ?? {}
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }
@@ -72,7 +75,7 @@ Singleton {
     Timer {
         id: saveTimer
         interval: 400
-        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, hyprland: root.hyprland, monitors: root.monitors, calendar: root.calendar }, null, 2) + "\n")
+        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, hyprland: root.hyprland, monitors: root.monitors, calendar: root.calendar, network: root.network }, null, 2) + "\n")
     }
 
     Component.onCompleted: parse(file.text())

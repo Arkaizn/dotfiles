@@ -27,6 +27,7 @@ import "modules/lockscreen"
 import "modules/settings"
 import "modules/calendar"
 import "modules/keybinds"
+import "modules/polkit"
 
 ShellRoot {
     id: root
@@ -61,4 +62,5 @@ ShellRoot {
     SettingsWindow { id: settingsWindow }
     CalendarWindow { id: calendarWindow }
     Cheatsheet { id: cheatsheet }
+    PolkitDialog {}
 }

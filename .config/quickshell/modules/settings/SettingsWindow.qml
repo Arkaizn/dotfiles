@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import "network"
 
 // Settings app: a normal (floating) window to change the Properties.qml
 // values and some compositor settings. Changes apply live and are saved to
@@ -111,6 +112,9 @@ Scope {
                 { key: "onEnteredButtonScale", type: "real", min: 1, max: 1.3, step: 0.01, label: "Hover zoom" },
                 { key: "onPressedButtonScale", type: "real", min: 0.7, max: 1, step: 0.01, label: "Press shrink" },
                 { key: "onEnteredTextScale", type: "real", min: 1, max: 1.5, step: 0.01, label: "Workspace & tray hover zoom" } ] } ] },
+
+        { id: "network", group: "System", icon: "󰛳", title: "Network", custom: "network",
+          desc: "Interfaces, IP settings, DNS and profiles (NetworkManager)" },
 
         { id: "monitors", group: wmGroup, icon: "󰍹", title: "Monitors", custom: "monitors",
           desc: "Arrange screens, resolution, refresh rate and scale" },
@@ -362,7 +366,7 @@ Scope {
                                     spacing: 6
 
                                     Repeater {
-                                        model: ["Shell", "Apps", root.wmGroup]
+                                        model: ["Shell", "System", "Apps", root.wmGroup]
                                         ColumnLayout {
                                             id: group
                                             required property string modelData
@@ -573,6 +577,13 @@ Scope {
                                     sourceComponent: MonitorsPage {}
                                 }
 
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "network"
+                                    visible: active
+                                    sourceComponent: NetworkPage { footerHost: footerArea }
+                                }
+
                                 Repeater {
                                     model: win.sections
                                     ColumnLayout {
@@ -637,6 +648,15 @@ Scope {
                                 }
                             }
 
+                        }
+
+                        // pages put bars here that must stay in reach while scrolling
+                        // (network: Apply / keep-or-revert)
+                        ColumnLayout {
+                            id: footerArea
+                            Layout.fillWidth: true
+                            Layout.fillHeight: false      // layouts stretch by default; only the content should
+                            spacing: 0
                         }
                     }
                 }
