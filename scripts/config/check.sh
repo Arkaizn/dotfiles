@@ -1,61 +1,35 @@
 #!/usr/bin/env bash
+# Does ~/.config differ from the repo? Same rules as push.sh (default profile),
+# run as a dry run: lists what a push would change, exit 1 if anything.
 set -euo pipefail
 
 SOURCE_DIR="$HOME/.config"
 TARGET_DIR="$HOME/git/dotfiles/.config"
 
-echo "Checking differences (lite mode)…"
+# per-device files and junk: see sync-excludes.sh
+source "$(dirname "$(readlink -f "$0")")/sync-excludes.sh"
 
-# Global always-skip files (never overwrite, never push)
-GLOBAL_EXCEPTIONS=(
-    "hypr/wallpapers/pywallpaper.png"
-    "hypr/wallpapers/thumbs.db"
-    "kitty/current-theme.conf"
-)
+echo "Checking differences…"
 
-# Build exclude args dynamically
-GLOBAL_EXCLUDES=()
-for g in "${GLOBAL_EXCEPTIONS[@]}"; do
-    GLOBAL_EXCLUDES+=( --exclude="$g" )
-done
+args=(-a --delete --dry-run --itemize-changes --out-format='%i %n')
+for e in "${DEVICE_FILES[@]}"; do args+=(--exclude="/$e"); done
+for e in "${NEVER_PUSH[@]}"; do args+=(--exclude="$e"); done
+args+=(--exclude="/hypr/wallpapers/pywallpaper.png" --exclude="/hypr/wallpapers/thumbs.db")
 
-DIFF_FOUND=0
+# only the top-level folders the repo has (like push.sh)
+while IFS= read -r name; do
+    args+=(--include="$name/" --include="$name/**")
+done < <(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 -type d -printf '%f\n')
+args+=(--exclude="*")
 
-check_existing_only() {
-    find "$TARGET_DIR" -mindepth 1 -maxdepth 1 | while read -r item; do
-        rel_path="${item#$TARGET_DIR/}"
-        src="$SOURCE_DIR/$rel_path"
-        dst="$TARGET_DIR/$rel_path"
+# drop folder-only entries (".d..t…" = just a timestamp)
+out=$(rsync "${args[@]}" "$SOURCE_DIR/" "$TARGET_DIR/" | grep -v '^\.d' || true)
 
-        if [ -e "$src" ]; then
-            if [ -d "$src" ]; then
-                out=$(rsync -av --dry-run --itemize-changes \
-                    --exclude="custom" \
-                    --exclude="hyprland/monitors.conf" \
-                    "${GLOBAL_EXCLUDES[@]}" \
-                    "$src/" "$dst")
-            else
-                out=$(rsync -av --dry-run --itemize-changes \
-                    --exclude="custom" \
-                    --exclude="hyprland/monitors.conf" \
-                    "${GLOBAL_EXCLUDES[@]}" \
-                    "$src" "$dst")
-            fi
-
-            if [ -n "$out" ]; then
-                echo "$out"
-                DIFF_FOUND=1
-            fi
-        fi
-    done
-}
-
-check_existing_only
-
-if [ "$DIFF_FOUND" -eq 0 ]; then
+if [ -z "$out" ]; then
     echo "✅ Up to date"
     exit 0
 else
+    echo "$out"
     echo "❌ Differences found"
     exit 1
 fi

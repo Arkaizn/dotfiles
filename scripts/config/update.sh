@@ -18,20 +18,9 @@ log "=== Dotfiles sync started $(date) ==="
 
 # Files "default" protects from overwrite; "full" ignores this list.
 # NOTE: these are root-relative paths (relative to SOURCE_DIR).
-DEFAULT_EXCLUDES=(
-    "custom/"
-    "kitty/current-theme.conf"
-    "quickshell/services/Colors.qml"
-    "niri/config/layout.kdl"
-    "hypr/hyprland/monitors.lua"
-    "hypr/hyprlock/hyprlock.sh"
-    "niri/config/output.kdl"
-    # per-device files of the quickshell settings app; the repo only holds
-    # neutral defaults so a fresh install works (niri errors on missing includes)
-    "quickshell/settings.json"
-    "niri/config/quickshell.kdl"
-    "niri/config/quickshell-outputs.kdl"
-)
+# Per-device files (protected): see sync-excludes.sh — one list for all sync scripts.
+source "$(dirname "$(readlink -f "$0")")/sync-excludes.sh"
+DEFAULT_EXCLUDES=("${DEVICE_FILES[@]}")
 
 profile=$(gum choose "default" "full")            # ask user which sync mode to use
 echo "Profile: $profile"

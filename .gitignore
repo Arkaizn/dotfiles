@@ -1,0 +1,6 @@
+# Safety net next to scripts/config/sync-excludes.sh: things that must never
+# land in this (public) repo even if they get copied in by accident.
+*.bak*
+__pycache__/
+*.pyc
+.config/wayvnc/config

@@ -1,0 +1,6 @@
+# Copy to ~/.config/wayvnc/config and set your own password.
+# The real config is per device and never synced (scripts/config/sync-excludes.sh).
+address=0.0.0.0
+enable_auth=true
+username=user
+password=CHANGE_ME

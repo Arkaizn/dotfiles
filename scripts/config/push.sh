@@ -4,22 +4,8 @@ SOURCE_DIR="$HOME/.config"                         # where your live configs are
 TARGET_DIR="$HOME/git/dotfiles/.config"             # where they get pushed to (repo)
 
 # Files/dirs to leave alone when pushing (host-specific or repo-managed)
-DEFAULT_EXCLUDES=(
-"custom/hyprland/custom.lua"
-"kitty/current-theme.conf"
-"hypr/hyprlock/hyprlock.sh"
-"quickshell/services/Colors.qml"
-"niri/config/layout.kdl"
-"custom"
-"hypr/hyprland/monitors.lua"
-"niri/config/output.kdl"
-"cava"
-# per-device files of the quickshell settings app (repo keeps neutral defaults)
-"quickshell/settings.json"
-"niri/config/quickshell.kdl"
-"niri/config/quickshell-outputs.kdl"
-"niri/config.kdl.bak-*"
-)
+# Per-device files and junk (backups, caches, secrets): see sync-excludes.sh
+source "$(dirname "$(readlink -f "$0")")/sync-excludes.sh"
 
 profile=$(gum choose "default" "full")              # ask user which push mode to use
 echo "Profile: $profile"
@@ -28,10 +14,15 @@ rsync_args=(-av --delete)
 
 # only protect files in "default" mode
 if [[ "$profile" == "default" ]]; then
-    for e in "${DEFAULT_EXCLUDES[@]}"; do
-        rsync_args+=(--exclude="$e")
+    # anchored ("/custom/" = only ~/.config/custom, not any folder called custom)
+    for e in "${DEVICE_FILES[@]}"; do
+        rsync_args+=(--exclude="/$e")
     done
 fi
+# junk / secrets / retired files: never, in either mode
+for e in "${NEVER_PUSH[@]}"; do
+    rsync_args+=(--exclude="$e")
+done
 
 # only sync top-level folders that already exist in TARGET_DIR
 while IFS= read -r name; do
