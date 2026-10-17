@@ -100,29 +100,6 @@ fi
 
 # temp (delete after a while / 2 Month?)
 
-## 07/08/26
-
-pacman -Qi kdbusaddons &>/dev/null || yay -S kdbusaddons --noconfirm
-
-## 08/09/26
-pacman -Qi polkit &>/dev/null || sudo pacman -S polkit --noconfirm
-pacman -Qi polkit-gnome &>/dev/null || sudo pacman -S polkit-gnome --noconfirm
-
-## 11/09/26
-pacman -Qi ttf-jetbrains-mono-nerd &>/dev/null || sudo pacman -S ttf-jetbrains-mono-nerd --noconfirm
-pacman -Qi ttf-nerd-fonts-symbols-mono &>/dev/null || sudo pacman -S ttf-nerd-fonts-symbols-mono --noconfirm
-pacman -Qi noto-fonts-cjk &>/dev/null || sudo pacman -S noto-fonts-cjk --noconfirm
-pacman -Qi noto-fonts-emoji &>/dev/null || sudo pacman -S noto-fonts-emoji --noconfirm
-pacman -Qi noto-fonts &>/dev/null || sudo pacman -S noto-fonts --noconfirm
-
-## 14/09/26
-pacman -Qi netbird &>/dev/null || yay -S netbird --noconfirm
-pacman -Qi netbird-ui-bin &>/dev/null || yay -S netbird-ui-bin --noconfirm
-
-sudo sed -i 's|--daemon-addr unix:///var/run/netbird/main.sock||' /usr/share/applications/netbird.desktop
-sudo netbird service install
-sudo systemctl enable --now netbird
-
 ## 18/09/26
 pacman -Qi satty &>/dev/null || yay -S satty --noconfirm
 pacman -Qi grim &>/dev/null || yay -S grim --noconfirm
