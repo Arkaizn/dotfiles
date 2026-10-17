@@ -26,10 +26,15 @@ PanelWindow {
     anchors {
         bottom: true
     }
-    // card width + room for the inverted corners on both sides
+    // card width (apps / clipboard; the wallpaper grid gets a wider card),
+    // surface = the widest card + room for the inverted corners on both sides.
+    // The surface keeps that width all the time (see the height note below);
+    // only the visible card animates between the two widths.
     readonly property int cardWidth: 640
+    readonly property int wallpaperCardWidth: 960
+    readonly property int shownCardWidth: mode === "wallpapers" ? wallpaperCardWidth : cardWidth
     readonly property int flare: Properties.flareRadius
-    implicitWidth: cardWidth + flare * 2
+    implicitWidth: Math.max(cardWidth, wallpaperCardWidth) + flare * 2
 
     // ── Why the surface size is a constant, not a binding ──
     // implicitHeight here drives the *real* Wayland layer-shell surface
@@ -271,9 +276,9 @@ PanelWindow {
         // edge, rounded corners at the top. Follows card's animated height.
         Shape {
             id: outline
-            x: 0
+            x: card.x - root.flare          // follows the card (its width animates)
             y: card.y
-            width: rect.width
+            width: card.width + root.flare * 2
             height: card.height
             preferredRendererType: Shape.CurveRenderer
             transform: Scale { origin.y: outline.height / 2; yScale: -1 }
@@ -303,13 +308,10 @@ PanelWindow {
             property bool collapsed: true
             readonly property real collapsedHeight: Properties.buttonHeight + root.modeBarHeight + root.contentSpacing + root.contentMargins
             clip: true
-            anchors {
-                left: parent.left
-                right: parent.right
-                bottom: parent.bottom
-                leftMargin: root.flare
-                rightMargin: root.flare
-            }
+            // centered; wider in wallpaper mode
+            anchors.bottom: parent.bottom
+            width: root.shownCardWidth
+            x: Math.round((parent.width - width) / 2)
             height: collapsed ? collapsedHeight : content.implicitHeight + root.contentMargins
             // sits on the bottom screen edge → only the top corners are rounded
             // drawn by `outline` below (fill + border incl. the inverted corners)
@@ -318,6 +320,12 @@ PanelWindow {
             Behavior on height {
                 enabled: !card.skipHeightAnim
                 NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+            }
+            // switching to / from wallpapers while open: the card widens / narrows
+            // (opening straight into a mode starts at its width)
+            Behavior on width {
+                enabled: !card.skipHeightAnim
+                NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
             }
 
             ColumnLayout {

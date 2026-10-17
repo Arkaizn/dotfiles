@@ -39,8 +39,13 @@ ColumnLayout {
     readonly property string scriptPath:    Quickshell.env("HOME") + "/.config/quickshell/scripts/set_wallpaper.sh"
     readonly property string thumbCacheDir: Quickshell.cachePath("wallpaper_thumbs") // persists across restarts
 
-    readonly property real cellW: (width - 20) / 3
+    // thumbnails per row (the Flow below has 8 px gaps, plus a little slack)
+    readonly property int columns: 4
+    readonly property real cellW: (width - (columns - 1) * 8 - 4) / columns
     readonly property real cellH: cellW * 0.58
+    // thumbnails are decoded once at the wide card's cell size
+    readonly property real thumbW: 230
+    readonly property real thumbH: thumbW * 0.58
 
     // Rescan only on first open; use the rescan button to pick up new files
     // later, so thumbnails stay cached/alive between opens.
@@ -263,6 +268,11 @@ ColumnLayout {
                     readonly property bool effectivelyExpanded: root.query !== "" || expanded
                     readonly property var items: root.itemsForFolder(relDir, root.query)
 
+                    // 0 = closed, 1 = open; animated, so opening / closing a folder
+                    // (one, or all via the mode bar button) slides the thumbnails
+                    property real openness: effectivelyExpanded ? 1 : 0
+                    Behavior on openness { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+
                     Layout.fillWidth: true
                     spacing: 6
                     visible: items.length > 0 || root.query === ""
@@ -293,7 +303,8 @@ ColumnLayout {
                             Item { Layout.fillWidth: true }
                             IconButton {
                                 Layout.rightMargin: 12
-                                icon: folderSection.effectivelyExpanded ? "󰅀" : "󰅂"
+                                icon: "󰅀"
+                                rotation: -90 * (1 - folderSection.openness)    // turns with the folder
                                 interactive: root.query === ""
                                 onClicked: folderModel.setProperty(folderSection.index, "expanded", !folderSection.expanded)
                             }
@@ -302,24 +313,37 @@ ColumnLayout {
 
                     Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.18) }
 
-                    Flow {
+                    // the thumbnails, clipped to the animated height
+                    Item {
                         Layout.fillWidth: true
-                        visible: folderSection.effectivelyExpanded
-                        spacing: 8
+                        Layout.preferredHeight: thumbs.implicitHeight * folderSection.openness
+                        visible: folderSection.openness > 0.001
+                        clip: true
 
-                        Repeater {
-                            model: folderSection.items
+                        Flow {
+                            id: thumbs
+                            width: parent.width
+                            spacing: 8
+                            // slides down a little and fades in while opening
+                            y: -14 * (1 - folderSection.openness)
+                            opacity: folderSection.openness
 
-                            delegate: WallpaperTile {
-                                required property var modelData
-                                path: modelData.path
-                                name: modelData.name
-                                cellW: root.cellW
-                                cellH: root.cellH
-                                thumbCacheDir: root.thumbCacheDir
-                                isSelected: applyProc.pickedPath === path
-                                applying: applyProc.running && isSelected
-                                onClicked: root.apply(path)
+                            Repeater {
+                                model: folderSection.items
+
+                                delegate: WallpaperTile {
+                                    required property var modelData
+                                    path: modelData.path
+                                    name: modelData.name
+                                    cellW: root.cellW
+                                    cellH: root.cellH
+                                    thumbW: root.thumbW
+                                    thumbH: root.thumbH
+                                    thumbCacheDir: root.thumbCacheDir
+                                    isSelected: applyProc.pickedPath === path
+                                    applying: applyProc.running && isSelected
+                                    onClicked: root.apply(path)
+                                }
                             }
                         }
                     }

@@ -25,6 +25,10 @@ Item {
     required property string name
     property real cellW: 100
     property real cellH: 58
+    // decode size of the thumbnail: fixed, so the card's width animation
+    // (which changes cellW every frame) doesn't reload the images
+    property real thumbW: cellW
+    property real thumbH: cellH
     property string thumbCacheDir: ""
     property bool isSelected: false
     property bool applying: false
@@ -77,8 +81,8 @@ Item {
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
             smooth: true
-            sourceSize.width: delegateRoot.cellW * 2
-            sourceSize.height: delegateRoot.cellH * 2
+            sourceSize.width: delegateRoot.thumbW * 2
+            sourceSize.height: delegateRoot.thumbH * 2
             // Load from cache once known to exist, else load the real file
             // and save a cached copy for future opens (even after restart)
             source: delegateRoot.cacheChecked
