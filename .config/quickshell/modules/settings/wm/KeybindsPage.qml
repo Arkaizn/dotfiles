@@ -21,6 +21,14 @@ ColumnLayout {
 
     property string focusKeys: ""          // from the launcher's cheatsheet: open this bind's editor
     signal focusConsumed()
+    property string anchor: ""             // from search: "new" opens a new keybind
+    signal anchorConsumed()
+    onAnchorChanged: if (anchor !== "") anchorTimer.restart()
+    Timer {
+        id: anchorTimer
+        interval: 100
+        onTriggered: { if (page.anchor === "new") page.startNew(null); page.anchorConsumed() }
+    }
 
     readonly property string wm: Compositor.isHyprland ? "hyprland" : "niri"
     readonly property var entries: Settings.keybinds.binds ?? []
@@ -29,7 +37,7 @@ ColumnLayout {
 
     function saveEntries(list) { Settings.set("keybinds", "binds", list) }
 
-    Component.onCompleted: { Keybinds.refresh(); focusTimer.restart() }
+    Component.onCompleted: { Keybinds.refresh(); focusTimer.restart(); if (anchor !== "") anchorTimer.restart() }
     onFocusKeysChanged: focusTimer.restart()
     // after Keybinds has (re)read the binds
     Timer {

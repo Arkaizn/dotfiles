@@ -6,6 +6,7 @@ import qs.components
 import qs.services
 import "network"
 import "wm"
+import "SettingsSearch.js" as SI
 
 // Settings app: a normal (floating) window to change the Properties.qml
 // values and some compositor settings. Changes apply live and are saved to
@@ -59,6 +60,8 @@ Scope {
     // a key of NiriSettings.schema / HyprSettings.schema and add layout hints
     // (sub / dependsOn). Pages with `wm` only show on that compositor.
     property string pendingKeybind: ""
+    property string pendingAnchor: ""      // where on a custom page to open (search: "hosts", "profile:<uuid>", …)
+    property string flashKey: ""           // "store.key" of a setting to scroll to and flash
     readonly property string wm: Compositor.isHyprland ? "hyprland" : "niri"
     readonly property string wmGroup: Compositor.isHyprland ? "Hyprland" : "Niri"
     readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm)
@@ -74,7 +77,7 @@ Scope {
                 { key: "fontFamily", type: "font", label: "Font", desc: "Used by the bar, popups and widgets" },
                 { key: "pixelSize", type: "int", min: 8, max: 24, label: "Text size", desc: "Bar labels and stats" },
                 { key: "fontBold", type: "bool", label: "Bold button text" },
-                { key: "color", type: "color", label: "Text & icon color", desc: "Buttons, fields and bar icons" } ] },
+                { key: "color", keywords: "text color font colour icon tint", type: "color", label: "Text & icon color", desc: "Buttons, fields and bar icons" } ] },
             { title: "Icons", items: [
                 { key: "iconSize", type: "int", min: 10, max: 32, label: "Icon size", desc: "Bar buttons, tray and profile" } ] } ] },
 
@@ -82,8 +85,8 @@ Scope {
           desc: "Shape and spacing of the top bar",
           sections: [
             { title: "Shape", items: [
-                { key: "barRadius", type: "int", min: 0, max: 30, label: "Corner radius" },
-                { key: "barInset", type: "int", min: 0, max: 40, label: "Distance to screen edge", desc: "Also where popups attach" } ] },
+                { key: "barRadius", keywords: "round rounded", type: "int", min: 0, max: 30, label: "Corner radius" },
+                { key: "barInset", keywords: "margin gap offset", type: "int", min: 0, max: 40, label: "Distance to screen edge", desc: "Also where popups attach" } ] },
             { title: "Content", items: [
                 { key: "barMarginLeft", type: "int", min: 0, max: 60, label: "Left padding" },
                 { key: "barMarginRight", type: "int", min: 0, max: 60, label: "Right padding" },
@@ -95,10 +98,10 @@ Scope {
           desc: "Bar background, popups, dashboard, launcher and cards",
           sections: [
             { title: "Colors", items: [
-                { key: "panelColor", type: "color", label: "Panel background", desc: "Bar and every popup" },
-                { key: "panelBorder", type: "color", label: "Panel border" },
-                { key: "cardBorder", type: "color", label: "Card border", desc: "Inner cards in the dashboard and control center" },
-                { key: "panelBorderWidth", type: "real", min: 0, max: 4, step: 0.5, label: "Border width" } ] },
+                { key: "panelColor", keywords: "transparency opacity transparent background color alpha", type: "color", label: "Panel background", desc: "Bar and every popup" },
+                { key: "panelBorder", keywords: "outline color transparency", type: "color", label: "Panel border" },
+                { key: "cardBorder", keywords: "outline color transparency", type: "color", label: "Card border", desc: "Inner cards in the dashboard and control center" },
+                { key: "panelBorderWidth", keywords: "outline thickness", type: "real", min: 0, max: 4, step: 0.5, label: "Border width" } ] },
             { title: "Corners", items: [
                 { key: "panelRadius", type: "int", min: 0, max: 48, label: "Big panels",
                   desc: "Dashboard, notification center, launcher, lockscreen" },
@@ -120,9 +123,9 @@ Scope {
           desc: "Hover and press feedback",
           sections: [
             { title: "Buttons", items: [
-                { key: "bDuration", type: "int", min: 0, max: 600, step: 10, label: "Animation length (ms)" },
-                { key: "onEnteredButtonScale", type: "real", min: 1, max: 1.3, step: 0.01, label: "Hover zoom" },
-                { key: "onPressedButtonScale", type: "real", min: 0.7, max: 1, step: 0.01, label: "Press shrink" },
+                { key: "bDuration", keywords: "speed animation time duration", type: "int", min: 0, max: 600, step: 10, label: "Animation length (ms)" },
+                { key: "onEnteredButtonScale", keywords: "hover grow bigger animation", type: "real", min: 1, max: 1.3, step: 0.01, label: "Hover zoom" },
+                { key: "onPressedButtonScale", keywords: "click shrink smaller animation", type: "real", min: 0.7, max: 1, step: 0.01, label: "Press shrink" },
                 { key: "onEnteredTextScale", type: "real", min: 1, max: 1.5, step: 0.01, label: "Workspace & tray hover zoom" } ] } ] },
 
         { id: "battery", group: "System", icon: "󰁹", title: "Battery", store: "battery",
@@ -259,6 +262,82 @@ Scope {
             { title: "Touchpad", items: [ { key: "naturalScroll" }, { key: "scrollFactor" } ] } ] }
     ]
 
+    // ── Search ───────────────────────────────────────────────────────────────
+    // Places on the custom pages (no settings list of their own), so search
+    // finds them too. target: where on the page (tab / editor), action: run it.
+    readonly property var places: [
+        { page: "profile", label: "Profile picture", desc: "Shown on the dashboard and lockscreen", keywords: "avatar photo image face", icon: "󰀄" },
+        { page: "profile", label: "Display name", keywords: "username greeting hello name", icon: "󰀄" },
+        { page: "network", target: "interfaces", label: "Interfaces", desc: "State, addresses, MAC", keywords: "ethernet wifi adapter nic ip address mac eno wlan", icon: "󰈀" },
+        { page: "network", target: "interfaces", label: "DHCP or static IP", desc: "Switch an interface between DHCP and a fixed address", keywords: "static ip manual fixed address gateway", icon: "󰩟" },
+        { page: "network", target: "interfaces", label: "DHCP lease", desc: "Server, lease time, renew", keywords: "renew expiry lease server", icon: "󰑓" },
+        { page: "network", target: "interfaces", label: "Search domain", desc: "Where it comes from (by hand or DHCP)", keywords: "domain suffix dns search", icon: "󰇖" },
+        { page: "network", target: "interfaces", label: "Hide virtual interfaces", desc: "Docker, bridges, VMware, …", keywords: "docker veth bridge vmware virtualbox hidden", icon: "󰈉" },
+        { page: "network", target: "interfaces", label: "Safe apply", desc: "Revert network changes after 20s unless kept", keywords: "revert rollback undo countdown", icon: "󰕌" },
+        { page: "network", target: "interfaces", label: "Wi-Fi on / off", keywords: "wireless radio airplane", icon: "󰖩" },
+        { page: "network", target: "profiles", label: "Network profiles", desc: "Saved connections", keywords: "connections nmcli networkmanager", icon: "󰒓" },
+        { page: "network", target: "profiles:new", label: "New network profile", keywords: "create add ethernet wifi bridge bond vlan wireguard", icon: "󰐕" },
+        { page: "network", target: "profiles", label: "Import a VPN", desc: "OpenVPN or WireGuard file", keywords: "ovpn wireguard openvpn conf", icon: "󰒃" },
+        { page: "network", target: "profiles", label: "Wi-Fi password", desc: "Open a Wi-Fi profile → Wi-Fi tab", keywords: "psk security wpa wpa2 wpa3 key", icon: "󰌾" },
+        { page: "network", target: "profiles", label: "MTU / MAC address", desc: "Open a profile → its link tab", keywords: "jumbo frames clone spoof random mac", icon: "󰈀" },
+        { page: "network", target: "profiles", label: "Static routes", desc: "Open a profile → IPv4 / IPv6 tab", keywords: "route gateway metric", icon: "󰑪" },
+        { page: "network", target: "profiles", label: "DHCP server (sharing)", desc: "Profile → IPv4 → Shared", keywords: "share hotspot dnsmasq nat", icon: "󰒍" },
+        { page: "network", target: "dns", label: "Global DNS", desc: "Override DNS for every network", keywords: "cloudflare quad9 google adguard 1.1.1.1 8.8.8.8 nameserver", icon: "󰇖" },
+        { page: "network", target: "dns", label: "DNS lookup test", keywords: "nslookup dig resolve query test", icon: "󰍉" },
+        { page: "network", target: "dns", label: "Flush DNS cache", keywords: "clear cache resolvectl", icon: "󰃢" },
+        { page: "network", target: "dns", label: "Hostname", desc: "This computer's name on the network", keywords: "computer name host", icon: "󰒋" },
+        { page: "network", target: "hosts", label: "Hosts file", desc: "Remap a name to an IP on this computer", keywords: "etc hosts redirect remap block domain", icon: "󰒋" },
+        { page: "monitors", label: "Resolution & refresh rate", keywords: "hz mode screen display", icon: "󰍹" },
+        { page: "monitors", label: "Scale & rotation", keywords: "hidpi zoom portrait transform", icon: "󰍹" },
+        { page: "monitors", label: "Arrange monitors", keywords: "position layout drag left right primary", icon: "󰍹" },
+        { page: "monitors", label: "Variable refresh rate", keywords: "vrr freesync gsync adaptive sync", icon: "󰍹" },
+        { page: "keybinds", target: "new", label: "New keybind", keywords: "add create shortcut hotkey", icon: "󰐕" },
+        { page: "keybinds", label: "Record keys", desc: "Press a combo to find or create a keybind", keywords: "record capture press", icon: "󰌌" },
+        { page: "keybinds", label: "Disable a keybind", keywords: "remove unbind turn off", icon: "󰂭" },
+        { page: "autostart", label: "Start a program at login", keywords: "autostart startup boot exec launch", icon: "󰐊" },
+        { page: "syntax", label: "Config syntax templates", keywords: "words templates kdl lua option paths rename", icon: "󰅩" },
+        { page: "import", label: "Import custom config", keywords: "custom.kdl custom.lua per-device", icon: "󰋺" },
+        { action: "export", label: "Export settings", desc: "Save all settings to a file", keywords: "backup save json transfer", icon: "󰈝" },
+        { action: "import", label: "Import settings", desc: "Load settings from a file", keywords: "restore load json transfer", icon: "󰋺" }
+    ]
+
+    // everything search can find (rebuilt when the pages / binds / profiles change, not per key)
+    readonly property var searchIndex: {
+        const out = []
+        for (const p of visiblePages) {
+            out.push({ kind: "page", pageId: p.id, label: p.title, desc: p.desc ?? "", keywords: (p.keywords ?? "") + " page",
+                       page: p.group, crumb: p.group, icon: p.icon, boost: 3 })
+            for (const s of p.sections ?? []) for (const i of s.items) {
+                const sp = fullSpec(p.store, i)
+                if (sp.type === "button") continue
+                out.push({ kind: "setting", pageId: p.id, store: p.store, key: i.key, spec: sp, label: sp.label,
+                           desc: sp.desc ?? "", keywords: sp.keywords ?? "", section: s.title, page: p.title,
+                           crumb: p.title + "  ›  " + s.title, icon: p.icon,
+                           parentOn: i.dependsOn === undefined || !!valueOf(p.store, i.dependsOn) })
+            }
+        }
+        for (const pl of places) {
+            const p = pl.page ? visiblePages.find(x => x.id === pl.page) : null
+            if (pl.page && !p) continue
+            out.push(Object.assign({ kind: pl.action ? "action" : "place", pageId: pl.page ?? "", page: p?.title ?? "Settings",
+                                     crumb: p ? p.title : "Settings", boost: 1 }, pl))
+        }
+        for (const r of Keybinds.binds)
+            out.push({ kind: "keybind", pageId: "keybinds", label: r.desc, desc: r.category,
+                       keywords: "keybind " + r.combos.map(c => c.map(k => Keybinds.keyLabel(k)).join(" ") + " " + c.join(" ")).join(" "),
+                       page: "Keybinds", crumb: "Keybinds", icon: "󰌌", keys: r.combos[0], bind: r.items[0], boost: -1 })
+        for (const c of Network.connections) if (c.type !== "loopback")
+            out.push({ kind: "profile", pageId: "network", target: "profile:" + c.uuid, label: c.name,
+                       desc: Network.typeLabel(c.type) + (c.active ? "  ·  active on " + c.device : ""),
+                       keywords: "network profile connection " + c.type + " " + c.device, page: "Network",
+                       crumb: "Network  ›  Profiles", icon: Network.typeIcon(c.type) })
+        for (const a of Settings.autostart.items ?? [])
+            out.push({ kind: "place", pageId: "autostart", label: a.name, desc: a.cmd, keywords: "autostart startup login",
+                       page: "Autostart", crumb: "Autostart", icon: "󰐊" })
+        return out
+    }
+    readonly property var searchVocabulary: SI.vocabularyOf(searchIndex)
+
     // niri / hyprland stores: their settings service
     function isWm(store) { return store === "niri" || store === "hyprland" }
     function wmFor(store) { return store === "hyprland" ? HyprSettings : NiriSettings }
@@ -305,26 +384,48 @@ Scope {
             readonly property string pageId: root.pageId
             readonly property var page: root.visiblePages.find(p => p.id === pageId) ?? root.visiblePages[0]
 
-            // sections to show: the page, or search hits across all pages
-            readonly property var sections: {
-                const q = query.trim().toLowerCase()
-                if (q === "")
-                    return (page.sections ?? []).map(s => ({ title: s.title, store: page.store, items: s.items }))
-                const out = []
-                for (const p of root.visiblePages) {
-                    for (const s of p.sections ?? []) {
-                        const hits = s.items.filter(i => {
-                            const sp = root.fullSpec(p.store, i)
-                            return (sp.label + " " + (sp.desc ?? "") + " " + p.title + " " + s.title).toLowerCase().includes(q)
-                        })
-                        if (hits.length > 0)
-                            out.push({ title: p.title + "  ·  " + s.title, store: p.store, items: hits })
-                    }
+            // the page's sections (search shows SearchResults instead)
+            readonly property var sections: query.trim() !== "" ? []
+                : (page.sections ?? []).map(s => ({ title: s.title, store: page.store, items: s.items }))
+
+            // ranked search results (SettingsSearch.js)
+            property int selected: 0
+            readonly property var results: {
+                const q = query.trim()
+                if (q === "") return []
+                const toks = SI.tokens(q)
+                return root.searchIndex.map((e, i) => ({ entry: e, score: SI.score(e, q, toks), i: i }))
+                    .filter(r => r.score > 0)
+                    .sort((a, b) => b.score - a.score || a.i - b.i)
+                    .slice(0, 60)
+            }
+            readonly property string suggestion: query.trim() !== "" && results.length === 0 ? SI.suggest(query, root.searchVocabulary) : ""
+            onQueryChanged: { selected = 0; flick.contentY = 0 }
+
+            // go to a result
+            function openEntry(e) {
+                if (!e) return
+                if (e.kind === "action") {
+                    if (e.action === "export") transfer.exportSettings()
+                    else transfer.importSettings()
+                    searchField.text = ""
+                    return
                 }
-                return out
+                if (e.kind === "keybind" && e.bind) root.pendingKeybind = Keybinds.normKeys(e.bind.keys)
+                if (e.target) root.pendingAnchor = e.target
+                if (e.kind === "setting") root.flashKey = e.store + "." + e.key
+                if (e.pageId) root.pageId = e.pageId
+                searchField.text = ""
+                if (e.kind !== "setting") flick.contentY = 0
             }
 
-            Component.onCompleted: Compositor.settings.refresh()
+            // Ctrl+F or / : search
+            Shortcut {
+                sequences: [StandardKey.Find, "/"]
+                onActivated: { searchField.forceActiveFocus(); searchField.selectAll() }
+            }
+
+            Component.onCompleted: { Compositor.settings.refresh(); Network.refresh() }
 
             Rectangle {
                 id: bg
@@ -382,12 +483,17 @@ Scope {
                             }
 
                             SearchField {
+                                id: searchField
                                 Layout.fillWidth: true
                                 Layout.bottomMargin: 6
                                 implicitHeight: Properties.buttonHeight + 2
-                                placeholderText: "Search settings"
+                                placeholderText: "Search  (Ctrl+F)"
                                 onTextChanged: win.query = text
-                                Keys.onEscapePressed: text = ""
+                                Keys.onEscapePressed: { text = ""; focus = false }
+                                Keys.onDownPressed: win.selected = Math.min(win.results.length - 1, win.selected + 1)
+                                Keys.onUpPressed: win.selected = Math.max(0, win.selected - 1)
+                                Keys.onReturnPressed: win.openEntry(win.results[win.selected]?.entry)
+                                Keys.onEnterPressed: win.openEntry(win.results[win.selected]?.entry)
                             }
 
                             // the tabs scroll when the window is too short for all of them
@@ -512,7 +618,7 @@ Scope {
                                     }
                                     Text {
                                         text: win.query !== ""
-                                            ? (win.sections.length > 0 ? "Results for \"" + win.query + "\"" : "Nothing matches \"" + win.query + "\"")
+                                            ? (win.results.length > 0 ? "Results for \"" + win.query.trim() + "\", best first" : "Nothing matches \"" + win.query.trim() + "\"")
                                             : win.page.desc
                                         color: Qt.rgba(1, 1, 1, 0.5)
                                         font.pixelSize: 12
@@ -641,6 +747,8 @@ Scope {
                                     sourceComponent: KeybindsPage {
                                         focusKeys: root.pendingKeybind
                                         onFocusConsumed: root.pendingKeybind = ""
+                                        anchor: root.pendingAnchor
+                                        onAnchorConsumed: root.pendingAnchor = ""
                                     }
                                 }
                                 Loader {
@@ -673,7 +781,28 @@ Scope {
                                     Layout.fillWidth: true
                                     active: win.query === "" && win.page.custom === "network"
                                     visible: active
-                                    sourceComponent: NetworkPage { footerHost: footerArea }
+                                    sourceComponent: NetworkPage {
+                                        footerHost: footerArea
+                                        anchor: root.pendingAnchor
+                                        onAnchorConsumed: root.pendingAnchor = ""
+                                    }
+                                }
+
+                                // search
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query.trim() !== ""
+                                    visible: active
+                                    sourceComponent: SearchResults {
+                                        results: win.results
+                                        query: win.query
+                                        selected: win.selected
+                                        flick: flick
+                                        suggestion: win.suggestion
+                                        pages: root.visiblePages
+                                        onActivate: e => win.openEntry(e)
+                                        onSuggestionPicked: t => searchField.text = t
+                                    }
                                 }
 
                                 Repeater {
@@ -724,7 +853,24 @@ Scope {
                                                             color: Qt.rgba(1, 1, 1, 0.06)
                                                         }
 
+                                                        // from search: scroll here and flash
+                                                        readonly property bool flashMe: root.flashKey !== ""
+                                                            && root.flashKey === section.modelData.store + "." + entry.modelData.key
+                                                        onFlashMeChanged: if (flashMe) flashTimer.restart()
+                                                        Component.onCompleted: if (flashMe) flashTimer.restart()
+                                                        Timer {
+                                                            id: flashTimer
+                                                            interval: 150          // after the page's layout settled
+                                                            onTriggered: {
+                                                                const y = entry.mapToItem(content, 0, 0).y
+                                                                flick.contentY = Math.max(0, Math.min(y - 80, flick.contentHeight - flick.height))
+                                                                item.flash()
+                                                                root.flashKey = ""
+                                                            }
+                                                        }
+
                                                         SettingItem {
+                                                            id: item
                                                             Layout.fillWidth: true
                                                             store: section.modelData.store
                                                             spec: root.fullSpec(section.modelData.store, entry.modelData)

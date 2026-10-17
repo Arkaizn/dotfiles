@@ -20,6 +20,17 @@ ColumnLayout {
     id: netPage
 
     property Item footerHost: null       // the settings window's footer (apply bars)
+    // where to open, from search: a tab ("hosts", "dns", …), "profiles:new" or "profile:<uuid>"
+    property string anchor: ""
+    signal anchorConsumed()
+    onAnchorChanged: applyAnchor()
+    function applyAnchor() {
+        if (anchor === "") return
+        if (tabOrder.includes(anchor)) setTab(anchor)
+        else if (anchor === "profiles:new") { setTab("profiles"); netPage.editing = ""; newPanel.open = true }
+        else if (anchor.startsWith("profile:")) openEditor(anchor.slice(8))
+        anchorConsumed()
+    }
     property string tab: "interfaces"
     property string editing: ""          // uuid open in the editor
     property bool showHidden: false
@@ -32,6 +43,7 @@ ColumnLayout {
         Network.readHosts()
         sync(deviceModel, deviceOrder, "name")
         sync(profileModel, profileOrder, "uuid")
+        applyAnchor()
     }
     Component.onDestruction: Network.watchers--
 

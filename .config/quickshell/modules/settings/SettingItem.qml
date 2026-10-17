@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import "SettingsSearch.js" as SI
 
 // One setting: label + description on the left, the control on the right,
 // and a revert button once it differs from the default.
@@ -20,6 +21,14 @@ Item {
     required property string store
     property bool sub: false             // option of the toggle above it
     property bool parentOn: true         // that toggle is on
+    // in search results: highlight the query, show where it lives (click → go there)
+    property string query: ""
+    property string crumb: ""
+    property bool selected: false
+    signal openRequested()
+
+    // jumped to from search: a glow that fades in and out
+    function flash() { flashAnim.restart() }
 
     // a compositor setting: its settings service (NiriSettings / HyprSettings)
     readonly property var wm: store === "niri" ? NiriSettings : store === "hyprland" ? HyprSettings : null
@@ -50,6 +59,37 @@ Item {
     }
 
     implicitHeight: Math.max(52, row.implicitHeight + 18)
+
+    Rectangle {
+        id: flashRect
+        anchors.fill: parent
+        anchors.margins: 2
+        radius: 10
+        color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.22)
+        border.width: 1.5
+        border.color: Colors.color6
+        opacity: 0
+        SequentialAnimation {
+            id: flashAnim
+            NumberAnimation { target: flashRect; property: "opacity"; to: 1; duration: 200; easing.type: Easing.OutCubic }
+            PauseAnimation { duration: 350 }
+            NumberAnimation { target: flashRect; property: "opacity"; to: 0.35; duration: 250 }
+            NumberAnimation { target: flashRect; property: "opacity"; to: 1; duration: 250 }
+            PauseAnimation { duration: 500 }
+            NumberAnimation { target: flashRect; property: "opacity"; to: 0; duration: 900; easing.type: Easing.InOutQuad }
+        }
+    }
+
+    // keyboard selection in search results
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 3
+        radius: 10
+        color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, root.selected ? 0.1 : 0)
+        border.width: root.selected ? 1 : 0
+        border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45)
+        Behavior on color { ColorAnimation { duration: 120 } }
+    }
     opacity: parentOn ? 1 : 0.4
     enabled: parentOn
     Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -75,10 +115,28 @@ Item {
             Layout.fillWidth: true
             spacing: 2
 
+            // search results: "Page › Section ›", click to go there
+            Text {
+                visible: root.crumb !== ""
+                text: root.crumb + "  󰅂"
+                color: crumbMouse.containsMouse ? Colors.color6 : Qt.rgba(1, 1, 1, 0.4)
+                font.pixelSize: 10
+                font.family: Properties.fontFamily
+                Behavior on color { ColorAnimation { duration: 120 } }
+                MouseArea {
+                    id: crumbMouse
+                    anchors.fill: parent
+                    anchors.margins: -3
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.openRequested()
+                }
+            }
             RowLayout {
                 spacing: 6
                 Text {
-                    text: root.spec.label
+                    text: root.query !== "" ? SI.highlight(root.spec.label, root.query, Colors.color6.toString()) : root.spec.label
+                    textFormat: root.query !== "" ? Text.StyledText : Text.PlainText
                     color: "white"
                     font.pixelSize: 13
                     font.bold: true
