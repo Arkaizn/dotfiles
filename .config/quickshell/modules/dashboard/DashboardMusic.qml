@@ -37,7 +37,7 @@ Item {
     }
 
     // Bring the player to the front: MPRIS Raise first (Firefox / Zen switch to
-    // the playing tab), then focus its window through niri — on Wayland an app
+    // the playing tab), then focus its window through the compositor — on Wayland an app
     // usually can't put itself in front. The window is found by app id
     // (desktop entry or player name); with several windows (browser), the one
     // whose title has the track in it wins (= the playing tab).
@@ -46,14 +46,8 @@ Item {
         if (!p) return
         if (p.canRaise) p.raise()
         const key = (p.desktopEntry || p.identity || "").toLowerCase().replace(/^mozilla\s+/, "")
-        Quickshell.execDetached(["sh", "-c",
-            'sleep 0.3; '                                   // let the browser switch tab (title changes)
-            + 'id=$(niri msg -j windows | jq -r --arg k "$1" --arg t "$2" \''
-            + '[.[] | select((.app_id // "" | ascii_downcase) as $a | $a != "" and $k != "" and (($a | contains($k)) or ($k | contains($a))))]'
-            + ' | (map(select($t != "" and ((.title // "") | contains($t)))) + .) | first | .id // empty\'); '
-            + '[ -n "$id" ] && niri msg action focus-window --id "$id"; '
-            + 'qs ipc call dashboard close',
-            "sh", key, p.trackTitle || ""])
+        // waits a moment first: the browser switches tab (its title changes)
+        Compositor.focusAppWindow(key, p.trackTitle || "", "qs ipc call dashboard close")
     }
 
     function nextPlayer() {

@@ -14,9 +14,11 @@ DEVICE_FILES=(
     "hypr/hyprland/monitors.lua"            # monitors (Hyprland)
     "hypr/hyprlock/hyprlock.sh"
     # quickshell settings app
-    "quickshell/settings.json"              # shell / niri / monitor / calendar settings
+    "quickshell/settings.json"              # shell / niri / Hyprland / monitor / calendar settings
     "niri/config/quickshell.kdl"            # niri overrides written by the settings app
     "niri/config/quickshell-outputs.kdl"    # monitor setup written by the settings app
+    "hypr/quickshell.lua"                   # Hyprland overrides written by the settings app
+    "hypr/quickshell-monitors.lua"          # monitor setup written by the settings app (Hyprland)
     # secrets
     "wayvnc/config"                         # VNC password — repo has config.example
 )

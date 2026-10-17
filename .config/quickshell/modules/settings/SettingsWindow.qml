@@ -6,9 +6,10 @@ import qs.components
 import qs.services
 
 // Settings app: a normal (floating) window to change the Properties.qml
-// values and some niri settings. Changes apply live and are saved to
+// values and some compositor settings. Changes apply live and are saved to
 // settings.json (services/Settings.qml); niri ones go to niri's override
-// file (services/NiriSettings.qml).
+// file (services/NiriSettings.qml), Hyprland ones to Hyprland's
+// (services/HyprSettings.qml). Only the running compositor's pages show.
 //
 // Open it with:  qs ipc call settings toggle   (Mod+S, set in the override file)
 //                qs ipc call settings openPage <id>   (ids below, e.g. niriLayout)
@@ -25,13 +26,10 @@ Scope {
         property string pageId: "appearance"
     }
 
-    // open, or bring the already open window to the front (niri focuses it,
-    // switching workspace / monitor if needed)
+    // open, or bring the already open window to the front (the compositor
+    // focuses it, switching workspace / monitor if needed)
     function show() {
-        if (root.open)
-            Quickshell.execDetached(["sh", "-c",
-                'id=$(niri msg -j windows | jq -r --arg t "$1" \'first(.[] | select(.title == $t) | .id) // empty\'); '
-                + '[ -n "$id" ] && niri msg action focus-window --id "$id"', "sh", NiriSettings.windowTitle])
+        if (root.open) Compositor.focusWindow(NiriSettings.windowTitle)
         root.open = true
     }
 
@@ -42,14 +40,19 @@ Scope {
         function close(): void { root.open = false }
         // e.g. qs ipc call settings openPage niriInput
         function openPage(id: string): void {
-            if (root.pages.some(p => p.id === id)) root.pageId = id
+            if (root.visiblePages.some(p => p.id === id)) root.pageId = id
             root.show()
         }
     }
 
     // ── Pages ────────────────────────────────────────────────────────────────
-    // "properties" items are complete here; "niri" items only name a key of
-    // NiriSettings.schema and add layout hints (sub / dependsOn).
+    // "properties" items are complete here; "niri" / "hyprland" items only name
+    // a key of NiriSettings.schema / HyprSettings.schema and add layout hints
+    // (sub / dependsOn). Pages with `wm` only show on that compositor.
+    readonly property string wm: Compositor.isHyprland ? "hyprland" : "niri"
+    readonly property string wmGroup: Compositor.isHyprland ? "Hyprland" : "Niri"
+    readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm)
+
     readonly property var pages: [
         { id: "appearance", group: "Shell", icon: "󰏘", title: "Appearance", store: "properties",
           desc: "Font, text and icons used all over the shell",
@@ -109,7 +112,7 @@ Scope {
                 { key: "onPressedButtonScale", type: "real", min: 0.7, max: 1, step: 0.01, label: "Press shrink" },
                 { key: "onEnteredTextScale", type: "real", min: 1, max: 1.5, step: 0.01, label: "Workspace & tray hover zoom" } ] } ] },
 
-        { id: "monitors", group: "Niri", icon: "󰍹", title: "Monitors", custom: "monitors",
+        { id: "monitors", group: wmGroup, icon: "󰍹", title: "Monitors", custom: "monitors",
           desc: "Arrange screens, resolution, refresh rate and scale" },
 
         { id: "calendar", group: "Apps", icon: "󰃭", title: "Calendar", store: "calendar",
@@ -133,14 +136,14 @@ Scope {
                 { key: "syncMinutes", type: "choice", def: "15", options: ["5", "15", "30", "60"],
                   label: "Sync every (minutes)", desc: "In the background too, for the dashboard and reminders" } ] } ] },
 
-        { id: "niriLayout", group: "Niri", icon: "󰕰", title: "Layout", store: "niri",
+        { id: "niriLayout", wm: "niri", group: "Niri", icon: "󰕰", title: "Layout", store: "niri",
           desc: "How windows are placed",
           sections: [
             { title: "Windows", items: [
                 { key: "gaps" }, { key: "centerColumn" }, { key: "columnWidth" }, { key: "cornerRadius" } ] },
             { title: "Apps", items: [ { key: "preferNoCsd" } ] } ] },
 
-        { id: "niriLooks", group: "Niri", icon: "󰖲", title: "Decorations", store: "niri",
+        { id: "niriLooks", wm: "niri", group: "Niri", icon: "󰖲", title: "Decorations", store: "niri",
           desc: "Focus ring, border and shadows",
           sections: [
             { title: "Focus ring", items: [
@@ -159,26 +162,67 @@ Scope {
                 { key: "shadowSpread", dependsOn: "shadowOn" },
                 { key: "shadowColor", dependsOn: "shadowOn" } ] } ] },
 
-        { id: "niriEffects", group: "Niri", icon: "󰂵", title: "Effects", store: "niri",
+        { id: "niriEffects", wm: "niri", group: "Niri", icon: "󰂵", title: "Effects", store: "niri",
           desc: "Animations and blur",
           sections: [
             { title: "Animations", items: [ { key: "animationsOn" }, { key: "slowdown", dependsOn: "animationsOn" } ] },
             { title: "Blur", items: [ { key: "appBlur" }, { key: "blurPasses" }, { key: "blurOffset" } ] } ] },
 
-        { id: "niriInput", group: "Niri", icon: "󰌌", title: "Input", store: "niri",
+        { id: "niriInput", wm: "niri", group: "Niri", icon: "󰌌", title: "Input", store: "niri",
           desc: "Keyboard, touchpad, mouse and cursor",
           sections: [
             { title: "Keyboard", items: [ { key: "kbLayout" }, { key: "numlock" } ] },
-            { title: "Pointer", items: [ { key: "touchpadAccel" }, { key: "mouseAccel" }, { key: "cursorSize" } ] } ] }
+            { title: "Pointer", items: [ { key: "touchpadAccel" }, { key: "mouseAccel" }, { key: "cursorSize" } ] } ] },
+
+        { id: "hyprLayout", wm: "hyprland", group: "Hyprland", icon: "󰕰", title: "Layout", store: "hyprland",
+          desc: "How windows are placed",
+          sections: [
+            { title: "Tiling", items: [ { key: "layout" }, { key: "gapsIn" }, { key: "gapsOut" } ] },
+            { title: "Corners", items: [ { key: "rounding" }, { key: "roundingPower" } ] } ] },
+
+        { id: "hyprLooks", wm: "hyprland", group: "Hyprland", icon: "󰖲", title: "Decorations", store: "hyprland",
+          desc: "Borders, opacity and shadows",
+          sections: [
+            { title: "Border", items: [ { key: "borderSize" }, { key: "activeBorder" }, { key: "inactiveBorder" } ] },
+            { title: "Opacity", items: [
+                { key: "activeOpacity" }, { key: "inactiveOpacity" },
+                { key: "dimInactive" }, { key: "dimStrength", dependsOn: "dimInactive" } ] },
+            { title: "Shadow", items: [
+                { key: "shadowOn" },
+                { key: "shadowRange", dependsOn: "shadowOn" },
+                { key: "shadowPower", dependsOn: "shadowOn" },
+                { key: "shadowColor", dependsOn: "shadowOn" } ] } ] },
+
+        { id: "hyprEffects", wm: "hyprland", group: "Hyprland", icon: "󰂵", title: "Effects", store: "hyprland",
+          desc: "Animations and blur",
+          sections: [
+            { title: "Animations", items: [ { key: "animationsOn" } ] },
+            { title: "Blur", items: [
+                { key: "blurOn" },
+                { key: "blurSize", dependsOn: "blurOn" },
+                { key: "blurPasses", dependsOn: "blurOn" },
+                { key: "blurVibrancy", dependsOn: "blurOn" },
+                { key: "blurXray", dependsOn: "blurOn" } ] } ] },
+
+        { id: "hyprInput", wm: "hyprland", group: "Hyprland", icon: "󰌌", title: "Input", store: "hyprland",
+          desc: "Keyboard, mouse and touchpad",
+          sections: [
+            { title: "Keyboard", items: [ { key: "kbLayout" }, { key: "numlock" } ] },
+            { title: "Pointer", items: [ { key: "sensitivity" }, { key: "accelProfile" }, { key: "followMouse" } ] },
+            { title: "Touchpad", items: [ { key: "naturalScroll" }, { key: "scrollFactor" } ] } ] }
     ]
 
+    // niri / hyprland stores: their settings service
+    function isWm(store) { return store === "niri" || store === "hyprland" }
+    function wmFor(store) { return store === "hyprland" ? HyprSettings : NiriSettings }
+
     function fullSpec(store, item) {
-        return store === "niri" ? Object.assign({}, NiriSettings.spec(item.key), item) : item
+        return isWm(store) ? Object.assign({}, wmFor(store).spec(item.key), item) : item
     }
 
     // current value of a setting in any store (for dependsOn)
     function valueOf(store, key) {
-        if (store === "niri") return NiriSettings.value(key)
+        if (isWm(store)) return wmFor(store).value(key)
         if (store === "calendar") {
             const v = Settings.calendar[key]
             if (v !== undefined) return v
@@ -212,7 +256,7 @@ Scope {
 
             property string query: ""
             readonly property string pageId: root.pageId
-            readonly property var page: root.pages.find(p => p.id === pageId)
+            readonly property var page: root.visiblePages.find(p => p.id === pageId) ?? root.visiblePages[0]
 
             // sections to show: the page, or search hits across all pages
             readonly property var sections: {
@@ -220,7 +264,7 @@ Scope {
                 if (q === "")
                     return (page.sections ?? []).map(s => ({ title: s.title, store: page.store, items: s.items }))
                 const out = []
-                for (const p of root.pages) {
+                for (const p of root.visiblePages) {
                     for (const s of p.sections ?? []) {
                         const hits = s.items.filter(i => {
                             const sp = root.fullSpec(p.store, i)
@@ -233,14 +277,14 @@ Scope {
                 return out
             }
 
-            Component.onCompleted: NiriSettings.refresh()
+            Component.onCompleted: Compositor.settings.refresh()
 
             Rectangle {
                 id: bg
                 anchors.fill: parent
-                radius: NiriSettings.appRadius          // same corners as niri's windows
+                radius: Compositor.appRadius          // same corners as the compositor's windows
                 color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
-                // no own border: niri draws the window's border (one inside got clipped at the corners)
+                // no own border: the compositor draws the window's border (one inside got clipped at the corners)
 
                 RowLayout {
                     anchors.fill: parent
@@ -251,7 +295,7 @@ Scope {
                     Rectangle {
                         Layout.preferredWidth: 230
                         Layout.fillHeight: true
-                        radius: Math.max(6, NiriSettings.appRadius - 2)
+                        radius: Math.max(6, Compositor.appRadius - 2)
                         color: "#27000000"
                         border.width: Properties.panelBorderWidth
                         border.color: Properties.cardBorder
@@ -318,7 +362,7 @@ Scope {
                                     spacing: 6
 
                                     Repeater {
-                                        model: ["Shell", "Apps", "Niri"]
+                                        model: ["Shell", "Apps", root.wmGroup]
                                         ColumnLayout {
                                             id: group
                                             required property string modelData
@@ -338,7 +382,7 @@ Scope {
                                             }
 
                                             Repeater {
-                                                model: root.pages.filter(p => p.group === group.modelData)
+                                                model: root.visiblePages.filter(p => p.group === group.modelData)
                                                 NavItem {
                                                     required property var modelData
                                                     Layout.fillWidth: true
@@ -431,12 +475,12 @@ Scope {
                                 IconButton {
                                     visible: win.query === "" && !win.page.custom
                                     icon: "󰑓"
-                                    tooltip: win.page.store === "niri" ? "Reset page to your niri config" : "Reset page to defaults"
+                                    tooltip: root.isWm(win.page.store) ? "Reset page to your " + Compositor.name + " config" : "Reset page to defaults"
                                     interactive: root.pageKeys(win.page)
                                         .some(k => Settings[win.page.store ?? "properties"]?.[k] !== undefined)
                                     onClicked: {
                                         for (const k of root.pageKeys(win.page)) {
-                                            if (win.page.store === "niri") NiriSettings.reset(k)
+                                            if (root.isWm(win.page.store)) root.wmFor(win.page.store).reset(k)
                                             else Settings.reset(win.page.store, k)
                                         }
                                     }
@@ -456,11 +500,14 @@ Scope {
                             pages: root.pages
                         }
 
-                        // niri status: missing include / rejected config
+                        // compositor status: missing include / rejected config
                         Rectangle {
+                            id: wmBanner
+                            readonly property var svc: root.wmFor(win.page.store)
+                            readonly property bool hypr: win.page.store === "hyprland"
                             Layout.fillWidth: true
-                            visible: win.query === "" && win.page.store === "niri"
-                                     && (!NiriSettings.included || NiriSettings.error !== "")
+                            visible: win.query === "" && root.isWm(win.page.store)
+                                     && (!svc.included || svc.error !== "" || (hypr && !svc.available))
                             implicitHeight: banner.implicitHeight + 20
                             radius: 14
                             color: Qt.rgba(0.95, 0.55, 0.66, 0.12)
@@ -481,20 +528,27 @@ Scope {
                                 }
                                 Text {
                                     Layout.fillWidth: true
-                                    text: !NiriSettings.included
-                                        ? "niri doesn't load the settings yet: " + NiriSettings.mainConfig
-                                          + " needs the line\n" + NiriSettings.includeLine
-                                        : "niri rejected the change, nothing was written:\n" + NiriSettings.error
+                                    text: wmBanner.hypr && !wmBanner.svc.available
+                                        ? (wmBanner.svc.legacyConfig
+                                            ? "Only Hyprland's Lua config (hyprland.lua, Hyprland 0.55+) is supported, this one is hyprland.conf."
+                                            : "No Hyprland config found at " + wmBanner.svc.mainConfig)
+                                        : !wmBanner.svc.included
+                                        ? (wmBanner.hypr
+                                            ? "Hyprland doesn't load the settings yet: " + wmBanner.svc.mainConfig
+                                              + " needs this as its last line\n" + wmBanner.svc.includeLine
+                                            : "niri doesn't load the settings yet: " + wmBanner.svc.mainConfig
+                                              + " needs the line\n" + wmBanner.svc.includeLine)
+                                        : Compositor.name + " rejected the change, nothing was written:\n" + wmBanner.svc.error
                                     color: "white"
                                     font.pixelSize: 11
                                     font.family: Properties.fontFamily
                                     wrapMode: Text.WordWrap
                                 }
                                 IconButton {
-                                    visible: NiriSettings.included
+                                    visible: wmBanner.svc.included
                                     icon: "󰑓"
-                                    tooltip: "Undo all niri changes"
-                                    onClicked: NiriSettings.resetAll()
+                                    tooltip: "Undo all " + Compositor.name + " changes"
+                                    onClicked: wmBanner.svc.resetAll()
                                 }
                             }
                         }

@@ -360,6 +360,7 @@ Singleton {
         + 'else rm -f "$tmp"; printf "%s\\n" "$out" | sed "s/\\x1b\\[[0-9;]*m//g" | grep -vE " (DEBUG|INFO) " >&2; exit 1; fi'
 
     function apply() {
+        if (readFile(mainConfig) === "") return     // no niri config here (e.g. a Hyprland-only machine)
         if (applyProc.running) { applyTimer.restart(); return }
         const text = generate()
         if (text === readFile(overridePath)) { root.error = ""; return }

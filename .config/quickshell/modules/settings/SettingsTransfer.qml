@@ -25,8 +25,8 @@ Rectangle {
     property var pending: null               // checked file content, while mode === "confirm"
 
     readonly property string defaultPath: Quickshell.env("HOME") + "/quickshell-settings.json"
-    readonly property var groups: ["properties", "niri", "monitors", "calendar"]
-    readonly property var groupNames: ({ properties: "shell", niri: "niri", monitors: "monitors", calendar: "calendar" })
+    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar"]
+    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar" })
     readonly property var walNames: ["foreground", "background", "color0", "color1", "color2", "color3", "color4",
         "color5", "color6", "color7", "color8", "color9", "color10", "color11", "color12", "color13", "color14", "color15"]
 
@@ -110,7 +110,7 @@ Rectangle {
         const v = pending
         dismiss()
         for (const g of groups) if (v[g] !== undefined) Settings.setGroup(g, v[g])
-        if (v.monitors !== undefined) Monitors.write()     // niri settings follow Settings.niri by themselves
+        if (v.monitors !== undefined) Monitors.write()     // niri / Hyprland settings follow Settings.niri / .hyprland by themselves
         show("done", "Settings imported")
     }
 
@@ -141,6 +141,7 @@ Rectangle {
 
     function specFor(group, key) {
         if (group === "niri") return NiriSettings.spec(key)
+        if (group === "hyprland") return HyprSettings.spec(key)
         for (const p of pages)
             if (p.store === group)
                 for (const s of p.sections) for (const i of s.items) if (i.key === key) return i

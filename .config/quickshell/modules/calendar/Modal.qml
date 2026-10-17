@@ -26,7 +26,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: NiriSettings.appRadius
+        radius: Compositor.appRadius
         color: "#66000000"
         MouseArea { anchors.fill: parent; onClicked: root.tryClose() }
     }

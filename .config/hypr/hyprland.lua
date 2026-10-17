@@ -20,3 +20,6 @@ dofile(dots .. "rules.lua")
 
 -- Custom
 dofile(home .. "/.config/custom/hyprland/custom.lua")
+
+-- Quickshell settings app: its settings, monitor setup and binds (loaded last, so they win)
+pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell.lua")

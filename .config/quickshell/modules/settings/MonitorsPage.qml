@@ -128,8 +128,11 @@ ColumnLayout {
             anchors.margins: 10
             anchors.leftMargin: 14
             text: !Monitors.included
-                ? "󰀦  niri doesn't load the monitor file yet: " + NiriSettings.mainConfig
-                  + " needs\n" + Monitors.includeLine + "\nright before the output.kdl include."
+                ? (Compositor.isHyprland
+                    ? "󰀦  Hyprland doesn't load the settings file yet: " + HyprSettings.mainConfig
+                      + " needs this as its last line\n" + Monitors.includeLine
+                    : "󰀦  niri doesn't load the monitor file yet: " + NiriSettings.mainConfig
+                      + " needs\n" + Monitors.includeLine + "\nright before the output.kdl include.")
                 : "󰀦  " + Monitors.error
             color: "white"
             font.pixelSize: 11

@@ -80,7 +80,6 @@ BarPopup {
         Quickshell.execDetached(["bash", "-c", "sleep 0.35; " + cmd])
     }
 
-    readonly property bool isNiri: (Quickshell.env("NIRI_SOCKET") ?? "") !== ""
 
     Flickable {
         id: flick
@@ -190,9 +189,7 @@ BarPopup {
                     icon: "󰹑"
                     title: "Capture"
                     subtitle: "Screenshot"
-                    onToggled: root.runTool(root.isNiri
-                        ? "niri msg action screenshot"
-                        : "grim -g \"$(slurp)\" - | satty -f -")
+                    onToggled: root.runTool(Compositor.screenshotCommand)
                 }
                 QuickTile {
                     Layout.fillWidth: true

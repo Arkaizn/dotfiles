@@ -63,13 +63,10 @@ Scope {
 
     readonly property string windowTitle: "Quickshell Calendar"
 
-    // open, or bring the already open window to the front (niri focuses it,
-    // switching workspace / monitor if needed)
+    // open, or bring the already open window to the front (the compositor
+    // focuses it, switching workspace / monitor if needed)
     function show() {
-        if (root.open)
-            Quickshell.execDetached(["sh", "-c",
-                'id=$(niri msg -j windows | jq -r --arg t "$1" \'first(.[] | select(.title == $t) | .id) // empty\'); '
-                + '[ -n "$id" ] && niri msg action focus-window --id "$id"', "sh", root.windowTitle])
+        if (root.open) Compositor.focusWindow(root.windowTitle)
         root.open = true
     }
 
@@ -243,9 +240,9 @@ Scope {
             Rectangle {
                 id: bg
                 anchors.fill: parent
-                radius: NiriSettings.appRadius          // same corners as niri's windows
+                radius: Compositor.appRadius          // same corners as the compositor's windows
                 color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
-                // no own border: niri draws the window's border, and one inside got
+                // no own border: the compositor draws the window's border, and one inside got
                 // clipped at the rounded corners (looked cut off when resizing)
 
                 // keyboard shortcuts (inactive while typing in a dialog)
@@ -280,7 +277,7 @@ Scope {
                     Rectangle {
                         Layout.preferredWidth: 260
                         Layout.fillHeight: true
-                        radius: Math.max(6, NiriSettings.appRadius - 2)
+                        radius: Math.max(6, Compositor.appRadius - 2)
                         color: "#27000000"
                         border.width: Properties.panelBorderWidth
                         border.color: Properties.cardBorder

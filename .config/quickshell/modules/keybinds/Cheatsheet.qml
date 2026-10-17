@@ -6,12 +6,12 @@ import Quickshell.Wayland
 import qs.components
 import qs.services
 
-// Keybind cheatsheet: every niri bind (services/Keybinds.qml), grouped in
+// Keybind cheatsheet: every niri / Hyprland bind (services/Keybinds.qml), grouped in
 // dashboard-style cards. Hangs under the bar like the dashboard.
 //
 //   qs ipc call keybinds toggle      (also: the keyboard button in the control center)
 //
-// Re-reads the niri config each time it opens, so new binds show up right away.
+// Re-reads the compositor's config each time it opens, so new binds show up right away.
 BarPopup {
     id: root
     side: "center"
@@ -106,7 +106,7 @@ BarPopup {
                     }
                     Text {
                         text: Keybinds.error !== "" ? Keybinds.error
-                            : Keybinds.binds.length + " shortcuts from your niri config"
+                            : Keybinds.binds.length + " shortcuts from your " + (Compositor.name || "niri") + " config"
                         color: Keybinds.error !== "" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.5)
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
@@ -124,7 +124,7 @@ BarPopup {
                 }
                 IconButton {
                     icon: "󰑓"
-                    tooltip: "Reload from niri config"
+                    tooltip: "Reload from " + (Compositor.name || "niri") + " config"
                     onClicked: Keybinds.refresh()
                 }
                 IconButton {

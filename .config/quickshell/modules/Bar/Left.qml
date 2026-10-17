@@ -17,12 +17,11 @@ RowLayout {
      
     ArchIcon {}
 
-    // Workspace_niri for Niri
-    // Workspace_Hyprland for Hyprland
+    // Workspaces_niri for niri, Workspaces_hyprland for Hyprland
     Loader {
-        sourceComponent: Quickshell.env("NIRI_SOCKET") !== null // check if socket is Niri else use hyprland
-            ? niriWorkspacesComponent
-            : hyprlandWorkspacesComponent
+        sourceComponent: Compositor.isNiri ? niriWorkspacesComponent
+                       : Compositor.isHyprland ? hyprlandWorkspacesComponent
+                       : null
     }
     Component {
         id: niriWorkspacesComponent

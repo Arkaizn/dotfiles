@@ -10,6 +10,7 @@ import qs.services
 //            min, max, step, options }
 //   store: "properties" → Properties.qml values
 //          "niri"       → niri config (NiriSettings)
+//          "hyprland"   → Hyprland config (HyprSettings)
 //          "calendar"   → calendar app options (Settings.calendar, default = spec.def)
 Item {
     id: root
@@ -19,11 +20,12 @@ Item {
     property bool sub: false             // option of the toggle above it
     property bool parentOn: true         // that toggle is on
 
-    readonly property bool isNiri: store === "niri"
-    readonly property var current: isNiri ? NiriSettings.value(spec.key)
+    // a compositor setting: its settings service (NiriSettings / HyprSettings)
+    readonly property var wm: store === "niri" ? NiriSettings : store === "hyprland" ? HyprSettings : null
+    readonly property var current: wm ? wm.value(spec.key)
                                  : store === "calendar" ? (Settings.calendar[spec.key] ?? spec.def)
                                  : Properties[spec.key]
-    readonly property bool changed: (isNiri ? Settings.niri : Settings[store])[spec.key] !== undefined
+    readonly property bool changed: Settings[store][spec.key] !== undefined
 
     function hex2(x) { return Math.round(x * 255).toString(16).padStart(2, "0") }
 
@@ -32,7 +34,7 @@ Item {
             const c = Qt.color(v)
             v = "#" + (c.a < 1 ? hex2(c.a) : "") + hex2(c.r) + hex2(c.g) + hex2(c.b)
         }
-        if (isNiri) NiriSettings.set(spec.key, v)
+        if (wm) wm.set(spec.key, v)
         else Settings.set(store, spec.key, v)
     }
 
@@ -42,7 +44,7 @@ Item {
     }
 
     function reset() {
-        if (isNiri) NiriSettings.reset(spec.key)
+        if (wm) wm.reset(spec.key)
         else Settings.reset(store, spec.key)
     }
 
@@ -104,7 +106,7 @@ Item {
             implicitHeight: 28
             iconSize: 13
             icon: "󰑓"
-            tooltip: root.isNiri ? "Back to your niri config" : "Back to default"
+            tooltip: root.wm ? "Back to your " + (root.store === "hyprland" ? "Hyprland" : "niri") + " config" : "Back to default"
             opacity: root.changed ? 1 : 0
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 150 } }

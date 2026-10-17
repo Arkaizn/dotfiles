@@ -89,8 +89,11 @@ PanelWindow {
 
     function open(scr) {
         // No screen given (keybind / IPC): open on the focused output.
-        if (!scr && !shown && Quickshell.env("NIRI_SOCKET")) {
-            focusedOutputProc.running = true
+        if (!scr && !shown && (Compositor.isNiri || Compositor.isHyprland)) {
+            Compositor.focusedOutput(name => {
+                const s = Quickshell.screens.find(x => x.name === name)
+                root.open(s ?? root.screen ?? Quickshell.screens[0])
+            })
             return
         }
         if (scr && scr !== screen) {
@@ -162,19 +165,6 @@ PanelWindow {
             root.visible = false
             BarState.detach(root._id)
             root.popupClosed()
-        }
-    }
-
-    Process {
-        id: focusedOutputProc
-        command: ["niri", "msg", "-j", "focused-output"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let name = ""
-                try { name = JSON.parse(text).name } catch (e) {}
-                const scr = Quickshell.screens.find(s => s.name === name)
-                root.open(scr ?? root.screen ?? Quickshell.screens[0])
-            }
         }
     }
 

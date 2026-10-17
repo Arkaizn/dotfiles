@@ -40,9 +40,10 @@ ShellRoot {
         Bar {}
     }
 
+    // niri's IPC (workspaces in the bar); only connects when running on niri
     Niri {
         id: niri
-        Component.onCompleted: connect()
+        Component.onCompleted: if (QsServices.Compositor.isNiri) connect()
 
         onConnected: console.info("Connected to niri")
         onErrorOccurred: function(error) {

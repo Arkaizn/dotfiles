@@ -71,6 +71,8 @@ Singleton {
 
     // Bind these to keys, e.g. in niri:
     //   Mod+N { spawn "qs" "ipc" "call" "notifs" "dismissLatest"; }
+    // or Hyprland:
+    //   hl.bind("SUPER + N", hl.dsp.exec_cmd("qs ipc call notifs dismissLatest"))
     IpcHandler {
         target: "notifs"
         function dismissLatest(): void {

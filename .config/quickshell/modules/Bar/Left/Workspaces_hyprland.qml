@@ -19,10 +19,17 @@ Item {
         rightPadding: 10
 
         Repeater {
-            model: Hyprland.workspaces.values
+            // this bar's monitor only (like the niri version), no special
+            // workspaces (scratchpads have negative ids), in order
+            model: Array.from(Hyprland.workspaces.values)
+                .filter(w => w.id > 0 && w.monitor?.name === bar.screen.name)
+                .sort((a, b) => a.id - b.id)
 
             Rectangle {
+                id: ws
                 required property HyprlandWorkspace modelData
+                // shown on its monitor (the focused one is shown on the focused monitor)
+                readonly property bool isActive: modelData.monitor?.activeWorkspace?.id === modelData.id
 
                 color: Qt.rgba(0, 0, 0, 0)
 
@@ -38,7 +45,7 @@ Item {
                     color: "transparent" // for testing -> Qt.rgba(0, 0, 0, modelData.id === Hyprland.focusedWorkspace?.id ? 0 : 0)
                     // one binding for every state (active / hover / pressed)
                     scale: workspaceMouse.pressed ? Properties.onPressedButtonScale
-                         : (modelData.id === Hyprland.focusedWorkspace?.id || workspaceMouse.containsMouse) ? Properties.onEnteredTextScale
+                         : (ws.isActive || workspaceMouse.containsMouse) ? Properties.onEnteredTextScale
                          : Properties.onExitedTextScale
                     Behavior on scale {
                         NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic }
@@ -52,7 +59,7 @@ Item {
                         font.pixelSize: Properties.pixelSize
                         text: modelData.name
                         color: Properties.color
-                        opacity: modelData.id === Hyprland.focusedWorkspace?.id ? 1.0 : 0.5
+                        opacity: ws.isActive ? 1.0 : 0.5
                     }
                 }
 

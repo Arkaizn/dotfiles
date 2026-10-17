@@ -5,13 +5,14 @@ import QtQuick
 
 // User settings changed in the settings app (modules/settings), stored in
 // settings.json next to shell.qml:
-//   { "properties": { key: value }, "niri": { key: value },
+//   { "properties": { key: value }, "niri": { key: value }, "hyprland": { key: value },
 //     "monitors": { "<make model serial>": { mode, scale, ... } } }
 // Only changed values are stored; everything else keeps its default.
 //   properties → applied by Properties.qml (defaults = the values written there);
 //                a color can also be { "wal": "color4", "alpha": 0.8 } to follow pywal
 //   niri       → written to niri's override file by NiriSettings.qml
-//   monitors   → written to niri's outputs file by Monitors.qml
+//   hyprland   → written to Hyprland's override file by HyprSettings.qml
+//   monitors   → written to niri's / Hyprland's monitor file by Monitors.qml
 //   calendar   → reminder / sync options, read by CalendarStore.qml
 Singleton {
     id: root
@@ -19,6 +20,7 @@ Singleton {
     readonly property string path: Quickshell.shellDir + "/settings.json"
     property var properties: ({})
     property var niri: ({})
+    property var hyprland: ({})
     property var monitors: ({})
     property var calendar: ({})
     property bool loaded: false
@@ -57,6 +59,7 @@ Singleton {
             const o = text.trim() === "" ? {} : JSON.parse(text)
             root.properties = o.properties ?? {}
             root.niri = o.niri ?? {}
+            root.hyprland = o.hyprland ?? {}
             root.monitors = o.monitors ?? {}
             root.calendar = o.calendar ?? {}
         } catch (e) {
@@ -69,7 +72,7 @@ Singleton {
     Timer {
         id: saveTimer
         interval: 400
-        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, monitors: root.monitors, calendar: root.calendar }, null, 2) + "\n")
+        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, hyprland: root.hyprland, monitors: root.monitors, calendar: root.calendar }, null, 2) + "\n")
     }
 
     Component.onCompleted: parse(file.text())

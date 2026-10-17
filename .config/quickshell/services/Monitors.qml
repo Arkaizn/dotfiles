@@ -6,21 +6,29 @@ import qs.services
 
 // Monitor setup for the settings app (modules/settings/MonitorsPage.qml).
 //
-// Scans the outputs with `niri msg --json outputs`, applies changes live with
-// `niri msg output …` (temporary, so they can be reverted), and once kept saves
-// them in settings.json (Settings.monitors) and writes them to
+// niri: scans the outputs with `niri msg --json outputs`, applies changes live
+// with `niri msg output …` (temporary, so they can be reverted), and once kept
+// saves them in settings.json (Settings.monitors) and writes them to
 //   ~/.config/niri/config/quickshell-outputs.kdl
 // niri uses the FIRST `output` block that matches a monitor, so config.kdl
 // includes that file *before* output.kdl: monitors set here win, and the ones
 // never touched here still use output.kdl.
 //
+// Hyprland: scans with `hyprctl -j monitors all`, applies live with
+// `hyprctl eval 'hl.monitor({…})'` (undone by the next reload), and writes
+//   ~/.config/hypr/quickshell-monitors.lua
+// which the settings override file (HyprSettings) loads last: Hyprland uses
+// the LAST matching monitor rule, so these win over monitors.lua too.
+//
 // Monitors are saved by "make model serial", so they keep their settings when
-// plugged into another port.
+// plugged into another port, and the same saved setup works for both.
 Singleton {
     id: root
 
     readonly property string outputsPath: NiriSettings.configDir + "/config/quickshell-outputs.kdl"
-    readonly property string includeLine: 'include "./config/quickshell-outputs.kdl"'
+    readonly property string includeLine: Compositor.isHyprland ? HyprSettings.includeLine
+                                                                : 'include "./config/quickshell-outputs.kdl"'
+    readonly property var transforms: ["normal", "90", "180", "270", "flipped", "flipped-90", "flipped-180", "flipped-270"]
 
     // live state from niri, one object per output:
     //   { name, ident, make, model, serial, modes, enabled, width, height, refresh,
@@ -52,8 +60,64 @@ Singleton {
     }
 
     function refresh() {
+        if (Compositor.isHyprland) {
+            HyprSettings.refresh()
+            root.included = HyprSettings.included     // the override file loads the monitor file
+            hyprScanProc.running = true
+            return
+        }
         scanProc.running = true
         root.included = NiriSettings.readFile(NiriSettings.mainConfig).split("\n").some(l => l.trim() === root.includeLine)
+    }
+
+    // Hyprland: modes are "2560x1440@359.98Hz" (the first is the preferred one),
+    // transform is 0–7 → the same objects niri gives
+    Process {
+        id: hyprScanProc
+        command: ["hyprctl", "-j", "monitors", "all"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let data
+                try { data = JSON.parse(text) } catch (e) { root.error = "Couldn't read the monitors from Hyprland"; return }
+                const list = data.map(o => {
+                    const modes = (o.availableModes ?? []).map((m, i) => {
+                        const r = /^(\d+)x(\d+)@([\d.]+)Hz$/.exec(m)
+                        return r ? { width: +r[1], height: +r[2], refresh_rate: Math.round(parseFloat(r[3]) * 1000), is_preferred: i === 0 } : null
+                    }).filter(m => m !== null)
+                    const saved = Settings.monitors[root.ident(o)]
+                    const live = o.disabled ? null : root.nearestMode(modes, o.width, o.height, o.refreshRate * 1000)
+                    const fallback = live ?? (saved ? root.parseMode(saved.mode, modes) : null) ?? modes[0]
+                        ?? { width: o.width, height: o.height, refresh_rate: Math.round(o.refreshRate * 1000) }
+                    return {
+                        name: o.name,
+                        ident: root.ident(o),
+                        make: o.make ?? "",
+                        model: o.model ?? "",
+                        serial: o.serial ?? "",
+                        modes: modes,
+                        physical: [o.physicalWidth ?? 0, o.physicalHeight ?? 0],
+                        enabled: !o.disabled,
+                        width: fallback.width,
+                        height: fallback.height,
+                        refresh: fallback.refresh_rate,
+                        scale: o.disabled ? (saved?.scale ?? 1) : o.scale,
+                        transform: o.disabled ? (saved?.transform ?? "normal") : (root.transforms[o.transform] ?? "normal"),
+                        x: o.disabled ? (saved?.x ?? 0) : o.x,
+                        y: o.disabled ? (saved?.y ?? 0) : o.y,
+                        vrrSupported: true,
+                        vrr: !!o.vrr
+                    }
+                })
+                list.sort((a, b) => a.x - b.x || a.y - b.y || a.name.localeCompare(b.name))
+                root.outputs = list
+            }
+        }
+    }
+
+    function nearestMode(modes, w, h, refresh) {
+        const same = modes.filter(x => x.width === w && x.height === h)
+        if (same.length === 0) return null
+        return same.reduce((a, b) => Math.abs(b.refresh_rate - refresh) < Math.abs(a.refresh_rate - refresh) ? b : a)
     }
 
     Process {
@@ -107,6 +171,15 @@ Singleton {
     // ── Live changes (temporary until saved) ─────────────────────────────────
     // cfgs: output objects like in `outputs`
     function applyLive(cfgs) {
+        if (Compositor.isHyprland) {
+            // on first, then off — so the layout is never empty
+            const calls = cfgs.filter(c => c.enabled).map(c => hyprMonitorCall(c, Compositor.luaString(c.name)))
+                .concat(cfgs.filter(c => !c.enabled).map(c => hyprMonitorCall(c, Compositor.luaString(c.name))))
+            root.busy = true
+            liveProc.command = ["hyprctl", "eval", "(function() " + calls.join("; ") + " end)()"]
+            liveProc.running = true
+            return
+        }
         const cmds = []
         const q = s => "'" + String(s).replace(/'/g, "'\\''") + "'"
         // on first, then modes, then positions, then off — so the layout is never empty
@@ -131,7 +204,7 @@ Singleton {
         stderr: StdioCollector { id: liveErr }
         onExited: code => {
             root.busy = false
-            root.error = code === 0 ? "" : (liveErr.text.trim() || "niri couldn't apply the change")
+            root.error = code === 0 ? "" : (liveErr.text.trim() || Compositor.name + " couldn't apply the change")
             root.refresh()
         }
     }
@@ -202,6 +275,35 @@ Singleton {
         write()
     }
 
+    // hl.monitor({…}) for one output; `output` is a Lua string
+    function hyprMonitorCall(c, output) {
+        if (!c.enabled) return "hl.monitor({ output = " + output + ", disabled = true })"
+        const mode = typeof c.mode === "string" ? c.mode : modeString(c.width, c.height, c.refresh)
+        return "hl.monitor({ output = " + output
+            + ", mode = " + Compositor.luaString(mode)
+            + ", position = " + Compositor.luaString(Math.round(c.x) + "x" + Math.round(c.y))
+            + ", scale = " + Number(Number(c.scale).toFixed(3))
+            + ", transform = " + Math.max(0, transforms.indexOf(c.transform))
+            + ", vrr = " + (c.vrr ? 1 : 0) + " })"
+    }
+
+    // Hyprland matches "desc:" by the start of "make model serial"
+    function hyprDesc(id) {
+        return id.split(" ").filter(w => w !== "Unknown").join(" ")
+    }
+
+    function generateHypr() {
+        let t = "-- Generated by the Quickshell settings app (Monitors page) — edits here get\n"
+              + "-- overwritten. Loaded by quickshell.lua, after monitors.lua: Hyprland uses\n"
+              + "-- the last monitor rule that matches, so these win over monitors.lua.\n"
+        const m = Settings.monitors
+        for (const id of Object.keys(m).sort()) {
+            t += "\n-- " + (m[id].name ?? "") + "\n"
+            t += hyprMonitorCall(m[id], Compositor.luaString("desc:" + hyprDesc(id))) + "\n"
+        }
+        return t
+    }
+
     function generate() {
         let t = "// Generated by the Quickshell settings app (Monitors page) — edits here get\n"
               + "// overwritten. Included BEFORE output.kdl in config.kdl: niri uses the first\n"
@@ -222,18 +324,36 @@ Singleton {
         return t
     }
 
+    // writes the file of every compositor that's set up here, so switching
+    // between them keeps the same monitor setup
     function write() {
-        root.busy = true
-        writeProc.command = ["sh", "-c", NiriSettings.installScript, "sh", generate(), root.outputsPath]
-        writeProc.running = true
+        if (NiriSettings.readFile(NiriSettings.mainConfig) !== "") {
+            writeProc.command = ["sh", "-c", NiriSettings.installScript, "sh", generate(), root.outputsPath]
+            writeProc.running = true
+        }
+        if (HyprSettings.available) {
+            hyprWriteProc.command = ["sh", "-c", HyprSettings.installScript, "sh", generateHypr(), HyprSettings.monitorsPath]
+            hyprWriteProc.running = true
+        }
+        root.busy = writeProc.running || hyprWriteProc.running
     }
 
     Process {
         id: writeProc
         stderr: StdioCollector { id: writeErr }
         onExited: code => {
-            root.busy = false
-            root.error = code === 0 ? "" : (writeErr.text.trim() || "niri validate failed")
+            root.busy = hyprWriteProc.running
+            if (!Compositor.isHyprland) root.error = code === 0 ? "" : (writeErr.text.trim() || "niri validate failed")
+            root.refresh()
+        }
+    }
+
+    Process {
+        id: hyprWriteProc
+        stderr: StdioCollector { id: hyprWriteErr }
+        onExited: code => {
+            root.busy = writeProc.running
+            if (Compositor.isHyprland) root.error = code === 0 ? "" : (hyprWriteErr.text.trim() || "Hyprland --verify-config failed")
             root.refresh()
         }
     }
