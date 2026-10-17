@@ -1119,7 +1119,7 @@ ColumnLayout {
         Layout.preferredHeight: ed.visible && ed.changeCount > 0 ? barRow.implicitHeight + 22 : 0
         Layout.topMargin: Layout.preferredHeight > 0 ? 8 : 0
         visible: Layout.preferredHeight > 0.5
-        clip: true
+        clip: Math.abs(Layout.preferredHeight - (barRow.implicitHeight + 22)) > 0.5   // only while sliding
         radius: 14
         color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12)
         border.width: Properties.panelBorderWidth

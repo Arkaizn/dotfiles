@@ -55,6 +55,9 @@ Scope {
     readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm)
 
     readonly property var pages: [
+        { id: "profile", group: "Shell", icon: "󰀄", title: "Profile", custom: "profile",
+          desc: "Your picture and name on the dashboard and lockscreen" },
+
         { id: "appearance", group: "Shell", icon: "󰏘", title: "Appearance", store: "properties",
           desc: "Font, text and icons used all over the shell",
           sections: [
@@ -112,6 +115,28 @@ Scope {
                 { key: "onEnteredButtonScale", type: "real", min: 1, max: 1.3, step: 0.01, label: "Hover zoom" },
                 { key: "onPressedButtonScale", type: "real", min: 0.7, max: 1, step: 0.01, label: "Press shrink" },
                 { key: "onEnteredTextScale", type: "real", min: 1, max: 1.5, step: 0.01, label: "Workspace & tray hover zoom" } ] } ] },
+
+        { id: "battery", group: "System", icon: "󰁹", title: "Battery", store: "battery",
+          desc: "Warnings when the battery runs low",
+          sections: [
+            { title: "Low battery", items: [
+                { key: "lowAlert", type: "bool", def: true, label: "Low battery warning",
+                  desc: "A notification to plug in, repeated while the battery is low" },
+                { key: "lowLevel", type: "int", def: 20, min: 5, max: 50, dependsOn: "lowAlert",
+                  label: "Below (%)" },
+                { key: "lowInterval", type: "int", def: 5, min: 1, max: 30, dependsOn: "lowAlert",
+                  label: "Repeat every (minutes)" },
+                { key: "testLow", type: "button", icon: "󰂃", text: "Send test", dependsOn: "lowAlert",
+                  label: "Try it", run: () => BatteryAlerts.test(false) } ] },
+            { title: "Critical battery", items: [
+                { key: "criticalAlert", type: "bool", def: true, label: "Critical battery warning",
+                  desc: "Urgent notification, more often" },
+                { key: "criticalLevel", type: "int", def: 10, min: 2, max: 30, dependsOn: "criticalAlert",
+                  label: "Below (%)" },
+                { key: "criticalInterval", type: "int", def: 1, min: 1, max: 10, dependsOn: "criticalAlert",
+                  label: "Repeat every (minutes)" },
+                { key: "testCritical", type: "button", icon: "󰂃", text: "Send test", dependsOn: "criticalAlert",
+                  label: "Try it", run: () => BatteryAlerts.test(true) } ] } ] },
 
         { id: "network", group: "System", icon: "󰛳", title: "Network", custom: "network",
           desc: "Interfaces, IP settings, DNS and profiles (NetworkManager)" },
@@ -227,10 +252,10 @@ Scope {
     // current value of a setting in any store (for dependsOn)
     function valueOf(store, key) {
         if (isWm(store)) return wmFor(store).value(key)
-        if (store === "calendar") {
-            const v = Settings.calendar[key]
+        if (store !== "properties") {
+            const v = Settings[store]?.[key]
             if (v !== undefined) return v
-            const p = pages.find(p => p.store === "calendar")
+            const p = pages.find(p => p.store === store)
             for (const s of p.sections) for (const i of s.items) if (i.key === key) return i.def
             return undefined
         }
@@ -358,6 +383,7 @@ Scope {
                                 contentHeight: nav.implicitHeight
                                 clip: true
                                 boundsBehavior: Flickable.StopAtBounds
+                                SmoothWheel { flick: navFlick; step: 100 }
 
                                 ColumnLayout {
                                     id: nav
@@ -559,15 +585,28 @@ Scope {
 
                         Flickable {
                             id: flick
+                            // `pad` of room on every side: buttons grow on hover (up to
+                            // ~5px per side) and got cut off at the clip edge. The
+                            // flick reaches into the window padding by `pad` and the
+                            // content is moved back in by it, so nothing shifts.
+                            readonly property int pad: 8
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            contentHeight: content.implicitHeight + 8
+                            Layout.leftMargin: -pad
+                            Layout.rightMargin: -pad
+                            Layout.topMargin: -pad
+                            contentHeight: content.implicitHeight + pad * 2
                             clip: true
                             boundsBehavior: Flickable.StopAtBounds
 
+                            // same wheel scrolling as the calendar
+                            SmoothWheel { flick: flick; step: 140 }
+
                             ColumnLayout {
                                 id: content
-                                width: flick.width
+                                x: flick.pad
+                                y: flick.pad
+                                width: flick.width - flick.pad * 2
                                 spacing: 18
 
                                 Loader {
@@ -575,6 +614,13 @@ Scope {
                                     active: win.query === "" && win.page.custom === "monitors"
                                     visible: active
                                     sourceComponent: MonitorsPage {}
+                                }
+
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "profile"
+                                    visible: active
+                                    sourceComponent: ProfilePage {}
                                 }
 
                                 Loader {

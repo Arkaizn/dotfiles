@@ -17,3 +17,4 @@ singleton Keybinds Keybinds.qml
 singleton Compositor Compositor.qml
 singleton HyprSettings HyprSettings.qml
 singleton Network Network.qml
+singleton BatteryAlerts BatteryAlerts.qml

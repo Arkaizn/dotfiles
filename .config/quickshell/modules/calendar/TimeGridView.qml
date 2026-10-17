@@ -1,4 +1,5 @@
 import QtQuick
+import qs.components
 import QtQuick.Controls
 import QtQuick.Layouts
 import qs.services

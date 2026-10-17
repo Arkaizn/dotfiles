@@ -35,6 +35,8 @@ ShellRoot {
     // start the niri settings service with the shell, so its override file
     // follows settings.json even when the settings app isn't open
     readonly property string niriConfig: QsServices.NiriSettings.configDir
+    // same for the low-battery notifications
+    readonly property string batteryTier: QsServices.BatteryAlerts.tier
 
     Variants {
         model: Quickshell.screens

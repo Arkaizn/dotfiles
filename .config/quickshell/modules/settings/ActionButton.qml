@@ -19,10 +19,11 @@ Item {
     implicitHeight: Properties.buttonHeight
     opacity: interactive ? 1 : 0.4
 
-    // the whole button scales (background and text together)
+    // the whole button scales (background and text together); wide buttons
+    // grow at most 4px per side, so they stay inside the edges around them
     scale: !interactive ? 1
          : mouse.pressed ? Properties.onPressedButtonScale
-         : mouse.containsMouse ? 1 + (Properties.onEnteredButtonScale - 1) * 0.4 : 1
+         : mouse.containsMouse ? 1 + Math.min((Properties.onEnteredButtonScale - 1) * 0.4, 8 / Math.max(1, width)) : 1
     Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
 
     ButtonBackground {

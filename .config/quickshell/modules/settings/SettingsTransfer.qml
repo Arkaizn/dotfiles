@@ -25,8 +25,8 @@ Rectangle {
     property var pending: null               // checked file content, while mode === "confirm"
 
     readonly property string defaultPath: Quickshell.env("HOME") + "/quickshell-settings.json"
-    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network"]
-    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar", network: "network page" })
+    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network", "battery", "profile"]
+    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar", network: "network page", battery: "battery", profile: "profile" })
     // the network page's own preferences (not spec-driven)
     readonly property var networkSpecs: ({
         hideVirtual: { type: "bool" }, safeApply: { type: "bool" },
@@ -148,6 +148,7 @@ Rectangle {
         if (group === "niri") return NiriSettings.spec(key)
         if (group === "hyprland") return HyprSettings.spec(key)
         if (group === "network") return networkSpecs[key] ?? null
+        if (group === "profile") return ({ name: { type: "string" }, faceRev: { type: "real" } })[key] ?? null
         for (const p of pages)
             if (p.store === group)
                 for (const s of p.sections) for (const i of s.items) if (i.key === key) return i

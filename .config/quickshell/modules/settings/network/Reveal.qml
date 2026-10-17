@@ -12,7 +12,9 @@ Item {
     Layout.fillWidth: true
     Layout.preferredHeight: open ? inner.implicitHeight : 0
     visible: Layout.preferredHeight > 0.5
-    clip: true
+    // clip only while sliding: once open, buttons growing on hover at its
+    // edges must not be cut off
+    clip: Math.abs(Layout.preferredHeight - inner.implicitHeight) > 0.5
     Behavior on Layout.preferredHeight { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
 
     ColumnLayout {

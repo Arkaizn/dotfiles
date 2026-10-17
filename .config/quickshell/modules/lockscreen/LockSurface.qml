@@ -20,7 +20,8 @@ Item {
     property var screen: null
 
     readonly property bool auth: lock.authOpen
-    readonly property string user: Quickshell.env("USER") ?? ""
+    // display name from the settings app (Profile), else the user name
+    readonly property string user: Settings.profile.name || (Quickshell.env("USER") ?? "")
 
     // 0 → 1 when locking, 1 → 0 when unlocking (blur, dim, content fade)
     property real shown: 0
@@ -215,7 +216,8 @@ Item {
                     Image {
                         id: avatar
                         anchors.fill: parent
-                        source: "file://" + Quickshell.env("HOME") + "/.face"
+                        source: "file://" + Quickshell.env("HOME") + "/.face?r=" + (Settings.profile.faceRev ?? 0)
+                        cache: false
                         sourceSize: Qt.size(192, 192)
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true

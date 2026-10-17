@@ -10,15 +10,18 @@ import Quickshell.Io
 
 
 ColumnLayout {
+    id: profileRoot
     anchors.fill: parent
     anchors.topMargin: 25
 
+        // display name from the settings app (Profile), else the user name
+        property string whoami: ""
         Process {
             id: usernameProc
             command: ["whoami"]
             running: true
             stdout: SplitParser {
-                onRead: data => usernameRect.iconText = data
+                onRead: data => whoami = data
             }
         }
 
@@ -64,7 +67,9 @@ ColumnLayout {
 
         Image {
             anchors.fill: parent
-            source: Quickshell.env("HOME") + "/.face"
+            // ?r= changes with a new picture from the settings app (no stale cache)
+            source: "file://" + Quickshell.env("HOME") + "/.face?r=" + (Settings.profile.faceRev ?? 0)
+            cache: false
             fillMode: Image.PreserveAspectCrop
             smooth: true
             mipmap: true
@@ -89,7 +94,7 @@ ColumnLayout {
         ButtonBackground {
             id: usernameRect
             hovered: root.hovered
-            iconText: ""
+            iconText: Settings.profile.name || profileRoot.whoami
             iconSize: 24
             fontBold: true
         }

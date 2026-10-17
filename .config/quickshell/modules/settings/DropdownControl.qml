@@ -20,7 +20,9 @@ Item {
     implicitWidth: 200
     implicitHeight: Properties.buttonHeight
 
-    scale: mouse.pressed ? Properties.onPressedButtonScale : mouse.containsMouse ? 1 + (Properties.onEnteredButtonScale - 1) * 0.4 : 1
+    // grows at most 4px per side (it can be wide), like ActionButton
+    scale: mouse.pressed ? Properties.onPressedButtonScale
+         : mouse.containsMouse ? 1 + Math.min((Properties.onEnteredButtonScale - 1) * 0.4, 8 / Math.max(1, width)) : 1
     Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
 
     ButtonBackground {

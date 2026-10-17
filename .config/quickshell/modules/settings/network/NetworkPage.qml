@@ -930,7 +930,7 @@ ColumnLayout {
         Layout.preferredHeight: Network.pending !== null ? keepRow.implicitHeight + 26 : 0
         Layout.topMargin: Layout.preferredHeight > 0 ? 8 : 0
         visible: Layout.preferredHeight > 0.5
-        clip: true
+        clip: Math.abs(Layout.preferredHeight - (keepRow.implicitHeight + 26)) > 0.5   // only while sliding
         radius: 14
         color: Qt.rgba(0.98, 0.89, 0.69, 0.12)
         border.width: Properties.panelBorderWidth

@@ -15,6 +15,8 @@ import QtQuick
 //   monitors   → written to niri's / Hyprland's monitor file by Monitors.qml
 //   calendar   → reminder / sync options, read by CalendarStore.qml
 //   network    → network page preferences (hidden interfaces, safe apply)
+//   battery    → low-battery notifications, read by BatteryAlerts.qml
+//   profile    → display name + picture revision (dashboard, lockscreen)
 Singleton {
     id: root
 
@@ -25,6 +27,8 @@ Singleton {
     property var monitors: ({})
     property var calendar: ({})
     property var network: ({})
+    property var battery: ({})
+    property var profile: ({})
     property bool loaded: false
 
     function has(group, key) { return root[group][key] !== undefined }
@@ -65,6 +69,8 @@ Singleton {
             root.monitors = o.monitors ?? {}
             root.calendar = o.calendar ?? {}
             root.network = o.network ?? {}
+            root.battery = o.battery ?? {}
+            root.profile = o.profile ?? {}
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }
@@ -75,7 +81,7 @@ Singleton {
     Timer {
         id: saveTimer
         interval: 400
-        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, hyprland: root.hyprland, monitors: root.monitors, calendar: root.calendar, network: root.network }, null, 2) + "\n")
+        onTriggered: file.setText(JSON.stringify({ properties: root.properties, niri: root.niri, hyprland: root.hyprland, monitors: root.monitors, calendar: root.calendar, network: root.network, battery: root.battery, profile: root.profile }, null, 2) + "\n")
     }
 
     Component.onCompleted: parse(file.text())

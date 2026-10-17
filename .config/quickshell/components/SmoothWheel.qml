@@ -1,6 +1,6 @@
 import QtQuick
 
-// Wheel scrolling for a Flickable like the month view: a fixed step per
+// Wheel scrolling for a Flickable (calendar, settings app): a fixed step per
 // notch, eased, and notches add up while it's still moving.
 //   Flickable { id: f; SmoothWheel { flick: f; step: 52 } }
 WheelHandler {

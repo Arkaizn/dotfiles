@@ -11,7 +11,8 @@ import qs.services
 //   store: "properties" → Properties.qml values
 //          "niri"       → niri config (NiriSettings)
 //          "hyprland"   → Hyprland config (HyprSettings)
-//          "calendar"   → calendar app options (Settings.calendar, default = spec.def)
+//          other        → that group of settings.json (calendar, battery, …; default = spec.def)
+//   type "button": an action, `spec.run()` on click (`spec.text` on the button)
 Item {
     id: root
 
@@ -23,8 +24,8 @@ Item {
     // a compositor setting: its settings service (NiriSettings / HyprSettings)
     readonly property var wm: store === "niri" ? NiriSettings : store === "hyprland" ? HyprSettings : null
     readonly property var current: wm ? wm.value(spec.key)
-                                 : store === "calendar" ? (Settings.calendar[spec.key] ?? spec.def)
-                                 : Properties[spec.key]
+                                 : store === "properties" ? Properties[spec.key]
+                                 : (Settings[store]?.[spec.key] ?? spec.def)
     readonly property bool changed: Settings[store][spec.key] !== undefined
 
     function hex2(x) { return Math.round(x * 255).toString(16).padStart(2, "0") }
@@ -122,6 +123,7 @@ Item {
                 case "real": return number
                 case "color": return colorPicker
                 case "choice": return choice
+                case "button": return button
                 default: return textField
                 }
             }
@@ -153,6 +155,14 @@ Item {
             link: canLink ? (Settings.properties[root.spec.key]?.wal ?? "") : ""
             onEdited: v => root.set(v)
             onLinked: (name, alpha) => root.setLink(name, alpha)
+        }
+    }
+    Component {
+        id: button
+        ActionButton {
+            icon: root.spec.icon ?? ""
+            text: root.spec.text ?? root.spec.label
+            onClicked: root.spec.run()
         }
     }
     Component {

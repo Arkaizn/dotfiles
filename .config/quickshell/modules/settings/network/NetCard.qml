@@ -46,7 +46,6 @@ ColumnLayout {
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
         Behavior on color { ColorAnimation { duration: 200 } }
-        clip: true
 
         ColumnLayout {
             id: body
