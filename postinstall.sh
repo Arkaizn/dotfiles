@@ -16,8 +16,9 @@ declare -A steps=(
     ["Install Nvidia drivers"]="nvidia.sh"
     ["Install OpenRGB"]="openrgb/openrgb.sh"
     ["Setup greetd autologin"]="greetd.sh"
+    ["Setup YubiKey login"]="yubikey.sh"
 )
-order=("Install apps" "Install & configure Zsh" "Install Nvidia drivers" "Install OpenRGB" "Setup greetd autologin")
+order=("Install apps" "Install & configure Zsh" "Install Nvidia drivers" "Install OpenRGB" "Setup greetd autologin" "Setup YubiKey login")
 
 # track completed steps
 declare -A done_steps=()
