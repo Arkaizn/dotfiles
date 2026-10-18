@@ -271,7 +271,7 @@ Scope {
                 { key: "open", type: "button", icon: "󰓅", text: "Open", label: "Performance monitor",
                   desc: "also: qs ipc call perfmon toggle", run: () => PerfMon.toggleRequested() } ] } ] },
         { id: "capture", group: "Apps", icon: "󰄀", title: "Screenshots", store: "capture",
-          keywords: "screenshot screen capture recording record video grim slurp satty wf-recorder print",
+          keywords: "screenshot screen capture recording record video grim slurp satty wf-recorder print ocr text recognition tesseract",
           desc: "Screenshots and screen recording (menu: Print, or qs ipc call capture menu)",
           sections: [
             { title: "Screenshots", items: [
@@ -280,15 +280,17 @@ Scope {
                   desc: "save: file + clipboard · copy: clipboard only · edit: open in satty" },
                 { key: "delay", type: "choice", def: "0", options: ["0", "3", "5", "10"], label: "Delay (seconds)" },
                 { key: "pointer", type: "bool", def: false, label: "Include the mouse pointer" },
-                { key: "notify", type: "bool", def: true, label: "Notification", desc: "With Open / Edit / Open folder" } ] },
+                { key: "notify", type: "bool", def: true, label: "Notification", desc: "With Open / Edit / Open folder" },
+                { key: "ocrLangs", type: "string", def: "eng+deu", label: "Text recognition languages",
+                  desc: "tesseract languages joined with + (installed: tesseract --list-langs)" } ] },
             { title: "Recording", items: [
                 { key: "videoDir", type: "string", def: "~/Videos/Recordings", label: "Folder" },
                 { key: "format", type: "choice", def: "mp4", options: ["mp4", "mkv", "webm"], label: "Format" },
-                { key: "audio", type: "choice", def: "none", options: ["none", "desktop", "mic"], label: "Sound",
-                  desc: "desktop: what you hear (monitor of the default output) · mic: default input" } ] },
+                { key: "audio", type: "choice", def: "both", options: ["both", "desktop", "mic", "none"], label: "Sound",
+                  desc: "desktop: what you hear (monitor of the default output) · mic: default input · both: mixed into one track" } ] },
             { title: "Menu", items: [
                 { key: "openMenu", type: "button", icon: "󰄀", text: "Open the capture menu", label: "Capture menu",
-                  desc: "Keys in the menu: 1 region · 2 screen · 3 window · 4 / 5 record", run: () => Capture.menuOpen = true } ] } ] },
+                  desc: "Keys in the menu: 1 region · 2 screen · 3 window · 4 text (OCR) · 5 record a window · 6 record a screen", run: () => Capture.menuOpen = true } ] } ] },
         { id: "calendar", group: "Apps", icon: "󰃭", title: "Calendar", store: "calendar",
           desc: "Reminders and syncing of the calendar app",
           sections: [

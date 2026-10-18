@@ -89,6 +89,14 @@ BarPopup {
     }
 
     // Close first, so the panel isn't in the screenshot / color pick
+    // instant capture actions: run once the control center is out of the way
+    function runCapture(fn) {
+        root.close()
+        captureTimer.fn = fn
+        captureTimer.restart()
+    }
+    Timer { id: captureTimer; property var fn; interval: 350; onTriggered: fn() }
+
     function runTool(cmd) {
         root.close()
         Quickshell.execDetached(["bash", "-c", "sleep 0.35; " + cmd])
@@ -192,19 +200,21 @@ BarPopup {
                 }
             }
 
-            // ── Tools ──
-            RowLayout {
+            // ── Tools ── (capture: services/Capture.qml)
+            GridLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                columns: 3
+                rowSpacing: 8
+                columnSpacing: 8
 
                 QuickTile {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
                     expandable: false
-                    icon: "󰹑"
-                    title: "Capture"
-                    subtitle: "Screenshot"
-                    onToggled: root.runTool(Compositor.screenshotCommand)
+                    icon: "󰩭"
+                    title: "Screenshot"
+                    subtitle: "Region"
+                    onToggled: root.runCapture(() => Capture.screenshot("region"))
                 }
                 QuickTile {
                     Layout.fillWidth: true
@@ -212,10 +222,19 @@ BarPopup {
                     expandable: false
                     icon: "󰊄"
                     title: "OCR"
-                    subtitle: "Copy text"
-                    onToggled: root.runTool(
-                        "grim -t png -g \"$(slurp)\" - | tesseract - - -l eng+deu 2>/dev/null | wl-copy"
-                        + " && notify-send -a 'Control center' 'OCR' 'Text copied to clipboard'")
+                    subtitle: "Region → text"
+                    onToggled: root.runCapture(() => Capture.ocr())
+                }
+                QuickTile {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    expandable: false
+                    active: Capture.recording
+                    icon: Capture.recording ? "󰓛" : "󰕧"
+                    title: Capture.recording ? "Stop" : "Record"
+                    subtitle: Capture.recording ? Math.floor(Capture.elapsed / 60) + ":" + String(Capture.elapsed % 60).padStart(2, "0")
+                                                : "Screen"
+                    onToggled: Capture.recording ? Capture.stop() : root.runCapture(() => Capture.record("screen"))
                 }
                 QuickTile {
                     Layout.fillWidth: true
@@ -227,6 +246,16 @@ BarPopup {
                     onToggled: root.runTool(
                         "c=$(hyprpicker -a -f hex) && [ -n \"$c\" ]"
                         + " && notify-send -a 'Control center' 'Color picker' \"$c copied to clipboard\"")
+                }
+                QuickTile {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    Layout.columnSpan: 2
+                    expandable: false
+                    icon: "󰄀"
+                    title: "Capture"
+                    subtitle: "Screenshot & record menu"
+                    onToggled: { root.close(); Capture.menuOpen = true }
                 }
             }
 

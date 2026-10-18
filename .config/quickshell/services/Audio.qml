@@ -23,8 +23,10 @@ Singleton {
     readonly property var hidden: Array.isArray(cfg.hidden) ? cfg.hidden : []
     readonly property var names: cfg.names && typeof cfg.names === "object" && !Array.isArray(cfg.names) ? cfg.names : ({})
 
-    readonly property var sinks: Pipewire.nodes.values.filter(n => n.type === PwNodeType.AudioSink)
-    readonly property var sources: Pipewire.nodes.values.filter(n => n.type === PwNodeType.AudioSource)
+    readonly property var sinks: Pipewire.nodes.values.filter(n => n.type === PwNodeType.AudioSink && !isInternal(n))
+    readonly property var sources: Pipewire.nodes.values.filter(n => n.type === PwNodeType.AudioSource && !isInternal(n))
+    // the temporary desktop + mic mix of a screen recording (services/Capture.qml)
+    function isInternal(n) { return (n?.name ?? "").startsWith("qs-rec") }
 
     // the name shown everywhere: your alias, else the device's description
     function label(n) {

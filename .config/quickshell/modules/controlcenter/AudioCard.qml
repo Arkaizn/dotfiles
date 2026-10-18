@@ -19,13 +19,13 @@ CCCard {
     // are AudioInStream and stay out).
     // hidden devices (Settings → Audio) stay out, unless one is the default
     readonly property var sinks: Pipewire.nodes.values
-        .filter(n => n.type === PwNodeType.AudioSink && (!Audio.isHidden(n) || n === Pipewire.defaultAudioSink))
+        .filter(n => n.type === PwNodeType.AudioSink && !Audio.isInternal(n) && (!Audio.isHidden(n) || n === Pipewire.defaultAudioSink))
         .sort((a, b) => root.nodeName(a).localeCompare(root.nodeName(b)))
     readonly property var sources: Pipewire.nodes.values
-        .filter(n => n.type === PwNodeType.AudioSource && (!Audio.isHidden(n) || n === Pipewire.defaultAudioSource))
+        .filter(n => n.type === PwNodeType.AudioSource && !Audio.isInternal(n) && (!Audio.isHidden(n) || n === Pipewire.defaultAudioSource))
         .sort((a, b) => root.nodeName(a).localeCompare(root.nodeName(b)))
     readonly property var streams: Pipewire.nodes.values
-        .filter(n => n.type === PwNodeType.AudioOutStream && !n.name.startsWith("speech-dispatcher"))
+        .filter(n => n.type === PwNodeType.AudioOutStream && !n.name.startsWith("speech-dispatcher") && !Audio.isInternal(n))
 
     // The saved default can point at an unplugged device (Quickshell then
     // reports null); fall back like WirePlumber does: highest session priority.

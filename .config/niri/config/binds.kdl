@@ -265,8 +265,9 @@ binds {
     Ctrl+Print { spawn "qs" "ipc" "call" "capture" "screenshot" "screen"; }
     Shift+Print { spawn "qs" "ipc" "call" "capture" "record" "screen"; }
     // Alt+Print { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
-    Super+Shift+S { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
-    Super+Shift+T { spawn-sh "grim -t png -g \"$(slurp)\" - | tesseract - - -l eng+deu | wl-copy && notify-send 'OCR' 'Text copied'"; }
+    // region screenshot / region → text, like the control center's Screenshot and OCR tiles
+    Super+Shift+S { spawn "qs" "ipc" "call" "capture" "screenshot" "region"; }
+    Super+Shift+T { spawn "qs" "ipc" "call" "capture" "ocr"; }
 
     // Applications such as remote-desktop clients and software KVM switches may
     // request that niri stops processing the keyboard shortcuts defined here
