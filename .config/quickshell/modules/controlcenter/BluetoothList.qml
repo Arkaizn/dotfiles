@@ -25,17 +25,6 @@ ColumnLayout {
         .sort((a, b) => (b.connected - a.connected) || (b.paired - a.paired)
                         || (a.name || "").localeCompare(b.name || ""))
 
-    function deviceIcon(d) {
-        const i = d.icon || ""
-        if (i.includes("headset") || i.includes("headphone")) return "󰋋"
-        if (i.includes("audio")) return "󰓃"
-        if (i.includes("mouse")) return "󰍽"
-        if (i.includes("keyboard")) return "󰌌"
-        if (i.includes("phone")) return "󰏲"
-        if (i.includes("gaming") || i.includes("joystick")) return "󰊴"
-        if (i.includes("computer")) return "󰟀"
-        return "󰂯"
-    }
 
     RowLayout {
         Layout.fillWidth: true
@@ -119,7 +108,7 @@ ColumnLayout {
                         spacing: 8
 
                         Text {
-                            text: root.deviceIcon(row.dev)
+                            text: BluetoothPower.iconFor(row.dev)
                             color: Colors.ink
                             font.pixelSize: 15
                             font.family: Properties.fontFamily

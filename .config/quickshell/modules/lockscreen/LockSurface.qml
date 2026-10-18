@@ -317,10 +317,33 @@ Item {
             font.family: Properties.fontFamily
         }
 
-        // ── Top-right: batteries ──
+        // ── Top-right: connected Bluetooth devices, then batteries ──
         Row {
             anchors { right: parent.right; top: parent.top; margins: 28 }
             spacing: 8
+
+            // headset, controller, … with its battery when it reports one
+            Repeater {
+                model: BluetoothPower.connected
+                delegate: Rectangle {
+                    required property var modelData
+                    readonly property int level: BluetoothPower.battery(modelData)
+                    implicitWidth: btText.implicitWidth + 20
+                    implicitHeight: 30
+                    radius: Properties.radius
+                    color: Properties.panelColor
+                    border.width: Properties.panelBorderWidth
+                    border.color: Properties.panelBorder
+                    Text {
+                        id: btText
+                        anchors.centerIn: parent
+                        text: BluetoothPower.iconFor(modelData) + "  " + modelData.name + (level >= 0 ? "  " + level + "%" : "")
+                        color: level >= 0 && level <= 15 ? "#f38ba8" : "white"
+                        font.pixelSize: 12
+                        font.family: Properties.fontFamily
+                    }
+                }
+            }
 
             Repeater {
                 model: {

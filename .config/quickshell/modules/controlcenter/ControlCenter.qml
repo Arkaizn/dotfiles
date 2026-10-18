@@ -84,7 +84,7 @@ BarPopup {
             out.push({ icon: b.icon, name: b.name, level: b.level })
         for (const dev of root.btConnected)
             if (dev.batteryAvailable)
-                out.push({ icon: "󰂯", name: dev.name, level: Math.round(dev.battery * 100) })
+                out.push({ icon: BluetoothPower.iconFor(dev), name: dev.name, level: Math.round(dev.battery * 100) })
         return out
     }
 
@@ -155,7 +155,9 @@ BarPopup {
                 QuickTile {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
-                    icon: !root.btAdapter?.enabled ? "󰂲" : root.btConnected.length > 0 ? "󰂱" : "󰂯"
+                    // one device connected: its kind (headset, controller, …)
+                    icon: !root.btAdapter?.enabled ? "󰂲" : root.btConnected.length === 1 ? BluetoothPower.iconFor(root.btConnected[0])
+                        : root.btConnected.length > 0 ? "󰂱" : "󰂯"
                     title: "Bluetooth"
                     subtitle: !root.btAdapter ? "No adapter"
                         : !root.btAdapter.enabled ? "Off"

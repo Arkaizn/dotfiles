@@ -89,8 +89,9 @@ ColumnLayout {
                 readonly property var dev: modelData
                 first: index === 0
                 wide: true
-                label: dev.name + (dev.connected ? "  ·  connected" : "")
+                label: BluetoothPower.iconFor(dev) + "  " + dev.name + (dev.connected ? "  ·  connected" : "")
                 desc: dev.address
+                      + (dev.icon ? "  ·  " + dev.icon.replace(/-/g, " ") : "")
                       + (dev.batteryAvailable ? "  ·  battery " + Math.round(dev.battery * 100) + "%" : "")
                       + (dev.trusted ? "  ·  trusted (reconnects by itself)" : "")
                       + (dev.blocked ? "  ·  blocked" : "")

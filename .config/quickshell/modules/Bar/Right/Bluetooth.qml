@@ -4,7 +4,8 @@ import QtQuick
 import qs.services
 import qs.components
 
-// Left click: control center · right click: Bluetooth on/off
+// Bluetooth state, followed by an icon per connected device (headset,
+// controller, …). Left click: control center · right click: Bluetooth on/off
 Item {
     id: root
     implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
@@ -20,7 +21,7 @@ Item {
 
     readonly property string icon: {
         if (!adapter?.enabled) return "󰂲"
-        if (anyConnected) return "󰂱"
+        if (anyConnected) return "󰂱 " + BluetoothPower.connected.map(d => BluetoothPower.iconFor(d)).join(" ")
         return "󰂯"
     }
 
