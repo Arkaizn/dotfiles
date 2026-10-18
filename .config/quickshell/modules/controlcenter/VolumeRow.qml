@@ -4,7 +4,8 @@ import Quickshell.Services.Pipewire
 import qs.components
 import qs.services
 
-// One volume control: [mute button] [slider] [xx%]
+// One volume control: [mute button] [slider] [xx%], with a live level meter
+// (LevelMeter) under the slider showing how loud it is right now.
 // `node` is a Pipewire node (sink, source or app stream); it must be tracked
 // by a PwObjectTracker somewhere for volume/muted to be live.
 RowLayout {
@@ -13,6 +14,7 @@ RowLayout {
     property var node: null
     property string icon: "󰕾"
     property string mutedIcon: "󰝟"
+    property bool meter: true
 
     readonly property var audio: node?.audio ?? null
     readonly property bool muted: audio?.muted ?? false
@@ -37,6 +39,16 @@ RowLayout {
         value: root.audio?.volume ?? 0
         opacity: root.muted ? 0.45 : 1
         onMoved: if (root.audio) root.audio.volume = value
+
+        LevelMeter {
+            visible: root.meter
+            x: slider.leftPadding
+            y: slider.topPadding + slider.availableHeight / 2 + 5
+            width: slider.availableWidth
+            node: root.node
+            muted: root.muted
+            volume: root.audio?.volume ?? 1
+        }
     }
 
     Text {

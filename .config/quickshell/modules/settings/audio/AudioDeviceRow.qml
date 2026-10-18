@@ -38,6 +38,7 @@ NetRow {
             onClicked: if (row.audio) row.audio.muted = !row.audio.muted
         }
         CCSlider {
+            id: volSlider
             Layout.fillWidth: true
             visible: !row.renaming
             to: Audio.maxVolume
@@ -45,6 +46,16 @@ NetRow {
             value: row.audio?.volume ?? 0
             opacity: row.audio?.muted ? 0.45 : 1
             onMoved: if (row.audio) row.audio.volume = value
+
+            // live level, like pavucontrol
+            LevelMeter {
+                x: volSlider.leftPadding
+                y: volSlider.topPadding + volSlider.availableHeight / 2 + 5
+                width: volSlider.availableWidth
+                node: row.node
+                muted: row.audio?.muted ?? false
+                volume: row.audio?.volume ?? 1
+            }
         }
         Text {
             visible: !row.renaming

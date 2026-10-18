@@ -5,17 +5,23 @@ import qs.components
 import qs.services
 import ".."
 import "../network"
+import "../../controlcenter"
 
 // Audio page (services/Audio.qml): every output / input with volume, default,
-// mute, name and visibility; card profiles; scroll step and max volume.
+// mute, name and visibility; apps playing right now; card profiles; scroll
+// step and max volume. Every slider has a live level meter (LevelMeter).
 ColumnLayout {
     id: page
     spacing: 16
 
     Component.onCompleted: Audio.loadCards()
 
+    // apps playing audio right now (not the recording mix, not speech-dispatcher)
+    readonly property var streams: Pipewire.nodes.values
+        .filter(n => n.type === PwNodeType.AudioOutStream && !n.name.startsWith("speech-dispatcher") && !Audio.isInternal(n))
+
     // volume / mute only update for tracked nodes
-    PwObjectTracker { objects: Audio.sinks.concat(Audio.sources) }
+    PwObjectTracker { objects: Audio.sinks.concat(Audio.sources).concat(page.streams) }
 
     NetCard {
         Layout.fillWidth: true
@@ -73,6 +79,26 @@ ColumnLayout {
                 output: false
                 isDefault: modelData === Pipewire.defaultAudioSource
                 onMakeDefault: Pipewire.preferredDefaultAudioSource = modelData
+            }
+        }
+    }
+
+    NetCard {
+        Layout.fillWidth: true
+        title: "Apps"
+        icon: "󰎆"
+        NetRow { first: true; visible: page.streams.length === 0; label: "Nothing is playing"; desc: "apps show up here while they play sound" }
+        Repeater {
+            model: page.streams
+            NetRow {
+                required property var modelData
+                required property int index
+                readonly property var props: modelData.properties ?? {}
+                first: index === 0
+                wide: true
+                label: props["application.name"] || props["application.process.binary"] || modelData.description || modelData.name
+                desc: props["media.name"] ?? ""
+                VolumeRow { Layout.fillWidth: true; node: modelData }
             }
         }
     }
