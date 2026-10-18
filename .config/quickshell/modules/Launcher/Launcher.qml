@@ -211,6 +211,7 @@ PanelWindow {
         for (const v of [appSearchView, clipboardView, connectionsView, wallpaperView, keybindsView]) { v.slideX = 0; v.opacity = 1 }
         card.skipHeightAnim = true
         card.collapsed = true
+        appSearchView.showAll = false
     }
 
     // Opens the launcher (optionally straight into a given mode), or closes
@@ -356,6 +357,7 @@ PanelWindow {
                     id: appSearchView
                     Layout.fillWidth: true
                     maxHeight: root.maxResultsHeight
+                    allAppsHeight: root.wallpaperMaxHeight
                     query: searchField.text
                     visible: root.mode === "apps"
                     property real slideX: 0

@@ -4,7 +4,9 @@ import Quickshell.Widgets
 import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
+import "../settings"
 
 // App search + "recommended apps" grid.
 //
@@ -20,7 +22,10 @@ ColumnLayout {
 
     property string query: ""
     property int maxHeight: 360
+    property int allAppsHeight: maxHeight   // the All apps page may be taller (more room for the A–Z strip)
     readonly property bool isSearching: query.trim().length > 0
+    // "All apps" page instead of the recommended grid (button in the header)
+    property bool showAll: false
 
     signal closeRequested()
 
@@ -221,11 +226,73 @@ ColumnLayout {
 
     // g / > / ssh prefixes: only the actions; the calculator row sits above
     // the apps and takes Enter for "=…" or when no app matches
-    function moveDown() { if (actions.prefixMode) actions.moveDown(); else if (root.isSearching) resultsList.incrementCurrentIndex() }
-    function moveUp() { if (actions.prefixMode) actions.moveUp(); else if (root.isSearching) resultsList.decrementCurrentIndex() }
+    function moveDown() { if (actions.prefixMode) actions.moveDown(); else if (root.isSearching) resultsList.incrementCurrentIndex(); else if (root.showAll) allView.moveDown() }
+    function moveUp() { if (actions.prefixMode) actions.moveUp(); else if (root.isSearching) resultsList.decrementCurrentIndex(); else if (root.showAll) allView.moveUp() }
     function activateCurrent() {
         if (actions.prefixMode || (actions.visible && (root.query.trim().startsWith("=") || filteredModel.count === 0))) { actions.activate(); return }
         if (root.isSearching) root.launch(resultsList.currentItem?.entry)
+        else if (root.showAll) allView.activateCurrent()
+    }
+
+    // ── Header: "Recommended" / "All apps" + the button between them ──
+    RowLayout {
+        Layout.fillWidth: true
+        Layout.leftMargin: 4
+        visible: !root.isSearching
+        spacing: 8
+
+        Text {
+            id: pageTitle
+            text: root.showAll ? "All apps" : "Recommended"
+            color: Colors.fade(0.55)
+            font.pixelSize: 12
+            font.bold: true
+        }
+        Text {
+            text: root.allApps.length
+            visible: root.showAll
+            color: Colors.fade(0.35)
+            font.pixelSize: 11
+        }
+        Item { Layout.fillWidth: true }
+
+        ActionButton {
+            id: pageButton
+            icon: root.showAll ? "󰁍" : "󰀻"
+            text: root.showAll ? "Recommended" : "All apps"
+            onClicked: root.showAll = !root.showAll
+        }
+    }
+
+    // page switch: the incoming page slides in from its side and fades in
+    // (the card's height animates on its own in Launcher.qml)
+    onShowAllChanged: {
+        pageAnim.stop()
+        if (showAll) allView.reset()
+        pageAnim.target = showAll ? allView : recommendedFlow
+        pageAnim.from = showAll ? 60 : -60
+        pageAnim.start()
+    }
+    ParallelAnimation {
+        id: pageAnim
+        property Item target: null
+        property real from: 0
+        NumberAnimation { target: pageAnim.target; property: "pageX"; from: pageAnim.from; to: 0; duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { target: pageAnim.target; property: "pageOpacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
+    }
+
+    AllAppsView {
+        id: allView
+        property real pageX: 0
+        property real pageOpacity: 1
+        Layout.fillWidth: true
+        Layout.preferredHeight: root.allAppsHeight - pageButton.implicitHeight - root.spacing
+        Layout.bottomMargin: 4
+        visible: root.showAll && !root.isSearching
+        opacity: pageOpacity
+        transform: Translate { x: allView.pageX }
+        apps: root.allApps
+        onLaunched: entry => root.launch(entry)
     }
 
     // ── Recommended apps strip — shown until the user starts typing ──
@@ -233,8 +300,11 @@ ColumnLayout {
         id: recommendedFlow
         Layout.fillWidth: true
         Layout.bottomMargin: 4
-        opacity: root.isSearching ? 0 : 1
-        visible: opacity > 0
+        property real pageX: 0
+        property real pageOpacity: 1
+        transform: Translate { x: recommendedFlow.pageX }
+        opacity: root.isSearching || root.showAll ? 0 : pageOpacity
+        visible: !root.showAll && opacity > 0
         spacing: 8
 
         Behavior on opacity {
@@ -313,6 +383,8 @@ ColumnLayout {
 
     ListView {
         id: resultsList
+        // same wheel feel as the settings sidebar
+        SmoothWheel { flick: resultsList; step: 100 }
         Layout.fillWidth: true
         // min 1 row while searching so the "No matching apps" empty state
         // actually has room to render, instead of being clipped to 0 height

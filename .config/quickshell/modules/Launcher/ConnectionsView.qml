@@ -1,6 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 
 // Saved SSH / RDP / VNC connections (services/RemoteConnections.qml). Enter or a
@@ -41,6 +42,8 @@ ColumnLayout {
 
     ListView {
         id: list
+        // same wheel feel as the settings sidebar
+        SmoothWheel { flick: list; step: 100 }
         Layout.fillWidth: true
         Layout.preferredHeight: Math.min(root.maxHeight, Math.max(root.shown.length, 1) * 52)
         clip: true

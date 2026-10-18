@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.components
 import qs.services
 import QtQuick.Layouts
 
@@ -148,6 +149,8 @@ ColumnLayout {
     // ── History list — always shown for this view; `query` just narrows it ──
     ListView {
         id: historyList
+        // same wheel feel as the settings sidebar
+        SmoothWheel { flick: historyList; step: 100 }
         Layout.fillWidth: true
         Layout.preferredHeight: Math.min(root.maxHeight, Math.max(filteredModel.count, 1) * 44)
         clip: true
