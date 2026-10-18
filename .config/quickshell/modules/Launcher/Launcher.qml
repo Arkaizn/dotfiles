@@ -207,6 +207,9 @@ PanelWindow {
     // (Esc, launching an app, …), so the next open always grows up from
     // the bottom instead of starting at the last view's size.
     onVisibleChanged: if (!visible) {
+        // closing without the exit animation (launching an app) left the panel
+        // in place; park it off-screen so the next open slides in cleanly
+        anim.hide()
         slideAnim.stop()
         for (const v of [appSearchView, clipboardView, connectionsView, wallpaperView, keybindsView]) { v.slideX = 0; v.opacity = 1 }
         card.skipHeightAnim = true
@@ -231,6 +234,7 @@ PanelWindow {
         }
 
         if (scr) root.screen = scr
+        anim.hide()                 // first open: start off-screen, not at the resting place
         card.skipHeightAnim = true
         root.mode = targetMode || "apps"
         root.visible = true

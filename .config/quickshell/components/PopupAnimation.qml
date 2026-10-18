@@ -36,6 +36,16 @@ Item {
         enterGroup.start()
     }
 
+    // jump to the hidden (slid-out) position without animating, so the next
+    // open never shows a frame of the panel at its resting place first
+    function hide() {
+        enterGroup.stop()
+        exitGroup.stop()
+        var off = root._offset()
+        target.x = off.x
+        target.y = off.y
+    }
+
     function exit() {
         enterGroup.stop()
         target.clip = true
