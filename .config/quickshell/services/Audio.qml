@@ -56,7 +56,8 @@ Singleton {
     // [{ name, description, active, profiles: [{ name, description, available }] }]
     property var cards: []
     property string cardError: ""
-    function loadCards() {
+    // failure: shown instead of clearing cardError (a failed profile change)
+    function loadCards(failure) {
         Jobs.run(["pactl", "-f", "json", "list", "cards"], (code, out, err) => {
             if (code !== 0) { cardError = code === 127 ? Jobs.installHint("pactl") : (err.trim() || "pactl failed"); return }
             try {
@@ -66,14 +67,16 @@ Singleton {
                     active: c.active_profile,
                     profiles: Object.keys(c.profiles).map(k => ({ name: k, description: c.profiles[k].description, available: c.profiles[k].available }))
                 }))
-                cardError = ""
+                cardError = failure ?? ""
             } catch (e) { cardError = "couldn't read pactl's output" }
         })
     }
     function setProfile(card, profile) {
         const c = cards.find(x => x.name === card)
         if (!c || !c.profiles.some(p => p.name === profile)) return
-        Jobs.run(["pactl", "set-card-profile", "--", card, profile], () => loadCards())
+        // no "--" before the card: pactl counts it as an argument and refuses
+        Jobs.run(["pactl", "set-card-profile", card, profile],
+                 (code, out, err) => loadCards(code === 0 ? "" : err.trim() || "pactl couldn't set the profile"))
     }
 
     // a short sound on a device (pw-play), to find out which one is which
