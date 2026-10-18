@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -240,6 +241,23 @@ Modal {
     }
 
     // "Every 2 weeks on Mon, Wed · 10 times"
+    // notes as rich text with clickable links (http(s)://… and www.…)
+    function linkify(t) {
+        const esc = String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        const html = esc.replace(/\b(?:https?:\/\/|www\.)[^\s<]*[^\s<.,;:!?)\]'"]/g, m => {
+            const href = m.startsWith("www.") ? "https://" + m : m
+            return "<a href=\"" + href.replace(/"/g, "%22") + "\" style=\"color: " + Colors.color6 + "\">" + m + "</a>"
+        })
+        return "<span style=\"white-space: pre-wrap\">" + html + "</span>"
+    }
+    property bool linkCopied: false
+    function copyLink(link) {
+        Quickshell.execDetached(["wl-copy", "--", link])
+        linkCopied = true
+        linkCopiedTimer.restart()
+    }
+    Timer { id: linkCopiedTimer; interval: 1200; onTriggered: root.linkCopied = false }
+
     function ruleText(rule) {
         if (!rule) return "Repeats"
         const m = {}
@@ -468,14 +486,35 @@ Modal {
                         width: parent.width - 8
                         readOnly: true
                         selectByMouse: true
-                        text: root.ev?.description ?? ""
+                        textFormat: TextEdit.RichText
+                        text: root.linkify(root.ev?.description)
                         color: Colors.fade(0.8)
                         selectionColor: Colors.fade(0.28)
                         font.pixelSize: 12
                         font.family: Properties.fontFamily
                         wrapMode: TextEdit.Wrap
+                        onLinkActivated: link => Qt.openUrlExternally(link)
+                        HoverHandler { cursorShape: notesText.hoveredLink ? Qt.PointingHandCursor : Qt.IBeamCursor }
+                        // right-click on a link copies it
+                        TapHandler {
+                            acceptedButtons: Qt.RightButton
+                            onTapped: (point) => {
+                                const link = notesText.linkAt(point.position.x, point.position.y)
+                                if (link) root.copyLink(link)
+                            }
+                        }
                     }
                 }
+            }
+            Text {
+                Layout.fillWidth: true
+                Layout.topMargin: -4
+                visible: notesText.visible && /\b(?:https?:\/\/|www\.)/.test(root.ev?.description ?? "")
+                text: root.linkCopied ? "󰄬  Link copied" : "Click a link to open it, right-click to copy it"
+                color: root.linkCopied ? Colors.color6 : Colors.fade(0.4)
+                font.pixelSize: 10
+                font.family: Properties.fontFamily
+                horizontalAlignment: Text.AlignRight
             }
 
             Text {
@@ -856,6 +895,12 @@ Modal {
             wrapMode: Text.WrapAnywhere
             onLinkActivated: link => Qt.openUrlExternally(link)
             HoverHandler { cursorShape: parent.link ? Qt.PointingHandCursor : Qt.ArrowCursor }
+            // right-click copies the link
+            TapHandler {
+                enabled: parent.parent.link
+                acceptedButtons: Qt.RightButton
+                onTapped: root.copyLink(parent.parent.text)
+            }
         }
     }
 
