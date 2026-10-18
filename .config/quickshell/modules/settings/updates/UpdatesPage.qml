@@ -15,7 +15,7 @@ ColumnLayout {
 
     property bool showAll: false
     readonly property var all: Updates.repo.map(u => Object.assign({ src: "repo" }, u))
-                                 .concat(Updates.withAur ? Updates.aur.map(u => Object.assign({ src: "AUR" }, u)) : [])
+                                 .concat(Updates.withAur ? Updates.aurPending.map(u => Object.assign({ src: "AUR" }, u)) : [])
 
     Component.onCompleted: { Updates.refresh(); Updates.loadNews() }
 
@@ -75,9 +75,10 @@ ColumnLayout {
             label: (Updates.count === 0 ? "Up to date" : Updates.count + (Updates.count === 1 ? " update" : " updates"))
                    + (Updates.rebootNeeded ? "  ·  reboot needed" : "")
             desc: (Updates.error !== "" ? "󰀦 " + Updates.error + "  ·  " : "")
-                  + Updates.repo.length + " from the repos" + (Updates.withAur ? ", " + Updates.aur.length + " from the AUR" : "")
+                  + Updates.repo.length + " from the repos" + (Updates.withAur ? ", " + Updates.aurPending.length + " from the AUR" : "")
+                  + (Updates.aurHeld.length > 0 ? ", " + Updates.aurHeld.length + " on hold" : "")
                   + (Updates.lastCheck > 0 ? "  ·  checked " + new Date(Updates.lastCheck).toLocaleTimeString(Qt.locale(), "HH:mm") : "")
-                  + "\nUpgrade opens a terminal: sudo pacman -Syu --noconfirm, then the outdated AUR packages with yay"
+                  + "\nUpgrade opens a terminal: sudo pacman -Syu, then each outdated AUR package on its own (one that fails doesn't stop the others; retry it by hand or put it on hold)"
         }
         Repeater {
             model: page.showAll ? page.all : page.all.slice(0, 12)
@@ -91,6 +92,21 @@ ColumnLayout {
                     color: modelData.src === "AUR" ? Colors.yellow : Colors.fade(0.45)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
+                }
+            }
+        }
+        // AUR packages that failed and wait for a newer version
+        Repeater {
+            model: Updates.withAur ? Updates.aurHeld : []
+            NetRow {
+                required property var modelData
+                sub: true
+                label: "󰏤  " + modelData.name
+                desc: modelData.old + "  →  " + modelData.new + "  ·  failed to update, on hold until a newer version comes out"
+                RowLayout {
+                    spacing: 8
+                    Text { text: "on hold"; color: Colors.orange; font.pixelSize: 11; font.family: Properties.fontFamily }
+                    ActionButton { text: "Try again"; onClicked: Updates.release(modelData.name) }
                 }
             }
         }

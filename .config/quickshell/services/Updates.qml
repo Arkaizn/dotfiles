@@ -22,7 +22,15 @@ Singleton {
     // [{ name, old, new }]
     property var repo: []
     property var aur: []
-    readonly property int count: repo.length + (withAur ? aur.length : 0)
+    // AUR packages that failed to update and were put on hold by the upgrade
+    // (scripts/upgrade.sh): skipped until a newer version comes out, and not
+    // counted as pending. File lines: "name version". [{ name, version }]
+    readonly property string heldFile: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/quickshell/aur-held"
+    property var held: []
+    function isHeld(u) { return held.some(h => h.name === u.name && h.version === u.new) }
+    readonly property var aurPending: aur.filter(u => !isHeld(u))
+    readonly property var aurHeld: aur.filter(u => isHeld(u))
+    readonly property int count: repo.length + (withAur ? aurPending.length : 0)
     property bool checking: checkProc.running || aurChecking
     property bool aurChecking: false
     property real lastCheck: 0
@@ -48,9 +56,20 @@ Singleton {
                 Jobs.run(["yay", "-Qua"], (code, out) => { aur = parse(out); aurChecking = false })
             })
         }
+        loadHeld()
         Jobs.run(["pacdiff", "-o"], (code, out) => pacnew = out.split("\n").filter(l => l.startsWith("/")))
         const kernel = NiriSettings.readFile("/proc/sys/kernel/osrelease").trim()
         if (kernel !== "") Jobs.run(["test", "-d", "/usr/lib/modules/" + kernel], code => rebootNeeded = code !== 0)
+    }
+
+    function loadHeld() {
+        Jobs.run(["cat", "--", heldFile], (code, out) => {
+            held = out.split("\n").map(l => l.trim().split(/\s+/)).filter(p => p.length === 2).map(p => ({ name: p[0], version: p[1] }))
+        })
+    }
+    // take a package off hold: the next upgrade tries it again
+    function release(name) {
+        Jobs.run(["sh", "-c", 'awk -v n="$2" \'$1 != n\' "$1" > "$1.tmp" && mv "$1.tmp" "$1"', "sh", heldFile, name], () => loadHeld())
     }
 
     // reboot needed: a notification (Settings.updates.rebootNotify), once each time it turns true
@@ -78,7 +97,7 @@ Singleton {
     // once per check, after both the repo and the AUR lists are in
     onCheckingChanged: if (!checking) notifyNew()
     function notifyNew() {
-        const all = repo.concat(withAur ? aur : []).map(u => u.name + " " + u.new)
+        const all = repo.concat(withAur ? aurPending : []).map(u => u.name + " " + u.new)
         const fresh = all.filter(n => !notifiedNames.includes(n))
         const first = !notifiedOnce             // first check since login: what's pending, not "new"
         notifiedOnce = true
@@ -120,8 +139,9 @@ Singleton {
 
     Process {
         id: upgradeProc
-        command: ["kitty", "--class", "custom_hover", "-e", "bash", "-c",
-            "sudo ls >/dev/null 2>&1 && sudo pacman -Syu --noconfirm && yay -Quq --aur | xargs -n 1 yay -S --noconfirm"]
+        // repos, then each AUR package on its own; failed ones can be retried
+        // by hand or put on hold (scripts/upgrade.sh)
+        command: ["kitty", "--class", "custom_hover", "--title", "System upgrade", "-e", Quickshell.shellDir + "/scripts/upgrade.sh"]
         onExited: root.refresh()
     }
 
