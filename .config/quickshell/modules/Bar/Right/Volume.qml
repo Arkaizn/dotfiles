@@ -51,9 +51,8 @@ Item {
         onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
 
         onWheel: wheel => {
-            if (!root.audio) return
-            const delta = wheel.angleDelta.y > 0 ? 0.05 : -0.05
-            root.audio.volume = Math.max(0, Math.min(1.0, root.audio.volume + delta))
+            // step and limit: Settings → Audio
+            Audio.nudge(root.audio, wheel.angleDelta.y > 0)
         }
 
         // onClicked (not onPressed) so the press animation plays before the action

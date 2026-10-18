@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import qs.components
 import qs.services
 import "JsonCheck.js" as JsonCheck
+import "Valid.js" as Valid
 
 // Export / import of settings.json, plus the banner that reports on it.
 //
@@ -25,10 +26,122 @@ Rectangle {
     property var pending: null               // checked file content, while mode === "confirm"
 
     readonly property string defaultPath: Quickshell.env("HOME") + "/quickshell-settings.json"
-    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network", "battery", "profile",
-                                   "autostart", "keybinds", "syntax"]
-    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors", calendar: "calendar", network: "network page", battery: "battery", profile: "profile",
-                                         autostart: "autostart", keybinds: "keybinds", syntax: "syntax" })
+    // every group of settings.json (one list: services/Settings.qml)
+    readonly property var groups: Settings.groups
+    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors",
+        calendar: "calendar", network: "network page", battery: "battery", profile: "profile", autostart: "autostart",
+        keybinds: "keybinds", syntax: "syntax", bar: "bar layout", notifications: "notifications", theme: "theme",
+        audio: "audio", bluetooth: "bluetooth", power: "power", defaultApps: "default apps", clipboard: "clipboard",
+        connections: "connections", capture: "screenshots", dotfiles: "dotfiles", netTools: "network tools",
+        updates: "updates", settingsProfiles: "settings profiles", wizard: "first-run", health: "health check",
+        perfmon: "performance monitor", launcher: "launcher" })
+    // feature groups: free-form objects, checked by their own validator if there is one
+    readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
+        "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
+        "health"]
+    // group → function(value, err) for the feature groups that need more than "is an object"
+    property var validators: ({
+        wizard: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k === "done") { if (typeof v[k] !== "boolean") err([k], "done must be true or false") }
+                else err([k], "unknown setting \"" + k + "\"")
+            }
+        },
+        settingsProfiles: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k === "active") { if (typeof v[k] !== "string" || (v[k] !== "" && SettingsProfiles.validName(v[k]) !== "")) err([k], "active is a profile name") }
+                else err([k], "unknown setting \"" + k + "\"")
+            }
+        },
+        updates: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k === "interval") { if (!Number.isInteger(v[k]) || v[k] < 0 || v[k] > 1440) err([k], "interval is 0–1440 minutes") }
+                else if (k === "aur" || k === "notify") { if (typeof v[k] !== "boolean") err([k], k + " must be true or false") }
+                else if (k === "mirrorCountries") { if (typeof v[k] !== "string" || !/^[A-Za-z ,]*$/.test(v[k])) err([k], "mirrorCountries: names or codes separated by commas") }
+                else err([k], "unknown setting \"" + k + "\"")
+            }
+        },
+        netTools: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (!["lastHost", "lastPortHost", "lastPort"].includes(k)) err([k], "unknown setting \"" + k + "\"")
+                else if (typeof v[k] !== "string" || (v[k] !== "" && (k === "lastPort" ? Valid.port(v[k]) : Valid.host(v[k])) !== "")) err([k], k + " isn't a valid " + (k === "lastPort" ? "port" : "host"))
+            }
+        },
+        power: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k === "batterySaver") { if (typeof v[k] !== "boolean") err([k], "batterySaver must be true or false") }
+                else err([k], "unknown setting \"" + k + "\"")
+            }
+        },
+        audio: (v, err) => {
+            for (const k of Object.keys(v)) {
+                const x = v[k]
+                if (k === "step") { if (!Number.isInteger(x) || x < 1 || x > 20) err([k], "step is 1–20") }
+                else if (k === "maxVolume") { if (!Number.isInteger(x) || x < 100 || x > 150) err([k], "maxVolume is 100–150") }
+                else if (k === "sliderScroll") { if (typeof x !== "boolean") err([k], "sliderScroll must be true or false") }
+                else if (k === "hidden") { if (!Array.isArray(x) || x.some(n => typeof n !== "string")) err([k], "hidden is a list of device names") }
+                else if (k === "names") { if (!x || typeof x !== "object" || Array.isArray(x) || Object.values(x).some(n => typeof n !== "string")) err([k], "names is { device: \"name\" }") }
+                else err([k], "unknown setting \"" + k + "\"")
+            }
+        },
+        notifications: (v, err) => {
+            const bools = ["dnd", "scheduleOn", "allowCritical"]
+            for (const k of Object.keys(v)) {
+                const x = v[k]
+                if (bools.includes(k)) { if (typeof x !== "boolean") err([k], k + " must be true or false") }
+                else if (k === "scheduleFrom" || k === "scheduleTo") { if (Notifs.minutesOf(x) < 0) err([k], k + " must be HH:MM") }
+                else if (k === "position") { if (!["top-right", "top-center", "top-left", "bottom-right", "bottom-left"].includes(x)) err([k], "unknown position " + JSON.stringify(x)) }
+                else if (k === "timeout") { if (!Number.isInteger(x) || x < 1 || x > 60) err([k], "timeout is 1–60 seconds") }
+                else if (k === "maxPopups") { if (!Number.isInteger(x) || x < 1 || x > 10) err([k], "maxPopups is 1–10") }
+                else if (k === "rules") {
+                    if (!Array.isArray(x)) err([k], "rules must be a list")
+                    else x.forEach((r, i) => {
+                        if (!r || typeof r.app !== "string" || r.app.trim() === "") err([k], "rule " + (i + 1) + " needs an app")
+                        else if (!["normal", "silent", "hide"].includes(r.action)) err([k], "rule " + (i + 1) + ": action is normal, silent or hide")
+                    })
+                }
+                else err([k], "unknown setting \"" + k + "\"")
+            }
+        },
+        dotfiles: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k === "repo") { if (typeof v.repo !== "string" || v.repo.trim() === "") err(["repo"], "repo must be a path") }
+                else if (k === "profile") { if (!["default", "full"].includes(v.profile)) err(["profile"], "profile is default or full") }
+                else err([k], "unknown setting \"" + k + "\"")
+            }
+        },
+        connections: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k !== "list") { err([k], "unknown setting \"" + k + "\""); continue }
+                if (!Array.isArray(v.list)) { err(["list"], "list must be a list"); continue }
+                v.list.forEach((c, i) => {
+                    if (!c || typeof c !== "object") return err(["list"], "entry " + (i + 1) + " isn't an object")
+                    const e = RemoteConnections.validate(c)
+                    for (const f of Object.keys(e)) err(["list"], "entry " + (i + 1) + " (" + (c.name ?? "?") + "): " + f + ": " + e[f])
+                    if (Object.keys(c).some(f => /pass(word)?$/i.test(f) && f !== "password")
+                        || (c.password !== undefined && !["none", "ask", "keyring"].includes(c.password)))
+                        err(["list"], "entry " + (i + 1) + ": passwords can't be imported (only none / ask / keyring)")
+                })
+            }
+        },
+        bar: (v, err) => {
+            const checkLayout = (l, path) => {
+                if (!l || typeof l !== "object" || Array.isArray(l)) return err(path, "layout must be an object")
+                for (const z of Object.keys(l)) {
+                    if (!BarLayout.zones.includes(z)) { err(path.concat([z]), "unknown zone \"" + z + "\""); continue }
+                    if (!Array.isArray(l[z])) { err(path.concat([z]), z + " must be a list"); continue }
+                    for (const id of l[z]) if (!BarLayout.moduleIds.includes(id)) err(path.concat([z]), "unknown module \"" + id + "\"")
+                }
+            }
+            for (const k of Object.keys(v)) {
+                if (k === "layout") checkLayout(v.layout, ["layout"])
+                else if (k === "monitors") {
+                    if (!v.monitors || typeof v.monitors !== "object" || Array.isArray(v.monitors)) err(["monitors"], "monitors must be an object")
+                    else for (const m of Object.keys(v.monitors)) checkLayout(v.monitors[m], ["monitors", m])
+                } else err([k], "unknown setting \"" + k + "\"")
+            }
+        }
+    })
     // the network page's own preferences (not spec-driven)
     readonly property var networkSpecs: ({
         hideVirtual: { type: "bool" }, safeApply: { type: "bool" },
@@ -50,7 +163,7 @@ Rectangle {
     }
 
     function writeTo(path) {
-        const o = { quickshellSettings: 1, exported: new Date().toISOString() }
+        const o = { quickshellSettings: 1, exported: new Date().toISOString(), version: Settings.version }
         for (const g of groups) o[g] = Settings[g]
         writer.path = path
         writer.command = ["sh", "-c", 'printf "%s" "$1" > "$2"', "sh", JSON.stringify(o, null, 2) + "\n", path]
@@ -133,11 +246,12 @@ Rectangle {
         if (!isObj(v)) return [{ line: 1, message: "the file should be one { … } object" }]
 
         for (const g of Object.keys(v)) {
-            if (g === "quickshellSettings" || g === "exported") continue
+            if (g === "quickshellSettings" || g === "exported" || g === "version") continue
             if (!groups.includes(g)) { err([g], "unknown group \"" + g + "\" (expected " + groups.join(", ") + ")"); continue }
             if (!isObj(v[g])) { err([g], "\"" + g + "\" should be an object { … }"); continue }
             if (g === "monitors") { checkMonitors(v[g], err); continue }
             if (g === "autostart" || g === "keybinds" || g === "syntax") { checkLists(g, v[g], err); continue }
+            if (freeGroups.includes(g)) { if (validators[g]) validators[g](v[g], (path, msg) => err([g].concat(path), g + ": " + msg)); continue }
             for (const k of Object.keys(v[g])) {
                 const sp = specFor(g, k)
                 if (!sp) { err([g, k], g + ": unknown setting \"" + k + "\""); continue }

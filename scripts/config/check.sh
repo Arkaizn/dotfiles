@@ -7,6 +7,7 @@ SOURCE_DIR="$HOME/.config"
 TARGET_DIR="$HOME/git/dotfiles/.config"
 
 # per-device files and junk: see sync-excludes.sh
+# shellcheck source=sync-excludes.sh disable=SC1091  # path is only known at runtime
 source "$(dirname "$(readlink -f "$0")")/sync-excludes.sh"
 
 echo "Checking differences…"

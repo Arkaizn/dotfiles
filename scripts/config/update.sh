@@ -19,10 +19,17 @@ log "=== Dotfiles sync started $(date) ==="
 # Files "default" protects from overwrite; "full" ignores this list.
 # NOTE: these are root-relative paths (relative to SOURCE_DIR).
 # Per-device files (protected): see sync-excludes.sh — one list for all sync scripts.
+# shellcheck source=sync-excludes.sh disable=SC1091  # path is only known at runtime
 source "$(dirname "$(readlink -f "$0")")/sync-excludes.sh"
 DEFAULT_EXCLUDES=("${DEVICE_FILES[@]}")
 
-profile=$(gum choose "default" "full")            # ask user which sync mode to use
+# profile: first argument (default | full), or ask (e.g. the quickshell settings app passes it)
+profile=${1:-}
+case "$profile" in
+    default|full) ;;
+    "") profile=$(gum choose "default" "full") ;;
+    *) echo "usage: $0 [default|full]" >&2; exit 2 ;;
+esac
 echo "Profile: $profile"
 
 if [[ "$profile" == "default" ]]; then
@@ -64,6 +71,7 @@ if [[ "$profile" == "default" ]]; then
     done
 
     # for protected files only, copy from source but never overwrite what's already there
+    # shellcheck disable=SC2016  # the script is for the inner bash, single quotes on purpose
     gum spin --title "Filling in protected files (existing files kept)…" -- \
         bash -c '
             src="$1"; dst="$2"; log="$3"; shift 3                                  # split args into named vars, leave excludes in "$@"

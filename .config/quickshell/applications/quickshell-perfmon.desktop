@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Performance Monitor
+GenericName=System Monitor
+Comment=CPU, GPU, memory, liquid cooler, temperatures and fans
+Icon=utilities-system-monitor
+Exec=qs ipc call perfmon toggle
+Terminal=false
+Categories=System;Monitor;
+Keywords=quickshell;performance;cpu;gpu;temperature;fan;cooler;kraken;monitor;cam;
+StartupNotify=false

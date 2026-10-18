@@ -5,9 +5,16 @@ TARGET_DIR="$HOME/git/dotfiles/.config"             # where they get pushed to (
 
 # Files/dirs to leave alone when pushing (host-specific or repo-managed)
 # Per-device files and junk (backups, caches, secrets): see sync-excludes.sh
+# shellcheck source=sync-excludes.sh disable=SC1091  # path is only known at runtime
 source "$(dirname "$(readlink -f "$0")")/sync-excludes.sh"
 
-profile=$(gum choose "default" "full")              # ask user which push mode to use
+# profile: first argument (default | full), or ask (e.g. the quickshell settings app passes it)
+profile=${1:-}
+case "$profile" in
+    default|full) ;;
+    "") profile=$(gum choose "default" "full") ;;
+    *) echo "usage: $0 [default|full]" >&2; exit 2 ;;
+esac
 echo "Profile: $profile"
 
 rsync_args=(-av --delete)
@@ -32,6 +39,6 @@ rsync_args+=(--exclude="*")
 
 gum spin --title "Pushing Config …" -- rsync "${rsync_args[@]}" "$SOURCE_DIR/" "$TARGET_DIR/"
 
-gum spin --title "Pushing .zshrc" -- rsync .zshrc ~/git/dotfiles/.config
+gum spin --title "Pushing .zshrc" -- rsync "$HOME/.zshrc" "$HOME/git/dotfiles/.config/"
 
 echo "Push done ✅"

@@ -20,8 +20,11 @@ Singleton {
     id: root
 
     // ── Tunables ──────────────────────────────────────────────
-    readonly property int popupTimeout: 5000   // used when the app doesn't specify one
-    readonly property int maxPopups: 5         // oldest popup gets hidden beyond this
+    // Settings → Notifications (Settings.notifications)
+    readonly property var cfg: Settings.notifications
+    readonly property int popupTimeout: (cfg.timeout ?? 5) * 1000   // used when the app doesn't specify one
+    readonly property int maxPopups: cfg.maxPopups ?? 5             // oldest popup gets hidden beyond this
+    readonly property string position: cfg.position ?? "top-right"
     readonly property int exitDuration: 420    // must cover the delegates' exit animations
     readonly property int clearStagger: 45     // delay between groups on "clear all"
 
@@ -35,6 +38,47 @@ Singleton {
 
     // Ticks every 30s so relative timestamps ("5m ago") stay fresh.
     property double now: Date.now()
+
+    // ── Do not disturb ────────────────────────────────────────
+    // On by hand (dnd) or by the schedule (from → to, may cross midnight).
+    // While on: no popups (critical ones still pop up if allowCritical);
+    // everything still lands in the notification center.
+    readonly property bool dndManual: cfg.dnd ?? false
+    readonly property bool dndScheduled: {
+        if (!(cfg.scheduleOn ?? false)) return false
+        const from = minutesOf(cfg.scheduleFrom ?? "22:00"), to = minutesOf(cfg.scheduleTo ?? "07:00")
+        if (from < 0 || to < 0 || from === to) return false
+        const d = new Date(now), cur = d.getHours() * 60 + d.getMinutes()
+        return from < to ? cur >= from && cur < to : cur >= from || cur < to
+    }
+    readonly property bool dnd: dndManual || dndScheduled
+    property int missed: 0                 // popups held back since DND went on
+    onDndChanged: if (!dnd) missed = 0
+    function setDnd(on) { Settings.set("notifications", "dnd", on) }
+
+    // "HH:MM" → minutes after midnight, -1 if invalid
+    function minutesOf(t) {
+        const m = /^(\d{1,2}):(\d{2})$/.exec(String(t ?? "").trim())
+        if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return -1
+        return Number(m[1]) * 60 + Number(m[2])
+    }
+
+    // Per-app rules: [{ app, action: "normal" | "silent" | "hide" }]. app is the
+    // app name, case-insensitive, "*" = any text. silent = center only (no
+    // popup), hide = dropped. First matching rule wins.
+    function ruleFor(appName) {
+        const rules = Array.isArray(cfg.rules) ? cfg.rules : []
+        const name = String(appName || "").toLowerCase()
+        for (const r of rules) {
+            if (!r || typeof r.app !== "string" || r.app.trim() === "") continue
+            const pat = r.app.trim().toLowerCase().split("*").map(x => x.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*")
+            if (new RegExp("^" + pat + "$").test(name)) return ["silent", "hide"].includes(r.action) ? r.action : "normal"
+        }
+        return "normal"
+    }
+
+    // app names seen this session, for the settings page's rule picker
+    property var seenApps: []
 
     // uid -> live Notification object (for actions / dismiss).
     property var _notifs: ({})
@@ -83,6 +127,16 @@ Singleton {
         }
         function clearAll(): void { root.clearAll() }
         function count(): int { return root.count }
+        function dnd(): string { return root.dnd ? "on" + (root.dndScheduled && !root.dndManual ? " (schedule)" : "") : "off" }
+        // all notifications of one app, e.g. qs ipc call notifs dismissApp Updates
+        function dismissApp(name: string): int {
+            const i = root._groupIndex(name)
+            if (i < 0) return 0
+            const n = root.groupModel.get(i).items.count
+            root.dismissGroup(name)
+            return n
+        }
+        function toggleDnd(): string { root.setDnd(!root.dndManual); return root.dndManual ? "on" : "off" }
     }
 
     // ── Public API ────────────────────────────────────────────
@@ -183,6 +237,10 @@ Singleton {
 
     function _add(notif) {
         notif.tracked = true
+        const name = notif.appName || "Unknown"
+        if (!seenApps.includes(name)) seenApps = seenApps.concat([name]).slice(-30)
+        const rule = ruleFor(name)
+        if (rule === "hide") { notif.dismiss(); return }
         const uid = _nextUid++
         _notifs[uid] = notif
 
@@ -215,6 +273,8 @@ Singleton {
 
         // ── popup ──
         if (notif.lastGeneration) return
+        if (rule === "silent") return
+        if (dnd && !(notif.urgency === NotificationUrgency.Critical && (cfg.allowCritical ?? true))) { missed++; return }
         popupModel.insert(0, {
             uid, appName, appIcon, image,
             summary: notif.summary || "",

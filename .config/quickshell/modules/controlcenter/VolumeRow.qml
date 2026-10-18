@@ -32,6 +32,8 @@ RowLayout {
     CCSlider {
         id: slider
         Layout.fillWidth: true
+        to: Audio.maxVolume            // 1.0, or more if allowed in Settings → Audio
+        scrollable: Audio.sliderScroll
         value: root.audio?.volume ?? 0
         opacity: root.muted ? 0.45 : 1
         onMoved: if (root.audio) root.audio.volume = value

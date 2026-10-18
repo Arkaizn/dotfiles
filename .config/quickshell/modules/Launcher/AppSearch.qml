@@ -219,9 +219,14 @@ ColumnLayout {
         return null
     }
 
-    function moveDown() { if (root.isSearching) resultsList.incrementCurrentIndex() }
-    function moveUp() { if (root.isSearching) resultsList.decrementCurrentIndex() }
-    function activateCurrent() { if (root.isSearching) root.launch(resultsList.currentItem?.entry) }
+    // g / > / ssh prefixes: only the actions; the calculator row sits above
+    // the apps and takes Enter for "=…" or when no app matches
+    function moveDown() { if (actions.prefixMode) actions.moveDown(); else if (root.isSearching) resultsList.incrementCurrentIndex() }
+    function moveUp() { if (actions.prefixMode) actions.moveUp(); else if (root.isSearching) resultsList.decrementCurrentIndex() }
+    function activateCurrent() {
+        if (actions.prefixMode || (actions.visible && (root.query.trim().startsWith("=") || filteredModel.count === 0))) { actions.activate(); return }
+        if (root.isSearching) root.launch(resultsList.currentItem?.entry)
+    }
 
     // ── Recommended apps strip — shown until the user starts typing ──
     Flow {
@@ -298,14 +303,24 @@ ColumnLayout {
     }
 
     // ── Full search results — shown only once there's a query ──
+    // calculator / g / > / ssh (LauncherActions.qml)
+    LauncherActions {
+        id: actions
+        Layout.fillWidth: true
+        query: root.query
+        onCloseRequested: root.closeRequested()
+    }
+
     ListView {
         id: resultsList
         Layout.fillWidth: true
         // min 1 row while searching so the "No matching apps" empty state
         // actually has room to render, instead of being clipped to 0 height
-        Layout.preferredHeight: Math.min(root.maxHeight, Math.max(filteredModel.count, root.isSearching ? 1 : 0) * 44)
+        // (not when the actions above already show something)
+        Layout.preferredHeight: actions.prefixMode ? 0
+            : Math.min(root.maxHeight - (actions.visible ? actions.implicitHeight : 0), Math.max(filteredModel.count, root.isSearching && !actions.visible ? 1 : 0) * 44)
         Layout.bottomMargin: 4
-        opacity: root.isSearching ? 1 : 0
+        opacity: root.isSearching && !actions.prefixMode ? 1 : 0
         visible: opacity > 0
         clip: true
         model: filteredModel
@@ -462,7 +477,7 @@ ColumnLayout {
         // Friendly empty state
         Text {
             anchors.centerIn: parent
-            visible: root.isSearching && filteredModel.count === 0
+            visible: root.isSearching && filteredModel.count === 0 && !actions.visible
             text: "No matching apps"
             color: Qt.rgba(1, 1, 1, 0.35)
             font.pixelSize: 13

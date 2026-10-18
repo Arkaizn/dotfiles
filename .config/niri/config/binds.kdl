@@ -259,8 +259,11 @@ binds {
     // Mod+Space       { switch-layout "next"; }
     // Mod+Shift+Space { switch-layout "prev"; }
 
-    Print { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
-    Ctrl+Print { spawn-sh "grim -t ppm - | satty --filename -"; }
+    // capture menu / screen screenshot / start-stop screen recording (quickshell: services/Capture.qml)
+    // before: Print = region → satty, Ctrl+Print = screen → satty (backup in ~/.local/state/quickshell/backups)
+    Print { spawn "qs" "ipc" "call" "capture" "menu"; }
+    Ctrl+Print { spawn "qs" "ipc" "call" "capture" "screenshot" "screen"; }
+    Shift+Print { spawn "qs" "ipc" "call" "capture" "record" "screen"; }
     // Alt+Print { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
     Super+Shift+S { spawn-sh "grim -t ppm -g \"$(slurp)\" - | satty --filename -"; }
     Super+Shift+T { spawn-sh "grim -t png -g \"$(slurp)\" - | tesseract - - -l eng+deu | wl-copy && notify-send 'OCR' 'Text copied'"; }

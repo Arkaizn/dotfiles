@@ -6,6 +6,21 @@ import qs.components
 import qs.services
 import "network"
 import "wm"
+import "bar"
+import "connections"
+import "dotfiles"
+import "notifications"
+import "theme"
+import "audio"
+import "bluetooth"
+import "power"
+import "defaultapps"
+import "clipboard"
+import "diagnostics"
+import "keys"
+import "updates"
+import "profiles"
+import "maintenance"
 import "SettingsSearch.js" as SI
 
 // Settings app: a normal (floating) window to change the Properties.qml
@@ -93,6 +108,18 @@ Scope {
                 { key: "spacing", type: "int", min: 0, max: 24, label: "Space between modules" },
                 { key: "interval", type: "int", min: 100, max: 5000, step: 100, label: "Stats refresh (ms)",
                   desc: "How often CPU, GPU and memory update" } ] } ] },
+        { id: "profiles", group: "Shell", icon: "󰆓", title: "Profiles", custom: "profiles",
+          keywords: "profile profiles preset snapshot switch work gaming save settings mode",
+          desc: "Save settings under a name and switch between them" },
+        { id: "theme", group: "Shell", icon: "󰏘", title: "Theme", custom: "theme",
+          keywords: "pywal wal colors color scheme palette light dark mode saturation backend saved themes base16",
+          desc: "pywal colors: preview, light / dark, saved and built-in themes" },
+        { id: "notifications", group: "Shell", icon: "󰂚", title: "Notifications", custom: "notifications",
+          keywords: "do not disturb dnd quiet silent schedule night popup position timeout rules mute app test",
+          desc: "Do not disturb, popups and per-app rules" },
+        { id: "barlayout", group: "Shell", icon: "󰕮", title: "Bar layout", custom: "barlayout",
+          keywords: "modules widgets order arrange drag position left right center clock tray workspaces cpu gpu memory temperature",
+          desc: "Which modules sit where on the bar, per monitor" },
 
         { id: "panels", group: "Shell", icon: "󰖯", title: "Panels", store: "properties",
           desc: "Bar background, popups, dashboard, launcher and cards",
@@ -150,6 +177,61 @@ Scope {
                 { key: "testCritical", type: "button", icon: "󰂃", text: "Send test", dependsOn: "criticalAlert",
                   label: "Try it", run: () => BatteryAlerts.test(true) } ] } ] },
 
+        { id: "health", group: "Maintenance", icon: "󰓙", title: "Health", custom: "health",
+          keywords: "doctor diagnose problems missing packages dependencies check",
+          desc: "Is everything the shell needs installed and working?" },
+
+        { id: "defaultapps", group: "Apps", icon: "󰀻", title: "Default apps", custom: "defaultapps",
+          keywords: "default application browser file manager editor image viewer video player music pdf email mail archive open with mime xdg",
+          desc: "Which app opens links, folders, images, …" },
+        { id: "clipboard", group: "Apps", icon: "󰅍", title: "Clipboard", custom: "clipboard",
+          keywords: "clipboard history cliphist copy paste pause clear wipe password keepassxc secret",
+          desc: "Clipboard history and passwords" },
+        { id: "connections", group: "Apps", icon: "󰢹", title: "Connections", custom: "connections",
+          keywords: "ssh rdp vnc remote desktop xfreerdp vncviewer server saved hosts",
+          desc: "Saved SSH, RDP and VNC connections for the launcher" },
+        { id: "audio", group: "System", icon: "󰕾", title: "Audio", custom: "audio",
+          keywords: "sound volume speaker headphones microphone mic input output pipewire default device profile hdmi surround mute",
+          desc: "Devices, volume limits and sound card profiles" },
+        { id: "bluetooth", group: "System", icon: "󰂯", title: "Bluetooth", custom: "bluetooth",
+          keywords: "bluetooth adapter paired devices trust block rename forget discoverable visible headphones controller",
+          desc: "Adapter and paired devices" },
+        { id: "power", group: "System", icon: "󰓅", title: "Power", custom: "power",
+          keywords: "power profile performance balanced saver battery energy powerprofilesctl",
+          desc: "Power profiles" },
+        { id: "updates", group: "Maintenance", icon: "󰚰", title: "Updates", custom: "updates",
+          keywords: "updates upgrade pacman yay aur checkupdates pacnew reboot kernel arch news",
+          desc: "Pending updates, Arch news, .pacnew files" },
+        { id: "cleanup", group: "Maintenance", icon: "󰃢", title: "Cleanup", custom: "cleanup",
+          keywords: "cache clean free space orphan packages pacman cache journal crash dumps coredump trash empty",
+          desc: "Free space: caches, old packages, logs, trash" },
+        { id: "diskusage", group: "Maintenance", icon: "󰋊", title: "Disk usage", custom: "diskusage",
+          keywords: "disk usage space ncdu treesize gdu du biggest files folders full",
+          desc: "What takes space, folder by folder" },
+        { id: "packages", group: "Maintenance", icon: "󰏗", title: "Packages", custom: "packages",
+          keywords: "packages installed biggest size aur explicit dependency pacman log history recently",
+          desc: "Installed packages: biggest, yours, AUR, recent changes" },
+        { id: "services", group: "Maintenance", icon: "󰒏", title: "Failed services", custom: "services",
+          keywords: "systemd failed services units restart reset failed systemctl",
+          desc: "Services that failed, with their log" },
+        { id: "errorlog", group: "Maintenance", icon: "󰀦", title: "Error log", custom: "errorlog",
+          keywords: "journal journalctl errors warnings log boot quickshell log",
+          desc: "Errors of this or the last boot" },
+        { id: "boottime", group: "Maintenance", icon: "󰑮", title: "Boot time", custom: "boottime",
+          keywords: "boot time startup slow systemd-analyze blame critical chain",
+          desc: "What slows down booting" },
+        { id: "diskhealth", group: "Maintenance", icon: "󰋊", title: "Disk health", custom: "diskhealth",
+          keywords: "smart smartctl ssd nvme health wear temperature errors disk",
+          desc: "SMART status of your drives" },
+        { id: "mirrors", group: "Maintenance", icon: "󰒍", title: "Mirrors", custom: "mirrors",
+          keywords: "mirrors mirrorlist reflector pacman download speed",
+          desc: "Pacman mirror list: age, refresh with reflector" },
+        { id: "dotfiles", group: "Maintenance", icon: "󰊢", title: "Dotfiles", custom: "dotfiles",
+          keywords: "git repo sync push pull update backup github rsync check differences",
+          desc: "Your dotfiles repo: status, differences with ~/.config, sync scripts" },
+        { id: "diagnostics", group: "Maintenance", icon: "󰛳", title: "Network tools", custom: "diagnostics",
+          keywords: "ping traceroute port open nc netcat speed test speedtest internet bandwidth latency diagnose network",
+          desc: "Ping, traceroute, port check, speed test" },
         { id: "network", group: "System", icon: "󰛳", title: "Network", custom: "network",
           desc: "Interfaces, IP settings, DNS and profiles (NetworkManager)" },
 
@@ -157,6 +239,9 @@ Scope {
           desc: "Search, change, disable and add keybinds" },
         { id: "autostart", group: wmGroup, icon: "󰐊", title: "Autostart", custom: "autostart",
           desc: "Programs started at login" },
+        { id: "keys", group: "Developer", icon: "󰌆", title: "SSH & GPG", custom: "keys",
+          keywords: "ssh key gpg pgp keys fingerprint agent known_hosts passphrase signing git public key",
+          desc: "Your keys, agent and known hosts (private keys are never shown)" },
         { id: "syntax", group: "Developer", icon: "󰅩", title: "Syntax", custom: "syntax",
           desc: "How the shell writes the compositor config" },
         { id: "import", group: "Developer", icon: "󰋺", title: "Import custom", custom: "import",
@@ -165,6 +250,45 @@ Scope {
         { id: "monitors", group: wmGroup, icon: "󰍹", title: "Monitors", custom: "monitors",
           desc: "Arrange screens, resolution, refresh rate and scale" },
 
+        { id: "launcher", group: "Apps", icon: "󰍉", title: "Launcher", store: "launcher",
+          keywords: "launcher search calculator qalc math units web search duckduckgo google prefix run command ssh",
+          desc: "Calculator and the g / > / ssh prefixes of the app search",
+          sections: [
+            { title: "In the app search", items: [
+                { key: "calculator", type: "bool", def: true, label: "Calculator",
+                  desc: "2+2, 5 km to mi, 10 EUR in CHF; =… for anything else (qalc). Enter copies the result" },
+                { key: "prefixes", type: "bool", def: true, label: "Prefixes",
+                  desc: "g <words> web search · > <program> run in a terminal (no shell) · ssh <name or user@host>" },
+                { key: "searchUrl", type: "string", def: "https://duckduckgo.com/?q=%s", label: "Web search address",
+                  desc: "%s = what you type, e.g. https://www.google.com/search?q=%s" } ] } ] },
+        { id: "perfmon", group: "Apps", icon: "󰓅", title: "Performance monitor", store: "perfmon",
+          keywords: "performance monitor cpu gpu temperature fan cooler kraken nzxt cam system monitor",
+          desc: "CPU, GPU, memory, liquid cooler, sensors (launcher: Performance Monitor)",
+          sections: [
+            { title: "Monitor", items: [
+                { key: "interval", type: "int", def: 1000, min: 500, max: 5000, step: 250, label: "Update every (ms)",
+                  desc: "it only reads anything while its window is open" },
+                { key: "open", type: "button", icon: "󰓅", text: "Open", label: "Performance monitor",
+                  desc: "also: qs ipc call perfmon toggle", run: () => PerfMon.toggleRequested() } ] } ] },
+        { id: "capture", group: "Apps", icon: "󰄀", title: "Screenshots", store: "capture",
+          keywords: "screenshot screen capture recording record video grim slurp satty wf-recorder print",
+          desc: "Screenshots and screen recording (menu: Print, or qs ipc call capture menu)",
+          sections: [
+            { title: "Screenshots", items: [
+                { key: "dir", type: "string", def: "~/Pictures/Screenshots", label: "Folder", desc: "Created if it doesn't exist" },
+                { key: "after", type: "choice", def: "save", options: ["save", "copy", "edit"], label: "After taking one",
+                  desc: "save: file + clipboard · copy: clipboard only · edit: open in satty" },
+                { key: "delay", type: "choice", def: "0", options: ["0", "3", "5", "10"], label: "Delay (seconds)" },
+                { key: "pointer", type: "bool", def: false, label: "Include the mouse pointer" },
+                { key: "notify", type: "bool", def: true, label: "Notification", desc: "With Open / Edit / Open folder" } ] },
+            { title: "Recording", items: [
+                { key: "videoDir", type: "string", def: "~/Videos/Recordings", label: "Folder" },
+                { key: "format", type: "choice", def: "mp4", options: ["mp4", "mkv", "webm"], label: "Format" },
+                { key: "audio", type: "choice", def: "none", options: ["none", "desktop", "mic"], label: "Sound",
+                  desc: "desktop: what you hear (monitor of the default output) · mic: default input" } ] },
+            { title: "Menu", items: [
+                { key: "openMenu", type: "button", icon: "󰄀", text: "Open the capture menu", label: "Capture menu",
+                  desc: "Keys in the menu: 1 region · 2 screen · 3 window · 4 / 5 record", run: () => Capture.menuOpen = true } ] } ] },
         { id: "calendar", group: "Apps", icon: "󰃭", title: "Calendar", store: "calendar",
           desc: "Reminders and syncing of the calendar app",
           sections: [
@@ -291,6 +415,52 @@ Scope {
         { page: "monitors", label: "Scale & rotation", keywords: "hidpi zoom portrait transform", icon: "󰍹" },
         { page: "monitors", label: "Arrange monitors", keywords: "position layout drag left right primary", icon: "󰍹" },
         { page: "monitors", label: "Variable refresh rate", keywords: "vrr freesync gsync adaptive sync", icon: "󰍹" },
+        { page: "barlayout", label: "Add a module to the bar", desc: "CPU, GPU, memory, temperatures, …", keywords: "widget show cpu gpu ram memory temperature stats", icon: "󰐕" },
+        { page: "barlayout", label: "Move bar modules", desc: "Drag between left, centre and right", keywords: "order arrange reorder position", icon: "󰕮" },
+        { page: "barlayout", label: "Per-monitor bar layout", keywords: "monitor screen output different", icon: "󰍹" },
+        { page: "connections", label: "New SSH / RDP / VNC connection", keywords: "add remote desktop server", icon: "󰐕" },
+        { page: "connections", label: "Import connections", desc: "From your scripts and ~/.ssh/config", keywords: "rdp scripts ssh config import", icon: "󰋺" },
+        { page: "connections", label: "RDP password in keyring", keywords: "secret-tool password store remote desktop", icon: "󰌋" },
+        { page: "dotfiles", label: "Copy config into the dotfiles repo", desc: "push.sh", keywords: "push backup save rsync", icon: "󰕒" },
+        { page: "dotfiles", label: "Pull dotfiles", desc: "pull.sh + update.sh", keywords: "pull update git sync", icon: "󰇚" },
+        { page: "dotfiles", label: "What differs from the repo", desc: "check.sh", keywords: "diff check changes compare", icon: "󰦒" },
+        { page: "notifications", label: "Do not disturb", desc: "Also a schedule, e.g. 22:00 → 07:00", keywords: "dnd quiet mute silence night", icon: "󰂛" },
+        { page: "notifications", label: "Notification position", keywords: "popup corner top bottom left right", icon: "󰂚" },
+        { page: "notifications", label: "Mute an app's notifications", keywords: "rule silent hide block app", icon: "󰂭" },
+        { page: "notifications", label: "Send a test notification", keywords: "test try notify-send", icon: "󰂚" },
+        { page: "theme", label: "Light mode", desc: "pywal light scheme from the wallpaper", keywords: "light dark mode bright", icon: "󰖨" },
+        { page: "theme", label: "Save the current colors", keywords: "save theme scheme palette", icon: "󰆓" },
+        { page: "theme", label: "pywal built-in themes", keywords: "base16 gruvbox nord dracula solarized monokai", icon: "󰏘" },
+        { page: "audio", label: "Default audio output", keywords: "speaker headphones sink default device", icon: "󰓃" },
+        { page: "audio", label: "Microphone", keywords: "mic input source", icon: "󰍬" },
+        { page: "audio", label: "Rename or hide an audio device", keywords: "alias name hide hdmi", icon: "󰏫" },
+        { page: "audio", label: "Sound card profile", keywords: "hdmi surround 5.1 stereo off profile", icon: "󰓃" },
+        { page: "audio", label: "Volume above 100%", keywords: "boost max volume step scroll", icon: "󰕾" },
+        { page: "bluetooth", label: "Bluetooth visible to other devices", keywords: "discoverable pairable visible", icon: "󰂯" },
+        { page: "bluetooth", label: "Forget a Bluetooth device", keywords: "unpair remove forget trust block rename", icon: "󰂲" },
+        { page: "defaultapps", label: "Default web browser", keywords: "browser firefox zen chrome links", icon: "󰖟" },
+        { page: "defaultapps", label: "Default file manager", keywords: "nautilus thunar folders", icon: "󰉋" },
+        { page: "defaultapps", label: "Open PDFs / images / videos with", keywords: "pdf image video music player viewer", icon: "󰀻" },
+        { page: "clipboard", label: "Pause clipboard history", keywords: "stop clipboard record private", icon: "󰏤" },
+        { page: "clipboard", label: "Clear clipboard history", keywords: "wipe delete clipboard", icon: "󰃢" },
+        { page: "clipboard", label: "Passwords in the clipboard", keywords: "keepassxc password secret sensitive", icon: "󰌾" },
+        { page: "diagnostics", label: "Ping a host", keywords: "ping latency reachable", icon: "󰛳" },
+        { page: "diagnostics", label: "Traceroute", keywords: "route hops path", icon: "󰑪" },
+        { page: "diagnostics", label: "Check if a port is open", keywords: "port nc netcat firewall", icon: "󰒍" },
+        { page: "diagnostics", label: "Internet speed test", keywords: "speedtest bandwidth download upload", icon: "󰓅" },
+        { page: "keys", label: "Copy my SSH public key", keywords: "ssh pub key github authorized_keys", icon: "󰆏" },
+        { page: "keys", label: "Remove a changed host key", keywords: "known_hosts host identification changed ssh-keygen -R", icon: "󰣀" },
+        { page: "keys", label: "New SSH key", keywords: "ssh-keygen generate ed25519", icon: "󰐕" },
+        { page: "keys", label: "GPG keys", keywords: "gpg pgp sign expire", icon: "󰌆" },
+        { page: "updates", label: "Check for updates", keywords: "pacman yay aur upgrade", icon: "󰚰" },
+        { page: "updates", label: ".pacnew files", keywords: "pacdiff pacnew pacsave etc config merge", icon: "󰈙" },
+        { page: "profiles", label: "Save settings as a profile", keywords: "profile preset snapshot", icon: "󰆓" },
+        { page: "profiles", label: "Switch settings profile", keywords: "profile switch apply work gaming", icon: "󰆓" },
+        { page: "cleanup", label: "Free up disk space", keywords: "clean cache full disk space", icon: "󰃢" },
+        { page: "cleanup", label: "Remove orphan packages", keywords: "orphans pacman -Qdt unused dependencies", icon: "󰏗" },
+        { page: "cleanup", label: "Empty the trash", keywords: "trash bin empty", icon: "󰩹" },
+        { page: "diskusage", label: "Biggest files", keywords: "large files big", icon: "󰈔" },
+        { page: "mirrors", label: "Refresh pacman mirrors", keywords: "reflector mirrorlist slow downloads", icon: "󰒍" },
         { page: "keybinds", target: "new", label: "New keybind", keywords: "add create shortcut hotkey", icon: "󰐕" },
         { page: "keybinds", label: "Record keys", desc: "Press a combo to find or create a keybind", keywords: "record capture press", icon: "󰌌" },
         { page: "keybinds", label: "Disable a keybind", keywords: "remove unbind turn off", icon: "󰂭" },
@@ -364,6 +534,15 @@ Scope {
         for (const s of page.sections ?? [])
             for (const i of s.items) keys.push(i.key)
         return keys
+    }
+
+    // settings profiles (and their IPC) are checked like an import, also while
+    // the window was never opened: an invisible checker that exists from the start
+    SettingsTransfer {
+        id: profileChecker
+        visible: false
+        pages: root.pages
+        Component.onCompleted: SettingsProfiles.validator = s => profileChecker.validate(s, {})
     }
 
     LazyLoader {
@@ -516,7 +695,7 @@ Scope {
                                     spacing: 6
 
                                     Repeater {
-                                        model: ["Shell", "System", "Apps", root.wmGroup, "Developer"]   // Developer: config syntax / import, last
+                                        model: ["Shell", "System", "Maintenance", "Apps", root.wmGroup, "Developer"]   // Developer: config syntax / import, last
                                         ColumnLayout {
                                             id: group
                                             required property string modelData
@@ -768,6 +947,146 @@ Scope {
                                     active: win.query === "" && win.page.custom === "syntax"
                                     visible: active
                                     sourceComponent: SyntaxPage {}
+                                }
+
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "bluetooth"
+                                    visible: active
+                                    sourceComponent: BluetoothPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "cleanup"
+                                    visible: active
+                                    sourceComponent: CleanupPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "diskusage"
+                                    visible: active
+                                    sourceComponent: DiskUsagePage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "packages"
+                                    visible: active
+                                    sourceComponent: PackagesPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "services"
+                                    visible: active
+                                    sourceComponent: ServicesPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "errorlog"
+                                    visible: active
+                                    sourceComponent: ErrorLogPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "boottime"
+                                    visible: active
+                                    sourceComponent: BootTimePage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "diskhealth"
+                                    visible: active
+                                    sourceComponent: DiskHealthPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "mirrors"
+                                    visible: active
+                                    sourceComponent: MirrorsPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "profiles"
+                                    visible: active
+                                    sourceComponent: ProfilesPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "updates"
+                                    visible: active
+                                    sourceComponent: UpdatesPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "keys"
+                                    visible: active
+                                    sourceComponent: KeysPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "diagnostics"
+                                    visible: active
+                                    sourceComponent: DiagnosticsPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "clipboard"
+                                    visible: active
+                                    sourceComponent: ClipboardPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "defaultapps"
+                                    visible: active
+                                    sourceComponent: DefaultAppsPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "power"
+                                    visible: active
+                                    sourceComponent: PowerPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "audio"
+                                    visible: active
+                                    sourceComponent: AudioPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "theme"
+                                    visible: active
+                                    sourceComponent: ThemePage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "notifications"
+                                    visible: active
+                                    sourceComponent: NotificationsPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "dotfiles"
+                                    visible: active
+                                    sourceComponent: DotfilesPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "connections"
+                                    visible: active
+                                    sourceComponent: ConnectionsPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "barlayout"
+                                    visible: active
+                                    sourceComponent: BarLayoutPage {}
+                                }
+
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "health"
+                                    visible: active
+                                    sourceComponent: HealthPage {}
                                 }
 
                                 Loader {

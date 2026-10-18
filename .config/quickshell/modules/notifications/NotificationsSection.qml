@@ -44,6 +44,15 @@ ColumnLayout {
 
         Item { Layout.fillWidth: true }
 
+        // do not disturb (Settings → Notifications has the schedule)
+        NotifActionButton {
+            label: (Notifs.dnd ? "󰂛  " : "󰂚  ") + (Notifs.dndScheduled && !Notifs.dndManual ? "Quiet (schedule)"
+                   : Notifs.dnd ? "Quiet" + (Notifs.missed > 0 ? " · " + Notifs.missed + " held back" : "") : "Do not disturb")
+            Layout.preferredHeight: 30
+            active: Notifs.dnd
+            onClicked: Notifs.setDnd(!Notifs.dndManual)
+        }
+
         NotifActionButton {
             label: "Clear all"
             Layout.preferredHeight: 30

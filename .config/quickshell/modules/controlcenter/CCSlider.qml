@@ -39,8 +39,12 @@ Slider {
         Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
     }
 
+    // false: the wheel scrolls the page instead of changing the value
+    property bool scrollable: true
+
     // Mouse wheel nudges by 5%
     WheelHandler {
+        enabled: root.scrollable
         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
             const step = event.angleDelta.y > 0 ? 0.05 : -0.05

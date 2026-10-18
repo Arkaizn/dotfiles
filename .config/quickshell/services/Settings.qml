@@ -20,6 +20,12 @@ import QtQuick
 //   autostart  → programs started at login: { items: [{ id, name, cmd, enabled, on }] }
 //   keybinds   → own / changed keybinds: { binds: [{ id, keys, name, kind, … }] }
 //   syntax     → edited config templates / option paths (Syntax.qml)
+//   bar, notifications, theme, audio, bluetooth, power, defaultApps,
+//   clipboard, connections, capture, dotfiles, netTools, updates,
+//   settingsProfiles, wizard, health, perfmon
+//              → one group per feature (see PLAN.md); readers always have a
+//                default, so an empty / old file never breaks anything
+// "version" is the file format; migrate() brings older files up to date.
 // (both compositors' override files are generated from niri / hyprland /
 //  autostart / keybinds / syntax)
 Singleton {
@@ -37,11 +43,43 @@ Singleton {
     property var autostart: ({})
     property var keybinds: ({})
     property var syntax: ({})
+    property var bar: ({})
+    property var notifications: ({})
+    property var theme: ({})
+    property var audio: ({})
+    property var bluetooth: ({})
+    property var power: ({})
+    property var defaultApps: ({})
+    property var clipboard: ({})
+    property var connections: ({})
+    property var capture: ({})
+    property var dotfiles: ({})
+    property var netTools: ({})
+    property var updates: ({})
+    property var settingsProfiles: ({})
+    property var wizard: ({})
+    property var health: ({})
+    property var perfmon: ({})
+    property var launcher: ({})
     property bool loaded: false
 
     // every group, in the order they're written
     readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network",
-                                   "battery", "profile", "autostart", "keybinds", "syntax"]
+                                   "battery", "profile", "autostart", "keybinds", "syntax",
+                                   "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
+                                   "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
+                                   "settingsProfiles", "wizard", "health", "perfmon", "launcher"]
+
+    // ── File format ──────────────────────────────────────────────────────────
+    // 1: no "version" field (everything up to now)
+    // 2: "version" written; the feature groups above exist (empty = defaults)
+    readonly property int version: 2
+    function migrate(o) {
+        let v = typeof o.version === "number" ? o.version : 1
+        if (v < 2) v = 2          // 1 → 2: only new, optional groups; nothing to convert
+        o.version = v
+        return o
+    }
 
     function has(group, key) { return root[group][key] !== undefined }
 
@@ -74,8 +112,9 @@ Singleton {
         // don't let the reload of an older write undo changes still waiting to be saved
         if (saveTimer.running) return
         try {
-            const o = text.trim() === "" ? {} : JSON.parse(text)
-            for (const g of root.groups) root[g] = o[g] ?? {}
+            const o = migrate(text.trim() === "" ? {} : JSON.parse(text))
+            // a group that isn't an object (hand edit) falls back to defaults
+            for (const g of root.groups) root[g] = (o[g] !== null && typeof o[g] === "object" && !Array.isArray(o[g])) ? o[g] : {}
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }
@@ -87,13 +126,16 @@ Singleton {
         id: saveTimer
         interval: 400
         onTriggered: {
-            const o = {}
+            const o = { version: root.version }
             for (const g of root.groups) o[g] = root[g]
             file.setText(JSON.stringify(o, null, 2) + "\n")
         }
     }
 
-    Component.onCompleted: parse(file.text())
+    // no settings.json (or an empty one) when the shell started: a new install
+    // (the first-run wizard opens then)
+    property bool fresh: false
+    Component.onCompleted: { const t = file.text() ?? ""; fresh = t.trim() === "" || t.trim() === "{}"; parse(t) }
 
     FileView {
         id: file

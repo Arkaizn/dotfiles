@@ -3,8 +3,8 @@ import QtQuick
 import qs.services
 import qs.components
 
-Item{
-    anchors.horizontalCenter: parent.horizontalCenter
+Item {
+    id: clock
     implicitWidth: Properties.buttonWidth + clockRow.implicitWidth
     implicitHeight: Properties.buttonHeight
 

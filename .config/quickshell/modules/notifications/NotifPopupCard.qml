@@ -7,7 +7,7 @@ import qs.services
 // ── A single notification popup ──
 // Delegate of NotifPopup's Repeater over Notifs.popupModel.
 //
-// Enter: slides in from the right while its slot grows open.
+// Enter: slides in from the right (or left, `side`) while its slot grows open.
 // Exit:  slides out to the right (from wherever it is, so a drag just
 //        continues), then the slot collapses so the cards below move up.
 // Drag right past the threshold or click anywhere → dismiss.
@@ -30,6 +30,8 @@ Item {
     property var window
     property real xOffset: 0
     property real yOffset: 0
+    // 1 = slides in from / is swiped out to the right, -1 = the left (popups on the left)
+    property int side: 1
 
     readonly property int gap: 8
     readonly property real dismissThreshold: 90
@@ -45,7 +47,7 @@ Item {
     clip: true
 
     Component.onCompleted: {
-        card.x = width + 20
+        card.x = side * (width + 20)
         enterAnim.start()
         if (!critical) timeoutAnim.start()
         window?.addRegion(blur)
@@ -69,7 +71,7 @@ Item {
     // Total must stay under Notifs.exitDuration, after which the model entry is removed.
     SequentialAnimation {
         id: exitAnim
-        NumberAnimation { target: card; property: "x"; to: root.width + 20; duration: 200; easing.type: Easing.InCubic }
+        NumberAnimation { target: card; property: "x"; to: root.side * (root.width + 20); duration: 200; easing.type: Easing.InCubic }
         NumberAnimation { target: root; property: "reveal"; to: 0; duration: 180; easing.type: Easing.OutCubic }
     }
 
@@ -109,7 +111,7 @@ Item {
         border.color: root.critical ? "#a0ff5f5f"
                     : cardHover.hovered ? Qt.lighter(Properties.panelBorder, 1.6) : Properties.panelBorder
         // fade as it's dragged away
-        opacity: 1 - Math.max(0, x) / (root.width * 1.4)
+        opacity: 1 - Math.max(0, root.side * x) / (root.width * 1.4)
 
         Behavior on border.color { ColorAnimation { duration: Anim.color } }
 
@@ -123,8 +125,8 @@ Item {
             cursorShape: drag.active ? Qt.ClosedHandCursor : Qt.PointingHandCursor
             drag.target: card
             drag.axis: Drag.XAxis
-            drag.minimumX: 0
-            drag.maximumX: root.width
+            drag.minimumX: root.side > 0 ? 0 : -root.width
+            drag.maximumX: root.side > 0 ? root.width : 0
             drag.threshold: 6
 
             property bool dragged: false
@@ -137,7 +139,7 @@ Item {
             onPositionChanged: if (drag.active) dragged = true
             onReleased: {
                 if (!dragged) return
-                if (card.x > root.dismissThreshold) Notifs.dismiss(root.uid)
+                if (root.side * card.x > root.dismissThreshold) Notifs.dismiss(root.uid)
                 else snapBack.start()
             }
             onClicked: if (!dragged) Notifs.activate(root.uid)

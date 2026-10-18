@@ -17,7 +17,11 @@ Scope {
     PolkitAgent {
         id: agent
         // another agent may already run (then this one stays idle)
-        onIsRegisteredChanged: console.info("polkit agent registered:", isRegistered)
+        onIsRegisteredChanged: {
+            console.info("polkit agent registered:", isRegistered)
+            Health.polkitAgent = isRegistered       // for the health check
+        }
+        Component.onCompleted: Health.polkitAgent = isRegistered
     }
 
     readonly property var flow: agent.flow

@@ -15,7 +15,8 @@ Item {
     ButtonBackground {
         id: buttonBackground
         hovered: notifBtn.hovered
-        iconText: "󰂚"
+        // bell with a slash while do-not-disturb is on
+        iconText: Notifs.dnd ? "󰂛" : "󰂚"
     }
 
     // Optional unread badge
@@ -31,13 +32,14 @@ Item {
         id: notifMouse
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
         onExited: buttonBackground.scale = Properties.onExitedButtonScale
         onPressed: buttonBackground.scale = Properties.onPressedButtonScale
         onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
         onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: controlCenter.toggle(bar.screen)
+        // right click: do not disturb on / off
+        onClicked: mouse => mouse.button === Qt.RightButton ? Notifs.setDnd(!Notifs.dndManual) : controlCenter.toggle(bar.screen)
     }
 }

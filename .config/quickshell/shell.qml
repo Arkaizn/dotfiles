@@ -27,6 +27,9 @@ import "modules/lockscreen"
 import "modules/settings"
 import "modules/calendar"
 import "modules/polkit"
+import "modules/capture"
+import "modules/wizard"
+import "modules/perfmon"
 
 ShellRoot {
     id: root
@@ -36,6 +39,16 @@ ShellRoot {
     readonly property string niriConfig: QsServices.NiriSettings.configDir
     // same for the low-battery notifications
     readonly property string batteryTier: QsServices.BatteryAlerts.tier
+    // and the health check (its startup check)
+    readonly property int healthErrors: QsServices.Health.errors
+    // and the dotfiles IPC target (it runs nothing until called)
+    readonly property bool dotfilesRepo: QsServices.Dotfiles.isRepo
+    // and the power IPC target / power-saver-on-battery
+    readonly property string powerProfile: QsServices.Power.current
+    // and the profiles IPC target
+    readonly property string settingsProfile: QsServices.SettingsProfiles.active
+    // and the theme IPC target (theme apply / undo)
+    readonly property bool themeApplying: QsServices.Theme.applying
 
     Variants {
         model: Quickshell.screens
@@ -63,4 +76,7 @@ ShellRoot {
     SettingsWindow { id: settingsWindow }
     CalendarWindow { id: calendarWindow }
     PolkitDialog {}
+    CaptureMenu {}
+    Wizard {}
+    PerfMonWindow {}
 }

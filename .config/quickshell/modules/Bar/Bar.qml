@@ -91,8 +91,8 @@ PanelWindow {
         }
 
         // Call Bar Buttons
-        Left {}
-        Middle {}
-        Right {}
+        Left { screenName: bar.screen?.name ?? "" }
+        Middle { screenName: bar.screen?.name ?? "" }
+        Right { screenName: bar.screen?.name ?? "" }
     }
 }

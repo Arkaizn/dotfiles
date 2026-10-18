@@ -17,8 +17,13 @@ PanelWindow {
     id: root
 
     visible: Notifs.popupModel.count > 0
-    anchors { top: true; right: true }
-    margins { top: 6; right: 10 }
+    // Settings → Notifications → Position
+    readonly property string position: Notifs.position
+    readonly property bool atBottom: position.startsWith("bottom")
+    readonly property bool atLeft: position.endsWith("left")
+    readonly property bool atCenter: position.endsWith("center")
+    anchors { top: !atBottom; bottom: atBottom; right: !atLeft && !atCenter; left: atLeft }
+    margins { top: 6; bottom: 10; right: 10; left: 10 }
     implicitWidth: 380
     implicitHeight: 900
     color: "transparent"
@@ -39,8 +44,13 @@ PanelWindow {
 
     Column {
         id: column
-        anchors { top: parent.top; right: parent.right }
+        // anchored to the corner / edge from Settings (undefined = not anchored)
         width: 360
+        anchors.top: root.atBottom ? undefined : parent.top
+        anchors.bottom: root.atBottom ? parent.bottom : undefined
+        anchors.right: root.atLeft || root.atCenter ? undefined : parent.right
+        anchors.left: root.atLeft ? parent.left : undefined
+        anchors.horizontalCenter: root.atCenter ? parent.horizontalCenter : undefined
 
         Repeater {
             model: Notifs.popupModel
@@ -50,6 +60,7 @@ PanelWindow {
                 window: root
                 xOffset: column.x
                 yOffset: column.y
+                side: root.atLeft ? -1 : 1
             }
         }
     }

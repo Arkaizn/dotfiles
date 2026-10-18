@@ -111,6 +111,10 @@ PanelWindow {
         function toggleKeybinds(): void {
             root.toggle("keybinds")
         }
+        // saved SSH / RDP / VNC connections
+        function toggleConnections(): void {
+            root.toggle("connections")
+        }
     }
 
     // Old wallpaper-selector IPC target, kept so existing keybinds still work
@@ -168,8 +172,8 @@ PanelWindow {
     }
 
     // Which sub-view is showing.
-    property string mode: "apps" // "apps" | "clipboard" | "wallpapers" | "keybinds"
-    readonly property var modes: ["apps", "clipboard", "wallpapers", "keybinds"]
+    property string mode: "apps" // "apps" | "clipboard" | "connections" | "wallpapers" | "keybinds"
+    readonly property var modes: ["apps", "clipboard", "connections", "wallpapers", "keybinds"]
 
     // Switching modes always clears the search text — carrying an "apps"
     // query like "steam" over into clipboard search would just be
@@ -204,7 +208,7 @@ PanelWindow {
     // the bottom instead of starting at the last view's size.
     onVisibleChanged: if (!visible) {
         slideAnim.stop()
-        for (const v of [appSearchView, clipboardView, wallpaperView, keybindsView]) { v.slideX = 0; v.opacity = 1 }
+        for (const v of [appSearchView, clipboardView, connectionsView, wallpaperView, keybindsView]) { v.slideX = 0; v.opacity = 1 }
         card.skipHeightAnim = true
         card.collapsed = true
     }
@@ -252,6 +256,7 @@ PanelWindow {
         return root.mode === "apps" ? appSearchView
              : root.mode === "clipboard" ? clipboardView
              : root.mode === "keybinds" ? keybindsView
+             : root.mode === "connections" ? connectionsView
              : wallpaperView
     }
 
@@ -370,6 +375,18 @@ PanelWindow {
                     onCloseRequested: { root.visible = false; searchField.text = "" }
                 }
 
+                ConnectionsView {
+                    id: connectionsView
+                    Layout.fillWidth: true
+                    maxHeight: root.maxResultsHeight
+                    query: searchField.text
+                    active: root.mode === "connections"
+                    visible: root.mode === "connections"
+                    property real slideX: 0
+                    transform: Translate { x: connectionsView.slideX }
+                    onCloseRequested: anim.exit()
+                }
+
                 WallpaperPicker {
                     id: wallpaperView
                     Layout.fillWidth: true
@@ -402,10 +419,12 @@ PanelWindow {
                     id: searchField
                     Layout.fillWidth: true
                     Layout.preferredHeight: Properties.buttonHeight
-                    icon: root.mode === "apps" ? "󰍉" : root.mode === "clipboard" ? "󰅍" : root.mode === "keybinds" ? "󰌌" : "󰸉"
+                    icon: root.mode === "apps" ? "󰍉" : root.mode === "clipboard" ? "󰅍" : root.mode === "keybinds" ? "󰌌"
+                        : root.mode === "connections" ? "󰢹" : "󰸉"
                     placeholderText: root.mode === "apps" ? "Search apps"
                                    : root.mode === "clipboard" ? "Search clipboard history"
                                    : root.mode === "keybinds" ? "Search keybinds"
+                                   : root.mode === "connections" ? "Search connections (SSH, RDP, VNC)"
                                    : "Search wallpapers"
 
                     Keys.onDownPressed: root.activeView().moveDown()
@@ -444,6 +463,7 @@ PanelWindow {
                         model: [
                             { value: "apps",       glyph: "󰀻", tip: "Apps" },
                             { value: "clipboard",  glyph: "󰅍", tip: "Clipboard history" },
+                            { value: "connections", glyph: "󰢹", tip: "Connections" },
                             { value: "wallpapers", glyph: "󰸉", tip: "Wallpapers" },
                             { value: "keybinds",   glyph: "󰌌", tip: "Keybinds" }
                         ]
@@ -465,6 +485,20 @@ PanelWindow {
                         icon: "󰑐"
                         tooltip: "Reload from " + (Compositor.name || "niri") + " config"
                         onClicked: Keybinds.refresh()
+                    }
+
+                    // Connections: check again / edit them
+                    IconButton {
+                        visible: root.mode === "connections"
+                        icon: "󰑐"
+                        tooltip: "Check which are reachable"
+                        onClicked: RemoteConnections.probe()
+                    }
+                    IconButton {
+                        visible: root.mode === "connections"
+                        icon: "󰒓"
+                        tooltip: "Edit connections"
+                        onClicked: { Quickshell.execDetached(["qs", "ipc", "call", "settings", "openPage", "connections"]); anim.exit() }
                     }
 
                     // Wallpaper tools, only in wallpaper mode

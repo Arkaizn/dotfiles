@@ -8,6 +8,7 @@ import qs.components
 
 
 Item {
+    id: music
     // implicitWidth: Properties.buttonWidth + visualizer.width + albumArt.width
     implicitHeight: Properties.buttonHeight
 

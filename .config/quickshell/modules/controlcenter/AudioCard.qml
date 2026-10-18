@@ -17,11 +17,12 @@ CCCard {
     // Filter on `type`, not properties: properties stay empty until a node is
     // tracked. AudioOutStream = apps playing audio (capture streams like cava
     // are AudioInStream and stay out).
+    // hidden devices (Settings → Audio) stay out, unless one is the default
     readonly property var sinks: Pipewire.nodes.values
-        .filter(n => n.type === PwNodeType.AudioSink)
+        .filter(n => n.type === PwNodeType.AudioSink && (!Audio.isHidden(n) || n === Pipewire.defaultAudioSink))
         .sort((a, b) => root.nodeName(a).localeCompare(root.nodeName(b)))
     readonly property var sources: Pipewire.nodes.values
-        .filter(n => n.type === PwNodeType.AudioSource)
+        .filter(n => n.type === PwNodeType.AudioSource && (!Audio.isHidden(n) || n === Pipewire.defaultAudioSource))
         .sort((a, b) => root.nodeName(a).localeCompare(root.nodeName(b)))
     readonly property var streams: Pipewire.nodes.values
         .filter(n => n.type === PwNodeType.AudioOutStream && !n.name.startsWith("speech-dispatcher"))
@@ -51,8 +52,9 @@ CCCard {
         appsOpen = false
     }
 
+    // your alias from Settings → Audio, else the device's description
     function nodeName(n) {
-        return n?.description || n?.nickname || n?.name || "Unknown"
+        return Audio.label(n)
     }
     function appName(n) {
         const p = n.properties ?? {}
