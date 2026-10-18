@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -5,8 +6,9 @@ import qs.services
 import ".."
 import "../network"
 
-// Updates page (services/Updates.qml): pending updates (repos + AUR), Arch
-// news, .pacnew files, reboot needed, and how often to check.
+// Updates page (services/Updates.qml): pending updates (repos + AUR), a
+// banner when a reboot is needed, Arch news, .pacnew files, and how often to
+// check / what to notify about.
 ColumnLayout {
     id: page
     spacing: 16
@@ -25,9 +27,53 @@ ColumnLayout {
             ActionButton { icon: "󰑓"; text: Updates.checking ? "Checking…" : "Check now"; interactive: !Updates.checking; onClicked: Updates.refresh() },
             ActionButton { icon: "󰚰"; text: "Upgrade"; primary: true; interactive: Updates.count > 0; onClicked: Updates.upgrade() }
         ]
+        // reboot needed: orange banner on top, with the button
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.margins: 10
+            Layout.bottomMargin: 0
+            visible: Updates.rebootNeeded
+            implicitHeight: rebootRow.implicitHeight + 20
+            radius: 10
+            color: Qt.rgba(Colors.orange.r, Colors.orange.g, Colors.orange.b, 0.14)
+            border.width: 1
+            border.color: Qt.rgba(Colors.orange.r, Colors.orange.g, Colors.orange.b, 0.5)
+            RowLayout {
+                id: rebootRow
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 10 }
+                spacing: 12
+                Text { text: "󰜉"; color: Colors.orange; font.pixelSize: 20; font.family: Properties.fontFamily }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+                    Text { text: "Reboot needed"; color: Colors.orange; font.pixelSize: 13; font.bold: true; font.family: Properties.fontFamily }
+                    Text {
+                        Layout.fillWidth: true
+                        text: "The kernel was updated. Until you reboot, the running kernel's modules are missing (USB sticks, VPNs may fail)."
+                        color: Colors.fade(0.6)
+                        font.pixelSize: 11
+                        font.family: Properties.fontFamily
+                        wrapMode: Text.WordWrap
+                    }
+                }
+                ActionButton {
+                    id: rebootBtn
+                    property bool armed: false
+                    icon: "󰜉"
+                    text: armed ? "Click again" : "Reboot"
+                    textColor: armed ? Colors.red : Colors.ink
+                    onClicked: {
+                        if (armed) Quickshell.execDetached(["sh", "-c", "systemctl reboot || loginctl reboot"])
+                        else { armed = true; disarm.restart() }
+                    }
+                    Timer { id: disarm; interval: 3000; onTriggered: rebootBtn.armed = false }
+                }
+            }
+        }
         NetRow {
-            first: true
-            label: Updates.count === 0 ? "Up to date" : Updates.count + (Updates.count === 1 ? " update" : " updates")
+            first: !Updates.rebootNeeded
+            label: (Updates.count === 0 ? "Up to date" : Updates.count + (Updates.count === 1 ? " update" : " updates"))
+                   + (Updates.rebootNeeded ? "  ·  reboot needed" : "")
             desc: (Updates.error !== "" ? "󰀦 " + Updates.error + "  ·  " : "")
                   + Updates.repo.length + " from the repos" + (Updates.withAur ? ", " + Updates.aur.length + " from the AUR" : "")
                   + (Updates.lastCheck > 0 ? "  ·  checked " + new Date(Updates.lastCheck).toLocaleTimeString(Qt.locale(), "HH:mm") : "")
@@ -61,11 +107,6 @@ ColumnLayout {
         title: "After updating"
         NetRow {
             first: true
-            label: Updates.rebootNeeded ? "󰜉  Reboot needed" : "No reboot needed"
-            desc: Updates.rebootNeeded ? "the kernel was updated; the running one's modules are gone (USB sticks, VPNs may fail to load modules until you reboot)"
-                                       : "the running kernel matches the installed one"
-        }
-        NetRow {
             wide: Updates.pacnew.length > 0
             label: Updates.pacnew.length === 0 ? "No .pacnew files" : Updates.pacnew.length + " .pacnew / .pacsave files"
             desc: Updates.pacnew.length === 0 ? "config files in /etc are in sync with the packages"
@@ -95,6 +136,11 @@ ColumnLayout {
         NetRow {
             label: "Notify about new updates"
             ToggleSwitch { checked: Settings.updates.notify ?? false; onToggled: v => Settings.set("updates", "notify", v) }
+        }
+        NetRow {
+            label: "Notify when a reboot is needed"
+            desc: "after a kernel update, with a Reboot now button (the bar's update button also turns orange)"
+            ToggleSwitch { checked: Settings.updates.rebootNotify ?? true; onToggled: v => Settings.set("updates", "rebootNotify", v) }
         }
     }
 }

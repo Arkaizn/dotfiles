@@ -8,7 +8,8 @@ import QtQuick
 // running one instance per bar makes all but one fail (and report 0).
 //
 // Settings.updates: { interval (minutes, 0 = only by hand; default 30),
-//                     aur (also yay -Qua; default true), notify (new updates → notification) }
+//                     aur (also yay -Qua; default true), notify (new updates → notification),
+//                     rebootNotify (reboot needed → notification with a Reboot button; default true) }
 // The settings app (Maintenance → Updates) shows the lists, Arch news, .pacnew
 // files and whether a reboot is due.
 Singleton {
@@ -50,6 +51,14 @@ Singleton {
         Jobs.run(["pacdiff", "-o"], (code, out) => pacnew = out.split("\n").filter(l => l.startsWith("/")))
         const kernel = NiriSettings.readFile("/proc/sys/kernel/osrelease").trim()
         if (kernel !== "") Jobs.run(["test", "-d", "/usr/lib/modules/" + kernel], code => rebootNeeded = code !== 0)
+    }
+
+    // reboot needed: a notification (Settings.updates.rebootNotify), once each time it turns true
+    onRebootNeededChanged: if (rebootNeeded && (cfg.rebootNotify ?? true)) notifyReboot()
+    function notifyReboot() {
+        Jobs.run(["notify-send", "-a", "Updates", "-u", "critical", "-i", "system-reboot", "-A", "reboot=Reboot now", "-A", "later=Later",
+                  "Reboot needed", "The kernel was updated. Reboot to finish the update (until then, USB sticks or VPNs may not work)."],
+                 (code, out) => { if (out.trim() === "reboot") Quickshell.execDetached(["sh", "-c", "systemctl reboot || loginctl reboot"]) })
     }
 
     function loadNews() {

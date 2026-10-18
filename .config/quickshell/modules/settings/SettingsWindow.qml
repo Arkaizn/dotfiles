@@ -201,7 +201,7 @@ Scope {
           desc: "Power profiles" },
         { id: "updates", group: "Maintenance", icon: "󰚰", title: "Updates", custom: "updates",
           keywords: "updates upgrade pacman yay aur checkupdates pacnew reboot kernel arch news",
-          desc: "Pending updates, Arch news, .pacnew files" },
+          desc: "Pending updates, reboot needed, Arch news, .pacnew files" },
         { id: "cleanup", group: "Maintenance", icon: "󰃢", title: "Cleanup", custom: "cleanup",
           keywords: "cache clean free space orphan packages pacman cache journal crash dumps coredump trash empty",
           desc: "Free space: caches, old packages, logs, trash" },
