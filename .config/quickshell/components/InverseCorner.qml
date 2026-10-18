@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import QtQuick.Shapes
 
 Item {
@@ -7,7 +8,7 @@ Item {
     height: radius
 
     property real radius: 12
-    property color color: "white"
+    property color color: Colors.ink
     property string corner: "topLeft"
 
     Shape {

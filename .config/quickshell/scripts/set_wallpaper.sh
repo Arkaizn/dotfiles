@@ -29,7 +29,12 @@ setsid -f swaybg -i "$BLURRED" -m fill >/dev/null 2>&1
 rm -fr ~/.cache/wal/schemes
 
 # Run pywal
-wal -i "$WALLPAPER" -n 2>/dev/null || true
+# light or dark scheme, as chosen in Settings → Shell → Theme (scripts/color-mode.sh)
+if [ "$(cat "$HOME/.local/state/quickshell/color-mode" 2>/dev/null)" = light ]; then
+    wal -i "$WALLPAPER" -n -l 2>/dev/null || true
+else
+    wal -i "$WALLPAPER" -n 2>/dev/null || true
+fi
 
 # Quickshell: services/Colors.qml reads ~/.cache/wal/colors.json (written by wal
 # above) and updates live — no generated QML copied in, so the shell doesn't

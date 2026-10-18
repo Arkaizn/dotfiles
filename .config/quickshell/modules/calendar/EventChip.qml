@@ -38,14 +38,14 @@ Rectangle {
         Text {
             visible: root.showTime && !root.filled
             text: U.fmtTime(root.ev.start)
-            color: Qt.rgba(1, 1, 1, 0.6)
+            color: Colors.fade(0.6)
             font.pixelSize: 10
             font.family: Properties.fontFamily
         }
         Text {
             Layout.fillWidth: true
             text: root.ev.title
-            color: root.filled ? U.onColor(root.calColor) : "white"
+            color: root.filled ? U.onColor(root.calColor) : Colors.ink
             font.pixelSize: 11
             font.bold: root.filled
             font.family: Properties.fontFamily

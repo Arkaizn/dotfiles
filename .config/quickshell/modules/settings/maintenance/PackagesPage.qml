@@ -97,7 +97,7 @@ ColumnLayout {
                         implicitWidth: 120 * Math.min(1, modelData.size / Math.max(1, page.shown[0]?.size ?? 1))
                         implicitHeight: 6; radius: 3; color: Colors.color6
                     }
-                    Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: PerfMon.bytes(modelData.size); color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: PerfMon.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                 }
             }
         }
@@ -128,10 +128,10 @@ ColumnLayout {
                     spacing: 10
                     Text {
                         text: modelData.action
-                        color: modelData.action === "removed" ? "#f38ba8" : modelData.action === "installed" ? "#a6e3a1" : Qt.rgba(1, 1, 1, 0.6)
+                        color: modelData.action === "removed" ? Colors.red : modelData.action === "installed" ? Colors.green : Colors.fade(0.6)
                         font.pixelSize: 11; font.family: Properties.fontFamily
                     }
-                    Text { text: modelData.time; color: Qt.rgba(1, 1, 1, 0.45); font.pixelSize: 11; font.family: Properties.fontFamily }
+                    Text { text: modelData.time; color: Colors.fade(0.45); font.pixelSize: 11; font.family: Properties.fontFamily }
                 }
             }
         }

@@ -45,7 +45,7 @@ ColumnLayout {
                 : !root.adapter.enabled ? "Bluetooth is off"
                 : root.adapter.discovering ? "Searching for devices…"
                 : root.devices.length + " devices"
-            color: Qt.rgba(1, 1, 1, 0.55)
+            color: Colors.fade(0.55)
             font.pixelSize: 11
         }
         IconButton {
@@ -85,8 +85,8 @@ ColumnLayout {
                     Layout.fillWidth: true
                     implicitHeight: 44
                     radius: 10
-                    color: dev.connected ? Qt.rgba(1, 1, 1, 0.12)
-                         : rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                    color: dev.connected ? Colors.fade(0.12)
+                         : rowMouse.containsMouse ? Colors.fade(0.07) : "transparent"
                     Behavior on color { ColorAnimation { duration: 80 } }
 
                     function activate() {
@@ -120,7 +120,7 @@ ColumnLayout {
 
                         Text {
                             text: root.deviceIcon(row.dev)
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 15
                             font.family: Properties.fontFamily
                         }
@@ -130,7 +130,7 @@ ColumnLayout {
                             Text {
                                 Layout.fillWidth: true
                                 text: row.dev.name || row.dev.address
-                                color: "white"
+                                color: Colors.ink
                                 font.pixelSize: 12
                                 font.bold: row.dev.connected
                                 elide: Text.ElideRight
@@ -142,7 +142,7 @@ ColumnLayout {
                                     : row.dev.state === BluetoothDeviceState.Disconnecting ? "Disconnecting…"
                                     : row.dev.connected ? "Connected" + (row.dev.batteryAvailable ? " · " + Math.round(row.dev.battery * 100) + "%" : "")
                                     : row.dev.paired ? "Paired" : "Click to pair"
-                                color: Qt.rgba(1, 1, 1, 0.5)
+                                color: Colors.fade(0.5)
                                 font.pixelSize: 10
                             }
                         }

@@ -27,7 +27,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Compositor.appRadius
-        color: "#66000000"
+        color: Colors.shade(0.4)
         MouseArea { anchors.fill: parent; onClicked: root.tryClose() }
     }
 

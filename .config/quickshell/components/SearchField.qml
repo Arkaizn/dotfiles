@@ -26,9 +26,9 @@ TextField {
     color: Properties.color
     font.pixelSize: 13
     font.family: Properties.fontFamily
-    selectionColor: Qt.rgba(1, 1, 1, 0.28)
-    selectedTextColor: "white"
-    placeholderTextColor: Qt.rgba(1, 1, 1, 0.35)
+    selectionColor: Colors.fade(0.28)
+    selectedTextColor: Colors.ink
+    placeholderTextColor: Colors.fade(0.35)
     echoMode: password ? TextInput.Password : TextInput.Normal
     passwordCharacter: "●"
     // spread the dots out a bit (only once something is typed, so the placeholder stays normal)
@@ -50,11 +50,12 @@ TextField {
     background: Rectangle {
         radius: Properties.radius + 2
         // focus only nudges things: fill a touch lighter, border a touch brighter
-        color: root.activeFocus ? "#3a000000" : "#45000000"
+        color: Colors.light ? (root.activeFocus ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.65))
+                            : (root.activeFocus ? Colors.shade(0.23) : Colors.shade(0.27))
         border.width: Properties.panelBorderWidth
-        border.color: root.error ? "#f38ba8"
-                    : root.activeFocus ? Qt.rgba(1, 1, 1, 0.16)
-                    : hover.hovered ? Qt.rgba(1, 1, 1, 0.13)
+        border.color: root.error ? Colors.red
+                    : root.activeFocus ? Colors.fade(0.16)
+                    : hover.hovered ? Colors.fade(0.13)
                     : Properties.cardBorder
         Behavior on color { ColorAnimation { duration: 150 } }
         Behavior on border.color { ColorAnimation { duration: 150 } }
@@ -67,7 +68,7 @@ TextField {
             height: 1.5
             radius: 1
             width: root.activeFocus ? parent.width - parent.radius * 2 : 0
-            color: root.error ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.14)
+            color: root.error ? Colors.red : Colors.fade(0.14)
             Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         }
     }
@@ -79,7 +80,7 @@ TextField {
         visible: root.icon !== ""
         anchors { left: parent.left; leftMargin: 13; verticalCenter: parent.verticalCenter }
         text: root.icon
-        color: Qt.rgba(1, 1, 1, root.activeFocus ? 0.7 : 0.45)
+        color: Colors.fade(root.activeFocus ? 0.7 : 0.45)
         font.pixelSize: 15
         font.family: Properties.fontFamily
         scale: root.activeFocus ? 1.05 : 1
@@ -95,7 +96,7 @@ TextField {
         scale: root.text.length > 0 ? 1 : 0.6
         anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
         text: "󰅖"
-        color: clearMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.5)
+        color: clearMouse.containsMouse ? Colors.ink : Colors.fade(0.5)
         font.pixelSize: 14
         font.family: Properties.fontFamily
         Behavior on opacity { NumberAnimation { duration: 150 } }

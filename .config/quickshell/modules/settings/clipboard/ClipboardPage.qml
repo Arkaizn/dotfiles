@@ -52,7 +52,7 @@ ColumnLayout {
             ActionButton {
                 icon: "󰃢"
                 text: page.confirmWipe ? "Delete all" : "Clear…"
-                textColor: page.confirmWipe ? "#f38ba8" : "white"
+                textColor: page.confirmWipe ? Colors.red : Colors.ink
                 onClicked: {
                     if (page.confirmWipe) { Clipboard.wipe(); page.confirmWipe = false }
                     else { page.confirmWipe = true; wipeTimer.restart() }

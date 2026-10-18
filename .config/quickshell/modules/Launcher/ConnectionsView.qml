@@ -70,8 +70,8 @@ ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: 2
                 radius: 6
-                color: cell.isCurrent ? Qt.rgba(1, 1, 1, 0.13) : hover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
-                border.color: cell.isCurrent ? Qt.rgba(1, 1, 1, 0.22) : "transparent"
+                color: cell.isCurrent ? Colors.fade(0.13) : hover.hovered ? Colors.fade(0.08) : "transparent"
+                border.color: cell.isCurrent ? Colors.fade(0.22) : "transparent"
                 border.width: 0.5
             }
 
@@ -93,7 +93,7 @@ ColumnLayout {
                     Text {
                         Layout.fillWidth: true
                         text: cell.c.name
-                        color: cell.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.85)
+                        color: cell.isCurrent ? Colors.ink : Colors.fade(0.85)
                         font.pixelSize: 14
                         font.weight: cell.isCurrent ? Font.Medium : Font.Normal
                         elide: Text.ElideRight
@@ -102,7 +102,7 @@ ColumnLayout {
                         Layout.fillWidth: true
                         text: (cell.c.user ? cell.c.user + "@" : "") + cell.c.host
                               + (cell.c.port !== RemoteConnections.types[cell.c.type].port ? ":" + cell.c.port : "")
-                        color: Qt.rgba(1, 1, 1, 0.45)
+                        color: Colors.fade(0.45)
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
@@ -110,7 +110,7 @@ ColumnLayout {
                 }
                 Text {
                     text: RemoteConnections.types[cell.c.type].name + (cell.c.password === "keyring" ? "  󰌋" : cell.c.password === "ask" ? "  󰌾" : "")
-                    color: Qt.rgba(1, 1, 1, 0.4)
+                    color: Colors.fade(0.4)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -120,7 +120,7 @@ ColumnLayout {
                     implicitHeight: 8
                     radius: 4
                     visible: cell.reach !== ""
-                    color: cell.reach === "up" ? "#a6e3a1" : cell.reach === "down" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.3)
+                    color: cell.reach === "up" ? Colors.green : cell.reach === "down" ? Colors.red : Colors.fade(0.3)
                     Behavior on color { ColorAnimation { duration: 200 } }
                 }
             }
@@ -131,7 +131,7 @@ ColumnLayout {
             visible: root.shown.length === 0
             text: RemoteConnections.list.length === 0 ? "No saved connections: add or import them in Settings → Connections"
                                                 : "No matching connections"
-            color: Qt.rgba(1, 1, 1, 0.35)
+            color: Colors.fade(0.35)
             font.pixelSize: 13
         }
     }

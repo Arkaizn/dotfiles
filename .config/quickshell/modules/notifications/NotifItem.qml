@@ -36,7 +36,7 @@ Item {
         width: root.width
         height: content.implicitHeight + 20
         radius: 9
-        color: hover.hovered ? "#1affffff" : "#0dffffff"
+        color: hover.hovered ? Colors.fade(0.1) : Colors.fade(0.05)
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
         opacity: root.reveal
@@ -90,14 +90,14 @@ Item {
                         Text {
                             text: root.model.summary
                             textFormat: Text.PlainText
-                            color: "#e0ffffff"
+                            color: Colors.fade(0.88)
                             font { bold: true; pixelSize: 13 }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
                         Text {
                             text: Notifs.relativeTime(root.model.time)
-                            color: "#55ffffff"
+                            color: Colors.fade(0.33)
                             font.pixelSize: 10
                         }
                     }
@@ -106,7 +106,7 @@ Item {
                         visible: root.model.body !== ""
                         text: root.model.body
                         textFormat: Text.StyledText
-                        color: "#a8ffffff"
+                        color: Colors.fade(0.66)
                         font.pixelSize: 12
                         wrapMode: Text.Wrap
                         maximumLineCount: 3

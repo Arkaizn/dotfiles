@@ -20,9 +20,9 @@ Rectangle {
     implicitHeight: 34
     radius: 9
     opacity: dragged ? 0.3 : 1
-    color: mouse.containsMouse && page.editable ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(1, 1, 1, 0.05)
+    color: mouse.containsMouse && page.editable ? Colors.fade(0.10) : Colors.fade(0.05)
     border.width: 1
-    border.color: zone === "" ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.35)
+    border.color: zone === "" ? Colors.fade(0.10) : Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.35)
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on opacity { NumberAnimation { duration: 120 } }
 
@@ -51,13 +51,13 @@ Rectangle {
         spacing: 7
         Text {
             text: chip.mod.icon
-            color: chip.zone === "" ? Qt.rgba(1, 1, 1, 0.5) : Colors.color6
+            color: chip.zone === "" ? Colors.fade(0.5) : Colors.color6
             font.pixelSize: 14
             font.family: Properties.fontFamily
         }
         Text {
             text: chip.mod.name
-            color: chip.zone === "" ? Qt.rgba(1, 1, 1, 0.6) : "white"
+            color: chip.zone === "" ? Colors.fade(0.6) : Colors.ink
             font.pixelSize: 12
             font.family: Properties.fontFamily
         }
@@ -65,7 +65,7 @@ Rectangle {
         Text {
             visible: chip.page.editable
             text: chip.zone === "" ? "󰐕" : "󰅖"
-            color: xMouse.containsMouse ? (chip.zone === "" ? Colors.color6 : "#f38ba8") : Qt.rgba(1, 1, 1, 0.4)
+            color: xMouse.containsMouse ? (chip.zone === "" ? Colors.color6 : Colors.red) : Colors.fade(0.4)
             font.pixelSize: 13
             font.family: Properties.fontFamily
             MouseArea {

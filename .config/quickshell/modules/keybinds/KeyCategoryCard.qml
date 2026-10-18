@@ -12,7 +12,7 @@ Rectangle {
     signal editRequested(var item)
     implicitHeight: cardCol.implicitHeight + 20
     radius: 12
-    color: '#45000000'
+    color: Colors.shade(0.27)
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
 
@@ -34,7 +34,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 text: card.category.name
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: card.compact ? 12 : 13
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -42,7 +42,7 @@ Rectangle {
             }
             Text {
                 text: card.category.rows.length
-                color: Qt.rgba(1, 1, 1, 0.35)
+                color: Colors.fade(0.35)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }

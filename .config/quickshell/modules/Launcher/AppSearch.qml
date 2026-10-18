@@ -271,7 +271,7 @@ ColumnLayout {
                     anchors.margins: 4
                     radius: 6
                     visible: recHover.hovered
-                    color: Qt.rgba(1, 1, 1, 0.08)
+                    color: Colors.fade(0.08)
                     Behavior on color { ColorAnimation { duration: 80 } }
                 }
 
@@ -292,7 +292,7 @@ ColumnLayout {
                     Text {
                         Layout.fillWidth: true
                         text: recCell.modelData.name
-                        color: Qt.rgba(1, 1, 1, 0.75)
+                        color: Colors.fade(0.75)
                         font.pixelSize: 12
                         horizontalAlignment: Text.AlignHCenter
                         elide: Text.ElideRight
@@ -392,8 +392,8 @@ ColumnLayout {
                 anchors.margins: 2
                 radius: 12
                 visible: resultCell.isCurrent
-                color: Qt.rgba(1, 1, 1, 0.13)
-                border.color: Qt.rgba(1, 1, 1, 0.22)
+                color: Colors.fade(0.13)
+                border.color: Colors.fade(0.22)
                 border.width: 0.5
             }
 
@@ -403,7 +403,7 @@ ColumnLayout {
                 anchors.margins: 2
                 radius: 12
                 visible: resultHover.hovered && !resultCell.isCurrent
-                color: Qt.rgba(1, 1, 1, 0.08)
+                color: Colors.fade(0.08)
                 Behavior on color { ColorAnimation { duration: 80 } }
             }
 
@@ -420,7 +420,7 @@ ColumnLayout {
 
                 Text {
                     text: resultCell.entry.name
-                    color: resultCell.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                    color: resultCell.isCurrent ? Colors.ink : Colors.fade(0.75)
                     font.pixelSize: 15
                     font.weight: resultCell.isCurrent ? Font.Medium : Font.Normal
                     Layout.fillWidth: true
@@ -455,9 +455,9 @@ ColumnLayout {
                     visible: resultCell.toplevel !== null
                     height: 26
                     radius: 6
-                    color: switchHover.hovered ? Qt.rgba(1, 1, 1, 0.16) : Qt.rgba(1, 1, 1, 0.08)
+                    color: switchHover.hovered ? Colors.fade(0.16) : Colors.fade(0.08)
                     border.width: 1
-                    border.color: switchHover.hovered ? Qt.rgba(1, 1, 1, 0.28) : Qt.rgba(1, 1, 1, 0.14)
+                    border.color: switchHover.hovered ? Colors.fade(0.28) : Colors.fade(0.14)
                     width: switchLabel.implicitWidth + 16
 
                     Behavior on color { ColorAnimation { duration: 80 } }
@@ -467,7 +467,7 @@ ColumnLayout {
                         anchors.centerIn: parent
                         text: "Switch to app"
                         font.pixelSize: 11
-                        color: switchHover.hovered ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                        color: switchHover.hovered ? Colors.ink : Colors.fade(0.5)
                         Behavior on color { ColorAnimation { duration: 80 } }
                     }
                 }
@@ -479,7 +479,7 @@ ColumnLayout {
             anchors.centerIn: parent
             visible: root.isSearching && filteredModel.count === 0 && !actions.visible
             text: "No matching apps"
-            color: Qt.rgba(1, 1, 1, 0.35)
+            color: Colors.fade(0.35)
             font.pixelSize: 13
         }
     }

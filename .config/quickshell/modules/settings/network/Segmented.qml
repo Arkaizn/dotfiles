@@ -19,9 +19,9 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Properties.radius + 2
-        color: Qt.rgba(0, 0, 0, 0.25)
+        color: Colors.light ? Qt.rgba(0, 0, 0, 0.06) : Qt.rgba(0, 0, 0, 0.25)
         border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.08)
+        border.color: Colors.fade(0.08)
     }
 
     // the sliding highlight
@@ -64,14 +64,14 @@ Item {
                     Text {
                         visible: (opt.modelData.icon ?? "") !== ""
                         text: opt.modelData.icon ?? ""
-                        color: opt.selected ? Colors.color6 : Qt.rgba(1, 1, 1, 0.6)
+                        color: opt.selected ? Colors.color6 : Colors.fade(0.6)
                         font.pixelSize: 13
                         font.family: Properties.fontFamily
                         Behavior on color { ColorAnimation { duration: 180 } }
                     }
                     Text {
                         text: opt.modelData.label
-                        color: opt.selected ? "white" : Qt.rgba(1, 1, 1, mouse.containsMouse ? 0.85 : 0.6)
+                        color: opt.selected ? Colors.ink : Colors.fade(mouse.containsMouse ? 0.85 : 0.6)
                         font.pixelSize: root.small ? 11 : 12
                         font.bold: opt.selected
                         font.family: Properties.fontFamily

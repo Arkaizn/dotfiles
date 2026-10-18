@@ -18,7 +18,7 @@ Item {
         anchors.fill: parent
         radius: height / 2
         border.width: 1.5
-        border.color: Qt.rgba(1, 1, 1, root.checked || mouse.containsMouse ? 0.28 : 0.16)
+        border.color: Colors.fade(root.checked || mouse.containsMouse ? 0.28 : 0.16)
         gradient: ButtonGradient { hovered: root.checked || mouse.containsMouse }
         Behavior on border.color { ColorAnimation { duration: 120 } }
 
@@ -38,7 +38,7 @@ Item {
         radius: width / 2
         anchors.verticalCenter: parent.verticalCenter
         x: root.checked ? root.width - width - 4 : 4
-        color: root.checked ? "white" : Qt.rgba(1, 1, 1, 0.55)
+        color: root.checked ? Colors.ink : Colors.fade(0.55)
         scale: mouse.pressed ? 0.85 : 1
         Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
         Behavior on color { ColorAnimation { duration: 150 } }

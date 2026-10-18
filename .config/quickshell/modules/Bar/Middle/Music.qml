@@ -94,7 +94,7 @@ Item {
             visible: albumArt.status === Image.Error || albumArt.status === Image.Null
             text: "󰎇"  // nerd font music note icon
             font.pixelSize: music.height * 0.5
-            color: "white"
+            color: Colors.ink
         }
 
         Row {
@@ -114,7 +114,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter  // parent is the Row
                     height: visualizer.isPlaying ? (music.barHeights[index] ?? 3) : 3
                     radius: width / 2
-                    color: "white"
+                    color: Colors.ink
                     opacity: visualizer.isPlaying ? 1.0 : 0.6
 
                     Behavior on height {
@@ -146,7 +146,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰒮"   // nerd font: skip-previous
                 font.pixelSize: Properties.pixelSize +7 //music.height * 0.38
-                color: "white"
+                color: Colors.ink
                 opacity: prevHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }
@@ -166,7 +166,7 @@ Item {
                 property bool isPlaying: music.player && music.player.playbackStatus === Mpris.Playing
                 text: player.isPlaying ? "" : ""  // pause : play
                 font.pixelSize: Properties.pixelSize + 3
-                color: "white"
+                color: Colors.ink
                 opacity: playHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }
@@ -193,7 +193,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: "󰒭"   // nerd font: skip-next
                 font.pixelSize: Properties.pixelSize +7
-                color: "white"
+                color: Colors.ink
                 opacity: nextHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }

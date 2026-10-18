@@ -24,11 +24,11 @@ Rectangle {
     color: invalid ? Qt.rgba(0.95, 0.55, 0.66, 0.16)
          : copied ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.3)
          : accent ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.14)
-         : Qt.rgba(1, 1, 1, mouse.containsMouse && copyable ? 0.12 : 0.07)
+         : Colors.fade(mouse.containsMouse && copyable ? 0.12 : 0.07)
     border.width: 1
     border.color: invalid ? Qt.rgba(0.95, 0.55, 0.66, 0.5)
                 : accent || copied ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45)
-                : Qt.rgba(1, 1, 1, 0.1)
+                : Colors.fade(0.1)
     Behavior on color { ColorAnimation { duration: 160 } }
 
     // pop in when created (list editors adding a value)
@@ -45,21 +45,21 @@ Rectangle {
         Text {
             visible: root.label !== ""
             text: root.label
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 10
             font.bold: true
             font.family: Properties.fontFamily
         }
         Text {
             text: root.copied ? "copied" : root.text
-            color: root.invalid ? "#f38ba8" : "white"
+            color: root.invalid ? Colors.red : Colors.ink
             font.pixelSize: 11
             font.family: Properties.fontFamily
         }
         Text {
             visible: root.removable
             text: "󰅖"
-            color: Qt.rgba(1, 1, 1, xMouse.containsMouse ? 0.95 : 0.5)
+            color: Colors.fade(xMouse.containsMouse ? 0.95 : 0.5)
             font.pixelSize: 11
             font.family: Properties.fontFamily
             MouseArea {

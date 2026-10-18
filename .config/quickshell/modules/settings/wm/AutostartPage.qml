@@ -103,7 +103,7 @@ ColumnLayout {
             Layout.margins: 16
             visible: page.items.length === 0
             text: "Nothing added yet."
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 12
             font.family: Properties.fontFamily
         }
@@ -148,7 +148,7 @@ ColumnLayout {
                         icon: "󰆴"
                         tooltip: armed ? "Click again to remove" : "Remove"
                         active: armed
-                        textColor: "#f38ba8"
+                        textColor: Colors.red
                         onClicked: { if (!armed) { armed = true; disarm.restart() } else page.remove(entry.a.id) }
                         Timer { id: disarm; interval: 3000; onTriggered: del.armed = false }
                     }
@@ -195,7 +195,7 @@ ColumnLayout {
             Layout.margins: 16
             visible: Keybinds.autostart.length === 0
             text: "Your config doesn't start anything."
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 12
             font.family: Properties.fontFamily
         }
@@ -215,7 +215,7 @@ ColumnLayout {
         Layout.leftMargin: 6
         Layout.fillWidth: true
         text: "Added programs start at your next login (niri: spawn-sh-at-startup, Hyprland: hl.on(\"hyprland.start\")). Edit the read-only ones in the file shown under them."
-        color: Qt.rgba(1, 1, 1, 0.4)
+        color: Colors.fade(0.4)
         font.pixelSize: 11
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap

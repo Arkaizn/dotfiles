@@ -18,9 +18,9 @@ Rectangle {
     Layout.fillWidth: true
     implicitHeight: col.implicitHeight + 24
     radius: 12
-    color: target ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.08) : "#1a000000"
+    color: target ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.08) : Colors.shade(0.1)
     border.width: 1
-    border.color: target ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6) : Qt.rgba(1, 1, 1, 0.06)
+    border.color: target ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6) : Colors.fade(0.06)
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on border.color { ColorAnimation { duration: 120 } }
 
@@ -33,7 +33,7 @@ Rectangle {
             spacing: 8
             Text {
                 text: zoneBox.title
-                color: Qt.rgba(1, 1, 1, 0.75)
+                color: Colors.fade(0.75)
                 font.pixelSize: 12
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -41,7 +41,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 text: zoneBox.hint
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: Colors.fade(0.4)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
@@ -56,7 +56,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: zoneBox.ids.length === 0
                 text: zoneBox.page.editable ? "Drop modules here" : "empty"
-                color: Qt.rgba(1, 1, 1, 0.3)
+                color: Colors.fade(0.3)
                 font.pixelSize: 11
                 font.italic: true
                 font.family: Properties.fontFamily

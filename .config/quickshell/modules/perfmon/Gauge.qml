@@ -16,7 +16,7 @@ Item {
     property int thickness: 12
 
     readonly property real frac: value < 0 ? 0 : Math.max(0, Math.min(1, (value - min) / (max - min)))
-    readonly property color tint: value >= crit ? "#f38ba8" : value >= warn ? "#f9e2af" : Colors.color6
+    readonly property color tint: value >= crit ? Colors.red : value >= warn ? Colors.yellow : Colors.color6
     // drawn by Shape on the GPU: a Canvas repainted every animation frame cost a lot of CPU
     property real shown: frac
     // no animation: values change every second, and animating them redraws the
@@ -31,7 +31,7 @@ Item {
         preferredRendererType: Shape.CurveRenderer
         ShapePath {
             fillColor: "transparent"
-            strokeColor: Qt.rgba(1, 1, 1, 0.08)
+            strokeColor: Colors.fade(0.08)
             strokeWidth: root.thickness
             capStyle: ShapePath.RoundCap
             PathAngleArc { centerX: root.width / 2; centerY: root.height / 2; radiusX: root.radius; radiusY: root.radius; startAngle: 135; sweepAngle: 270 }
@@ -47,7 +47,7 @@ Item {
     Column {
         anchors.centerIn: parent
         spacing: 2
-        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.text; color: "white"; font.pixelSize: 26; font.bold: true; font.family: Properties.fontFamily }
-        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.sub; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 12; font.family: Properties.fontFamily }
+        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.text; color: Colors.ink; font.pixelSize: 26; font.bold: true; font.family: Properties.fontFamily }
+        Text { anchors.horizontalCenter: parent.horizontalCenter; text: root.sub; color: Colors.fade(0.55); font.pixelSize: 12; font.family: Properties.fontFamily }
     }
 }

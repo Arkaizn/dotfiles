@@ -198,7 +198,7 @@ ColumnLayout {
         Text {
             Layout.fillWidth: true
             text: ed.message
-            color: ed.message.startsWith("Storing") ? Qt.rgba(1, 1, 1, 0.6) : "#f38ba8"
+            color: ed.message.startsWith("Storing") ? Colors.fade(0.6) : Colors.red
             font.pixelSize: 11
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap

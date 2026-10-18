@@ -33,7 +33,7 @@ RowLayout {
                 id: label
                 anchors.centerIn: parent
                 text: opt.modelData
-                color: opt.selected ? "white" : Qt.rgba(1, 1, 1, 0.55)
+                color: opt.selected ? Colors.ink : Colors.fade(0.55)
                 font.pixelSize: 12
                 font.bold: opt.selected
                 font.family: Properties.fontFamily

@@ -69,7 +69,7 @@ ColumnLayout {
                     spacing: 8
                     Text {
                         text: root.days === 1 ? U.dayNames[U.weekday(head.modelData)] : U.dayShort[U.weekday(head.modelData)]
-                        color: head.today ? Colors.color6 : U.weekday(head.modelData) >= 5 ? Qt.rgba(1, 1, 1, 0.32) : Qt.rgba(1, 1, 1, 0.5)
+                        color: head.today ? Colors.color6 : U.weekday(head.modelData) >= 5 ? Colors.fade(0.32) : Colors.fade(0.5)
                         font.pixelSize: 12
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -78,12 +78,12 @@ ColumnLayout {
                         implicitWidth: Math.max(30, dnum.implicitWidth + 14)
                         implicitHeight: 30
                         radius: 15
-                        color: head.today ? Colors.color6 : dayHover.hovered ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+                        color: head.today ? Colors.color6 : dayHover.hovered ? Colors.fade(0.1) : "transparent"
                         Text {
                             id: dnum
                             anchors.centerIn: parent
                             text: head.modelData.getDate()
-                            color: head.today ? U.onColor(Colors.color6) : U.weekday(head.modelData) >= 5 ? Qt.rgba(1, 1, 1, 0.6) : "white"
+                            color: head.today ? U.onColor(Colors.color6) : U.weekday(head.modelData) >= 5 ? Colors.fade(0.6) : Colors.ink
                             font.pixelSize: 16
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -107,7 +107,7 @@ ColumnLayout {
         visible: any
         implicitHeight: rows * 22 + 10
         radius: 12
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
 
@@ -116,7 +116,7 @@ ColumnLayout {
             anchors.verticalCenter: parent.verticalCenter
             horizontalAlignment: Text.AlignRight
             text: "all-day"
-            color: Qt.rgba(1, 1, 1, 0.35)
+            color: Colors.fade(0.35)
             font.pixelSize: 10
             font.family: Properties.fontFamily
         }
@@ -158,7 +158,7 @@ ColumnLayout {
                             visible: adCell.evs.length > allDay.rows
                             leftPadding: 6
                             text: "+" + (adCell.evs.length - allDay.rows + 1) + " more"
-                            color: Qt.rgba(1, 1, 1, 0.5)
+                            color: Colors.fade(0.5)
                             font.pixelSize: 10
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -179,7 +179,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.fillHeight: true
         radius: 12
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
         clip: true
@@ -225,7 +225,7 @@ ColumnLayout {
                             y: -height / 2
                             horizontalAlignment: Text.AlignRight
                             text: U.pad(parent.index) + ":00"
-                            color: Qt.rgba(1, 1, 1, 0.35)
+                            color: Colors.fade(0.35)
                             font.pixelSize: 10
                             font.family: Properties.fontFamily
                         }
@@ -233,7 +233,7 @@ ColumnLayout {
                             x: root.gutter
                             width: parent.width - root.gutter - 8
                             height: 1
-                            color: Qt.rgba(1, 1, 1, parent.index > 0 ? 0.06 : 0)
+                            color: Colors.fade(parent.index > 0 ? 0.06 : 0)
                         }
                         // half hour
                         Rectangle {
@@ -241,7 +241,7 @@ ColumnLayout {
                             y: root.hourHeight / 2
                             width: parent.width - root.gutter - 8
                             height: 1
-                            color: Qt.rgba(1, 1, 1, 0.025)
+                            color: Colors.fade(0.025)
                         }
                     }
                 }
@@ -272,14 +272,14 @@ ColumnLayout {
                                 x: -2.5
                                 width: 1
                                 height: parent.height
-                                color: Qt.rgba(1, 1, 1, 0.09)
+                                color: Colors.fade(0.09)
                             }
 
                             // weekend: a shade darker
                             Rectangle {
                                 anchors.fill: parent
                                 visible: root.days > 1 && U.weekday(col.modelData) >= 5
-                                color: "#22000000"
+                                color: Colors.shade(0.13)
                             }
 
                             // today tint
@@ -336,7 +336,7 @@ ColumnLayout {
                                     anchors { left: parent.left; top: parent.top; margins: 6 }
                                     text: U.pad(Math.floor(slots.fromMin / 60)) + ":" + U.pad(slots.fromMin % 60) + " – "
                                         + U.pad(Math.floor(slots.toMin / 60) % 24) + ":" + U.pad(slots.toMin % 60)
-                                    color: "white"
+                                    color: Colors.ink
                                     font.pixelSize: 11
                                     font.bold: true
                                     font.family: Properties.fontFamily
@@ -387,7 +387,7 @@ ColumnLayout {
                                         Text {
                                             width: parent.width
                                             text: block.ev.title
-                                            color: "white"
+                                            color: Colors.ink
                                             font.pixelSize: 11
                                             font.bold: true
                                             font.family: Properties.fontFamily
@@ -400,7 +400,7 @@ ColumnLayout {
                                             width: parent.width
                                             text: block.dragging ? U.fmtTime(block.preview.start) + " – " + U.fmtTime(block.preview.end)
                                                 : U.fmtRange(block.ev, col.modelData) + (block.ev.location ? "  ·  " + block.ev.location : "")
-                                            color: Qt.rgba(1, 1, 1, block.dragging ? 0.95 : 0.65)
+                                            color: Colors.fade(block.dragging ? 0.95 : 0.65)
                                             font.pixelSize: 10
                                             font.bold: block.dragging
                                             font.family: Properties.fontFamily
@@ -478,13 +478,13 @@ ColumnLayout {
                                 y: mins / 60 * root.hourHeight - 1
                                 width: parent.width
                                 height: 2
-                                color: "#f38ba8"
+                                color: Colors.red
                                 z: 5
                                 Rectangle {
                                     width: 8; height: 8; radius: 4
                                     x: -4
                                     anchors.verticalCenter: parent.verticalCenter
-                                    color: "#f38ba8"
+                                    color: Colors.red
                                 }
                             }
                         }

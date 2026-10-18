@@ -26,7 +26,7 @@ Item {
             const ctx = getContext("2d")
             ctx.reset()
             const w = width, h = height
-            ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.06)
+            ctx.strokeStyle = Colors.fade(0.06)
             ctx.lineWidth = 1
             for (let i = 1; i < 4; i++) { const y = Math.round(h * i / 4) + 0.5; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke() }
             const span = root.topValue - root.min
@@ -59,7 +59,7 @@ Item {
     Text {
         anchors { right: parent.right; top: parent.top; margins: 2 }
         text: Math.round(root.topValue) + root.unit
-        color: Qt.rgba(1, 1, 1, 0.3)
+        color: Colors.fade(0.3)
         font.pixelSize: 10
         font.family: Properties.fontFamily
     }

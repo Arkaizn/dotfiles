@@ -15,7 +15,7 @@ Rectangle {
     readonly property bool stacked: compact && (bind.combos.length > 1 || bind.combos.some(c => c.length > 2))
     implicitHeight: Math.max(compact ? 26 : 30, rowLayout.implicitHeight + 8)
     radius: 8
-    color: rowHover.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+    color: rowHover.hovered ? Colors.fade(0.05) : "transparent"
     Behavior on color { ColorAnimation { duration: 100 } }
 
     HoverHandler { id: rowHover }
@@ -31,7 +31,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredWidth: 1          // wrap in the space left, don't push under the keys
             text: row.bind.desc
-            color: Qt.rgba(1, 1, 1, 0.85)
+            color: Colors.fade(0.85)
             font.pixelSize: row.compact ? 11 : 12
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
@@ -44,7 +44,7 @@ Rectangle {
             Text {
                 visible: row.editable
                 text: "󰏫"
-                color: editMouse.containsMouse ? Colors.color6 : Qt.rgba(1, 1, 1, 0.6)
+                color: editMouse.containsMouse ? Colors.color6 : Colors.fade(0.6)
                 opacity: rowHover.hovered ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: 120 } }
                 font.pixelSize: 13

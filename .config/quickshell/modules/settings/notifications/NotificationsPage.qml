@@ -66,7 +66,7 @@ ColumnLayout {
                     value: page.cfg.scheduleFrom ?? "22:00"
                     onEdited: v => Settings.set("notifications", "scheduleFrom", v.trim())
                 }
-                Text { text: "→"; color: Qt.rgba(1, 1, 1, 0.5); font.family: Properties.fontFamily }
+                Text { text: "→"; color: Colors.fade(0.5); font.family: Properties.fontFamily }
                 TextControl {
                     implicitWidth: 90
                     value: page.cfg.scheduleTo ?? "07:00"

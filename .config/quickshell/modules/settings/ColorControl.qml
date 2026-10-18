@@ -14,7 +14,7 @@ import "../controlcenter"
 RowLayout {
     id: root
 
-    property color value: "white"
+    property color value: Colors.ink
     property bool canLink: false
     property string link: ""     // pywal color name it follows ("color4"), "" = fixed
     signal edited(color value)
@@ -39,7 +39,7 @@ RowLayout {
             clip: true
             color: "#808080"
             border.width: 1.5
-            border.color: Qt.rgba(1, 1, 1, swatchMouse.containsMouse || picker.visible ? 0.4 : 0.2)
+            border.color: Colors.fade(swatchMouse.containsMouse || picker.visible ? 0.4 : 0.2)
 
             // checkerboard so transparency shows
             Grid {
@@ -72,11 +72,11 @@ RowLayout {
             width: 14; height: 14; radius: 7
             color: Colors.background
             border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.3)
+            border.color: Colors.fade(0.3)
             Text {
                 anchors.centerIn: parent
                 text: "󰸉"
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: 8
                 font.family: Properties.fontFamily
             }
@@ -113,7 +113,7 @@ RowLayout {
 
                 Text {
                     text: root.canLink ? "Wallpaper colors (follow wallpaper changes)" : "Palette"
-                    color: Qt.rgba(1, 1, 1, 0.55)
+                    color: Colors.fade(0.55)
                     font.pixelSize: 11
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -138,7 +138,7 @@ RowLayout {
                             radius: 6
                             color: isWal ? Colors[modelData] : modelData
                             border.width: selected ? 2 : 1.5
-                            border.color: selected ? "white" : Qt.rgba(1, 1, 1, chipMouse.containsMouse ? 0.6 : 0.18)
+                            border.color: selected ? Colors.ink : Colors.fade(chipMouse.containsMouse ? 0.6 : 0.18)
                             scale: chipMouse.containsMouse ? 1.12 : 1
                             Behavior on scale { NumberAnimation { duration: 100 } }
                             MouseArea {
@@ -163,7 +163,7 @@ RowLayout {
                     spacing: 10
                     Text {
                         text: "Opacity"
-                        color: Qt.rgba(1, 1, 1, 0.55)
+                        color: Colors.fade(0.55)
                         font.pixelSize: 11
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -181,7 +181,7 @@ RowLayout {
                         Layout.preferredWidth: 34
                         horizontalAlignment: Text.AlignRight
                         text: Math.round(root.value.a * 100) + "%"
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
                     }

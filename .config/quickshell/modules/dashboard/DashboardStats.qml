@@ -123,7 +123,7 @@ ColumnLayout {
     Text {
         Layout.alignment: Qt.AlignHCenter
         text: "SYSTEM"
-        color: Qt.rgba(1, 1, 1, 0.35)
+        color: Colors.fade(0.35)
         font.pixelSize: 9
         font.letterSpacing: 3
         font.bold: true
@@ -231,7 +231,7 @@ ColumnLayout {
             Shape {
                 anchors.fill: parent
                 ShapePath {
-                    strokeColor: Qt.rgba(1,1,1,0.08); strokeWidth: 8
+                    strokeColor: Colors.fade(0.08); strokeWidth: 8
                     fillColor: "transparent"; capStyle: ShapePath.RoundCap
                     PathAngleArc { centerX: 65; centerY: 65; radiusX: 50; radiusY: 50; startAngle: 180; sweepAngle: 175 }
                 }
@@ -240,7 +240,7 @@ ColumnLayout {
             Shape {
                 anchors.fill: parent
                 ShapePath {
-                    strokeColor: Qt.rgba(1,1,1,0.08); strokeWidth: 8
+                    strokeColor: Colors.fade(0.08); strokeWidth: 8
                     fillColor: "transparent"; capStyle: ShapePath.RoundCap
                     PathAngleArc { centerX: 65; centerY: 65; radiusX: 50; radiusY: 50; startAngle: 0; sweepAngle: 175 }
                 }
@@ -284,7 +284,7 @@ ColumnLayout {
                 spacing: 0
                 Text {
                     text: "NET"
-                    color: Qt.rgba(1,1,1,0.4)
+                    color: Colors.fade(0.4)
                     font.pixelSize: 11; font.letterSpacing: 2; font.bold: true
                 }
                 Text {
@@ -350,7 +350,7 @@ ColumnLayout {
                 width: parent.width
                 height: 6
                 radius: 3
-                color: Qt.rgba(1, 1, 1, 0.08)
+                color: Colors.fade(0.08)
 
                 Rectangle {
                     height: parent.height
@@ -407,7 +407,7 @@ ColumnLayout {
         Shape {
             anchors.fill: parent
             ShapePath {
-                strokeColor: Qt.rgba(1,1,1,0.08); strokeWidth: 8
+                strokeColor: Colors.fade(0.08); strokeWidth: 8
                 fillColor: "transparent"; capStyle: ShapePath.RoundCap
                 PathAngleArc { centerX: 65; centerY: 65; radiusX: 50; radiusY: 50; startAngle: -225; sweepAngle: 270 }
             }
@@ -416,7 +416,7 @@ ColumnLayout {
             visible: !gauge.singleRing
             anchors.fill: parent
             ShapePath {
-                strokeColor: Qt.rgba(1,1,1,0.08); strokeWidth: 7
+                strokeColor: Colors.fade(0.08); strokeWidth: 7
                 fillColor: "transparent"; capStyle: ShapePath.RoundCap
                 PathAngleArc { centerX: 65; centerY: 65; radiusX: 36; radiusY: 36; startAngle: -225; sweepAngle: 270 }
             }
@@ -455,7 +455,7 @@ ColumnLayout {
             Text {
                 Layout.alignment: Qt.AlignHCenter
                 text: gauge.label
-                color: Qt.rgba(1,1,1,0.4)
+                color: Colors.fade(0.4)
                 font.pixelSize: 11; font.letterSpacing: 2; font.bold: true
             }
             Text {
@@ -469,7 +469,7 @@ ColumnLayout {
                 visible: gauge.secondaryLabel !== ""
                 Layout.alignment: Qt.AlignHCenter
                 text: gauge.secondaryLabel
-                color: gauge.singleRing ? Qt.rgba(1,1,1,0.5) : gauge.secondaryColor
+                color: gauge.singleRing ? Colors.fade(0.5) : gauge.secondaryColor
                 font.pixelSize: gauge.singleRing ? 11 : 12
                 font.bold: !gauge.singleRing
             }

@@ -38,14 +38,14 @@ NetRow {
             radius: Properties.radius
             color: Qt.rgba(0, 0, 0, 0.3)
             border.width: 1
-            border.color: area.activeFocus ? Qt.rgba(1, 1, 1, 0.3) : Properties.cardBorder
+            border.color: area.activeFocus ? Colors.fade(0.3) : Properties.cardBorder
             Behavior on border.color { ColorAnimation { duration: 150 } }
             TextArea {
                 id: area
                 anchors.fill: parent
                 padding: 10
                 color: Properties.color
-                selectionColor: Qt.rgba(1, 1, 1, 0.28)
+                selectionColor: Colors.fade(0.28)
                 font.pixelSize: 12
                 font.family: Properties.fontFamily
                 wrapMode: TextEdit.NoWrap

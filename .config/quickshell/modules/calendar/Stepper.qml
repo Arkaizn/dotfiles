@@ -22,7 +22,7 @@ RowLayout {
         Layout.preferredWidth: 30
         horizontalAlignment: Text.AlignHCenter
         text: st.value
-        color: "white"
+        color: Colors.ink
         font.pixelSize: 13
         font.bold: true
         font.family: Properties.fontFamily

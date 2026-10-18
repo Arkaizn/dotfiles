@@ -128,13 +128,13 @@ ColumnLayout {
                     IconButton {
                         icon: "󰂭"
                         active: dev.blocked
-                        textColor: dev.blocked ? "#f38ba8" : Properties.color
+                        textColor: dev.blocked ? Colors.red : Properties.color
                         tooltip: dev.blocked ? "Blocked: can't connect (click to unblock)" : "Block"
                         onClicked: dev.blocked = !dev.blocked
                     }
                     IconButton {
                         icon: page.confirmForget === dev.address ? "󰄬" : "󰆴"
-                        textColor: page.confirmForget === dev.address ? "#f38ba8" : Properties.color
+                        textColor: page.confirmForget === dev.address ? Colors.red : Properties.color
                         tooltip: page.confirmForget === dev.address ? "Click again to forget it" : "Forget (unpair)"
                         onClicked: {
                             if (page.confirmForget === dev.address) { dev.forget(); page.confirmForget = "" }

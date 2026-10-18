@@ -64,7 +64,7 @@ PanelWindow {
     // the two views, the search field, and the mode bar) + outer margins.
     implicitHeight: Math.max(maxResultsHeight, wallpaperMaxHeight) + contentSpacing * 2 + Properties.buttonHeight + modeBarHeight + contentMargins
 
-    color: '#00000000'
+    color: Colors.shade(0.0)
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     exclusiveZone: 0
 
@@ -525,7 +525,7 @@ PanelWindow {
                         icon: "󰓛"
                         tooltip: "Stop the running wallpaper command"
                         interactive: wallpaperView.applying
-                        textColor: wallpaperView.applying ? "#f38ba8" : Properties.color
+                        textColor: wallpaperView.applying ? Colors.red : Properties.color
                         onClicked: wallpaperView.stop()
                     }
                 }

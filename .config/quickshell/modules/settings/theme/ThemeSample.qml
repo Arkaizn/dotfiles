@@ -10,7 +10,7 @@ Rectangle {
     radius: 10
     color: scheme?.special?.background ?? "#000"
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, 0.12)
+    border.color: Colors.fade(0.12)
     Column {
         anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 12 }
         spacing: 4

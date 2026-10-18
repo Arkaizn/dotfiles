@@ -156,7 +156,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: 48
             radius: 8
-            color: isCurrent ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16) : hover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+            color: isCurrent ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16) : hover.hovered ? Colors.fade(0.08) : "transparent"
             border.width: isCurrent ? 1 : 0
             border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4)
             opacity: modelData.disabled ? 0.65 : 1
@@ -169,10 +169,10 @@ ColumnLayout {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: 1
-                    Text { Layout.fillWidth: true; text: row.modelData.title; color: "white"; font.pixelSize: 14; font.weight: Font.Medium; elide: Text.ElideRight }
-                    Text { Layout.fillWidth: true; text: row.modelData.subtitle; color: Qt.rgba(1, 1, 1, 0.45); font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
+                    Text { Layout.fillWidth: true; text: row.modelData.title; color: Colors.ink; font.pixelSize: 14; font.weight: Font.Medium; elide: Text.ElideRight }
+                    Text { Layout.fillWidth: true; text: row.modelData.subtitle; color: Colors.fade(0.45); font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
                 }
-                Text { visible: row.isCurrent && !row.modelData.disabled; text: "↵"; color: Qt.rgba(1, 1, 1, 0.5); font.pixelSize: 14 }
+                Text { visible: row.isCurrent && !row.modelData.disabled; text: "↵"; color: Colors.fade(0.5); font.pixelSize: 14 }
             }
         }
     }

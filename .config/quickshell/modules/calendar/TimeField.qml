@@ -95,12 +95,12 @@ Item {
                 width: ListView.view.width - 10
                 height: 28
                 radius: Properties.radius
-                color: hover.hovered ? Qt.rgba(1, 1, 1, 0.08) : selected ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                color: hover.hovered ? Colors.fade(0.08) : selected ? Colors.fade(0.05) : "transparent"
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     x: 10
                     text: root.fmt(entry.value)
-                    color: entry.selected ? Colors.color6 : entry.value % 60 === 0 ? "white" : Qt.rgba(1, 1, 1, 0.6)
+                    color: entry.selected ? Colors.color6 : entry.value % 60 === 0 ? Colors.ink : Colors.fade(0.6)
                     font.pixelSize: 12
                     font.bold: entry.selected || entry.value % 60 === 0
                     font.family: Properties.fontFamily

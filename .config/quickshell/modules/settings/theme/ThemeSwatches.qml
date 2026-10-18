@@ -1,5 +1,6 @@
 import QtQuick
 
+import qs.services
 // The 16 colors of a pywal scheme as a strip of squares (two rows with `rows: 2`).
 Grid {
     id: root
@@ -16,7 +17,7 @@ Grid {
             radius: 3
             color: root.colors?.["color" + index] ?? "transparent"
             border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.12)
+            border.color: Colors.fade(0.12)
         }
     }
 }

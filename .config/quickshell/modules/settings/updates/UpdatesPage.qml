@@ -42,7 +42,7 @@ ColumnLayout {
                 desc: modelData.old + "  →  " + modelData.new
                 Text {
                     text: modelData.src
-                    color: modelData.src === "AUR" ? "#f9e2af" : Qt.rgba(1, 1, 1, 0.45)
+                    color: modelData.src === "AUR" ? Colors.yellow : Colors.fade(0.45)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }

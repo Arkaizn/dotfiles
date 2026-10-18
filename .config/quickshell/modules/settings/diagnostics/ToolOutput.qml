@@ -28,7 +28,7 @@ ColumnLayout {
             text: root.st.missing ? "<font color='#f9e2af'>" + root.st.missing + " isn't installed: " + Jobs.installHint(root.st.missing) + "</font>"
                 : root.st.lines.slice(-root.maxLines).map(l => (l.err && root.failed ? "<font color='#f38ba8'>" : "") + l.text.replace(/&/g, "&amp;").replace(/</g, "&lt;") + (l.err && root.failed ? "</font>" : "")).join("<br>")
                   + (root.st.running ? "<br><font color='#888888'>…</font>" : "")
-            color: Qt.rgba(1, 1, 1, 0.8)
+            color: Colors.fade(0.8)
             font.pixelSize: 11
             font.family: "monospace"
             wrapMode: Text.WrapAnywhere
@@ -39,7 +39,7 @@ ColumnLayout {
         Layout.bottomMargin: 10
         visible: !root.st.running && root.st.code !== -1 && !root.st.missing
         text: root.st.cancelled ? "cancelled" : root.st.timedOut ? "stopped: took too long" : "exit " + root.st.code
-        color: root.st.code === 0 ? Qt.rgba(1, 1, 1, 0.4) : "#f9e2af"
+        color: root.st.code === 0 ? Colors.fade(0.4) : Colors.yellow
         font.pixelSize: 10
         font.family: Properties.fontFamily
     }

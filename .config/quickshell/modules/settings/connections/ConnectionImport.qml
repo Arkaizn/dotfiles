@@ -67,7 +67,7 @@ ColumnLayout {
         visible: imp.anyPassword
         text: "󰀦  Your scripts keep their plain-text passwords. Once the import works, remove /p:… from them yourself"
               + " (and change any password that was ever pushed to a git repository)."
-        color: "#f9e2af"
+        color: Colors.yellow
         font.pixelSize: 11
         font.family: Properties.fontFamily
         wrapMode: Text.Wrap
@@ -80,7 +80,7 @@ ColumnLayout {
         Text {
             Layout.fillWidth: true
             text: imp.message
-            color: "#f38ba8"
+            color: Colors.red
             font.pixelSize: 11
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap

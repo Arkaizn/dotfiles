@@ -69,10 +69,10 @@ Scope {
                             spacing: 6
                             Rectangle {
                                 implicitWidth: 22; implicitHeight: 22; radius: 11
-                                color: index <= root.step ? Colors.color6 : Qt.rgba(1, 1, 1, 0.1)
-                                Text { anchors.centerIn: parent; text: index < root.step ? "󰄬" : index + 1; color: index <= root.step ? "black" : "white"; font.pixelSize: 11; font.family: Properties.fontFamily }
+                                color: index <= root.step ? Colors.color6 : Colors.fade(0.1)
+                                Text { anchors.centerIn: parent; text: index < root.step ? "󰄬" : index + 1; color: index <= root.step ? "black" : Colors.ink; font.pixelSize: 11; font.family: Properties.fontFamily }
                             }
-                            Text { text: modelData; color: index === root.step ? "white" : Qt.rgba(1, 1, 1, 0.45); font.pixelSize: 12; font.family: Properties.fontFamily }
+                            Text { text: modelData; color: index === root.step ? Colors.ink : Colors.fade(0.45); font.pixelSize: 12; font.family: Properties.fontFamily }
                         }
                     }
                 }
@@ -85,11 +85,11 @@ Scope {
                     // ── 0 welcome ──
                     ColumnLayout {
                         spacing: 14
-                        Text { text: "Welcome to your shell"; color: "white"; font.pixelSize: 24; font.bold: true; font.family: Properties.fontFamily }
+                        Text { text: "Welcome to your shell"; color: Colors.ink; font.pixelSize: 24; font.bold: true; font.family: Properties.fontFamily }
                         Text {
                             Layout.fillWidth: true; wrapMode: Text.Wrap
                             text: "A few choices to get started; everything can be changed later in the settings app. First, a check of what the shell needs:"
-                            color: Qt.rgba(1, 1, 1, 0.7); font.pixelSize: 13; font.family: Properties.fontFamily
+                            color: Colors.fade(0.7); font.pixelSize: 13; font.family: Properties.fontFamily
                         }
                         NetCard {
                             Layout.fillWidth: true
@@ -115,7 +115,7 @@ Scope {
                     // ── 1 you ──
                     ColumnLayout {
                         spacing: 14
-                        Text { text: "About you"; color: "white"; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
+                        Text { text: "About you"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
                         NetCard {
                             Layout.fillWidth: true
                             NetRow {
@@ -144,8 +144,8 @@ Scope {
                     // ── 2 bar ──
                     ColumnLayout {
                         spacing: 14
-                        Text { text: "Your bar"; color: "white"; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
-                        Text { text: "Pick a starting point; the bar at the top changes right away. Fine-tune it later in Settings → Bar layout."; color: Qt.rgba(1, 1, 1, 0.7); font.pixelSize: 13; font.family: Properties.fontFamily; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                        Text { text: "Your bar"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
+                        Text { text: "Pick a starting point; the bar at the top changes right away. Fine-tune it later in Settings → Bar layout."; color: Colors.fade(0.7); font.pixelSize: 13; font.family: Properties.fontFamily; Layout.fillWidth: true; wrapMode: Text.Wrap }
                         Repeater {
                             model: root.presets
                             Rectangle {
@@ -157,15 +157,15 @@ Scope {
                                 Layout.fillWidth: true
                                 implicitHeight: 64
                                 radius: 12
-                                color: selected ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16) : pm.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.03)
+                                color: selected ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16) : pm.containsMouse ? Colors.fade(0.07) : Colors.fade(0.03)
                                 border.width: 1
-                                border.color: selected ? Colors.color6 : Qt.rgba(1, 1, 1, 0.1)
+                                border.color: selected ? Colors.color6 : Colors.fade(0.1)
                                 MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: BarLayout.save("", parent.layout) }
                                 ColumnLayout {
                                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 16 }
                                     spacing: 2
-                                    Text { text: (parent.parent.selected ? "󰄬  " : "") + parent.parent.modelData.name; color: "white"; font.pixelSize: 14; font.bold: true; font.family: Properties.fontFamily }
-                                    Text { text: parent.parent.modelData.desc; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                                    Text { text: (parent.parent.selected ? "󰄬  " : "") + parent.parent.modelData.name; color: Colors.ink; font.pixelSize: 14; font.bold: true; font.family: Properties.fontFamily }
+                                    Text { text: parent.parent.modelData.desc; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
                                 }
                             }
                         }
@@ -175,7 +175,7 @@ Scope {
                     // ── 3 notifications & updates ──
                     ColumnLayout {
                         spacing: 14
-                        Text { text: "Notifications and updates"; color: "white"; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
+                        Text { text: "Notifications and updates"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
                         NetCard {
                             Layout.fillWidth: true
                             NetRow {
@@ -212,7 +212,7 @@ Scope {
                     // ── 4 look & keys ──
                     ColumnLayout {
                         spacing: 14
-                        Text { text: "Look and keys"; color: "white"; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
+                        Text { text: "Look and keys"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
                         NetCard {
                             Layout.fillWidth: true
                             NetRow {
@@ -241,11 +241,11 @@ Scope {
                     // ── 5 done ──
                     ColumnLayout {
                         spacing: 14
-                        Text { text: "All set"; color: "white"; font.pixelSize: 24; font.bold: true; font.family: Properties.fontFamily }
+                        Text { text: "All set"; color: Colors.ink; font.pixelSize: 24; font.bold: true; font.family: Properties.fontFamily }
                         Text {
                             Layout.fillWidth: true; wrapMode: Text.Wrap
                             text: "Everything else lives in the settings app: network, audio, Bluetooth, default apps, connections, profiles and more. This setup can be run again from Settings → Maintenance → Health."
-                            color: Qt.rgba(1, 1, 1, 0.7); font.pixelSize: 13; font.family: Properties.fontFamily
+                            color: Colors.fade(0.7); font.pixelSize: 13; font.family: Properties.fontFamily
                         }
                         ActionButton { icon: "󰒓"; text: "Open the settings app"; onClicked: { root.finish(); Quickshell.execDetached(["qs", "ipc", "call", "settings", "open"]) } }
                         Item { Layout.fillHeight: true }

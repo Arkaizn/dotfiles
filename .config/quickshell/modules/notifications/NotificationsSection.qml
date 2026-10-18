@@ -21,7 +21,7 @@ ColumnLayout {
 
         Text {
             text: "Notifications"
-            color: "white"
+            color: Colors.ink
             font { bold: true; pixelSize: 14 }
         }
 
@@ -30,14 +30,14 @@ ColumnLayout {
             Layout.preferredWidth: countLabel.implicitWidth + 12
             Layout.preferredHeight: 18
             radius: 9
-            color: "#40ffffff"
+            color: Colors.fade(0.25)
             Behavior on opacity { NumberAnimation { duration: Anim.hover } }
 
             Text {
                 id: countLabel
                 anchors.centerIn: parent
                 text: Notifs.count
-                color: "#ddffffff"
+                color: Colors.fade(0.87)
                 font { bold: true; pixelSize: 10 }
             }
         }
@@ -66,7 +66,7 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 1
-        color: "#33ffffff"
+        color: Colors.fade(0.2)
     }
 
     // ── Empty state (fades/collapses instead of popping) ──────
@@ -81,7 +81,7 @@ ColumnLayout {
         Text {
             anchors.centerIn: parent
             text: "   No notifications"
-            color: "#66ffffff"
+            color: Colors.fade(0.4)
             font { pixelSize: 12; family: Properties.fontFamily }
         }
     }

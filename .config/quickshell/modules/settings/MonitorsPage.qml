@@ -134,7 +134,7 @@ ColumnLayout {
                     : "󰀦  niri doesn't load the monitor file yet: " + NiriSettings.mainConfig
                       + " needs\n" + Monitors.includeLine + "\nright before the output.kdl include.")
                 : "󰀦  " + Monitors.error
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 11
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
@@ -146,14 +146,14 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: 290
         radius: 14
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
 
         Text {
             anchors { left: parent.left; top: parent.top; margins: 14 }
             text: "Drag to arrange  ·  click to select"
-            color: Qt.rgba(1, 1, 1, 0.4)
+            color: Colors.fade(0.4)
             font.pixelSize: 11
             font.family: Properties.fontFamily
         }
@@ -211,9 +211,9 @@ ColumnLayout {
                     width: r.w * m.sf
                     height: r.h * m.sf
                     radius: 10
-                    color: isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.28) : Qt.rgba(1, 1, 1, 0.08)
+                    color: isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.28) : Colors.fade(0.08)
                     border.width: isSel ? 2 : 1.5
-                    border.color: isSel ? Colors.color6 : Qt.rgba(1, 1, 1, drag.containsMouse ? 0.4 : 0.22)
+                    border.color: isSel ? Colors.color6 : Colors.fade(drag.containsMouse ? 0.4 : 0.22)
                     z: isSel ? 1 : 0
                     Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -225,7 +225,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignHCenter
                             text: mon.c.name
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 15
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -235,7 +235,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignHCenter
                             text: mon.c.model
-                            color: Qt.rgba(1, 1, 1, 0.6)
+                            color: Colors.fade(0.6)
                             font.pixelSize: 10
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
@@ -245,7 +245,7 @@ ColumnLayout {
                             horizontalAlignment: Text.AlignHCenter
                             text: mon.c.width + "×" + mon.c.height + " @ " + Math.round(mon.c.refresh / 1000) + "Hz"
                                   + (mon.c.scale !== 1 ? "  ·  " + mon.c.scale + "x" : "")
-                            color: Qt.rgba(1, 1, 1, 0.45)
+                            color: Colors.fade(0.45)
                             font.pixelSize: 10
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
@@ -298,7 +298,7 @@ ColumnLayout {
                     icon: "󰶐"
                     text: page.draft[index].name + "  ·  off"
                     primary: page.selected === index
-                    textColor: Qt.rgba(1, 1, 1, 0.7)
+                    textColor: Colors.fade(0.7)
                     onClicked: page.selected = index
                 }
             }
@@ -316,7 +316,7 @@ ColumnLayout {
             spacing: 8
             Text {
                 text: page.sel ? (page.sel.make + " " + page.sel.model).trim() || page.sel.name : ""
-                color: Qt.rgba(1, 1, 1, 0.55)
+                color: Colors.fade(0.55)
                 font.pixelSize: 12
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -328,7 +328,7 @@ ColumnLayout {
                     const inch = p && p[0] > 0 ? Math.round(Math.hypot(p[0], p[1]) / 25.4 * 10) / 10 + "\"  ·  " : ""
                     return page.sel.name + "  ·  " + inch + "at " + page.sel.x + ", " + page.sel.y
                 }
-                color: Qt.rgba(1, 1, 1, 0.35)
+                color: Colors.fade(0.35)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }
@@ -338,7 +338,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: rows.implicitHeight
             radius: 14
-            color: "#27000000"
+            color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
 
@@ -468,7 +468,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: 54
         radius: 14
-        color: Monitors.pending ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12) : "#27000000"
+        color: Monitors.pending ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12) : Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Monitors.pending ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4) : Properties.cardBorder
         Behavior on color { ColorAnimation { duration: 150 } }
@@ -490,7 +490,7 @@ ColumnLayout {
             Text {
                 Layout.fillWidth: true
                 text: page.edited ? "Not applied yet" : Object.keys(Settings.monitors).length > 0 ? "Saved" : "Using output.kdl"
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: Colors.fade(0.45)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 horizontalAlignment: Text.AlignRight
@@ -521,7 +521,7 @@ ColumnLayout {
             Text {
                 Layout.fillWidth: true
                 text: "Keep this display setup?  Reverting in " + Monitors.countdown + "s"
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: 12
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -545,7 +545,7 @@ ColumnLayout {
         Layout.leftMargin: 16
         Layout.rightMargin: 16
         implicitHeight: 1
-        color: Qt.rgba(1, 1, 1, 0.06)
+        color: Colors.fade(0.06)
     }
 
     // ── Identify: big name on every screen for a moment ──────────────────────
@@ -577,7 +577,7 @@ ColumnLayout {
                         Text {
                             Layout.alignment: Qt.AlignHCenter
                             text: modelData.name
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 44
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -585,7 +585,7 @@ ColumnLayout {
                         Text {
                             Layout.alignment: Qt.AlignHCenter
                             text: modelData.model
-                            color: Qt.rgba(1, 1, 1, 0.6)
+                            color: Colors.fade(0.6)
                             font.pixelSize: 13
                             font.family: Properties.fontFamily
                         }

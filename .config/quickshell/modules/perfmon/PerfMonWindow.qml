@@ -15,9 +15,9 @@ Scope {
     onOpenChanged: PerfMon.active = open
 
     readonly property color cpuColor: Colors.color6
-    readonly property color gpuColor: "#a6e3a1"
-    readonly property color memColor: "#89b4fa"
-    readonly property color liquidColor: "#94e2d5"
+    readonly property color gpuColor: Colors.green
+    readonly property color memColor: Colors.blue
+    readonly property color liquidColor: Colors.teal
 
     function gb(kib) { return (kib / 1048576).toFixed(1) }
 
@@ -45,9 +45,9 @@ Scope {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        Text { text: "Performance"; color: "white"; font.pixelSize: 22; font.bold: true; font.family: Properties.fontFamily }
+                        Text { text: "Performance"; color: Colors.ink; font.pixelSize: 22; font.bold: true; font.family: Properties.fontFamily }
                         Item { Layout.fillWidth: true }
-                        Text { text: "every " + (PerfMon.interval / 1000) + " s  ·  only while this window is open"; color: Qt.rgba(1, 1, 1, 0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
+                        Text { text: "every " + (PerfMon.interval / 1000) + " s  ·  only while this window is open"; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
                     }
 
                     // ── gauges ──────────────────────────────────────────────
@@ -145,13 +145,13 @@ Scope {
                                         required property int index
                                         readonly property real modelData: PerfMon.cores[index] ?? 0
                                         width: 30; height: 46; radius: 5
-                                        color: Qt.rgba(1, 1, 1, 0.06)
+                                        color: Colors.fade(0.06)
                                         Rectangle {
                                             anchors.bottom: parent.bottom
                                             width: parent.width
                                             height: parent.height * Math.min(1, modelData / 100)
                                             radius: 5
-                                            color: modelData > 90 ? "#f38ba8" : modelData > 75 ? "#f9e2af" : root.cpuColor
+                                            color: modelData > 90 ? Colors.red : modelData > 75 ? Colors.yellow : root.cpuColor
                                         }
                                     }
                                 }

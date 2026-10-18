@@ -27,14 +27,14 @@ Item {
         spacing: 8
         Text {
             text: "󰃭"
-            color: Qt.rgba(1, 1, 1, 0.6)
+            color: Colors.fade(0.6)
             font.pixelSize: 13
             font.family: Properties.fontFamily
         }
         Text {
             id: label
             text: U.fmtShortDate(root.day) + " " + root.day.getFullYear()
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 12
             font.family: Properties.fontFamily
         }

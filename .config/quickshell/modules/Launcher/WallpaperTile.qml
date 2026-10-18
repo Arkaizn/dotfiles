@@ -110,13 +110,13 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: 10
-            color: tileArea.containsMouse || delegateRoot.isSelected ? "#99000000" : "transparent"
+            color: tileArea.containsMouse || delegateRoot.isSelected ? Colors.shade(0.6) : "transparent"
 
             Text {
                 anchors { bottom: parent.bottom; left: parent.left; right: parent.right; margins: 5 }
                 visible: tileArea.containsMouse || delegateRoot.isSelected
                 text: delegateRoot.name
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: 10
                 elide: Text.ElideMiddle
             }
@@ -124,7 +124,7 @@ Item {
                 anchors.centerIn: parent
                 visible: delegateRoot.applying
                 text: "Applying…"
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: 11
             }
         }

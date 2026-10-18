@@ -47,7 +47,7 @@ ColumnLayout {
               + "{@word} is a name " + (hypr ? "Hyprland" : "niri") + " uses (edit it under Words), {value} is filled in by the shell "
               + "(strings come quoted). Example: if spawn-sh-at-startup \"x\" became spawn-shell-at-startup=\"x\", set the autostart "
               + "template to {@autostart}={cmd} and the word autostart to spawn-shell-at-startup."
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: Colors.fade(0.5)
         font.pixelSize: 11
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap
@@ -118,7 +118,7 @@ ColumnLayout {
         Layout.leftMargin: 6
         Layout.topMargin: 4
         text: "What gets written"
-        color: Qt.rgba(1, 1, 1, 0.55)
+        color: Colors.fade(0.55)
         font.pixelSize: 12
         font.bold: true
         font.family: Properties.fontFamily

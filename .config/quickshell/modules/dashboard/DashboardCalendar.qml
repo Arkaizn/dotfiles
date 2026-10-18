@@ -143,7 +143,7 @@ Item {
                     anchors.fill: parent
                     radius: 6
                     color: "transparent"
-                    border.color: Qt.rgba(1,1,1, prevHover.hovered ? 0.28 : 0.14)
+                    border.color: Colors.fade(prevHover.hovered ? 0.28 : 0.14)
                     border.width: 0.5
 
                     gradient: ButtonGradient {
@@ -154,7 +154,7 @@ Item {
                     anchors.centerIn: parent
                     text: "‹"
                     font.pixelSize: 20
-                    color: prevHover.hovered ? "white" : Qt.rgba(1,1,1,0.6)
+                    color: prevHover.hovered ? Colors.ink : Colors.fade(0.6)
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }
             }
@@ -189,8 +189,8 @@ Item {
                     id: monthPillBg
                     anchors.fill: parent
                     radius: 7
-                    color: "white"   // filled by the gradient layer below
-                    border.color: Qt.rgba(1,1,1, monthPillItem.hovered ? 0.28 : 0.18)
+                    color: Colors.ink   // filled by the gradient layer below
+                    border.color: Colors.fade(monthPillItem.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     
                     gradient: ButtonGradient {
@@ -219,7 +219,7 @@ Item {
                             NumberAnimation { target: monthLabel; property: "opacity"; to: 1; duration: 140 }
                         }
                     }
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 13
                     font.weight: Font.Medium
                 }
@@ -240,7 +240,7 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     radius: 7
-                    border.color: Qt.rgba(1, 1, 1, todayHover.hovered || todayBtn.away ? 0.28 : 0.18)
+                    border.color: Colors.fade(todayHover.hovered || todayBtn.away ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: todayHover.hovered || todayBtn.away }
                 }
@@ -248,7 +248,7 @@ Item {
                     id: todayLabel
                     anchors.centerIn: parent
                     text: "Today"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 11
                     font.weight: Font.Medium
                 }
@@ -277,7 +277,7 @@ Item {
                     anchors.fill: parent
                     radius: 6
                     color: "transparent"
-                    border.color: Qt.rgba(1,1,1, nextHover.hovered ? 0.28 : 0.14)
+                    border.color: Colors.fade(nextHover.hovered ? 0.28 : 0.14)
                     border.width: 0.5
                     gradient: ButtonGradient {
                             hovered: nextHover.hovered
@@ -288,7 +288,7 @@ Item {
                     anchors.centerIn: parent
                     text: "›"
                     font.pixelSize: 20
-                    color: nextHover.hovered ? "white" : Qt.rgba(1,1,1,0.6)
+                    color: nextHover.hovered ? Colors.ink : Colors.fade(0.6)
                     Behavior on color { ColorAnimation { duration: 100 } }
                 }
             }
@@ -310,7 +310,7 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 0
                     text: modelData
-                    color: index >= 5 ? Qt.rgba(1,1,1,0.2) : Qt.rgba(1,1,1,0.35)
+                    color: index >= 5 ? Colors.fade(0.2) : Colors.fade(0.35)
                     font.pixelSize: 12
                     horizontalAlignment: Text.AlignHCenter
                 }
@@ -345,7 +345,7 @@ Item {
                             let dt = root.cellDate(c)
                             root.isoWeek(dt.getFullYear(), dt.getMonth(), dt.getDate())
                         }
-                        color: Qt.rgba(1,1,1,0.2)
+                        color: Colors.fade(0.2)
                         font.pixelSize: 9
                         verticalAlignment: Text.AlignVCenter
                         horizontalAlignment: Text.AlignHCenter
@@ -386,8 +386,8 @@ Item {
                                 height: width
                                 radius: 6
                                 visible: dayCell.isToday && !dayCell.isSelected
-                                color: Qt.rgba(1,1,1,0.13)
-                                border.color: Qt.rgba(1,1,1,0.22)
+                                color: Colors.fade(0.13)
+                                border.color: Colors.fade(0.22)
                                 border.width: 0.5
                             }
 
@@ -399,7 +399,7 @@ Item {
                                 height: width
                                 radius: 6
                                 visible: dayCell.isSelected
-                                color: Qt.rgba(1, 1, 1, 0.1)
+                                color: Colors.fade(0.1)
                             }
 
                             // ── Hover highlight (non-other, non-today, non-selected) ──
@@ -410,7 +410,7 @@ Item {
                                 radius: 6
                                 visible: dayHover.hovered && !dayCell.isOther
                                          && !dayCell.isToday && !dayCell.isSelected
-                                color: Qt.rgba(1,1,1,0.08)
+                                color: Colors.fade(0.08)
                                 Behavior on color { ColorAnimation { duration: 80 } }
                             }
 
@@ -419,11 +419,11 @@ Item {
                                 text: dayCell.cell.d
                                 font.pixelSize: 12
                                 font.weight: (dayCell.isToday || dayCell.isSelected) ? Font.Medium : Font.Normal
-                                color: dayCell.isOther    ? Qt.rgba(1,1,1,0.15)
-                                     : dayCell.isSelected ? "white"
-                                     : dayCell.isToday    ? "white"
-                                     : dayCell.index >= 5 ? Qt.rgba(1,1,1,0.45)     // weekend
-                                     : Qt.rgba(1,1,1,0.75)
+                                color: dayCell.isOther    ? Colors.fade(0.15)
+                                     : dayCell.isSelected ? Colors.ink
+                                     : dayCell.isToday    ? Colors.ink
+                                     : dayCell.index >= 5 ? Colors.fade(0.45)     // weekend
+                                     : Colors.fade(0.75)
                             }
 
                             // calendar app events: a dot per calendar (max 3)
@@ -438,7 +438,7 @@ Item {
                                     Rectangle {
                                         required property string modelData
                                         width: 3; height: 3; radius: 1.5
-                                        color: CalendarStore.calendarMap[modelData]?.color ?? "white"
+                                        color: CalendarStore.calendarMap[modelData]?.color ?? Colors.ink
                                     }
                                 }
                             }

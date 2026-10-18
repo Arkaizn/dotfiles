@@ -108,7 +108,7 @@ Item {
             Layout.preferredHeight: 18
             Layout.leftMargin: -14
             radius: 1
-            color: Qt.rgba(1, 1, 1, 0.12)
+            color: Colors.fade(0.12)
         }
 
         ColumnLayout {
@@ -119,7 +119,7 @@ Item {
             Text {
                 visible: root.crumb !== ""
                 text: root.crumb + "  󰅂"
-                color: crumbMouse.containsMouse ? Colors.color6 : Qt.rgba(1, 1, 1, 0.4)
+                color: crumbMouse.containsMouse ? Colors.color6 : Colors.fade(0.4)
                 font.pixelSize: 10
                 font.family: Properties.fontFamily
                 Behavior on color { ColorAnimation { duration: 120 } }
@@ -137,7 +137,7 @@ Item {
                 Text {
                     text: root.query !== "" ? SI.highlight(root.spec.label, root.query, Colors.color6.toString()) : root.spec.label
                     textFormat: root.query !== "" ? Text.StyledText : Text.PlainText
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 13
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -153,7 +153,7 @@ Item {
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: root.spec.desc ?? ""
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: Colors.fade(0.5)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap

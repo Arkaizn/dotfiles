@@ -33,7 +33,7 @@ NetRow {
         }
         IconButton {
             icon: row.audio?.muted ? (row.output ? "󰝟" : "󰍭") : (row.output ? "󰕾" : "󰍬")
-            textColor: row.audio?.muted ? "#f38ba8" : Properties.color
+            textColor: row.audio?.muted ? Colors.red : Properties.color
             tooltip: row.audio?.muted ? "Unmute" : "Mute"
             onClicked: if (row.audio) row.audio.muted = !row.audio.muted
         }
@@ -50,7 +50,7 @@ NetRow {
             visible: !row.renaming
             Layout.preferredWidth: 42
             text: Math.round((row.audio?.volume ?? 0) * 100) + "%"
-            color: Qt.rgba(1, 1, 1, 0.7)
+            color: Colors.fade(0.7)
             font.pixelSize: 12
             font.family: Properties.fontFamily
             horizontalAlignment: Text.AlignRight

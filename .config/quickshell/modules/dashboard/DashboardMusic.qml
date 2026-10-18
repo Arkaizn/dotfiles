@@ -130,7 +130,7 @@ Item {
         anchors.centerIn: parent
         visible: root.player === null
         text: "No media playing"
-        color: Qt.rgba(1, 1, 1, 0.4)
+        color: Colors.fade(0.4)
         font.pixelSize: 14
     }
 
@@ -148,7 +148,7 @@ Item {
             width: 130
             height: 130
             radius: 18
-            color: Qt.rgba(1, 1, 1, 0.06)
+            color: Colors.fade(0.06)
             clip: true
 
             layer.enabled: true
@@ -175,7 +175,7 @@ Item {
                 anchors.centerIn: parent
                 text: "󰎇"
                 font.pixelSize: 46
-                color: Qt.rgba(1, 1, 1, 0.3)
+                color: Colors.fade(0.3)
                 visible: !root.player || root.player.trackArtUrl === ""
                          || albumArtImage.status !== Image.Ready
             }
@@ -205,7 +205,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: root.player ? (root.player.trackArtist || " ") : " "
-                    color: Qt.rgba(1, 1, 1, 0.55)
+                    color: Colors.fade(0.55)
                     font.pixelSize: 12
                     elide: Text.ElideRight
                 }
@@ -223,7 +223,7 @@ Item {
                 implicitHeight: 26
                 implicitWidth: pillRow.implicitWidth + 18
                 radius: 8
-                border.color: Qt.rgba(1,1,1, sourcePill.hovered ? 0.28 : 0.18)
+                border.color: Colors.fade(sourcePill.hovered ? 0.28 : 0.18)
                 border.width: 0.5
                 gradient: ButtonGradient { hovered: sourceHover.containsMouse }
                 Rectangle {
@@ -296,7 +296,7 @@ Item {
                 visible: root.player !== null
                 implicitWidth: 26; implicitHeight: 26
                 radius: 8
-                border.color: Qt.rgba(1,1,1, jumpHover.containsMouse ? 0.28 : 0.18)
+                border.color: Colors.fade(jumpHover.containsMouse ? 0.28 : 0.18)
                 border.width: 0.5
                 gradient: ButtonGradient { hovered: jumpHover.containsMouse }
                 Rectangle {
@@ -341,7 +341,7 @@ Item {
                     width: 34
                     height: 34
                     radius: 8
-                    border.color: Qt.rgba(1,1,1, shuffleHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(shuffleHover.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: shuffleHover.containsMouse }
                     Rectangle {
@@ -354,7 +354,7 @@ Item {
                         font.pixelSize: 15
                         // Active = Colors.color6, inactive = dim white
                         color: root.player && root.player.shuffle
-                               ? Colors.color6 : Qt.rgba(1, 1, 1, 0.35)
+                               ? Colors.color6 : Colors.fade(0.35)
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -376,7 +376,7 @@ Item {
                 // ── Previous ─────────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Qt.rgba(1,1,1, prevHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(prevHover.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: prevHover.containsMouse }
                     Rectangle {
@@ -388,7 +388,7 @@ Item {
                         text: "󰒮"
                         font.pixelSize: 17
                         color: root.player && root.player.canGoPrevious
-                               ? Colors.foreground : Qt.rgba(1,1,1,0.25)
+                               ? Colors.foreground : Colors.fade(0.25)
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -408,7 +408,7 @@ Item {
                 // ── Play / Pause ─────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Qt.rgba(1,1,1, playHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(playHover.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: playHover.containsMouse }
                     Rectangle {
@@ -443,7 +443,7 @@ Item {
                 // ── Next ─────────────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Qt.rgba(1,1,1, nextHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(nextHover.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: nextHover.containsMouse }
                     Rectangle {
@@ -455,7 +455,7 @@ Item {
                         text: "󰒭"
                         font.pixelSize: 17
                         color: root.player && root.player.canGoNext
-                               ? Colors.foreground : Qt.rgba(1,1,1,0.25)
+                               ? Colors.foreground : Colors.fade(0.25)
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -476,7 +476,7 @@ Item {
                 // Cycles: MprisLoopState.None → All → Track → None
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Qt.rgba(1,1,1, repeatHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(repeatHover.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: repeatHover.containsMouse }
                     Rectangle {
@@ -494,9 +494,9 @@ Item {
                         }
                         // Color: colored for All and Track, dim for None
                         color: {
-                            if (!root.player) return Qt.rgba(1, 1, 1, 0.35)
+                            if (!root.player) return Colors.fade(0.35)
                             if (root.player.loopState === MprisLoopState.None)
-                                return Qt.rgba(1, 1, 1, 0.35)
+                                return Colors.fade(0.35)
                             return Colors.color6
                         }
                     }
@@ -535,7 +535,7 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     radius: 3
-                    color: Qt.rgba(1, 1, 1, 0.12)
+                    color: Colors.fade(0.12)
                 }
 
                 Rectangle {

@@ -18,7 +18,7 @@ Rectangle {
     implicitHeight: Math.max(52, rowLayout.implicitHeight + 18)
     radius: 10
     color: selected ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12)
-         : hover.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+         : hover.hovered ? Colors.fade(0.05) : "transparent"
     border.width: selected ? 1 : 0
     border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45)
     Behavior on color { ColorAnimation { duration: 120 } }
@@ -50,7 +50,7 @@ Rectangle {
                 Layout.fillWidth: true
                 text: SI.highlight(row.entry.label ?? "", row.query, Colors.color6.toString())
                 textFormat: Text.StyledText
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: 13
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -60,7 +60,7 @@ Rectangle {
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: [row.entry.crumb, row.entry.desc].filter(x => x).join("  ·  ")
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: Colors.fade(0.5)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
@@ -79,7 +79,7 @@ Rectangle {
 
         Text {
             text: row.entry.kind === "action" ? "󰐊" : "󰅂"
-            color: Qt.rgba(1, 1, 1, row.selected || hover.hovered ? 0.8 : 0.3)
+            color: Colors.fade(row.selected || hover.hovered ? 0.8 : 0.3)
             font.pixelSize: 14
             font.family: Properties.fontFamily
             Behavior on color { ColorAnimation { duration: 120 } }

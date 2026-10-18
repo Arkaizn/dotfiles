@@ -147,7 +147,7 @@ ColumnLayout {
                 spacing: 6
                 Rectangle {
                     width: 7; height: 7; radius: 3.5
-                    color: parent.parent.ok ? Colors.color6 : "#f9e2af"
+                    color: parent.parent.ok ? Colors.color6 : Colors.yellow
                 }
                 Text {
                     text: !Network.networking ? "Networking off"
@@ -155,7 +155,7 @@ ColumnLayout {
                         : Network.connectivity === "limited" ? "Limited"
                         : Network.connectivity === "portal" ? "Captive portal"
                         : Network.connectivity === "none" ? "Offline" : "…"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -198,14 +198,14 @@ ColumnLayout {
                 spacing: 8
                 Text {
                     text: toast.msg?.error ? "󰀦" : "󰄬"
-                    color: toast.msg?.error ? "#f38ba8" : Colors.color6
+                    color: toast.msg?.error ? Colors.red : Colors.color6
                     font.pixelSize: 15
                     font.family: Properties.fontFamily
                 }
                 Text {
                     Layout.fillWidth: true
                     text: toast.msg?.text ?? ""
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
@@ -267,14 +267,14 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: deviceModel.count + (deviceModel.count === 1 ? " interface" : " interfaces")
                       + (netPage.hiddenCount > 0 && !netPage.showHidden ? "  ·  " + netPage.hiddenCount + " hidden" : "")
-                color: Qt.rgba(1, 1, 1, 0.55)
+                color: Colors.fade(0.55)
                 font.pixelSize: 12
                 font.bold: true
                 font.family: Properties.fontFamily
             }
             Text {
                 text: "Hide virtual"
-                color: Qt.rgba(1, 1, 1, 0.6)
+                color: Colors.fade(0.6)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }
@@ -294,7 +294,7 @@ ColumnLayout {
             Layout.fillWidth: true
             visible: netPage.hideVirtual
             text: "Virtual = Docker, bridges, veth, VMware / VirtualBox, tunnels, loopback. Hide or always show single ones from their card."
-            color: Qt.rgba(1, 1, 1, 0.35)
+            color: Colors.fade(0.35)
             font.pixelSize: 10
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
@@ -516,7 +516,7 @@ ColumnLayout {
                     NetRow {
                         Text {
                             text: newPanel.problem
-                            color: Qt.rgba(1, 1, 1, 0.45)
+                            color: Colors.fade(0.45)
                             font.pixelSize: 11
                             font.family: Properties.fontFamily
                         }
@@ -536,7 +536,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 implicitHeight: profCol.implicitHeight + 8
                 radius: 14
-                color: "#27000000"
+                color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
 
@@ -563,14 +563,14 @@ ColumnLayout {
                                 anchors.leftMargin: 6
                                 anchors.rightMargin: 6
                                 radius: 10
-                                color: rowHover.hovered ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                                color: rowHover.hovered ? Colors.fade(0.05) : "transparent"
                                 Behavior on color { ColorAnimation { duration: 120 } }
                             }
                             Rectangle {
                                 visible: prow.index > 0
                                 anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 16; rightMargin: 16 }
                                 height: 1
-                                color: Qt.rgba(1, 1, 1, 0.06)
+                                color: Colors.fade(0.06)
                             }
                             HoverHandler { id: rowHover }
                             MouseArea {
@@ -586,11 +586,11 @@ ColumnLayout {
                                     width: 32; height: 32; radius: 16
                                     color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, prow.c?.active ? 0.18 : 0.05)
                                     border.width: 1.5
-                                    border.color: prow.c?.active ? Colors.color6 : Qt.rgba(1, 1, 1, 0.15)
+                                    border.color: prow.c?.active ? Colors.color6 : Colors.fade(0.15)
                                     Text {
                                         anchors.centerIn: parent
                                         text: Network.typeIcon(prow.c?.type ?? "")
-                                        color: prow.c?.active ? Colors.color6 : Qt.rgba(1, 1, 1, 0.65)
+                                        color: prow.c?.active ? Colors.color6 : Colors.fade(0.65)
                                         font.pixelSize: 14
                                         font.family: Properties.fontFamily
                                     }
@@ -601,7 +601,7 @@ ColumnLayout {
                                     Text {
                                         Layout.fillWidth: true
                                         text: prow.c?.name ?? ""
-                                        color: "white"
+                                        color: Colors.ink
                                         font.pixelSize: 13
                                         font.bold: true
                                         font.family: Properties.fontFamily
@@ -616,7 +616,7 @@ ColumnLayout {
                                             return [Network.typeLabel(c.type), c.active ? "active on " + c.device : ago,
                                                     c.autoconnect ? null : "manual"].filter(x => x).join("  ·  ")
                                         }
-                                        color: Qt.rgba(1, 1, 1, 0.5)
+                                        color: Colors.fade(0.5)
                                         font.pixelSize: 11
                                         font.family: Properties.fontFamily
                                         elide: Text.ElideRight
@@ -641,7 +641,7 @@ ColumnLayout {
                                         icon: "󰆴"
                                         tooltip: prow.armed ? "Click again to delete" : "Delete"
                                         active: prow.armed
-                                        textColor: "#f38ba8"
+                                        textColor: Colors.red
                                         onClicked: {
                                             if (!prow.armed) { prow.armed = true; disarmP.restart(); return }
                                             Network.remove(prow.key, prow.c.name)
@@ -667,7 +667,7 @@ ColumnLayout {
                                 }
                                 Text {
                                     text: "󰅂"
-                                    color: Qt.rgba(1, 1, 1, rowHover.hovered ? 0.7 : 0.3)
+                                    color: Colors.fade(rowHover.hovered ? 0.7 : 0.3)
                                     font.pixelSize: 14
                                     font.family: Properties.fontFamily
                                 }
@@ -678,7 +678,7 @@ ColumnLayout {
                         Layout.margins: 16
                         visible: profileModel.count === 0
                         text: netPage.profileFilter !== "" ? "No profile matches" : "No profiles"
-                        color: Qt.rgba(1, 1, 1, 0.45)
+                        color: Colors.fade(0.45)
                         font.pixelSize: 12
                         font.family: Properties.fontFamily
                     }
@@ -751,12 +751,12 @@ ColumnLayout {
                     implicitWidth: gs.implicitWidth + 18
                     implicitHeight: 22
                     radius: 11
-                    color: globalCard.isOn ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.18) : Qt.rgba(1, 1, 1, 0.07)
+                    color: globalCard.isOn ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.18) : Colors.fade(0.07)
                     Text {
                         id: gs
                         anchors.centerIn: parent
                         text: globalCard.isOn ? "global" : "per network"
-                        color: globalCard.isOn ? Colors.color6 : Qt.rgba(1, 1, 1, 0.6)
+                        color: globalCard.isOn ? Colors.color6 : Colors.fade(0.6)
                         font.pixelSize: 10
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -836,7 +836,7 @@ ColumnLayout {
                         Text {
                             visible: modelData.servers.length === 0
                             text: "none"
-                            color: Qt.rgba(1, 1, 1, 0.4)
+                            color: Colors.fade(0.4)
                             font.pixelSize: 11
                             font.family: Properties.fontFamily
                         }
@@ -899,7 +899,7 @@ ColumnLayout {
                             id: resText
                             anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
                             text: lookupCard.result
-                            color: lookupCard.ok ? "white" : "#f38ba8"
+                            color: lookupCard.ok ? Colors.ink : Colors.red
                             font.pixelSize: 11
                             font.family: Properties.fontFamily
                             wrapMode: Text.WrapAnywhere
@@ -971,7 +971,7 @@ ColumnLayout {
             Layout.leftMargin: 6
             text: "Like the hosts file on Windows: these names resolve to the IP you set, only on this computer (/etc/hosts). "
                   + "Browsers with secure DNS (DNS over HTTPS) can skip it."
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: Colors.fade(0.5)
             font.pixelSize: 11
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
@@ -986,7 +986,7 @@ ColumnLayout {
                 Text {
                     visible: !hostsTab.dirty
                     text: hostsTab.inSync ? "in /etc/hosts" : "not applied"
-                    color: hostsTab.inSync ? Colors.color6 : "#f9e2af"
+                    color: hostsTab.inSync ? Colors.color6 : Colors.yellow
                     font.pixelSize: 11
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -1019,7 +1019,7 @@ ColumnLayout {
                             error: (hrow.e.ip ?? "") !== "" && Net.ip(hrow.e.ip) !== ""
                             onEditingFinished: if (text.trim() !== hrow.e.ip) hostsTab.update(hrow.e.id, { ip: text.trim() })
                         }
-                        Text { text: "→"; color: Qt.rgba(1, 1, 1, 0.4); font.pixelSize: 13; font.family: Properties.fontFamily }
+                        Text { text: "→"; color: Colors.fade(0.4); font.pixelSize: 13; font.family: Properties.fontFamily }
                         SearchField {
                             Layout.fillWidth: true
                             implicitWidth: 240
@@ -1043,7 +1043,7 @@ ColumnLayout {
                         IconButton {
                             icon: "󰆴"
                             tooltip: "Remove"
-                            textColor: "#f38ba8"
+                            textColor: Colors.red
                             onClicked: hostsTab.change(hostsTab.draft.filter(x => x.id !== hrow.e.id))
                         }
                         ToggleSwitch {
@@ -1057,7 +1057,7 @@ ColumnLayout {
                         Layout.bottomMargin: 8
                         visible: hrow.err !== "" && ((hrow.e.ip ?? "") !== "" || (hrow.e.names ?? "") !== "")
                         text: "󰀦  " + hrow.err
-                        color: "#f38ba8"
+                        color: Colors.red
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
                     }
@@ -1069,7 +1069,7 @@ ColumnLayout {
                             Layout.rightMargin: 16
                             Layout.bottomMargin: 8
                             text: hrow.testResult
-                            color: hrow.testOk ? Qt.rgba(1, 1, 1, 0.7) : "#f38ba8"
+                            color: hrow.testOk ? Colors.fade(0.7) : Colors.red
                             font.pixelSize: 11
                             font.family: Properties.fontFamily
                             wrapMode: Text.WrapAnywhere
@@ -1110,7 +1110,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 6
             text: "Apply asks for your password (it writes /etc/hosts; the previous file is kept as /etc/hosts.quickshell.bak)."
-            color: Qt.rgba(1, 1, 1, 0.4)
+            color: Colors.fade(0.4)
             font.pixelSize: 11
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
@@ -1156,7 +1156,7 @@ ColumnLayout {
                 spacing: 5
                 Text {
                     text: "Keep the new settings of " + (Network.pending?.name ?? "") + "?  Reverting in " + Network.countdown + "s"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 12
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -1166,12 +1166,12 @@ ColumnLayout {
                     Layout.fillWidth: true
                     implicitHeight: 3
                     radius: 1.5
-                    color: Qt.rgba(1, 1, 1, 0.1)
+                    color: Colors.fade(0.1)
                     Rectangle {
                         height: parent.height
                         radius: parent.radius
                         width: parent.width * Math.max(0, Network.countdown - 1) / 20
-                        color: "#f9e2af"
+                        color: Colors.yellow
                         Behavior on width { NumberAnimation { duration: 1000; easing.type: Easing.Linear } }
                     }
                 }

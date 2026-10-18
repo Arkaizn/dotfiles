@@ -22,8 +22,8 @@ Rectangle {
     readonly property bool connecting: d.stateCode > 30 && d.stateCode < 100
     readonly property bool managedHere: d.managed && !d.external && d.uuid !== ""
     readonly property color stateColor: connected ? Colors.color6
-                                       : connecting ? "#f9e2af"
-                                       : d.stateCode <= 10 ? Qt.rgba(1, 1, 1, 0.3) : Qt.rgba(1, 1, 1, 0.5)
+                                       : connecting ? Colors.yellow
+                                       : d.stateCode <= 10 ? Colors.fade(0.3) : Colors.fade(0.5)
 
     // the profile, read when expanded (for the DHCP / static switch)
     property var profile: null
@@ -88,11 +88,11 @@ Rectangle {
         })
     }
 
-    component Info: Text { color: Qt.rgba(1, 1, 1, 0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
+    component Info: Text { color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
 
     implicitHeight: col.implicitHeight + 24
     radius: 14
-    color: expanded ? Qt.rgba(1, 1, 1, 0.045) : hover.hovered ? Qt.rgba(1, 1, 1, 0.03) : "#27000000"
+    color: expanded ? Colors.fade(0.045) : hover.hovered ? Colors.fade(0.03) : Colors.card
     border.width: Properties.panelBorderWidth
     border.color: expanded ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.35) : Properties.cardBorder
     opacity: isHidden ? 0.6 : 1
@@ -125,7 +125,7 @@ Rectangle {
                     Text {
                         anchors.centerIn: parent
                         text: Network.typeIcon(card.d.type)
-                        color: card.connected ? Colors.color6 : Qt.rgba(1, 1, 1, 0.75)
+                        color: card.connected ? Colors.color6 : Colors.fade(0.75)
                         font.pixelSize: 17
                         font.family: Properties.fontFamily
                     }
@@ -145,7 +145,7 @@ Rectangle {
                         spacing: 8
                         Text {
                             text: card.d.name
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 14
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -153,7 +153,7 @@ Rectangle {
                         Text {
                             visible: card.d.speed !== ""
                             text: card.d.speed
-                            color: Qt.rgba(1, 1, 1, 0.4)
+                            color: Colors.fade(0.4)
                             font.pixelSize: 10
                             font.family: Properties.fontFamily
                         }
@@ -163,7 +163,7 @@ Rectangle {
                         text: [card.d.connection || null, Network.typeLabel(card.d.type),
                                card.d.product ? (card.d.vendor + " " + card.d.product).trim() : null]
                               .filter(x => x).join("  ·  ")
-                        color: Qt.rgba(1, 1, 1, 0.5)
+                        color: Colors.fade(0.5)
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
@@ -181,7 +181,7 @@ Rectangle {
                         id: stateText
                         anchors.centerIn: parent
                         text: card.d.external ? "external" : card.d.state
-                        color: card.connected ? Colors.color6 : Qt.rgba(1, 1, 1, 0.65)
+                        color: card.connected ? Colors.color6 : Colors.fade(0.65)
                         font.pixelSize: 10
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -190,7 +190,7 @@ Rectangle {
 
                 Text {
                     text: "󰅀"
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 14
                     font.family: Properties.fontFamily
                     rotation: card.expanded ? 180 : 0
@@ -242,7 +242,7 @@ Rectangle {
                 text: !card.d.managed ? "NetworkManager doesn't manage this interface."
                     : card.d.external ? "Set up by another program (Docker, VPN client, VMware…); NetworkManager only watches it."
                     : "No profile is active on this interface."
-                color: Qt.rgba(1, 1, 1, 0.55)
+                color: Colors.fade(0.55)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
@@ -256,7 +256,7 @@ Rectangle {
                 radius: 12
                 color: Qt.rgba(0, 0, 0, 0.18)
                 border.width: 1
-                border.color: card.dirty ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4) : Qt.rgba(1, 1, 1, 0.06)
+                border.color: card.dirty ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4) : Colors.fade(0.06)
                 Behavior on border.color { ColorAnimation { duration: 200 } }
 
                 ColumnLayout {
@@ -272,14 +272,14 @@ Rectangle {
                             spacing: 1
                             Text {
                                 text: "IPv4 address"
-                                color: "white"
+                                color: Colors.ink
                                 font.pixelSize: 13
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
                             Text {
                                 text: card.shownMethod === "auto" ? "Assigned by the DHCP server" : "Set by hand"
-                                color: Qt.rgba(1, 1, 1, 0.5)
+                                color: Colors.fade(0.5)
                                 font.pixelSize: 11
                                 font.family: Properties.fontFamily
                             }
@@ -304,7 +304,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 4
-                                Text { text: "Address / prefix"; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                                Text { text: "Address / prefix"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
                                 SearchField {
                                     Layout.fillWidth: true
                                     implicitHeight: Properties.buttonHeight
@@ -319,7 +319,7 @@ Rectangle {
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 4
-                                Text { text: "Gateway"; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                                Text { text: "Gateway"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
                                 SearchField {
                                     Layout.fillWidth: true
                                     implicitHeight: Properties.buttonHeight
@@ -332,7 +332,7 @@ Rectangle {
                                 }
                             }
                         }
-                        Text { text: "DNS servers"; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                        Text { text: "DNS servers"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
                         ListField {
                             Layout.fillWidth: true
                             values: card.draftMethod === "manual" ? card.draftDns : card.d.dns4
@@ -344,7 +344,7 @@ Rectangle {
                             Layout.fillWidth: true
                             visible: card.addressError !== "" || card.gatewayError !== ""
                             text: card.addressError !== "" ? "Address: " + card.addressError : "Gateway: " + card.gatewayError
-                            color: "#f38ba8"
+                            color: Colors.red
                             font.pixelSize: 11
                             font.family: Properties.fontFamily
                         }
@@ -368,7 +368,7 @@ Rectangle {
                                     const left = l.expiry - Network.now / 1000
                                     return Net.duration(l.leaseTime) + (l.expiry > 0 ? "  ·  renews / expires in " + Net.duration(left) : "")
                                 }
-                                color: "white"
+                                color: Colors.ink
                                 font.pixelSize: 11
                                 font.family: Properties.fontFamily
                             }
@@ -383,7 +383,7 @@ Rectangle {
                                 Text {
                                     visible: card.ignoresDhcpDns
                                     text: "ignored, this profile uses its own"
-                                    color: "#f9e2af"
+                                    color: Colors.yellow
                                     font.pixelSize: 10
                                     font.family: Properties.fontFamily
                                     topPadding: 5
@@ -398,7 +398,7 @@ Rectangle {
                                 Text {
                                     visible: card.ignoresDhcpDns
                                     text: "ignored, this profile uses its own"
-                                    color: "#f9e2af"
+                                    color: Colors.yellow
                                     font.pixelSize: 10
                                     font.family: Properties.fontFamily
                                     topPadding: 5
@@ -418,7 +418,7 @@ Rectangle {
                                 text: card.draftMethod === "auto" ? "Switch to DHCP (the static address is removed)"
                                     : card.method === "auto" ? "Filled in from the current lease, change what you need"
                                     : "Not applied yet"
-                                color: Qt.rgba(1, 1, 1, 0.55)
+                                color: Colors.fade(0.55)
                                 font.pixelSize: 11
                                 font.family: Properties.fontFamily
                                 wrapMode: Text.WordWrap
@@ -449,7 +449,7 @@ Rectangle {
                     Layout.alignment: Qt.AlignTop
                     Layout.topMargin: 4
                     text: "Search domain"
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -464,7 +464,7 @@ Rectangle {
                             Chip { text: modelData.name; accent: modelData.from.startsWith("set by hand") }
                             Text {
                                 text: modelData.from
-                                color: Qt.rgba(1, 1, 1, 0.45)
+                                color: Colors.fade(0.45)
                                 font.pixelSize: 10
                                 font.family: Properties.fontFamily
                                 topPadding: 5
@@ -479,7 +479,7 @@ Rectangle {
                 Layout.fillWidth: true
                 visible: card.managedHere && card.profile !== null && !["auto", "manual"].includes(card.method)
                 text: "IPv4 method: " + card.method + " (change it in the profile)"
-                color: Qt.rgba(1, 1, 1, 0.55)
+                color: Colors.fade(0.55)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }

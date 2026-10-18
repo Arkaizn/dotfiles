@@ -79,15 +79,15 @@ ColumnLayout {
                 implicitWidth: pl.implicitWidth + 16
                 implicitHeight: Properties.buttonHeight - 4
                 radius: Properties.radius
-                color: Qt.rgba(1, 1, 1, pm.containsMouse ? 0.12 : 0.06)
+                color: Colors.fade(pm.containsMouse ? 0.12 : 0.06)
                 border.width: 1
-                border.color: Qt.rgba(1, 1, 1, 0.1)
+                border.color: Colors.fade(0.1)
                 Behavior on color { ColorAnimation { duration: 120 } }
                 Text {
                     id: pl
                     anchors.centerIn: parent
                     text: parent.modelData.label
-                    color: Qt.rgba(1, 1, 1, 0.75)
+                    color: Colors.fade(0.75)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -106,7 +106,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.problem !== ""
         text: root.problem
-        color: "#f38ba8"
+        color: Colors.red
         font.pixelSize: 11
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap

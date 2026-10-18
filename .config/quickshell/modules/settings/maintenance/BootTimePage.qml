@@ -47,7 +47,7 @@ ColumnLayout {
         })
     }
 
-    readonly property var colors: ({ firmware: "#89b4fa", loader: "#94e2d5", kernel: "#f9e2af", initrd: "#fab387", userspace: Colors.color6 })
+    readonly property var colors: ({ firmware: Colors.blue, loader: Colors.teal, kernel: Colors.yellow, initrd: Colors.orange, userspace: Colors.color6 })
 
     NetCard {
         Layout.fillWidth: true
@@ -64,7 +64,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 implicitHeight: 14
                 radius: 7
-                color: Qt.rgba(1, 1, 1, 0.06)
+                color: Colors.fade(0.06)
                 clip: true
                 Row {
                     anchors.fill: parent
@@ -74,7 +74,7 @@ ColumnLayout {
                             required property var modelData
                             width: parent.width * modelData.secs / Math.max(0.1, page.total)
                             height: parent.height
-                            color: page.colors[modelData.name] ?? Qt.rgba(1, 1, 1, 0.3)
+                            color: page.colors[modelData.name] ?? Colors.fade(0.3)
                         }
                     }
                 }
@@ -113,9 +113,9 @@ ColumnLayout {
                     Rectangle {
                         implicitWidth: 120 * Math.min(1, modelData.secs / Math.max(0.1, page.blame[0]?.secs ?? 1))
                         implicitHeight: 6; radius: 3
-                        color: page.chain.includes(modelData.unit) ? "#f9e2af" : Colors.color6
+                        color: page.chain.includes(modelData.unit) ? Colors.yellow : Colors.color6
                     }
-                    Text { Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight; text: modelData.secs.toFixed(2) + " s"; color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight; text: modelData.secs.toFixed(2) + " s"; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                 }
             }
         }
@@ -132,7 +132,7 @@ ColumnLayout {
                 required property int index
                 first: index === 0
                 label: modelData.unit
-                Text { text: modelData.secs.toFixed(2) + " s"; color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+                Text { text: modelData.secs.toFixed(2) + " s"; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
             }
         }
     }

@@ -247,7 +247,7 @@ ColumnLayout {
         Layout.leftMargin: 6
         text: "Moves autostart entries and keybinds from your per-device custom configs into the settings, where they can be switched on / off "
               + "and are part of an export. Commented-out lines come in switched off."
-        color: Qt.rgba(1, 1, 1, 0.5)
+        color: Colors.fade(0.5)
         font.pixelSize: 11
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap
@@ -279,7 +279,7 @@ ColumnLayout {
                 property bool armed: false
                 icon: "󰆴"
                 text: armed ? "Click again: delete file + include" : "Delete file"
-                textColor: "#f38ba8"
+                textColor: Colors.red
                 onClicked: {
                     if (!armed) { armed = true; disarm.restart(); return }
                     armed = false
@@ -300,7 +300,7 @@ ColumnLayout {
             Layout.margins: 16
             visible: !srcCard.src.found || srcCard.src.items.length === 0
             text: !srcCard.src.found ? "No file here." : "Nothing to import (no autostart or keybinds)."
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 12
             font.family: Properties.fontFamily
         }

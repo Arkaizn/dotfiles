@@ -30,7 +30,7 @@ BarPopup {
             Layout.fillHeight: true
             Layout.preferredWidth: 300
             radius: root.radius
-            color: '#45000000'
+            color: Colors.shade(0.27)
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
 
@@ -48,7 +48,7 @@ BarPopup {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 180
                 radius: root.radius / 4 * 3
-                color: '#45000000'
+                color: Colors.shade(0.27)
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
 
@@ -70,7 +70,7 @@ BarPopup {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 radius: root.radius / 4 * 3
-                color: '#45000000'
+                color: Colors.shade(0.27)
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
 
@@ -109,7 +109,7 @@ BarPopup {
             Layout.fillHeight: true
             Layout.preferredWidth: 300
             radius: root.radius
-            color: '#45000000'
+            color: Colors.shade(0.27)
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
 

@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import QtQuick.Controls
 
 // Thin slider in the panel style. Bind `value` to the live value and write
@@ -16,13 +17,13 @@ Slider {
         width: root.availableWidth
         height: 4
         radius: 2
-        color: "#33ffffff"
+        color: Colors.fade(0.2)
 
         Rectangle {
             width: root.visualPosition * parent.width
             height: parent.height
             radius: 2
-            color: root.enabled ? "#ddffffff" : "#55ffffff"
+            color: root.enabled ? Colors.fade(0.87) : Colors.fade(0.33)
         }
     }
 
@@ -32,8 +33,8 @@ Slider {
         width: 14
         height: 14
         radius: 7
-        color: root.pressed ? "#ffffff" : "#eeffffff"
-        border.color: "#55ffffff"
+        color: root.pressed ? "#ffffff" : Colors.fade(0.93)
+        border.color: Colors.fade(0.33)
         border.width: 1
         scale: root.pressed ? 1.15 : root.hovered ? 1.08 : 1
         Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }

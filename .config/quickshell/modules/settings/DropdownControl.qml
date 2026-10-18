@@ -45,7 +45,7 @@ Item {
         Text {
             Layout.fillWidth: true
             text: root.current?.label ?? "—"
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 12
             font.family: Properties.fontFamily
             elide: Text.ElideRight
@@ -90,7 +90,7 @@ Item {
                 width: ListView.view.width
                 height: 28
                 radius: Properties.radius
-                color: hover.hovered ? Qt.rgba(1, 1, 1, 0.08) : selected ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                color: hover.hovered ? Colors.fade(0.08) : selected ? Colors.fade(0.05) : "transparent"
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 10
@@ -106,7 +106,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: entry.modelData.label
-                        color: entry.selected ? Colors.color6 : "white"
+                        color: entry.selected ? Colors.color6 : Colors.ink
                         font.pixelSize: 12
                         font.bold: entry.selected
                         font.family: Properties.fontFamily
@@ -114,7 +114,7 @@ Item {
                     Text {
                         visible: text !== ""
                         text: entry.modelData.hint ?? ""
-                        color: Qt.rgba(1, 1, 1, 0.4)
+                        color: Colors.fade(0.4)
                         font.pixelSize: 10
                         font.family: Properties.fontFamily
                     }

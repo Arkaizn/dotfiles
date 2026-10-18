@@ -40,7 +40,7 @@ Modal {
                 Text {
                     Layout.fillWidth: true
                     text: "Calendar settings"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 17
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -48,7 +48,7 @@ Modal {
                 Text {
                     Layout.fillWidth: true
                     text: "Changes apply right away"
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -164,7 +164,7 @@ Modal {
                     Layout.leftMargin: 6
                     visible: CalendarStore.accounts.length === 0
                     text: "No accounts yet — add one with ＋ in the sidebar."
-                    color: Qt.rgba(1, 1, 1, 0.45)
+                    color: Colors.fade(0.45)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -202,14 +202,14 @@ Modal {
                                 Text {
                                     text: accCard.modelData.type === "ics" ? "Subscription" : accCard.modelData.type === "local" ? "Local"
                                         : /icloud/i.test(accCard.modelData.url) ? "iCloud" : "CalDAV"
-                                    color: Qt.rgba(1, 1, 1, 0.4)
+                                    color: Colors.fade(0.4)
                                     font.pixelSize: 11
                                     font.family: Properties.fontFamily
                                 }
                                 ActionButton {
                                     icon: "󰆴"
                                     text: accCard.armed ? "Really remove" : "Remove"
-                                    textColor: "#f38ba8"
+                                    textColor: Colors.red
                                     primary: accCard.armed
                                     onClicked: {
                                         if (accCard.armed) CalendarStore.removeAccount(accCard.modelData.id)
@@ -249,7 +249,7 @@ Modal {
                                         Text {
                                             visible: calRow.modelData.readOnly || accCard.modelData.type === "ics"
                                             text: "󰌾"
-                                            color: Qt.rgba(1, 1, 1, 0.3)
+                                            color: Colors.fade(0.3)
                                             font.pixelSize: 12
                                             font.family: Properties.fontFamily
                                         }
@@ -259,7 +259,7 @@ Modal {
                                             iconSize: 13
                                             icon: calRow.modelData.notify === false ? "󰂛" : "󰂚"
                                             active: calRow.modelData.notify !== false
-                                            textColor: calRow.modelData.notify === false ? Qt.rgba(1, 1, 1, 0.4) : Properties.color
+                                            textColor: calRow.modelData.notify === false ? Colors.fade(0.4) : Properties.color
                                             tooltip: calRow.modelData.notify === false ? "Reminders off for this calendar" : "Reminders on"
                                             onClicked: CalendarStore.setCalendar(calRow.modelData.id, { notify: calRow.modelData.notify === false })
                                         }
@@ -280,7 +280,7 @@ Modal {
                     Layout.topMargin: 2
                     visible: CalendarStore.accounts.length > 0
                     text: "Color square: palette, opacity and hex  ·  󰂚 reminders from that calendar  ·  switch: show / hide"
-                    color: Qt.rgba(1, 1, 1, 0.35)
+                    color: Colors.fade(0.35)
                     font.pixelSize: 10
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
@@ -292,7 +292,7 @@ Modal {
     component SectionTitle: Text {
         Layout.leftMargin: 6
         Layout.topMargin: 6
-        color: Qt.rgba(1, 1, 1, 0.55)
+        color: Colors.fade(0.55)
         font.pixelSize: 12
         font.bold: true
         font.family: Properties.fontFamily
@@ -303,7 +303,7 @@ Modal {
         Layout.fillWidth: true
         implicitHeight: col.implicitHeight
         radius: 14
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
         ColumnLayout {
@@ -318,6 +318,6 @@ Modal {
         Layout.leftMargin: 16
         Layout.rightMargin: 16
         implicitHeight: 1
-        color: Qt.rgba(1, 1, 1, 0.06)
+        color: Colors.fade(0.06)
     }
 }

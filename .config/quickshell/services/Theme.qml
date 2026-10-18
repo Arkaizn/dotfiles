@@ -12,6 +12,7 @@ import QtQuick
 // border colors (niri-colors.sh); the previous colors.json is kept for Undo.
 //
 //   qs ipc call theme apply <file.json>    qs ipc call theme undo
+//   qs ipc call theme mode light|dark|toggle
 Singleton {
     id: root
 
@@ -36,7 +37,7 @@ Singleton {
     readonly property bool previewing: Jobs.isRunning("theme-preview")
 
     // so `qs ipc call theme undo` knows about the undo file right after startup
-    Component.onCompleted: hasUndo = read(undoFile) !== ""
+    Component.onCompleted: { hasUndo = read(undoFile) !== ""; detect() }
 
     function refresh() {
         current = parse(read(currentFile))
@@ -176,8 +177,89 @@ Singleton {
         })
     }
 
+    // ── Light / dark mode (scripts/color-mode.sh) ───────────────────────────
+    // Settings.theme: mode, the parts to switch (wal, niri, portal, gtk, icons, qt)
+    // and the theme pairs (gtkLight / gtkDark, iconLight / iconDark, kvLight / kvDark,
+    // qtColorsLight / qtColorsDark). Missing pairs: detected from the current setup.
+    readonly property string modeScript: home + "/.config/quickshell/scripts/color-mode.sh"
+    readonly property string mode: Settings.theme.mode ?? (Colors.light ? "light" : "dark")
+    readonly property bool switching: Jobs.isRunning("color-mode")
+    property var detected: ({})            // { gtk, icons, kvantum, qtColors } as set now
+    property var themes: ({ gtk: [], icons: [], kvantum: [] })   // installed, for the pickers
+
+    function part(k) { return Settings.theme[k] ?? true }
+    // light / dark name for a part: the setting, else derived from what's set now
+    function pair(kind, m) {
+        const key = kind + (m === "light" ? "Light" : "Dark")
+        if (Settings.theme[key]) return Settings.theme[key]
+        const cur = detected[kind] ?? ""
+        const list = themes[kind] ?? []
+        const isDark = /dark/i.test(cur)
+        if ((m === "dark") === isDark || cur === "") return cur
+        if (kind === "qtColors") return m === "light" ? "/usr/share/qt6ct/colors/airy.conf" : "/usr/share/qt6ct/colors/darker.conf"
+        // Colloid-Dark → Colloid-Light / Colloid · Fluent-dark → Fluent · Fluent-roundDark → Fluent-round
+        const base = cur.replace(/[-_]?(dark|light)$/i, "")
+        // icons: the plain name is the light variant (Fluent-light is for light panels on dark apps)
+        if (m === "light") return (kind === "icons" ? [base, base + "-Light", base + "-light"] : [base + "-Light", base + "-light", base]).find(n => list.includes(n)) ?? base
+        return [base + "-Dark", base + "-dark", base + "Dark"].find(n => list.includes(n)) ?? cur
+    }
+
+    function detect() {
+        Jobs.run(["sh", "-c",
+                  'printf "gtk\t%s\n" "$(gsettings get org.gnome.desktop.interface gtk-theme)"\n'
+                + 'printf "icons\t%s\n" "$(gsettings get org.gnome.desktop.interface icon-theme)"\n'
+                + 'c=${XDG_CONFIG_HOME:-$HOME/.config}\n'
+                + 'printf "kvantum\t%s\n" "$(sed -n "s/^theme=//p" "$c/Kvantum/kvantum.kvconfig" 2>/dev/null)"\n'
+                + 'printf "qtColors\t%s\n" "$(sed -n "s/^color_scheme_path=//p" "$c/qt6ct/qt6ct.conf" 2>/dev/null)"\n'
+                + 'for d in "$HOME/.themes" "$HOME/.local/share/themes" /usr/share/themes; do for t in "$d"/*/; do [ -d "$t/gtk-3.0" ] && printf "T\tgtk\t%s\n" "$(basename "$t")"; done; done\n'
+                + 'for d in "$HOME/.icons" "$HOME/.local/share/icons" /usr/share/icons; do for t in "$d"/*/; do [ -f "$t/index.theme" ] && printf "T\ticons\t%s\n" "$(basename "$t")"; done; done\n'
+                + 'for d in "$c/Kvantum" /usr/share/Kvantum; do for t in "$d"/*/; do for k in "$t"*.kvconfig; do [ -f "$k" ] && printf "T\tkvantum\t%s\n" "$(basename "$k" .kvconfig)"; done; done; done'],
+                (code, out) => {
+            const d = {}, t = { gtk: [], icons: [], kvantum: [] }
+            for (const l of out.split("\n")) {
+                const p = l.split("\t")
+                if (p[0] === "T" && t[p[1]] && !t[p[1]].includes(p[2])) t[p[1]].push(p[2])
+                else if (p.length === 2) d[p[0]] = p[1].replace(/^'|'$/g, "")
+            }
+            for (const k in t) t[k].sort()
+            themes = t
+            detected = d
+        })
+    }
+
+    function validTheme(n) { return /^[A-Za-z0-9 ._+-]{1,80}$/.test(n) }
+
+    // m: "light" | "dark"
+    function setMode(m) {
+        if (m !== "light" && m !== "dark" || switching) return
+        const args = ["bash", modeScript, m]
+        if (part("wal")) args.push("--wal")
+        if (part("niri")) args.push("--niri")
+        if (part("portal")) args.push("--portal")
+        const add = (flag, kind) => { const n = pair(kind, m); if (n && validTheme(n)) args.push(flag, n) }
+        if (part("gtk")) add("--gtk", "gtk")
+        if (part("icons")) add("--icons", "icons")
+        if (part("qt")) {
+            add("--kvantum", "kvantum")
+            const c = pair("qtColors", m)
+            if (c && /^\/[A-Za-z0-9 ._\/-]+\.conf$/.test(c)) args.push("--qtcolors", c)
+        }
+        // remember the pairs as they are now, so later guesses don't depend on the mode
+        for (const k of ["gtk", "icons", "kvantum", "qtColors"])
+            for (const mm of ["Light", "Dark"])
+                if (!Settings.theme[k + mm] && pair(k, mm.toLowerCase())) Settings.set("theme", k + mm, pair(k, mm.toLowerCase()))
+        Settings.set("theme", "mode", m)
+        Jobs.start("color-mode", args, { timeout: 120000, onExit: () => { refresh(); detect() } })
+    }
+
     IpcHandler {
         target: "theme"
+        function mode(m: string): string {
+            const target = m === "toggle" || m === "" ? (root.mode === "dark" ? "light" : "dark") : m
+            if (target !== "light" && target !== "dark") return "light, dark or toggle"
+            root.setMode(target)
+            return "switching to " + target
+        }
         function apply(file: string): string { root.apply(file); return "applying " + file }
         function undo(): string { if (!root.hasUndo) return "nothing to undo"; root.undo(); return "undoing" }
     }

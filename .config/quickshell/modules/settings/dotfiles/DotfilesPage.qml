@@ -22,7 +22,7 @@ ColumnLayout {
     readonly property int maxList: 12
 
     function kindIcon(k) { return k === "new" ? "󰐕" : k === "deleted" ? "󰍴" : "󰏫" }
-    function kindColor(k) { return k === "new" ? "#a6e3a1" : k === "deleted" ? "#f38ba8" : "#f9e2af" }
+    function kindColor(k) { return k === "new" ? Colors.green : k === "deleted" ? Colors.red : Colors.yellow }
 
     // ── Repository ──────────────────────────────────────────────────────────
     NetCard {
@@ -163,7 +163,7 @@ ColumnLayout {
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 12
                         font.family: Properties.fontFamily
                         text: page.confirm === "push"
@@ -209,7 +209,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.margins: 14
             text: page.pushLog.lines.slice(-20).map(l => l.text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "")).filter(t => t.trim() !== "").join("\n")
-            color: Qt.rgba(1, 1, 1, 0.7)
+            color: Colors.fade(0.7)
             font.pixelSize: 11
             font.family: "monospace"
             wrapMode: Text.WrapAnywhere

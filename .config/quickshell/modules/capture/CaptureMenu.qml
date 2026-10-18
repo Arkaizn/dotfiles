@@ -84,7 +84,7 @@ PanelWindow {
                 Text {
                     Layout.fillWidth: true
                     text: "Capture"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 18
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -98,7 +98,7 @@ PanelWindow {
             }
 
             // ── Screenshot ──────────────────────────────────────────────────
-            Text { text: "Screenshot"; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
+            Text { text: "Screenshot"; color: Colors.fade(0.55); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 10
@@ -109,7 +109,7 @@ PanelWindow {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 10
-                Text { text: "Then"; color: Qt.rgba(1, 1, 1, 0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
+                Text { text: "Then"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
                 Segmented {
                     small: true
                     options: [{ label: "Save & copy", value: "save" }, { label: "Copy", value: "copy" }, { label: "Edit", value: "edit" }]
@@ -117,7 +117,7 @@ PanelWindow {
                     onEdited: v => win.after = v
                 }
                 Item { Layout.fillWidth: true }
-                Text { text: "Delay"; color: Qt.rgba(1, 1, 1, 0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
+                Text { text: "Delay"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
                 Segmented {
                     small: true
                     options: [{ label: "0", value: "0" }, { label: "3s", value: "3" }, { label: "5s", value: "5" }, { label: "10s", value: "10" }]
@@ -126,10 +126,10 @@ PanelWindow {
                 }
             }
 
-            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Qt.rgba(1, 1, 1, 0.08) }
+            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Colors.fade(0.08) }
 
             // ── Recording ───────────────────────────────────────────────────
-            Text { text: "Record"; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
+            Text { text: "Record"; color: Colors.fade(0.55); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 10
@@ -149,7 +149,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 spacing: 10
                 visible: !Capture.recording
-                Text { text: "Sound"; color: Qt.rgba(1, 1, 1, 0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
+                Text { text: "Sound"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
                 Segmented {
                     small: true
                     options: [{ label: "None", value: "none" }, { label: "Desktop", value: "desktop" }, { label: "Microphone", value: "mic" }]
@@ -162,7 +162,7 @@ PanelWindow {
             Text {
                 Layout.fillWidth: true
                 text: "Screenshots → " + Capture.shotDir.replace(Capture.home, "~") + "   ·   Videos → " + Capture.videoDir.replace(Capture.home, "~")
-                color: Qt.rgba(1, 1, 1, 0.35)
+                color: Colors.fade(0.35)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 elide: Text.ElideMiddle

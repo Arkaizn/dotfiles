@@ -91,7 +91,7 @@ Modal {
                 Text {
                     Layout.fillWidth: true
                     text: root.step === 0 ? "Add calendars" : root.step === 1 ? root.kindInfo.title : "Choose calendars"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 17
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -100,7 +100,7 @@ Modal {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
                     text: root.step === 0 ? "Where do your calendars live?" : root.step === 1 ? root.kindInfo.desc : "Found " + root.found.length + " — pick the ones to show"
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -125,9 +125,9 @@ Modal {
                     Layout.fillWidth: true
                     implicitHeight: 58
                     radius: 14
-                    color: kindMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "#27000000"
+                    color: kindMouse.containsMouse ? Colors.fade(0.07) : Colors.card
                     border.width: Properties.panelBorderWidth
-                    border.color: kindMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.2) : Properties.cardBorder
+                    border.color: kindMouse.containsMouse ? Colors.fade(0.2) : Properties.cardBorder
                     scale: kindMouse.pressed ? 0.98 : 1
                     Behavior on scale { NumberAnimation { duration: 100 } }
                     RowLayout {
@@ -148,7 +148,7 @@ Modal {
                             spacing: 1
                             Text {
                                 text: kindCard.modelData.title
-                                color: "white"
+                                color: Colors.ink
                                 font.pixelSize: 13
                                 font.bold: true
                                 font.family: Properties.fontFamily
@@ -156,7 +156,7 @@ Modal {
                             Text {
                                 Layout.fillWidth: true
                                 text: kindCard.modelData.desc
-                                color: Qt.rgba(1, 1, 1, 0.5)
+                                color: Colors.fade(0.5)
                                 font.pixelSize: 11
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideRight
@@ -164,7 +164,7 @@ Modal {
                         }
                         Text {
                             text: "󰅂"
-                            color: Qt.rgba(1, 1, 1, 0.4)
+                            color: Colors.fade(0.4)
                             font.pixelSize: 13
                             font.family: Properties.fontFamily
                         }
@@ -209,7 +209,7 @@ Modal {
                         : root.kind === "local" ? "The file is created if it doesn't exist. Point it at an existing .ics to use that." : ""
                     textFormat: Text.StyledText
                     linkColor: Colors.color6
-                    color: Qt.rgba(1, 1, 1, 0.75)
+                    color: Colors.fade(0.75)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
@@ -260,7 +260,7 @@ Modal {
             visible: root.step === 2
             implicitHeight: calList.implicitHeight
             radius: 14
-            color: "#27000000"
+            color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
             ColumnLayout {
@@ -289,7 +289,7 @@ Modal {
                             Text {
                                 Layout.fillWidth: true
                                 text: calRow.modelData.name + (calRow.modelData.readOnly ? "  󰌾" : "")
-                                color: "white"
+                                color: Colors.ink
                                 font.pixelSize: 13
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideRight
@@ -312,7 +312,7 @@ Modal {
             Layout.fillWidth: true
             visible: root.error !== ""
             text: root.error
-            color: "#f38ba8"
+            color: Colors.red
             font.pixelSize: 11
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
@@ -325,7 +325,7 @@ Modal {
             Text {
                 Layout.fillWidth: true
                 text: root.kindInfo.type === "caldav" && root.step === 1 ? "󰌾  The password is stored in your keyring." : ""
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: Colors.fade(0.4)
                 font.pixelSize: 10
                 font.family: Properties.fontFamily
             }

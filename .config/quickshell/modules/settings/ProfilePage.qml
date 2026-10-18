@@ -90,7 +90,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: picRow.implicitHeight + 40
         radius: 14
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
 
@@ -153,14 +153,14 @@ ColumnLayout {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: page.busy ? "󰔟" : "󰄀"
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 22
                             font.family: Properties.fontFamily
                         }
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             text: page.busy ? "Working…" : "Change"
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 11
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -172,7 +172,7 @@ ColumnLayout {
                     radius: width / 2
                     color: "transparent"
                     border.width: 2
-                    border.color: avMouse.containsMouse ? Colors.color6 : Qt.rgba(1, 1, 1, 0.18)
+                    border.color: avMouse.containsMouse ? Colors.color6 : Colors.fade(0.18)
                     Behavior on border.color { ColorAnimation { duration: 180 } }
                 }
                 MouseArea {
@@ -190,7 +190,7 @@ ColumnLayout {
                 spacing: 6
                 Text {
                     text: Settings.profile.name || Quickshell.env("USER") || ""
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 20
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -198,7 +198,7 @@ ColumnLayout {
                 Text {
                     Layout.fillWidth: true
                     text: page.info !== "" ? "~/.face  ·  " + page.info : "No picture set (~/.face)"
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
@@ -207,7 +207,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     visible: page.error !== ""
                     text: "󰀦  " + page.error
-                    color: "#f38ba8"
+                    color: Colors.red
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
@@ -236,7 +236,7 @@ ColumnLayout {
                         property bool armed: false
                         icon: "󰆴"
                         text: armed ? "Click again to remove" : "Remove"
-                        textColor: armed ? "#f38ba8" : "white"
+                        textColor: armed ? Colors.red : Colors.ink
                         interactive: !page.busy
                         onClicked: {
                             if (!armed) { armed = true; disarm.restart(); return }
@@ -253,7 +253,7 @@ ColumnLayout {
     Text {
         Layout.leftMargin: 6
         text: "Shown on the dashboard and the lockscreen. Pictures are cropped to a centered square."
-        color: Qt.rgba(1, 1, 1, 0.4)
+        color: Colors.fade(0.4)
         font.pixelSize: 11
         font.family: Properties.fontFamily
     }
@@ -263,7 +263,7 @@ ColumnLayout {
         Layout.leftMargin: 6
         Layout.topMargin: 4
         text: "Name"
-        color: Qt.rgba(1, 1, 1, 0.55)
+        color: Colors.fade(0.55)
         font.pixelSize: 12
         font.bold: true
         font.family: Properties.fontFamily
@@ -272,7 +272,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: nameRow.implicitHeight
         radius: 14
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
         PlainRow {

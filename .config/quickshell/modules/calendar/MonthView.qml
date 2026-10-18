@@ -76,7 +76,7 @@ ColumnLayout {
                 Layout.preferredWidth: 1
                 leftPadding: 8
                 text: modelData
-                color: index >= 5 ? Qt.rgba(1, 1, 1, 0.35) : Qt.rgba(1, 1, 1, 0.5)
+                color: index >= 5 ? Colors.fade(0.35) : Colors.fade(0.5)
                 font.pixelSize: 11
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -142,7 +142,7 @@ ColumnLayout {
                     Layout.topMargin: 8
                     horizontalAlignment: Text.AlignRight
                     text: U.weekNumber(week.start)
-                    color: Qt.rgba(1, 1, 1, 0.25)
+                    color: Colors.fade(0.25)
                     font.pixelSize: 10
                     font.family: Properties.fontFamily
                 }
@@ -168,12 +168,12 @@ ColumnLayout {
                         radius: 12
                         clip: true
                         // weekend: a shade darker
-                        color: isSel ? Qt.rgba(1, 1, 1, 0.09)
-                             : inMonth ? (weekend ? "#3a000000" : "#27000000")
-                             : (weekend ? "#22000000" : "#14000000")
+                        color: isSel ? Colors.fade(0.09)
+                             : inMonth ? (weekend ? Colors.shade(0.23) : Colors.card)
+                             : (weekend ? Colors.shade(0.13) : Colors.shade(0.08))
                         border.width: Properties.panelBorderWidth
                         border.color: isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6)
-                                    : hover.hovered ? Qt.rgba(1, 1, 1, 0.16) : Properties.cardBorder
+                                    : hover.hovered ? Colors.fade(0.16) : Properties.cardBorder
                         Behavior on color { ColorAnimation { duration: 200 } }
                         Behavior on border.color { ColorAnimation { duration: 150 } }
 
@@ -189,7 +189,7 @@ ColumnLayout {
                             width: Math.max(22, num.implicitWidth + 12)
                             height: 20
                             radius: 10
-                            color: cell.today ? Colors.color6 : numHover.hovered ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+                            color: cell.today ? Colors.color6 : numHover.hovered ? Colors.fade(0.1) : "transparent"
                             scale: numHover.pressed ? Properties.onPressedButtonScale : numHover.hovered ? Properties.onEnteredButtonScale : 1
                             Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                             Text {
@@ -197,7 +197,7 @@ ColumnLayout {
                                 anchors.centerIn: parent
                                 text: cell.day.getDate() === 1 ? cell.day.getDate() + ". " + U.monthNames[cell.day.getMonth()].slice(0, 3) : cell.day.getDate()
                                 color: cell.today ? U.onColor(Colors.color6)
-                                     : cell.inMonth ? (cell.weekend ? Qt.rgba(1, 1, 1, 0.6) : "white") : Qt.rgba(1, 1, 1, 0.3)
+                                     : cell.inMonth ? (cell.weekend ? Colors.fade(0.6) : Colors.ink) : Colors.fade(0.3)
                                 font.pixelSize: 11
                                 font.bold: cell.today || cell.day.getDate() === 1
                                 font.family: Properties.fontFamily
@@ -233,7 +233,7 @@ ColumnLayout {
                                 visible: cell.evs.length > cell.shown
                                 leftPadding: 6
                                 text: "+" + (cell.evs.length - cell.shown) + " more"
-                                color: moreHover.hovered ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                                color: moreHover.hovered ? Colors.ink : Colors.fade(0.5)
                                 font.pixelSize: 10
                                 font.bold: true
                                 font.family: Properties.fontFamily

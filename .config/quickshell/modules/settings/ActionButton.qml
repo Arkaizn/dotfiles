@@ -12,7 +12,7 @@ Item {
     property string text: ""
     property bool primary: false
     property bool interactive: true
-    property color textColor: "white"
+    property color textColor: Colors.ink
     signal clicked()
 
     implicitWidth: row.implicitWidth + 26

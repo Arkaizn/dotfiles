@@ -18,7 +18,7 @@ Item {
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        textColor: Capture.recording ? "#f38ba8" : Properties.color
+        textColor: Capture.recording ? Colors.red : Properties.color
         iconText: Capture.recording ? (root.hovered ? "󰓛 stop" : "󰑊 " + root.time) : "󰔟 " + Capture.countdown
     }
 

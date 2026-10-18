@@ -20,7 +20,7 @@ ColumnLayout {
         return g
     }
 
-    function statusColor(s) { return s === "ok" ? Colors.color6 : s === "warn" ? "#f9e2af" : s === "error" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.5) }
+    function statusColor(s) { return s === "ok" ? Colors.color6 : s === "warn" ? Colors.yellow : s === "error" ? Colors.red : Colors.fade(0.5) }
     function statusIcon(s) { return s === "ok" ? "󰄬" : s === "warn" ? "󰀦" : s === "error" ? "󰅙" : "󰔟" }
 
     // ── Summary ─────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ ColumnLayout {
                         : Health.errors > 0 ? Health.errors + (Health.errors === 1 ? " problem" : " problems") + (Health.warnings > 0 ? ", " + Health.warnings + " warnings" : "")
                         : Health.warnings > 0 ? "Works, " + Health.warnings + (Health.warnings === 1 ? " warning" : " warnings")
                         : "Everything looks good"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 16
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -63,7 +63,7 @@ ColumnLayout {
                 Text {
                     text: Health.lastRun > 0 ? Health.results.filter(r => r.status === "ok").length + " of " + Health.results.length
                                                 + " checks ok  ·  last run " + new Date(Health.lastRun).toLocaleTimeString(Qt.locale(), "HH:mm:ss") : ""
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -137,7 +137,7 @@ ColumnLayout {
                             Layout.preferredWidth: 1
                             visible: row.r.fix !== ""
                             text: "Fix:  " + row.r.fix
-                            color: Qt.rgba(1, 1, 1, 0.75)
+                            color: Colors.fade(0.75)
                             font.pixelSize: 11
                             font.family: Properties.fontFamily
                             wrapMode: Text.WrapAnywhere

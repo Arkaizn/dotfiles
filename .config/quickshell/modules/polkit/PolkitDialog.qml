@@ -76,7 +76,7 @@ Scope {
         Rectangle {
             id: backdrop
             anchors.fill: parent
-            color: "#80000000"
+            color: Colors.shade(0.5)
             opacity: root.shown ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
             MouseArea { anchors.fill: parent; onClicked: {} }   // swallow clicks
@@ -122,7 +122,7 @@ Scope {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
                     text: "Authentication required"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 17
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -131,7 +131,7 @@ Scope {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
                     text: root.flow?.message ?? ""
-                    color: Qt.rgba(1, 1, 1, 0.7)
+                    color: Colors.fade(0.7)
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
@@ -145,7 +145,7 @@ Scope {
                         const n = id?.displayName ?? id?.name ?? ""
                         return n !== "" ? "as " + n : ""
                     }
-                    color: Qt.rgba(1, 1, 1, 0.45)
+                    color: Colors.fade(0.45)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -169,7 +169,7 @@ Scope {
                     readonly property string msg: root.flow?.supplementaryMessage ?? ""
                     visible: msg !== "" || root.failedOnce
                     text: msg !== "" ? msg : "Wrong password, try again"
-                    color: (root.flow?.supplementaryIsError ?? false) || root.failedOnce ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.6)
+                    color: (root.flow?.supplementaryIsError ?? false) || root.failedOnce ? Colors.red : Colors.fade(0.6)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap

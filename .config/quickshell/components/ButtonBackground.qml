@@ -29,8 +29,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: Properties.radius
-        color: Qt.rgba(0, 0, 0, 0.18)
-        border.color: Qt.rgba(1,1,1, root.hovered ? 0.28 : 0.18)
+        color: Colors.light ? Qt.rgba(1, 1, 1, 0.35) : Qt.rgba(0, 0, 0, 0.18)
+        border.color: Colors.fade(root.hovered ? 0.28 : 0.18)
         border.width: 1.5
 
         gradient: ButtonGradient {

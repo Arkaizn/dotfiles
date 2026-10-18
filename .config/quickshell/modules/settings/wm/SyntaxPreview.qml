@@ -18,7 +18,7 @@ NetCard {
     header: [
         Text {
             text: pv.error !== "" ? "rejected" : "valid"
-            color: pv.error !== "" ? "#f38ba8" : Colors.color6
+            color: pv.error !== "" ? Colors.red : Colors.color6
             font.pixelSize: 11
             font.bold: true
             font.family: Properties.fontFamily
@@ -29,7 +29,7 @@ NetCard {
         Layout.margins: 14
         visible: pv.error !== ""
         text: "󰀦  Rejected, the old file stays:\n" + pv.error
-        color: "#f38ba8"
+        color: Colors.red
         font.pixelSize: 11
         font.family: Properties.fontFamily
         wrapMode: Text.Wrap
@@ -38,7 +38,7 @@ NetCard {
         Layout.fillWidth: true
         Layout.margins: 14
         text: pv.body
-        color: Qt.rgba(1, 1, 1, 0.75)
+        color: Colors.fade(0.75)
         font.pixelSize: 11
         font.family: Properties.fontFamily
         wrapMode: Text.WrapAnywhere

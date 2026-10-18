@@ -68,11 +68,11 @@ SearchField {
                 width: ListView.view.width
                 height: 28
                 radius: Properties.radius
-                color: entry.index === view.currentIndex || hover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                color: entry.index === view.currentIndex || hover.hovered ? Colors.fade(0.08) : "transparent"
                 Text {
                     anchors { left: parent.left; leftMargin: 10; right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
                     text: entry.modelData
-                    color: entry.modelData === root.value ? Colors.color6 : "white"
+                    color: entry.modelData === root.value ? Colors.color6 : Colors.ink
                     font.pixelSize: 12
                     font.family: entry.modelData
                     elide: Text.ElideRight

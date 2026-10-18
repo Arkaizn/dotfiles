@@ -30,7 +30,7 @@ ColumnLayout {
         Text {
             Layout.fillWidth: true
             text: root.title
-            color: Qt.rgba(1, 1, 1, 0.55)
+            color: Colors.fade(0.55)
             font.pixelSize: 12
             font.bold: true
             font.family: Properties.fontFamily
@@ -42,7 +42,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: body.implicitHeight
         radius: 14
-        color: root.tint.a > 0 ? root.tint : "#27000000"
+        color: root.tint.a > 0 ? root.tint : Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
         Behavior on color { ColorAnimation { duration: 200 } }

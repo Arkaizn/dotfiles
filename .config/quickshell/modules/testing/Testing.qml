@@ -17,7 +17,7 @@ PanelWindow {
     }
     implicitWidth: 400
     implicitHeight: 400
-    color: '#00000000'
+    color: Colors.shade(0.0)
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
     property int duration: 500

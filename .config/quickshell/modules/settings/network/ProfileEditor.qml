@@ -190,7 +190,7 @@ ColumnLayout {
         Layout.fillWidth: true
         implicitHeight: headRow.implicitHeight + 24
         radius: 14
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
 
@@ -208,11 +208,11 @@ ColumnLayout {
                 width: 40; height: 40; radius: 20
                 color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, ed.isActive ? 0.18 : 0.06)
                 border.width: 1.5
-                border.color: ed.isActive ? Colors.color6 : Qt.rgba(1, 1, 1, 0.2)
+                border.color: ed.isActive ? Colors.color6 : Colors.fade(0.2)
                 Text {
                     anchors.centerIn: parent
                     text: Network.typeIcon(ed.type)
-                    color: ed.isActive ? Colors.color6 : Qt.rgba(1, 1, 1, 0.7)
+                    color: ed.isActive ? Colors.color6 : Colors.fade(0.7)
                     font.pixelSize: 18
                     font.family: Properties.fontFamily
                 }
@@ -223,7 +223,7 @@ ColumnLayout {
                 Text {
                     Layout.fillWidth: true
                     text: ed.val("connection.id") || "…"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 16
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -234,7 +234,7 @@ ColumnLayout {
                     text: [Network.typeLabel(ed.type), ed.isActive ? "active on " + ed.device : "not active",
                            ed.raw("connection.interface-name") ? "for " + ed.raw("connection.interface-name") : null]
                           .filter(x => x).join("  ·  ")
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
@@ -256,7 +256,7 @@ ColumnLayout {
                 icon: "󰆴"
                 tooltip: armed ? "Click again to delete" : "Delete"
                 active: armed
-                textColor: "#f38ba8"
+                textColor: Colors.red
                 onClicked: {
                     if (!armed) { armed = true; disarm.restart(); return }
                     Network.remove(ed.uuid, ed.raw("connection.id"))
@@ -270,7 +270,7 @@ ColumnLayout {
     Text {
         visible: ed.loadError !== ""
         text: "󰀦  " + ed.loadError
-        color: "#f38ba8"
+        color: Colors.red
         font.pixelSize: 12
         font.family: Properties.fontFamily
     }
@@ -1020,7 +1020,7 @@ ColumnLayout {
             }
             Text {
                 text: allPane.keys.length + " shown"
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: Colors.fade(0.45)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }
@@ -1030,7 +1030,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: allCol.implicitHeight + 8
             radius: 14
-            color: "#27000000"
+            color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
 
@@ -1073,7 +1073,7 @@ ColumnLayout {
                             Text {
                                 Layout.preferredWidth: Math.min(260, allCol.width * 0.42)
                                 text: prop.modelData.slice(prop.section.length + 1)
-                                color: Qt.rgba(1, 1, 1, ed.raw(prop.modelData) === "" && !ed.changed(prop.modelData) ? 0.45 : 0.85)
+                                color: Colors.fade(ed.raw(prop.modelData) === "" && !ed.changed(prop.modelData) ? 0.45 : 0.85)
                                 font.pixelSize: 11
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideMiddle
@@ -1135,7 +1135,7 @@ ColumnLayout {
                 spacing: 1
                 Text {
                     text: ed.changeCount + (ed.changeCount === 1 ? " change" : " changes") + " to " + (ed.val("connection.id") || "this profile")
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 12
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -1146,7 +1146,7 @@ ColumnLayout {
                         : ed.isActive && ed.page?.safeApply ? "Applied live, reverted after 20s unless you keep it"
                         : ed.isActive ? "Applied live to " + ed.device
                         : "Saved to the profile, used next time it connects"
-                    color: ed.problems.length > 0 ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.55)
+                    color: ed.problems.length > 0 ? Colors.red : Colors.fade(0.55)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight

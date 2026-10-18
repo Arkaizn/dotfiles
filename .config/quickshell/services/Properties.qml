@@ -15,7 +15,7 @@ Rectangle {
     // Button Background
     property bool hovered: false
     property string iconText: ""
-    property color color: "white"
+    property color color: Colors.ink
     
 
     // Text / Font
@@ -37,10 +37,11 @@ Rectangle {
     property double onPressedButtonScale: 0.92   // while a button is held down
 
     // Panels — the bar and every popup attached to it (BarPopup)
-    property color panelColor: '#50000000'
-    property color panelBorder: Qt.rgba(1, 1, 1, 0.13)
+    // (defaults follow the pywal colors and light / dark: see themeDefaults below)
+    property color panelColor: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
+    property color panelBorder: Colors.fade(0.13)
     property real panelBorderWidth: 1
-    property color cardBorder: Qt.rgba(1, 1, 1, 0.10)   // outline of inner cards (dashboard, notif center)
+    property color cardBorder: Colors.fade(0.10)   // outline of inner cards (dashboard, notif center)
     property int barRadius: 15       // bar corners
     property int popupRadius: 12     // notification popup cards
     property int panelRadius: 30     // big widgets: dashboard, notification center, wallpapers, launcher
@@ -75,6 +76,14 @@ Rectangle {
     ]
     property var defaults: ({})
     property var walLinked: ({})   // keys currently bound to a pywal color
+    // defaults that follow the theme (the panel look of the settings app: the
+    // pywal background at 86 %, text and borders in the light / dark ink)
+    readonly property var themeDefaults: ({
+        panelColor: { wal: "background", alpha: 0.86 },
+        panelBorder: { wal: "ink", alpha: 0.13 },
+        cardBorder: { wal: "ink", alpha: 0.10 },
+        color: { wal: "ink" }
+    })
 
     // A color setting can be a hex string or a link to a pywal color:
     //   { "wal": "color4", "alpha": 0.8 }   (alpha optional)
@@ -98,7 +107,7 @@ Rectangle {
         const o = Settings.properties
         const linked = {}
         for (const k of settingKeys) {
-            const v = o[k] !== undefined ? o[k] : defaults[k]
+            const v = o[k] !== undefined ? o[k] : (themeDefaults[k] ?? defaults[k])
             if (v?.wal !== undefined) {
                 root[k] = Qt.binding(() => root.walColor(v))
                 linked[k] = true

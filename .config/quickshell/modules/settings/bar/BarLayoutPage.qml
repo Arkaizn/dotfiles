@@ -145,7 +145,7 @@ Item {
             title: "Layout"
             header: Text {
                 text: page.editable ? "drag to move  ·  × removes  ·  changes apply right away" : "turn on “Own layout” to edit"
-                color: Qt.rgba(1, 1, 1, 0.4)
+                color: Colors.fade(0.4)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }
@@ -209,8 +209,8 @@ Item {
             id: gRow
             anchors.centerIn: parent
             spacing: 7
-            Text { text: ghost.mod.icon; color: "white"; font.pixelSize: 14; font.family: Properties.fontFamily }
-            Text { text: ghost.mod.name; color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+            Text { text: ghost.mod.icon; color: Colors.ink; font.pixelSize: 14; font.family: Properties.fontFamily }
+            Text { text: ghost.mod.name; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
         }
     }
 }

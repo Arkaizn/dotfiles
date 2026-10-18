@@ -111,7 +111,7 @@ BarPopup {
             Layout.fillWidth: true
             implicitHeight: 34
             radius: 10
-            color: headerMouse.containsMouse && root.stack.length > 0 ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+            color: headerMouse.containsMouse && root.stack.length > 0 ? Colors.fade(0.08) : "transparent"
             Behavior on color { ColorAnimation { duration: 80 } }
 
             MouseArea {
@@ -130,7 +130,7 @@ BarPopup {
                 Text {
                     visible: root.stack.length > 0
                     text: "󰅁"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 14
                     font.family: Properties.fontFamily
                 }
@@ -148,7 +148,7 @@ BarPopup {
                     textFormat: Text.PlainText
                     maximumLineCount: 1
                     wrapMode: Text.NoWrap
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 13
                     font.bold: true
                     elide: Text.ElideRight
@@ -156,7 +156,7 @@ BarPopup {
             }
         }
 
-        Rectangle { Layout.fillWidth: true; height: 1; color: "#20ffffff" }
+        Rectangle { Layout.fillWidth: true; height: 1; color: Colors.fade(0.13) }
 
         // ── Entries ──
         Flickable {

@@ -51,7 +51,7 @@ ColumnLayout {
             text: !Networking.wifiEnabled ? "Wi-Fi is off"
                 : root.networks.length === 0 ? "Scanning…"
                 : root.networks.length + " networks"
-            color: Qt.rgba(1, 1, 1, 0.55)
+            color: Colors.fade(0.55)
             font.pixelSize: 11
         }
         IconButton {
@@ -89,8 +89,8 @@ ColumnLayout {
                     Layout.fillWidth: true
                     implicitHeight: rowCol.implicitHeight + 12
                     radius: 10
-                    color: net.connected ? Qt.rgba(1, 1, 1, 0.12)
-                         : rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                    color: net.connected ? Colors.fade(0.12)
+                         : rowMouse.containsMouse ? Colors.fade(0.07) : "transparent"
                     Behavior on color { ColorAnimation { duration: 80 } }
 
                     function activate() {
@@ -133,7 +133,7 @@ ColumnLayout {
 
                             Text {
                                 text: root.signalIcon(row.net)
-                                color: "white"
+                                color: Colors.ink
                                 font.pixelSize: 15
                                 font.family: Properties.fontFamily
                             }
@@ -143,7 +143,7 @@ ColumnLayout {
                                 Text {
                                     Layout.fillWidth: true
                                     text: row.net.name
-                                    color: "white"
+                                    color: Colors.ink
                                     font.pixelSize: 12
                                     font.bold: row.net.connected
                                     elide: Text.ElideRight
@@ -155,14 +155,14 @@ ColumnLayout {
                                         : root.errorFor === row.net.name ? "Connection failed"
                                         : row.net.connected ? "Connected"
                                         : row.net.known ? "Saved" : ""
-                                    color: root.errorFor === row.net.name && !row.busy ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.5)
+                                    color: root.errorFor === row.net.name && !row.busy ? Colors.red : Colors.fade(0.5)
                                     font.pixelSize: 10
                                 }
                             }
                             Text {
                                 visible: row.secured
                                 text: "󰌾"
-                                color: Qt.rgba(1, 1, 1, 0.45)
+                                color: Colors.fade(0.45)
                                 font.pixelSize: 11
                                 font.family: Properties.fontFamily
                             }

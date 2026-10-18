@@ -26,6 +26,45 @@ ColumnLayout {
         return Theme.builtins.filter(t => (q === "" || t.name.toLowerCase().includes(q)) && t.light === page.light)
     }
 
+    // ── Light / dark ────────────────────────────────────────────────────────
+    NetCard {
+        Layout.fillWidth: true
+        title: "Light or dark"
+        icon: Theme.mode === "light" ? "󰖨" : "󰖔"
+        NetRow {
+            first: true
+            label: Theme.switching ? "Switching…" : Theme.mode === "light" ? "Light mode" : "Dark mode"
+            desc: "new pywal colors from your wallpaper, and the apps you pick below. Also: qs ipc call theme mode toggle"
+            Segmented {
+                small: true
+                options: [{ label: "󰖔  Dark", value: "dark" }, { label: "󰖨  Light", value: "light" }]
+                value: Theme.mode
+                onEdited: v => Theme.setMode(v)
+            }
+        }
+        NetRow {
+            label: "The shell's colors (pywal)"
+            desc: "regenerated from the current wallpaper (wal -l for light); new wallpapers keep the mode"
+            ToggleSwitch { checked: Theme.part("wal"); onToggled: v => Settings.set("theme", "wal", v) }
+        }
+        NetRow {
+            label: "Tell apps (prefer light / dark)"
+            desc: "browsers, libadwaita / GNOME apps, Electron apps follow this"
+            ToggleSwitch { checked: Theme.part("portal"); onToggled: v => Settings.set("theme", "portal", v) }
+        }
+        NetRow {
+            label: "niri window borders"
+            ToggleSwitch { checked: Theme.part("niri"); onToggled: v => Settings.set("theme", "niri", v) }
+        }
+        ThemePairRow { kind: "gtk"; label: "GTK theme"; desc: "GTK 3 and 4 apps (also ~/.config/gtk-4.0 for libadwaita)" }
+        ThemePairRow { kind: "icons"; label: "Icon theme"; desc: "GTK and Qt apps" }
+        ThemePairRow { kind: "kvantum"; label: "Qt apps (Kvantum)"; desc: "Kvantum theme + qt6ct style; already open Qt apps change on restart"; partKey: "qt" }
+        NetRow {
+            label: "Changed config files"
+            desc: "copied once to ~/.local/state/quickshell/backups/color-mode/ before the first change"
+        }
+    }
+
     // ── Current ─────────────────────────────────────────────────────────────
     NetCard {
         Layout.fillWidth: true
@@ -179,7 +218,7 @@ ColumnLayout {
                         property bool armed: false
                         icon: armed ? "󰄬" : "󰆴"
                         tooltip: armed ? "Click again to delete" : "Delete"
-                        textColor: armed ? "#f38ba8" : Properties.color
+                        textColor: armed ? Colors.red : Properties.color
                         onClicked: { if (armed) Theme.remove(modelData.name); else { armed = true; disarm.restart() } }
                         Timer { id: disarm; interval: 3000; onTriggered: del.armed = false }
                     }
@@ -212,12 +251,12 @@ ColumnLayout {
                     width: list.width
                     height: 34
                     radius: 8
-                    color: hover.hovered ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                    color: hover.hovered ? Colors.fade(0.07) : "transparent"
                     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: Theme.previewFile(row.modelData.name, row.modelData.file, row.modelData.data) }
                     RowLayout {
                         anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
-                        Text { Layout.fillWidth: true; text: row.modelData.name; color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
                         ThemeSwatches { colors: row.modelData.data.colors; size: 12 }
                     }
                 }

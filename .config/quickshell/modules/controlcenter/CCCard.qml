@@ -6,7 +6,7 @@ import qs.services
 //   CCCard { implicitHeight: col.implicitHeight + 24; ColumnLayout { id: col; ... } }
 Rectangle {
     radius: 14
-    color: "#27000000"
+    color: Colors.card
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
 }

@@ -29,14 +29,14 @@ ColumnLayout {
             Text {
                 text: root.account.type === "ics" ? "󰑫" : root.account.type === "local" ? "󰋜"
                     : /icloud/i.test(root.account.url) ? "󰀵" : "󰒍"
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: Colors.fade(0.45)
                 font.pixelSize: 12
                 font.family: Properties.fontFamily
             }
             Text {
                 Layout.fillWidth: true
                 text: root.armed ? "Click again to remove" : root.account.name
-                color: root.armed ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.7)
+                color: root.armed ? Colors.red : Colors.fade(0.7)
                 font.pixelSize: 11
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -45,7 +45,7 @@ ColumnLayout {
             Text {
                 visible: root.errorFor.length > 0
                 text: "󰀦"
-                color: "#f38ba8"
+                color: Colors.red
                 font.pixelSize: 12
                 font.family: Properties.fontFamily
                 HoverHandler { id: errHover }
@@ -58,7 +58,7 @@ ColumnLayout {
                 iconSize: 11
                 icon: "󰆴"
                 tooltip: "Remove account"
-                textColor: root.armed ? "#f38ba8" : Properties.color
+                textColor: root.armed ? Colors.red : Properties.color
                 onClicked: {
                     if (root.armed) CalendarStore.removeAccount(root.account.id)
                     else { root.armed = true; disarm.restart() }
@@ -75,7 +75,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: 30
             radius: Properties.radius
-            color: rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+            color: rowMouse.containsMouse ? Colors.fade(0.06) : "transparent"
 
             MouseArea {
                 id: rowMouse
@@ -142,7 +142,7 @@ ColumnLayout {
                                     width: 20; height: 20; radius: 6
                                     color: modelData
                                     border.width: 1.5
-                                    border.color: Qt.rgba(1, 1, 1, chip.containsMouse ? 0.6 : 0.15)
+                                    border.color: Colors.fade(chip.containsMouse ? 0.6 : 0.15)
                                     MouseArea {
                                         id: chip
                                         anchors.fill: parent
@@ -162,7 +162,7 @@ ColumnLayout {
                 Text {
                     Layout.fillWidth: true
                     text: row.modelData.name
-                    color: row.modelData.enabled ? "white" : Qt.rgba(1, 1, 1, 0.4)
+                    color: row.modelData.enabled ? Colors.ink : Colors.fade(0.4)
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
@@ -170,7 +170,7 @@ ColumnLayout {
                 Text {
                     visible: row.modelData.readOnly || root.account.type === "ics"
                     text: "󰌾"
-                    color: Qt.rgba(1, 1, 1, 0.3)
+                    color: Colors.fade(0.3)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -178,7 +178,7 @@ ColumnLayout {
                 Text {
                     visible: rowMouse.containsMouse
                     text: "󰏘"
-                    color: Qt.rgba(1, 1, 1, 0.5)
+                    color: Colors.fade(0.5)
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                     MouseArea {

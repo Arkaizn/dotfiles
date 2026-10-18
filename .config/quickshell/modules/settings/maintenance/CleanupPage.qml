@@ -96,10 +96,10 @@ ColumnLayout {
                 label: modelData.path.replace(page.home, "~")
                 RowLayout {
                     spacing: 8
-                    Text { text: PerfMon.bytes(modelData.size); color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { text: PerfMon.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                     ActionButton {
                         text: page.armed(modelData.path) ? "Delete " + PerfMon.bytes(modelData.size) : "Clear…"
-                        textColor: page.armed(modelData.path) ? "#f38ba8" : "white"
+                        textColor: page.armed(modelData.path) ? Colors.red : Colors.ink
                         onClicked: page.armed(modelData.path) ? (page.clearCache(modelData.path), page.confirm = "") : page.ask(modelData.path)
                     }
                 }
@@ -170,7 +170,7 @@ ColumnLayout {
                 ActionButton { icon: "󰉋"; text: "Open"; onClicked: Quickshell.execDetached(["xdg-open", "trash:///"]) }
                 ActionButton {
                     text: page.armed("trash") ? "Empty for good" : "Empty…"
-                    textColor: page.armed("trash") ? "#f38ba8" : "white"
+                    textColor: page.armed("trash") ? Colors.red : Colors.ink
                     interactive: page.trash > 0
                     onClicked: page.armed("trash") ? (Jobs.run(["gio", "trash", "--empty"], () => page.refresh()), page.confirm = "") : page.ask("trash")
                 }

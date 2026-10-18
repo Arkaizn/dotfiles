@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.services
 import QtQuick.Layouts
 
 // Clipboard history, backed by `cliphist` (+ `wl-copy` to restore an entry
@@ -193,8 +194,8 @@ ColumnLayout {
                 anchors.margins: 2
                 radius: 6
                 visible: cell.isCurrent
-                color: Qt.rgba(1, 1, 1, 0.13)
-                border.color: Qt.rgba(1, 1, 1, 0.22)
+                color: Colors.fade(0.13)
+                border.color: Colors.fade(0.22)
                 border.width: 0.5
             }
             Rectangle {
@@ -202,7 +203,7 @@ ColumnLayout {
                 anchors.margins: 2
                 radius: 6
                 visible: cellHover.hovered && !cell.isCurrent
-                color: Qt.rgba(1, 1, 1, 0.08)
+                color: Colors.fade(0.08)
                 Behavior on color { ColorAnimation { duration: 80 } }
             }
 
@@ -218,7 +219,7 @@ ColumnLayout {
 
                 Text {
                     text: cell.entry.preview
-                    color: cell.isCurrent ? "white" : Qt.rgba(1, 1, 1, 0.75)
+                    color: cell.isCurrent ? Colors.ink : Colors.fade(0.75)
                     font.pixelSize: 14
                     font.weight: cell.isCurrent ? Font.Medium : Font.Normal
                     Layout.fillWidth: true
@@ -235,7 +236,7 @@ ColumnLayout {
             anchors.centerIn: parent
             visible: filteredModel.count === 0
             text: root.rawEntries.length === 0 ? "No clipboard history" : "No matching entries"
-            color: Qt.rgba(1, 1, 1, 0.35)
+            color: Colors.fade(0.35)
             font.pixelSize: 13
         }
     }

@@ -48,7 +48,7 @@ Modal {
                 Text {
                     Layout.fillWidth: true
                     text: "Move a repeating event"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 16
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -57,7 +57,7 @@ Modal {
                     Layout.fillWidth: true
                     text: root.ev ? root.ev.title + "  →  " + U.fmtShortDate(new Date(root.newStart)) + ", "
                                     + U.fmtTime(root.newStart) + " – " + U.fmtTime(root.newEnd) : ""
-                    color: Qt.rgba(1, 1, 1, 0.55)
+                    color: Colors.fade(0.55)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
@@ -69,7 +69,7 @@ Modal {
             Layout.fillWidth: true
             visible: root.dayChanged
             text: "A whole series can only change its time here, not its day — moving to another day works for this event only."
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: Colors.fade(0.5)
             font.pixelSize: 11
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap

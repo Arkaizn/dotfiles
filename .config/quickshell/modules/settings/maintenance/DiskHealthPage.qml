@@ -109,7 +109,7 @@ ColumnLayout {
                     required property var modelData
                     sub: true
                     label: modelData[0]
-                    Text { text: modelData[1]; color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { text: modelData[1]; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                 }
             }
         }

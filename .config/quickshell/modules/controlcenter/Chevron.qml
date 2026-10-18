@@ -5,7 +5,7 @@ import qs.services
 Text {
     property bool open: false
     text: "󰅀"
-    color: Qt.rgba(1, 1, 1, 0.6)
+    color: Colors.fade(0.6)
     font.pixelSize: 13
     font.family: Properties.fontFamily
     rotation: open ? 180 : 0

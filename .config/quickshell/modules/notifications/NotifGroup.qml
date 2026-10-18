@@ -37,9 +37,9 @@ Item {
         width: root.width
         height: col.implicitHeight + 20
         radius: 12
-        color: "#27000000"
+        color: Colors.card
         border.width: 1
-        border.color: headerHover.hovered ? Qt.rgba(1, 1, 1, 0.18) : Properties.cardBorder
+        border.color: headerHover.hovered ? Colors.fade(0.18) : Properties.cardBorder
 
         // slide in from the right on add, out to the right on removal
         x: 60
@@ -75,7 +75,7 @@ Item {
                         Layout.preferredWidth: 34
                         Layout.preferredHeight: 34
                         radius: 9
-                        color: "#20ffffff"
+                        color: Colors.fade(0.13)
 
                         Image {
                             id: appIconImg
@@ -90,7 +90,7 @@ Item {
                             visible: appIconImg.status !== Image.Ready
                             anchors.centerIn: parent
                             text: (root.model.appName || "?").charAt(0).toUpperCase()
-                            color: "#ccffffff"
+                            color: Colors.fade(0.8)
                             font { bold: true; pixelSize: 15 }
                         }
                     }
@@ -101,7 +101,7 @@ Item {
 
                         Text {
                             text: root.model.appName
-                            color: "#e6ffffff"
+                            color: Colors.fade(0.9)
                             font { bold: true; pixelSize: 13 }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
@@ -109,7 +109,7 @@ Item {
                         Text {
                             text: (root.itemCount > 1 ? root.itemCount + " notifications · " : "")
                                   + Notifs.relativeTime(root.model.time)
-                            color: "#70ffffff"
+                            color: Colors.fade(0.44)
                             font.pixelSize: 11
                         }
                     }

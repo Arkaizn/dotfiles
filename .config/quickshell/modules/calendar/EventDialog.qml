@@ -315,7 +315,7 @@ Modal {
                     Text {
                         Layout.fillWidth: true
                         text: root.ev?.title ?? ""
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 20
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -334,7 +334,7 @@ Modal {
                                 id: countdown
                                 anchors.centerIn: parent
                                 text: root.ev ? root.countdownText(root.ev) : ""
-                                color: "white"
+                                color: Colors.ink
                                 font.pixelSize: 11
                                 font.bold: true
                                 font.family: Properties.fontFamily
@@ -342,7 +342,7 @@ Modal {
                         }
                         Text {
                             text: root.ev ? U.fmtDate(new Date(root.ev.start)) : ""
-                            color: Qt.rgba(1, 1, 1, 0.55)
+                            color: Colors.fade(0.55)
                             font.pixelSize: 12
                             font.family: Properties.fontFamily
                         }
@@ -407,7 +407,7 @@ Modal {
                 visible: (root.ev?.location ?? "") !== ""
                 implicitHeight: 48
                 radius: 12
-                color: "#27000000"
+                color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
                 RowLayout {
@@ -424,7 +424,7 @@ Modal {
                     Text {
                         Layout.fillWidth: true
                         text: root.ev?.location ?? ""
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 12
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
@@ -452,7 +452,7 @@ Modal {
                 visible: (root.ev?.description ?? "") !== ""
                 implicitHeight: Math.min(notesText.implicitHeight + 20, 220)
                 radius: 12
-                color: "#27000000"
+                color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
                 Flickable {
@@ -469,8 +469,8 @@ Modal {
                         readOnly: true
                         selectByMouse: true
                         text: root.ev?.description ?? ""
-                        color: Qt.rgba(1, 1, 1, 0.8)
-                        selectionColor: Qt.rgba(1, 1, 1, 0.28)
+                        color: Colors.fade(0.8)
+                        selectionColor: Colors.fade(0.28)
                         font.pixelSize: 12
                         font.family: Properties.fontFamily
                         wrapMode: TextEdit.Wrap
@@ -482,7 +482,7 @@ Modal {
                 Layout.fillWidth: true
                 visible: root.error !== ""
                 text: root.error
-                color: "#f38ba8"
+                color: Colors.red
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
@@ -496,14 +496,14 @@ Modal {
                     visible: !root.confirmDelete
                     icon: "󰆴"
                     text: "Delete"
-                    textColor: "#f38ba8"
+                    textColor: Colors.red
                     onClicked: root.confirmDelete = true
                 }
                 ActionButton {
                     visible: root.confirmDelete && (root.ev?.recurring ?? false)
                     icon: "󰆴"
                     text: "Only this one"
-                    textColor: "#f38ba8"
+                    textColor: Colors.red
                     interactive: !CalendarStore.working
                     onClicked: root.remove(true)
                 }
@@ -511,7 +511,7 @@ Modal {
                     visible: root.confirmDelete
                     icon: "󰆴"
                     text: (root.ev?.recurring ?? false) ? "All repeats" : "Really delete"
-                    textColor: "#f38ba8"
+                    textColor: Colors.red
                     primary: true
                     interactive: !CalendarStore.working
                     onClicked: root.remove(false)
@@ -551,7 +551,7 @@ Modal {
                     Layout.fillWidth: true
                     text: !root.ev ? "New event" : root.editScope === "this" ? "Edit this event"
                         : root.editScope === "all" ? "Edit series" : "Edit event"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 17
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -578,7 +578,7 @@ Modal {
                 visible: root.ev?.recurring ?? false
                 text: root.editScope === "this" ? "󰑖  Only this occurrence changes — the rest of the series stays as it is."
                     : "󰑖  Changes apply to every event of the series."
-                color: Qt.rgba(1, 1, 1, 0.55)
+                color: Colors.fade(0.55)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
@@ -588,7 +588,7 @@ Modal {
                 Layout.fillWidth: true
                 implicitHeight: form.implicitHeight
                 radius: 14
-                color: "#27000000"
+                color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
 
@@ -643,7 +643,7 @@ Modal {
                         Layout.leftMargin: 16
                         Layout.rightMargin: 16
                         implicitHeight: 1
-                        color: Qt.rgba(1, 1, 1, 0.06)
+                        color: Colors.fade(0.06)
                     }
                     FormRow {
                         visible: root.editScope !== "this"      // this occurrence only: no repeat options
@@ -669,7 +669,7 @@ Modal {
                         Text {
                             Layout.preferredWidth: 56
                             text: root.unit + (root.rInterval > 1 ? "s" : "")
-                            color: Qt.rgba(1, 1, 1, 0.7)
+                            color: Colors.fade(0.7)
                             font.pixelSize: 12
                             font.family: Properties.fontFamily
                         }
@@ -687,14 +687,14 @@ Modal {
                                 implicitWidth: 30
                                 implicitHeight: 30
                                 radius: 15
-                                color: on ? Colors.color6 : dMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(1, 1, 1, 0.04)
+                                color: on ? Colors.color6 : dMouse.containsMouse ? Colors.fade(0.1) : Colors.fade(0.04)
                                 border.width: 1
-                                border.color: on ? Colors.color6 : Qt.rgba(1, 1, 1, 0.15)
+                                border.color: on ? Colors.color6 : Colors.fade(0.15)
                                 Behavior on color { ColorAnimation { duration: 100 } }
                                 Text {
                                     anchors.centerIn: parent
                                     text: U.dayShort[dchip.index].slice(0, 2)
-                                    color: dchip.on ? U.onColor(Colors.color6) : "white"
+                                    color: dchip.on ? U.onColor(Colors.color6) : Colors.ink
                                     font.pixelSize: 10
                                     font.bold: true
                                     font.family: Properties.fontFamily
@@ -726,7 +726,7 @@ Modal {
                         Text {
                             visible: root.rEnd === "after"
                             text: root.rCount === 1 ? "time" : "times"
-                            color: Qt.rgba(1, 1, 1, 0.7)
+                            color: Colors.fade(0.7)
                             font.pixelSize: 12
                             font.family: Properties.fontFamily
                         }
@@ -757,8 +757,8 @@ Modal {
                     onTextChanged: if (text !== root.fNotes) root.fNotes = text
                     wrapMode: TextEdit.Wrap
                     color: Properties.color
-                    placeholderTextColor: Qt.rgba(1, 1, 1, 0.35)
-                    selectionColor: Qt.rgba(1, 1, 1, 0.28)
+                    placeholderTextColor: Colors.fade(0.35)
+                    selectionColor: Colors.fade(0.28)
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                     leftPadding: 14
@@ -766,9 +766,9 @@ Modal {
                     topPadding: 10
                     background: Rectangle {
                         radius: Properties.radius + 2
-                        color: notes.activeFocus ? "#3a000000" : "#45000000"
+                        color: notes.activeFocus ? Colors.shade(0.23) : Colors.shade(0.27)
                         border.width: Properties.panelBorderWidth
-                        border.color: notes.activeFocus ? Qt.rgba(1, 1, 1, 0.16) : Properties.cardBorder
+                        border.color: notes.activeFocus ? Colors.fade(0.16) : Properties.cardBorder
                     }
                 }
             }
@@ -777,7 +777,7 @@ Modal {
                 Layout.fillWidth: true
                 visible: root.error !== ""
                 text: root.error
-                color: "#f38ba8"
+                color: Colors.red
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
@@ -801,7 +801,7 @@ Modal {
                     Text {
                         Layout.fillWidth: true
                         text: "󰑖  This event repeats. Save the changes for…"
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 12
                         font.family: Properties.fontFamily
                         wrapMode: Text.WordWrap
@@ -842,7 +842,7 @@ Modal {
             Layout.preferredWidth: 18
             horizontalAlignment: Text.AlignHCenter
             text: parent.icon
-            color: Qt.rgba(1, 1, 1, 0.5)
+            color: Colors.fade(0.5)
             font.pixelSize: 14
             font.family: Properties.fontFamily
         }
@@ -850,7 +850,7 @@ Modal {
             Layout.fillWidth: true
             text: parent.link ? "<a href=\"" + parent.text + "\" style=\"color: white\">" + parent.text + "</a>" : parent.text
             textFormat: parent.link ? Text.RichText : Text.PlainText
-            color: Qt.rgba(1, 1, 1, 0.8)
+            color: Colors.fade(0.8)
             font.pixelSize: 12
             font.family: Properties.fontFamily
             wrapMode: Text.WrapAnywhere
@@ -869,7 +869,7 @@ Modal {
             anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter
             text: parent.label
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 13
             font.bold: true
             font.family: Properties.fontFamily

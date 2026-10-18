@@ -278,7 +278,7 @@ Scope {
                         Layout.preferredWidth: 260
                         Layout.fillHeight: true
                         radius: Math.max(6, Compositor.appRadius - 2)
-                        color: "#27000000"
+                        color: Colors.card
                         border.width: Properties.panelBorderWidth
                         border.color: Properties.cardBorder
 
@@ -304,7 +304,7 @@ Scope {
                                     Text {
                                         Layout.fillWidth: true
                                         text: "Calendar"
-                                        color: "white"
+                                        color: Colors.ink
                                         font.pixelSize: 18
                                         font.bold: true
                                         font.family: Properties.fontFamily
@@ -356,7 +356,7 @@ Scope {
                                     Layout.fillWidth: true
                                     Layout.leftMargin: 4
                                     text: "CALENDARS"
-                                    color: Qt.rgba(1, 1, 1, 0.4)
+                                    color: Colors.fade(0.4)
                                     font.pixelSize: 10
                                     font.bold: true
                                     font.letterSpacing: 1.2
@@ -398,7 +398,7 @@ Scope {
                                             Layout.fillWidth: true
                                             Layout.leftMargin: 4
                                             text: "No calendars yet. Add iCloud, a CalDAV server, a Google / Outlook link or a local calendar."
-                                            color: Qt.rgba(1, 1, 1, 0.45)
+                                            color: Colors.fade(0.45)
                                             font.pixelSize: 11
                                             font.family: Properties.fontFamily
                                             wrapMode: Text.WordWrap
@@ -432,7 +432,7 @@ Scope {
                                     text: CalendarStore.syncing ? "Syncing…"
                                         : errs > 0 ? "󰀦  " + errs + (errs === 1 ? " calendar" : " calendars") + " couldn't sync"
                                         : CalendarStore.lastSync > 0 ? "Synced " + Qt.formatTime(new Date(CalendarStore.lastSync), "HH:mm") : ""
-                                    color: errs > 0 && !CalendarStore.syncing ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.4)
+                                    color: errs > 0 && !CalendarStore.syncing ? Colors.red : Colors.fade(0.4)
                                     font.pixelSize: 10
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
@@ -483,7 +483,7 @@ Scope {
                                     Text {
                                         Layout.fillWidth: true
                                         text: win.heading
-                                        color: "white"
+                                        color: Colors.ink
                                         font.pixelSize: 24
                                         font.bold: true
                                         font.family: Properties.fontFamily
@@ -491,7 +491,7 @@ Scope {
                                     }
                                     Text {
                                         text: win.subtitle
-                                        color: Qt.rgba(1, 1, 1, 0.5)
+                                        color: Colors.fade(0.5)
                                         font.pixelSize: 12
                                         font.family: Properties.fontFamily
                                     }
@@ -585,13 +585,13 @@ Scope {
                     radius: 20
                     color: Qt.rgba(0.2, 0.05, 0.08, 0.95)
                     border.width: 1
-                    border.color: "#f38ba8"
+                    border.color: Colors.red
                     Text {
                         id: errText
                         anchors.centerIn: parent
                         width: parent.width - 40
                         text: CalendarStore.lastError
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight

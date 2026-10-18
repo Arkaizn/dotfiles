@@ -129,7 +129,7 @@ CCCard {
         }
 
         // ── Apps ──
-        Rectangle { Layout.fillWidth: true; Layout.topMargin: 2; height: 1; color: "#20ffffff" }
+        Rectangle { Layout.fillWidth: true; Layout.topMargin: 2; height: 1; color: Colors.fade(0.13) }
 
         Item {
             Layout.fillWidth: true
@@ -148,18 +148,18 @@ CCCard {
                 spacing: 8
                 Text {
                     text: "Apps"
-                    color: Qt.rgba(1, 1, 1, 0.55)
+                    color: Colors.fade(0.55)
                     font { bold: true; pixelSize: 12 }
                 }
                 Rectangle {
                     visible: root.streams.length > 0
                     implicitWidth: appCount.implicitWidth + 10; implicitHeight: 18; radius: 9
-                    color: "#40ffffff"
+                    color: Colors.fade(0.25)
                     Text {
                         id: appCount
                         anchors.centerIn: parent
                         text: root.streams.length
-                        color: "#ddffffff"
+                        color: Colors.fade(0.87)
                         font { bold: true; pixelSize: 10 }
                     }
                 }
@@ -169,7 +169,7 @@ CCCard {
                     text: root.streams.length === 0 ? "Nothing is playing"
                         : [...new Set(root.streams.map(n => root.appName(n)))].join(", ")
                     opacity: root.appsOpen ? 0 : 1
-                    color: appsMouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                    color: appsMouse.containsMouse ? Colors.ink : Colors.fade(0.5)
                     font.pixelSize: 11
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignRight
@@ -225,14 +225,14 @@ CCCard {
                                 }
                                 Text {
                                     text: root.appName(app.modelData)
-                                    color: "white"
+                                    color: Colors.ink
                                     font.pixelSize: 12
                                     font.bold: true
                                 }
                                 Text {
                                     Layout.fillWidth: true
                                     text: app.modelData.properties?.["media.name"] ?? ""
-                                    color: Qt.rgba(1, 1, 1, 0.45)
+                                    color: Colors.fade(0.45)
                                     font.pixelSize: 11
                                     elide: Text.ElideRight
                                 }
@@ -271,13 +271,13 @@ CCCard {
             spacing: 8
             Text {
                 text: dh.label
-                color: Qt.rgba(1, 1, 1, 0.55)
+                color: Colors.fade(0.55)
                 font { bold: true; pixelSize: 12 }
             }
             Text {
                 Layout.fillWidth: true
                 text: dh.current
-                color: dhMouse.containsMouse ? "white" : "#ddffffff"
+                color: dhMouse.containsMouse ? Colors.ink : Colors.fade(0.87)
                 font.pixelSize: 12
                 horizontalAlignment: Text.AlignRight
                 elide: Text.ElideRight
@@ -307,8 +307,8 @@ CCCard {
                 Layout.fillWidth: true
                 implicitHeight: 30
                 radius: 8
-                color: isCurrent ? Qt.rgba(1, 1, 1, 0.14)
-                     : optMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : "transparent"
+                color: isCurrent ? Colors.fade(0.14)
+                     : optMouse.containsMouse ? Colors.fade(0.07) : "transparent"
 
                 MouseArea {
                     id: optMouse
@@ -322,7 +322,7 @@ CCCard {
                     Text {
                         Layout.fillWidth: true
                         text: dp.nameOf(opt.modelData)
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 12
                         font.bold: opt.isCurrent
                         elide: Text.ElideRight
@@ -330,7 +330,7 @@ CCCard {
                     Text {
                         visible: opt.isCurrent
                         text: "󰄬"
-                        color: "white"
+                        color: Colors.ink
                         font.pixelSize: 13
                         font.family: Properties.fontFamily
                     }

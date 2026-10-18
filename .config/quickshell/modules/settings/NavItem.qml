@@ -22,7 +22,7 @@ Item {
         anchors.fill: parent
         radius: Properties.radius + 2
         border.width: root.selected || mouse.containsMouse ? 1.5 : 0
-        border.color: Qt.rgba(1, 1, 1, root.selected ? 0.24 : 0.14)
+        border.color: Colors.fade(root.selected ? 0.24 : 0.14)
         gradient: ButtonGradient { hovered: root.selected }
         opacity: root.selected ? 1 : mouse.containsMouse ? 0.6 : 0
         Behavior on opacity { NumberAnimation { duration: 120 } }
@@ -38,7 +38,7 @@ Item {
             Layout.preferredWidth: 20
             horizontalAlignment: Text.AlignHCenter
             text: root.icon
-            color: root.selected ? Colors.color6 : Qt.rgba(1, 1, 1, 0.6)
+            color: root.selected ? Colors.color6 : Colors.fade(0.6)
             font.pixelSize: 16
             font.family: Properties.fontFamily
             Behavior on color { ColorAnimation { duration: 120 } }
@@ -46,7 +46,7 @@ Item {
         Text {
             Layout.fillWidth: true
             text: root.label
-            color: root.selected ? "white" : Qt.rgba(1, 1, 1, 0.75)
+            color: root.selected ? Colors.ink : Colors.fade(0.75)
             font.pixelSize: 13
             font.bold: root.selected
             font.family: Properties.fontFamily
@@ -57,7 +57,7 @@ Item {
             implicitWidth: Math.max(18, count.implicitWidth + 10)
             implicitHeight: 18
             radius: 9
-            color: Qt.rgba(1, 1, 1, 0.1)
+            color: Colors.fade(0.1)
             Text {
                 id: count
                 anchors.centerIn: parent

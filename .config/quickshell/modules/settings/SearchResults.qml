@@ -40,7 +40,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 6
             text: root.results.length + (root.results.length === 1 ? " result" : " results")
-            color: Qt.rgba(1, 1, 1, 0.55)
+            color: Colors.fade(0.55)
             font.pixelSize: 12
             font.bold: true
             font.family: Properties.fontFamily
@@ -54,12 +54,12 @@ ColumnLayout {
                     implicitWidth: kt.implicitWidth + 10
                     implicitHeight: 18
                     radius: 5
-                    color: Qt.rgba(1, 1, 1, 0.08)
+                    color: Colors.fade(0.08)
                     border.width: 1
-                    border.color: Qt.rgba(1, 1, 1, 0.14)
-                    Text { id: kt; anchors.centerIn: parent; text: modelData[0]; color: "white"; font.pixelSize: 10; font.bold: true; font.family: Properties.fontFamily }
+                    border.color: Colors.fade(0.14)
+                    Text { id: kt; anchors.centerIn: parent; text: modelData[0]; color: Colors.ink; font.pixelSize: 10; font.bold: true; font.family: Properties.fontFamily }
                 }
-                Text { text: modelData[1]; color: Qt.rgba(1, 1, 1, 0.45); font.pixelSize: 10; font.family: Properties.fontFamily }
+                Text { text: modelData[1]; color: Colors.fade(0.45); font.pixelSize: 10; font.family: Properties.fontFamily }
             }
         }
     }
@@ -70,7 +70,7 @@ ColumnLayout {
         visible: root.results.length > 0
         implicitHeight: list.implicitHeight + 8
         radius: 14
-        color: "#27000000"
+        color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
 
@@ -111,7 +111,7 @@ ColumnLayout {
                         Layout.leftMargin: 16
                         Layout.rightMargin: 16
                         implicitHeight: 1
-                        color: Qt.rgba(1, 1, 1, 0.06)
+                        color: Colors.fade(0.06)
                     }
 
                     // a setting: change it right here
@@ -159,14 +159,14 @@ ColumnLayout {
         Text {
             Layout.alignment: Qt.AlignHCenter
             text: "󰍉"
-            color: Qt.rgba(1, 1, 1, 0.25)
+            color: Colors.fade(0.25)
             font.pixelSize: 40
             font.family: Properties.fontFamily
         }
         Text {
             Layout.alignment: Qt.AlignHCenter
             text: "Nothing for \"" + root.query + "\""
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 15
             font.bold: true
             font.family: Properties.fontFamily
@@ -175,7 +175,7 @@ ColumnLayout {
             Layout.alignment: Qt.AlignHCenter
             visible: root.suggestion !== ""
             spacing: 8
-            Text { text: "Did you mean"; color: Qt.rgba(1, 1, 1, 0.55); font.pixelSize: 12; font.family: Properties.fontFamily }
+            Text { text: "Did you mean"; color: Colors.fade(0.55); font.pixelSize: 12; font.family: Properties.fontFamily }
             ActionButton {
                 icon: "󰍉"
                 text: root.suggestion
@@ -187,7 +187,7 @@ ColumnLayout {
             Layout.alignment: Qt.AlignHCenter
             Layout.topMargin: 10
             text: "Or go to a page"
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 11
             font.family: Properties.fontFamily
         }

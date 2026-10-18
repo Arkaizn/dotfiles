@@ -33,7 +33,7 @@ NetCard {
                 Text {
                     Layout.preferredWidth: 230
                     text: "{@" + wr.modelData + "}"
-                    color: wr.changed ? Colors.color6 : Qt.rgba(1, 1, 1, 0.6)
+                    color: wr.changed ? Colors.color6 : Colors.fade(0.6)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight

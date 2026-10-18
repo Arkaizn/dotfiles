@@ -82,7 +82,7 @@ Item {
                     elide: Text.ElideRight
                     text: root.isToday ? "Today"
                         : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][root.day.getDay()]
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 14
                     font.bold: true
                     font.family: Properties.fontFamily
@@ -94,7 +94,7 @@ Item {
                     text: root.day.getDate() + ". " + ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",
                           "Aug", "Sep", "Oct", "Nov", "Dec"][root.day.getMonth()]
                           + (root.events.length ? "  ·  " + root.events.length + (root.events.length === 1 ? " event" : " events") : "")
-                    color: Qt.rgba(1, 1, 1, 0.45)
+                    color: Colors.fade(0.45)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
@@ -141,8 +141,8 @@ Item {
                 width: ListView.view.width - 8
                 height: 40
                 radius: 9
-                color: mouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07)
-                     : live ? Qt.rgba(calColor.r, calColor.g, calColor.b, 0.14) : Qt.rgba(1, 1, 1, 0.03)
+                color: mouse.containsMouse ? Colors.fade(0.07)
+                     : live ? Qt.rgba(calColor.r, calColor.g, calColor.b, 0.14) : Colors.fade(0.03)
                 opacity: past ? 0.45 : 1
                 scale: mouse.pressed ? Properties.onPressedButtonScale : mouse.containsMouse ? 1.02 : 1
                 Behavior on color { ColorAnimation { duration: 100 } }
@@ -165,7 +165,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: row.modelData.title
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 12
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -174,7 +174,7 @@ Item {
                         Text {
                             Layout.fillWidth: true
                             text: root.timeText(row.modelData) + (row.modelData.location ? "  ·  " + row.modelData.location : "")
-                            color: Qt.rgba(1, 1, 1, 0.5)
+                            color: Colors.fade(0.5)
                             font.pixelSize: 10
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
@@ -212,14 +212,14 @@ Item {
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: "󰃮"
-                    color: Qt.rgba(1, 1, 1, 0.25)
+                    color: Colors.fade(0.25)
                     font.pixelSize: 26
                     font.family: Properties.fontFamily
                 }
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: "Nothing planned"
-                    color: Qt.rgba(1, 1, 1, 0.45)
+                    color: Colors.fade(0.45)
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                 }
@@ -232,7 +232,7 @@ Item {
             visible: root.nextUp !== null
             implicitHeight: 40
             radius: 9
-            color: nextMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.07) : Qt.rgba(1, 1, 1, 0.03)
+            color: nextMouse.containsMouse ? Colors.fade(0.07) : Colors.fade(0.03)
             RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 10
@@ -258,7 +258,7 @@ Item {
                                    : d.getDate() + "." + (d.getMonth() + 1) + "."
                         return e.title + "  ·  " + when + (e.allDay ? "" : " " + root.hm(e.start))
                     }
-                    color: Qt.rgba(1, 1, 1, 0.75)
+                    color: Colors.fade(0.75)
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight

@@ -56,7 +56,7 @@ RowLayout {
         spacing: -2
         Text {
             text: Time.format("HH:mm:ss")
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 30
             font.bold: true
             font.family: Properties.fontFamily
@@ -65,7 +65,7 @@ RowLayout {
             text: root.armed !== ""
                 ? "Click again to " + root.actions.find(a => a.id === root.armed).tip.toLowerCase()
                 : Time.format("dddd, d. MMMM")
-            color: root.armed !== "" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.6)
+            color: root.armed !== "" ? Colors.red : Colors.fade(0.6)
             font.pixelSize: 12
         }
         // batteries
@@ -81,14 +81,14 @@ RowLayout {
                     implicitWidth: chip.implicitWidth + 16
                     implicitHeight: 24
                     radius: Properties.radius
-                    color: "#27000000"
+                    color: Colors.card
                     border.width: Properties.panelBorderWidth
                     border.color: Properties.cardBorder
                     Text {
                         id: chip
                         anchors.centerIn: parent
                         text: modelData.icon + "  " + modelData.name + "  " + modelData.level + "%"
-                        color: modelData.level <= 15 ? "#f38ba8" : modelData.level <= 30 ? "#fab387" : "white"
+                        color: modelData.level <= 15 ? Colors.red : modelData.level <= 30 ? Colors.orange : Colors.ink
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
                     }
@@ -116,7 +116,7 @@ RowLayout {
                     icon: modelData.icon
                     tooltip: modelData.tip
                     active: root.armed === modelData.id
-                    textColor: root.armed === modelData.id || modelData.id === "poweroff" ? "#f38ba8" : Properties.color
+                    textColor: root.armed === modelData.id || modelData.id === "poweroff" ? Colors.red : Properties.color
                     onClicked: root.run(modelData)
                 }
             }

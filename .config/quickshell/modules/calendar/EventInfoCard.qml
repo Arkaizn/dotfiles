@@ -14,7 +14,7 @@ Rectangle {
     Layout.preferredWidth: 1
     implicitHeight: 64
     radius: 12
-    color: "#27000000"
+    color: Colors.card
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
     ColumnLayout {
@@ -26,13 +26,13 @@ Rectangle {
             spacing: 6
             Text {
                 text: card.icon
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: Colors.fade(0.45)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }
             Text {
                 text: card.label.toUpperCase()
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: Colors.fade(0.45)
                 font.pixelSize: 9
                 font.bold: true
                 font.letterSpacing: 1
@@ -52,7 +52,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 text: card.value
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: 13
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -63,7 +63,7 @@ Rectangle {
             Layout.fillWidth: true
             visible: text !== ""
             text: card.sub
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 10
             font.family: Properties.fontFamily
             elide: Text.ElideRight

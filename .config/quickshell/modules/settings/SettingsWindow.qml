@@ -623,7 +623,7 @@ Scope {
                         Layout.preferredWidth: 230
                         Layout.fillHeight: true
                         radius: Math.max(6, Compositor.appRadius - 2)
-                        color: "#27000000"
+                        color: Colors.card
                         border.width: Properties.panelBorderWidth
                         border.color: Properties.cardBorder
 
@@ -649,7 +649,7 @@ Scope {
                                     Text {
                                         Layout.fillWidth: true
                                         text: "Settings"
-                                        color: "white"
+                                        color: Colors.ink
                                         font.pixelSize: 18
                                         font.bold: true
                                         font.family: Properties.fontFamily
@@ -707,7 +707,7 @@ Scope {
                                                 Layout.leftMargin: 8
                                                 Layout.bottomMargin: 2
                                                 text: group.modelData.toUpperCase()
-                                                color: Qt.rgba(1, 1, 1, 0.4)
+                                                color: Colors.fade(0.4)
                                                 font.pixelSize: 10
                                                 font.bold: true
                                                 font.letterSpacing: 1.2
@@ -756,7 +756,7 @@ Scope {
                                 Layout.fillWidth: true
                                 Layout.leftMargin: 8
                                 text: "Changes apply right away (monitors after Apply).\nThe dot marks changed values."
-                                color: Qt.rgba(1, 1, 1, 0.35)
+                                color: Colors.fade(0.35)
                                 font.pixelSize: 10
                                 font.family: Properties.fontFamily
                                 wrapMode: Text.WordWrap
@@ -790,7 +790,7 @@ Scope {
                                     spacing: 0
                                     Text {
                                         text: win.query !== "" ? "Search" : win.page.title
-                                        color: "white"
+                                        color: Colors.ink
                                         font.pixelSize: 24
                                         font.bold: true
                                         font.family: Properties.fontFamily
@@ -799,7 +799,7 @@ Scope {
                                         text: win.query !== ""
                                             ? (win.results.length > 0 ? "Results for \"" + win.query.trim() + "\", best first" : "Nothing matches \"" + win.query.trim() + "\"")
                                             : win.page.desc
-                                        color: Qt.rgba(1, 1, 1, 0.5)
+                                        color: Colors.fade(0.5)
                                         font.pixelSize: 12
                                         font.family: Properties.fontFamily
                                     }
@@ -855,7 +855,7 @@ Scope {
                                 spacing: 10
                                 Text {
                                     text: "󰀦"
-                                    color: "#f38ba8"
+                                    color: Colors.red
                                     font.pixelSize: 18
                                     font.family: Properties.fontFamily
                                 }
@@ -872,7 +872,7 @@ Scope {
                                             : "niri doesn't load the settings yet: " + wmBanner.svc.mainConfig
                                               + " needs the line\n" + wmBanner.svc.includeLine)
                                         : Compositor.name + " rejected the change, nothing was written:\n" + wmBanner.svc.error
-                                    color: "white"
+                                    color: Colors.ink
                                     font.pixelSize: 11
                                     font.family: Properties.fontFamily
                                     wrapMode: Text.WordWrap
@@ -1135,7 +1135,7 @@ Scope {
                                         Text {
                                             Layout.leftMargin: 6
                                             text: section.modelData.title
-                                            color: Qt.rgba(1, 1, 1, 0.55)
+                                            color: Colors.fade(0.55)
                                             font.pixelSize: 12
                                             font.bold: true
                                             font.family: Properties.fontFamily
@@ -1145,7 +1145,7 @@ Scope {
                                             Layout.fillWidth: true
                                             implicitHeight: items.implicitHeight
                                             radius: 14
-                                            color: "#27000000"
+                                            color: Colors.card
                                             border.width: Properties.panelBorderWidth
                                             border.color: Properties.cardBorder
 
@@ -1169,7 +1169,7 @@ Scope {
                                                             Layout.leftMargin: 16
                                                             Layout.rightMargin: 16
                                                             implicitHeight: 1
-                                                            color: Qt.rgba(1, 1, 1, 0.06)
+                                                            color: Colors.fade(0.06)
                                                         }
 
                                                         // from search: scroll here and flash

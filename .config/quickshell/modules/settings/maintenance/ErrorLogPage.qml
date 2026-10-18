@@ -144,10 +144,10 @@ ColumnLayout {
                     id: line
                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 14 }
                     spacing: 10
-                    Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 4; implicitWidth: 6; implicitHeight: 6; radius: 3; color: modelData.prio <= 3 ? "#f38ba8" : "#f9e2af" }
-                    Text { Layout.alignment: Qt.AlignTop; text: modelData.time; visible: modelData.time !== ""; color: Qt.rgba(1, 1, 1, 0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
+                    Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 4; implicitWidth: 6; implicitHeight: 6; radius: 3; color: modelData.prio <= 3 ? Colors.red : Colors.yellow }
+                    Text { Layout.alignment: Qt.AlignTop; text: modelData.time; visible: modelData.time !== ""; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
                     Text { Layout.alignment: Qt.AlignTop; Layout.preferredWidth: 130; text: modelData.who; color: Colors.color6; font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideRight }
-                    Text { Layout.fillWidth: true; text: modelData.text; color: Qt.rgba(1, 1, 1, 0.8); font.pixelSize: 11; font.family: Properties.fontFamily; wrapMode: Text.WrapAnywhere; maximumLineCount: 4; elide: Text.ElideRight }
+                    Text { Layout.fillWidth: true; text: modelData.text; color: Colors.fade(0.8); font.pixelSize: 11; font.family: Properties.fontFamily; wrapMode: Text.WrapAnywhere; maximumLineCount: 4; elide: Text.ElideRight }
                 }
             }
         }

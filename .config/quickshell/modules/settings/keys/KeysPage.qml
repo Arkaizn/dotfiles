@@ -83,7 +83,7 @@ ColumnLayout {
                 }
                 ActionButton {
                     text: page.forgetMsg === "click again to remove it" ? "Remove" : "Forget…"
-                    textColor: page.forgetMsg === "click again to remove it" ? "#f38ba8" : "white"
+                    textColor: page.forgetMsg === "click again to remove it" ? Colors.red : Colors.ink
                     interactive: page.forgetHost.trim() !== ""
                     onClicked: {
                         if (page.forgetMsg !== "click again to remove it") { page.forgetMsg = "click again to remove it"; return }

@@ -16,7 +16,7 @@ Rectangle {
     // never shrink below the content (text + optional bar)
     Layout.minimumHeight: col.implicitHeight + 20
     radius: 10
-    color: Qt.rgba(1, 1, 1, 0.05)
+    color: Colors.fade(0.05)
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
 
@@ -31,20 +31,20 @@ Rectangle {
             spacing: 6
             Text {
                 text: tile.icon
-                color: Qt.rgba(1, 1, 1, 0.45)
+                color: Colors.fade(0.45)
                 font.pixelSize: 13
                 font.family: Properties.fontFamily
             }
             Text {
                 text: tile.label
-                color: Qt.rgba(1, 1, 1, 0.35)
+                color: Colors.fade(0.35)
                 font.pixelSize: 10; font.letterSpacing: 1; font.bold: true
                 Layout.fillWidth: true
             }
         }
         Text {
             text: tile.value
-            color: Qt.rgba(1, 1, 1, 0.85)
+            color: Colors.fade(0.85)
             font.pixelSize: 16; font.bold: true
             elide: Text.ElideRight
             Layout.fillWidth: true

@@ -81,7 +81,7 @@ ColumnLayout {
                         Rectangle {
                             implicitWidth: 8; implicitHeight: 8; radius: 4
                             visible: entry.reach !== ""
-                            color: entry.reach === "up" ? "#a6e3a1" : entry.reach === "down" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.3)
+                            color: entry.reach === "up" ? Colors.green : entry.reach === "down" ? Colors.red : Colors.fade(0.3)
                         }
                         IconButton { icon: "󰐊"; tooltip: "Connect"; onClicked: RemoteConnections.connect(entry.c.id) }
                         IconButton {
@@ -92,7 +92,7 @@ ColumnLayout {
                         IconButton {
                             icon: page.confirmDelete === entry.c.id ? "󰄬" : "󰆴"
                             tooltip: page.confirmDelete === entry.c.id ? "Click again to delete" : "Delete (and its keyring password)"
-                            textColor: page.confirmDelete === entry.c.id ? "#f38ba8" : Properties.color
+                            textColor: page.confirmDelete === entry.c.id ? Colors.red : Properties.color
                             onClicked: {
                                 if (page.confirmDelete === entry.c.id) { RemoteConnections.remove(entry.c.id); page.confirmDelete = "" }
                                 else { page.confirmDelete = entry.c.id; confirmTimer.restart() }

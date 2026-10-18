@@ -433,7 +433,7 @@ Rectangle {
             Layout.alignment: Qt.AlignTop
             Layout.topMargin: 1
             text: root.mode === "error" ? "󰀦" : root.mode === "confirm" ? "󰄬" : root.mode === "busy" ? "󰔟" : "󰄴"
-            color: root.mode === "error" ? "#f38ba8" : Colors.color6
+            color: root.mode === "error" ? Colors.red : Colors.color6
             font.pixelSize: 18
             font.family: Properties.fontFamily
         }
@@ -444,7 +444,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 text: root.title
-                color: "white"
+                color: Colors.ink
                 font.pixelSize: 12
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -454,7 +454,7 @@ Rectangle {
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: root.details
-                color: Qt.rgba(1, 1, 1, 0.75)
+                color: Colors.fade(0.75)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap

@@ -131,7 +131,7 @@ ColumnLayout {
                 Rectangle {
                     anchors { fill: parent; leftMargin: 6; rightMargin: 6; topMargin: 2; bottomMargin: 2 }
                     radius: 8
-                    color: hover.hovered && row.modelData.dir ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+                    color: hover.hovered && row.modelData.dir ? Colors.fade(0.06) : "transparent"
                     // size bar behind the row, relative to the biggest item
                     Rectangle {
                         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
@@ -145,14 +145,14 @@ ColumnLayout {
                     RowLayout {
                         anchors { fill: parent; leftMargin: 10; rightMargin: 6 }
                         spacing: 10
-                        Text { text: row.modelData.dir ? "󰉋" : "󰈔"; color: row.modelData.dir ? Colors.color6 : Qt.rgba(1, 1, 1, 0.5); font.pixelSize: 15; font.family: Properties.fontFamily }
-                        Text { Layout.fillWidth: true; text: row.modelData.name; color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
-                        Text { text: (page.total > 0 ? Math.round(100 * row.modelData.size / page.total) : 0) + " %"; color: Qt.rgba(1, 1, 1, 0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
-                        Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: PerfMon.bytes(row.modelData.size); color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+                        Text { text: row.modelData.dir ? "󰉋" : "󰈔"; color: row.modelData.dir ? Colors.color6 : Colors.fade(0.5); font.pixelSize: 15; font.family: Properties.fontFamily }
+                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
+                        Text { text: (page.total > 0 ? Math.round(100 * row.modelData.size / page.total) : 0) + " %"; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
+                        Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: PerfMon.bytes(row.modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                         IconButton {
                             visible: row.full.startsWith(page.home + "/")
                             icon: page.confirmTrash === row.full ? "󰄬" : "󰩹"
-                            textColor: page.confirmTrash === row.full ? "#f38ba8" : Properties.color
+                            textColor: page.confirmTrash === row.full ? Colors.red : Properties.color
                             tooltip: page.confirmTrash === row.full ? "Click again: move to the trash" : "Move to the trash"
                             onClicked: {
                                 if (page.confirmTrash === row.full) { page.trash(row.full); page.confirmTrash = "" }
@@ -193,7 +193,7 @@ ColumnLayout {
                 label: modelData.path.replace(page.home, "~")
                 RowLayout {
                     spacing: 6
-                    Text { text: PerfMon.bytes(modelData.size); color: "white"; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { text: PerfMon.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                     IconButton { icon: "󰉋"; tooltip: "Show the folder"; onClicked: Quickshell.execDetached(["xdg-open", modelData.path.replace(/\/[^/]*$/, "")]) }
                 }
             }

@@ -30,7 +30,7 @@ Item {
         visible: root.groups.length === 0
         text: CalendarStore.accounts.length === 0 ? "Add a calendar account to see your events"
                                                    : "Nothing planned in the next 60 days"
-        color: Qt.rgba(1, 1, 1, 0.4)
+        color: Colors.fade(0.4)
         font.pixelSize: 13
         font.family: Properties.fontFamily
     }
@@ -66,7 +66,7 @@ Item {
                     Text {
                         anchors.right: parent.right
                         text: group.modelData.day.getDate()
-                        color: group.today ? Colors.color6 : U.weekday(group.modelData.day) >= 5 ? Qt.rgba(1, 1, 1, 0.6) : "white"
+                        color: group.today ? Colors.color6 : U.weekday(group.modelData.day) >= 5 ? Colors.fade(0.6) : Colors.ink
                         font.pixelSize: 26
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -74,7 +74,7 @@ Item {
                     Text {
                         anchors.right: parent.right
                         text: group.today ? "Today" : U.dayShort[U.weekday(group.modelData.day)] + " · " + U.monthNames[group.modelData.day.getMonth()].slice(0, 3)
-                        color: group.today ? Colors.color6 : Qt.rgba(1, 1, 1, 0.5)
+                        color: group.today ? Colors.color6 : Colors.fade(0.5)
                         font.pixelSize: 11
                         font.bold: true
                         font.family: Properties.fontFamily
@@ -92,7 +92,7 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: rows.implicitHeight + 8
                 radius: 14
-                color: "#27000000"
+                color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: group.today ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4) : Properties.cardBorder
 
@@ -111,7 +111,7 @@ Item {
                             width: rows.width
                             height: 50
                             radius: 10
-                            color: rowMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent"
+                            color: rowMouse.containsMouse ? Colors.fade(0.06) : "transparent"
                             opacity: past ? 0.5 : 1
 
                             RowLayout {
@@ -123,7 +123,7 @@ Item {
                                 Text {
                                     Layout.preferredWidth: 118
                                     text: U.fmtRange(row.modelData, group.modelData.day)
-                                    color: Qt.rgba(1, 1, 1, 0.7)
+                                    color: Colors.fade(0.7)
                                     font.pixelSize: 11
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
@@ -140,7 +140,7 @@ Item {
                                     Text {
                                         Layout.fillWidth: true
                                         text: row.modelData.title
-                                        color: "white"
+                                        color: Colors.ink
                                         font.pixelSize: 13
                                         font.bold: true
                                         font.family: Properties.fontFamily
@@ -150,7 +150,7 @@ Item {
                                         Layout.fillWidth: true
                                         text: [row.modelData.location, CalendarStore.calendarMap[row.modelData.calendar]?.name]
                                               .filter(x => x).join("  ·  ")
-                                        color: Qt.rgba(1, 1, 1, 0.45)
+                                        color: Colors.fade(0.45)
                                         font.pixelSize: 11
                                         font.family: Properties.fontFamily
                                         elide: Text.ElideRight
@@ -159,7 +159,7 @@ Item {
                                 Text {
                                     visible: row.modelData.recurring
                                     text: "󰑖"
-                                    color: Qt.rgba(1, 1, 1, 0.35)
+                                    color: Colors.fade(0.35)
                                     font.pixelSize: 13
                                     font.family: Properties.fontFamily
                                 }

@@ -121,7 +121,7 @@ ColumnLayout {
             Layout.fillWidth: true
             implicitHeight: comboRow.implicitHeight + 18
             radius: 12
-            readonly property color tint: page.comboBind ? Qt.rgba(1, 1, 1, 1) : Colors.color6
+            readonly property color tint: page.comboBind ? Colors.fade(1) : Colors.color6
             color: Qt.rgba(tint.r, tint.g, tint.b, 0.08)
             border.width: 1
             border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.3)
@@ -137,7 +137,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     Layout.leftMargin: 4
                     text: page.comboBind ? "→  " + Keybinds.describe(page.comboBind) : "is free"
-                    color: "white"
+                    color: Colors.ink
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
@@ -239,7 +239,7 @@ ColumnLayout {
                 desc: "Stays as it is in your config"
                 Text {
                     text: editor.item ? Keybinds.describe(editor.item) : (editor.entry?.desc ?? "")
-                    color: Qt.rgba(1, 1, 1, 0.75)
+                    color: Colors.fade(0.75)
                     font.pixelSize: 12
                     font.family: Properties.fontFamily
                 }
@@ -304,7 +304,7 @@ ColumnLayout {
                 Text {
                     Layout.fillWidth: true
                     text: editor.problem
-                    color: editor.conflict ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.45)
+                    color: editor.conflict ? Colors.red : Colors.fade(0.45)
                     font.pixelSize: 11
                     font.bold: editor.conflict
                     font.family: Properties.fontFamily
@@ -314,21 +314,21 @@ ColumnLayout {
                     visible: editor.conflict
                     icon: "󰛔"
                     text: "Replace it"
-                    textColor: "#f38ba8"
+                    textColor: Colors.red
                     onClicked: editor.replaceOk = true
                 }
                 ActionButton {
                     visible: editor.fromConfig
                     icon: "󰂭"
                     text: "Disable"
-                    textColor: "#f38ba8"
+                    textColor: Colors.red
                     onClicked: { page.disable(editor.item); page.editing = null }
                 }
                 ActionButton {
                     visible: editor.entry !== null
                     icon: "󰆴"
                     text: editor.entry?.kind === "original" ? "Reset" : "Delete"
-                    textColor: "#f38ba8"
+                    textColor: Colors.red
                     onClicked: { page.removeEntry(editor.entry); page.editing = null }
                 }
                 ActionButton {
@@ -433,7 +433,7 @@ ColumnLayout {
                 IconButton {
                     icon: e.kind === "command" ? "󰆴" : "󰑓"
                     tooltip: e.kind === "command" ? "Delete" : "Restore your config's bind"
-                    textColor: e.kind === "command" ? "#f38ba8" : Properties.color
+                    textColor: e.kind === "command" ? Colors.red : Properties.color
                     onClicked: page.removeEntry(e)
                 }
                 ToggleSwitch {
@@ -450,7 +450,7 @@ ColumnLayout {
         Layout.leftMargin: 6
         text: Keybinds.error !== "" ? "󰀦  " + Keybinds.error
             : page.groups.reduce((n, g) => n + g.rows.length, 0) + " shown  ·  from your " + (Compositor.name || "niri") + " config"
-        color: Keybinds.error !== "" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.45)
+        color: Keybinds.error !== "" ? Colors.red : Colors.fade(0.45)
         font.pixelSize: 11
         font.family: Properties.fontFamily
     }

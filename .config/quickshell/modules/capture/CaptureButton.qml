@@ -11,15 +11,15 @@ Rectangle {
     property bool danger: false
     signal clicked()
 
-    readonly property color tint: danger ? "#f38ba8" : Colors.color6
+    readonly property color tint: danger ? Colors.red : Colors.color6
 
     Layout.fillWidth: true
     implicitHeight: 74
     radius: 12
     scale: mouse.pressed ? 0.97 : 1
-    color: mouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.18) : Qt.rgba(1, 1, 1, 0.05)
+    color: mouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.18) : Colors.fade(0.05)
     border.width: 1
-    border.color: mouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.6) : Qt.rgba(1, 1, 1, 0.08)
+    border.color: mouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.6) : Colors.fade(0.08)
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on scale { NumberAnimation { duration: 90 } }
 
@@ -44,7 +44,7 @@ Rectangle {
         Text {
             Layout.alignment: Qt.AlignHCenter
             text: btn.text
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 12
             font.family: Properties.fontFamily
         }
@@ -53,7 +53,7 @@ Rectangle {
         visible: btn.key !== ""
         anchors { top: parent.top; right: parent.right; margins: 7 }
         text: btn.key
-        color: Qt.rgba(1, 1, 1, 0.35)
+        color: Colors.fade(0.35)
         font.pixelSize: 10
         font.family: Properties.fontFamily
     }

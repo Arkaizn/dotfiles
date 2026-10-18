@@ -162,7 +162,7 @@ Item {
                     Layout.preferredHeight: 42
                     Layout.alignment: Qt.AlignTop
                     radius: 10
-                    color: "#20ffffff"
+                    color: Colors.fade(0.13)
                     clip: true
 
                     Image {
@@ -181,7 +181,7 @@ Item {
 
                     Text {
                         text: root.appName
-                        color: "#88ffffff"
+                        color: Colors.fade(0.53)
                         font { bold: true; pixelSize: 11 }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
@@ -192,7 +192,7 @@ Item {
                     Text {
                         text: root.summary
                         textFormat: Text.PlainText
-                        color: "#e6ffffff"
+                        color: Colors.fade(0.9)
                         font { bold: true; pixelSize: 14 }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
@@ -202,7 +202,7 @@ Item {
                         visible: root.body !== ""
                         text: root.body
                         textFormat: Text.StyledText
-                        color: "#b0ffffff"
+                        color: Colors.fade(0.69)
                         font.pixelSize: 12
                         wrapMode: Text.Wrap
                         maximumLineCount: 4
@@ -248,7 +248,7 @@ Item {
             width: (parent.width - card.radius * 2) * root.progress
             height: 2
             radius: 1
-            color: "#40ffffff"
+            color: Colors.fade(0.25)
         }
     }
 }

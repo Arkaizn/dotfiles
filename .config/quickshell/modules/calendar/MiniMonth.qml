@@ -40,7 +40,7 @@ ColumnLayout {
             Layout.fillWidth: true
             Layout.leftMargin: 4
             text: U.monthNames[root.shownMonth.getMonth()] + " " + root.shownMonth.getFullYear()
-            color: "white"
+            color: Colors.ink
             font.pixelSize: 13
             font.bold: true
             font.family: Properties.fontFamily
@@ -75,7 +75,7 @@ ColumnLayout {
                 height: 20
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData.slice(0, 2)
-                color: index >= 5 ? Qt.rgba(1, 1, 1, 0.25) : Qt.rgba(1, 1, 1, 0.4)
+                color: index >= 5 ? Colors.fade(0.25) : Colors.fade(0.4)
                 font.pixelSize: 10
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -101,7 +101,7 @@ ColumnLayout {
                     height: width
                     radius: width / 2
                     color: cell.isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.85)
-                         : hover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                         : hover.hovered ? Colors.fade(0.08) : "transparent"
                     border.width: cell.today && !cell.isSel ? 1.5 : 0
                     border.color: Colors.color6
                 }
@@ -110,7 +110,7 @@ ColumnLayout {
                     anchors.verticalCenterOffset: cell.evs.length > 0 ? -2 : 0
                     text: cell.day.getDate()
                     color: cell.isSel ? U.onColor(Colors.color6)
-                         : cell.inMonth ? (cell.index % 7 >= 5 ? Qt.rgba(1, 1, 1, 0.55) : "white") : Qt.rgba(1, 1, 1, 0.3)
+                         : cell.inMonth ? (cell.index % 7 >= 5 ? Colors.fade(0.55) : Colors.ink) : Colors.fade(0.3)
                     font.pixelSize: 11
                     font.bold: cell.today || cell.isSel
                     font.family: Properties.fontFamily
@@ -126,7 +126,7 @@ ColumnLayout {
                         Rectangle {
                             required property string modelData
                             width: 4; height: 4; radius: 2
-                            color: cell.isSel ? U.onColor(Colors.color6) : (CalendarStore.calendarMap[modelData]?.color ?? "white")
+                            color: cell.isSel ? U.onColor(Colors.color6) : (CalendarStore.calendarMap[modelData]?.color ?? Colors.ink)
                         }
                     }
                 }

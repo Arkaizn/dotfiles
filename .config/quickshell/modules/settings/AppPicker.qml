@@ -72,7 +72,7 @@ Item {
             anchors { left: parent.left; leftMargin: 13; verticalCenter: parent.verticalCenter }
             visible: field.activeFocus || root.current === null
             text: "󰍉"
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 15
             font.family: Properties.fontFamily
         }
@@ -121,7 +121,7 @@ Item {
             anchors.centerIn: parent
             visible: root.matches.length === 0
             text: "No app matches \"" + root.query + "\""
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.fade(0.45)
             font.pixelSize: 12
             font.family: Properties.fontFamily
         }
@@ -142,8 +142,8 @@ Item {
                 width: ListView.view.width
                 height: 32
                 radius: Properties.radius
-                color: entry.index === view.currentIndex || hover.hovered ? Qt.rgba(1, 1, 1, 0.08)
-                     : selected ? Qt.rgba(1, 1, 1, 0.05) : "transparent"
+                color: entry.index === view.currentIndex || hover.hovered ? Colors.fade(0.08)
+                     : selected ? Colors.fade(0.05) : "transparent"
                 RowLayout {
                     anchors.fill: parent
                     anchors.leftMargin: 8
@@ -159,7 +159,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         text: entry.modelData.label
-                        color: entry.selected ? Colors.color6 : "white"
+                        color: entry.selected ? Colors.color6 : Colors.ink
                         font.pixelSize: 12
                         font.bold: entry.selected
                         font.family: Properties.fontFamily
@@ -169,7 +169,7 @@ Item {
                         visible: text !== ""
                         Layout.maximumWidth: 120
                         text: entry.modelData.hint
-                        color: Qt.rgba(1, 1, 1, 0.4)
+                        color: Colors.fade(0.4)
                         font.pixelSize: 10
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight

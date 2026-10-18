@@ -24,14 +24,14 @@ Item {
         visible: root.separator
         anchors { verticalCenter: parent.verticalCenter; left: parent.left; right: parent.right; leftMargin: 8; rightMargin: 8 }
         height: 1
-        color: "#20ffffff"
+        color: Colors.fade(0.13)
     }
 
     Rectangle {
         visible: !root.separator
         anchors.fill: parent
         radius: 8
-        color: mouse.containsMouse && root.usable ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
+        color: mouse.containsMouse && root.usable ? Colors.fade(0.10) : "transparent"
         Behavior on color { ColorAnimation { duration: 80 } }
 
         MouseArea {
@@ -53,7 +53,7 @@ Item {
                 text: root.entry?.buttonType === QsMenuButtonType.RadioButton
                     ? (root.checked ? "󰐾" : "󰄰")
                     : (root.checked ? "󰄵" : "󰄱")
-                color: root.checked ? "white" : Qt.rgba(1, 1, 1, 0.5)
+                color: root.checked ? Colors.ink : Colors.fade(0.5)
                 font.pixelSize: 14
                 font.family: Properties.fontFamily
             }
@@ -69,8 +69,8 @@ Item {
                 Layout.fillWidth: true
                 // DBus menus mark mnemonics with "_" — drop them
                 text: (root.entry?.text ?? "").replace(/_(?=\S)/g, "")
-                color: !root.usable ? Qt.rgba(1, 1, 1, 0.35)
-                     : mouse.containsMouse ? "white" : Qt.rgba(1, 1, 1, 0.85)
+                color: !root.usable ? Colors.fade(0.35)
+                     : mouse.containsMouse ? Colors.ink : Colors.fade(0.85)
                 font.pixelSize: 12
                 elide: Text.ElideRight
             }
@@ -78,7 +78,7 @@ Item {
             Text {
                 visible: root.entry?.hasChildren ?? false
                 text: "󰅂"
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: Colors.fade(0.5)
                 font.pixelSize: 13
                 font.family: Properties.fontFamily
             }

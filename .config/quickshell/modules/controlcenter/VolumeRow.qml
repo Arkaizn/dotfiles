@@ -24,7 +24,7 @@ RowLayout {
         implicitWidth: 28
         implicitHeight: 28
         icon: root.muted ? root.mutedIcon : root.icon
-        textColor: root.muted ? "#f38ba8" : Properties.color
+        textColor: root.muted ? Colors.red : Properties.color
         tooltip: root.muted ? "Unmute" : "Mute"
         onClicked: if (root.audio) root.audio.muted = !root.audio.muted
     }
@@ -43,7 +43,7 @@ RowLayout {
         Layout.preferredWidth: 36
         horizontalAlignment: Text.AlignRight
         text: Math.round((root.audio?.volume ?? 0) * 100) + "%"
-        color: Qt.rgba(1, 1, 1, root.muted ? 0.4 : 0.75)
+        color: Colors.fade(root.muted ? 0.4 : 0.75)
         font.pixelSize: 11
         font.family: Properties.fontFamily
     }

@@ -79,7 +79,7 @@ ColumnLayout {
                     error: page.errors.count !== undefined
                     onTextEdited: page.count = text
                 }
-                Text { text: "pings"; color: Qt.rgba(1, 1, 1, 0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
+                Text { text: "pings"; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
             }
         }
         NetRow {

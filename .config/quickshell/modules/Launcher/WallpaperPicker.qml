@@ -189,11 +189,11 @@ ColumnLayout {
         onExited: function(code) {
             forceKillTimer.stop()
             if (stopped)
-                root.setStatus("■  stopped", "#f9e2af", true)
+                root.setStatus("■  stopped", Colors.yellow, true)
             else if (code === 0)
-                root.setStatus("✔  " + applyProc.pickedPath.split("/").pop(), "#a6e3a1", true)
+                root.setStatus("✔  " + applyProc.pickedPath.split("/").pop(), Colors.green, true)
             else
-                root.setStatus("✖  failed (code " + code + ")", "#f38ba8", true)
+                root.setStatus("✖  failed (code " + code + ")", Colors.red, true)
         }
     }
 
@@ -314,7 +314,7 @@ ColumnLayout {
                         }
                     }
 
-                    Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1, 1, 1, 0.18) }
+                    Rectangle { Layout.fillWidth: true; height: 1; color: Colors.fade(0.18) }
 
                     // the thumbnails, clipped to the animated height
                     Item {

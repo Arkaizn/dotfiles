@@ -86,7 +86,7 @@ Item {
                 Layout.leftMargin: 4
                 text: Keybinds.error !== "" ? "󰀦  " + Keybinds.error
                     : Keybinds.binds.length + " shortcuts from your " + (Compositor.name || "niri") + " config"
-                color: Keybinds.error !== "" ? "#f38ba8" : Qt.rgba(1, 1, 1, 0.45)
+                color: Keybinds.error !== "" ? Colors.red : Colors.fade(0.45)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
             }
@@ -116,7 +116,7 @@ Item {
                         }
                         Text {
                             text: "Most important"
-                            color: "white"
+                            color: Colors.ink
                             font.pixelSize: 13
                             font.bold: true
                             font.family: Properties.fontFamily
@@ -176,7 +176,7 @@ Item {
                 Layout.topMargin: 30
                 visible: root.cards.length === 0 && Keybinds.error === ""
                 text: root.query !== "" ? "No keybind matches \"" + root.query + "\"" : "No keybinds"
-                color: Qt.rgba(1, 1, 1, 0.5)
+                color: Colors.fade(0.5)
                 font.pixelSize: 13
                 font.family: Properties.fontFamily
             }

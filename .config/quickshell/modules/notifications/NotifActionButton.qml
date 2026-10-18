@@ -18,7 +18,7 @@ Rectangle {
     implicitHeight: 30
     radius: 8
     border.width: 1
-    border.color: Qt.rgba(1, 1, 1, hovered || active ? 0.28 : 0.14)
+    border.color: Colors.fade(hovered || active ? 0.28 : 0.14)
     gradient: ButtonGradient { hovered: root.hovered || root.active }
     scale: mouse.pressed ? 0.94 : hovered ? 1.04 : 1
 
@@ -29,7 +29,7 @@ Rectangle {
         id: text
         anchors.centerIn: parent
         text: root.label
-        color: root.hovered || root.active ? "white" : "#ddffffff"
+        color: root.hovered || root.active ? Colors.ink : Colors.fade(0.87)
         font.pixelSize: root.fontSize
         font.family: Properties.fontFamily
     }
