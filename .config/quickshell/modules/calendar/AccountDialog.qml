@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -20,9 +21,20 @@ Modal {
     property string fUser: ""
     property string fPass: ""
 
+    // Microsoft 365: sign-in by device code (the tokens are in the keyring under pendingId)
+    property string pendingId: ""
+    property bool signedIn: false
+    property bool loggingIn: false
+    property var loginCode: null      // { userCode, url, expiresIn } while waiting for the browser
+    property bool advanced: false
+    property string fTenant: ""
+    property string fClient: ""
+
     readonly property var kinds: [
         { id: "icloud", type: "caldav", icon: "󰀵", title: "iCloud",
           desc: "Apple Calendar. Needs an app-specific password." },
+        { id: "m365", type: "graph", icon: "󰴢", title: "Microsoft 365",
+          desc: "Work or school Outlook / Exchange account. Sign in with the browser." },
         { id: "caldav", type: "caldav", icon: "󰒍", title: "CalDAV server",
           desc: "Nextcloud, Fastmail, mailbox.org, Radicale, Baïkal, Synology, …" },
         { id: "google", type: "ics", icon: "󰊭", title: "Google / Outlook",
@@ -37,7 +49,39 @@ Modal {
     function start() {
         step = 0; kind = ""; error = ""; found = []
         fName = ""; fUrl = ""; fUser = ""; fPass = ""
+        fTenant = ""; fClient = ""; advanced = false
         open()
+    }
+
+    // stop a sign-in in progress / drop the tokens of one that didn't become an account
+    function dropLogin() {
+        if (loggingIn) CalendarStore.cancelGraphLogin()
+        if (pendingId && signedIn) CalendarStore.forgetSecret(pendingId)
+        pendingId = ""; signedIn = false; loggingIn = false; loginCode = null
+    }
+
+    function signIn() {
+        dropLogin()
+        error = ""
+        pendingId = CalendarStore.newAccountId()
+        loggingIn = true
+        CalendarStore.graphLogin({ id: pendingId, tenant: fTenant.trim(), clientId: fClient.trim() },
+            code => { root.loginCode = code },
+            res => {
+                root.loggingIn = false
+                root.loginCode = null
+                if (!res.ok) { root.error = res.error; root.pendingId = ""; return }
+                root.signedIn = true
+                root.fUser = res.username ?? ""
+                root.found = res.calendars.map(c => Object.assign({ enabled: true }, c))
+                if (!root.fName) root.fName = root.fUser || "Microsoft 365"
+                root.step = 2
+            })
+    }
+
+    function copyAndOpen() {
+        Quickshell.execDetached(["wl-copy", "--", loginCode.userCode])
+        Qt.openUrlExternally(loginCode.url)
     }
 
     function choose(k) {
@@ -50,10 +94,14 @@ Modal {
     }
 
     function form() {
+        if (kindInfo.type === "graph")
+            return { type: "graph", id: pendingId, name: fName.trim(), url: "https://graph.microsoft.com",
+                     username: fUser, tenant: fTenant.trim(), clientId: fClient.trim() }
         return { type: kindInfo.type, name: fName.trim(), url: fUrl.trim(), username: fUser.trim(), password: fPass }
     }
 
     function check() {
+        if (kindInfo.type === "graph") { signIn(); return }
         error = ""
         CalendarStore.discover(form(), res => {
             if (!res.ok) { root.error = res.error; return }
@@ -67,10 +115,12 @@ Modal {
         const chosen = found.filter(c => c.enabled)
         if (chosen.length === 0) { error = "Pick at least one calendar"; return }
         CalendarStore.addAccount(form(), chosen)
+        signedIn = false          // it's the account's keyring entry now
+        pendingId = ""
         close()
     }
 
-    onClosed: fPass = ""      // don't keep the password around
+    onClosed: { fPass = ""; dropLogin() }     // don't keep the password around
 
     ColumnLayout {
         width: parent.width
@@ -83,7 +133,7 @@ Modal {
                 visible: root.step > 0
                 implicitWidth: 30; implicitHeight: 30
                 icon: "󰅁"
-                onClicked: { root.step--; root.error = "" }
+                onClicked: { root.dropLogin(); root.step = root.step === 2 && root.kind === "m365" ? 1 : root.step - 1; root.error = "" }
             }
             ColumnLayout {
                 Layout.fillWidth: true
@@ -206,7 +256,8 @@ Modal {
                         ? "Google: calendar.google.com → ⚙ Settings → your calendar → \"Secret address in iCal format\".<br>Outlook: Settings → Calendar → Shared calendars → Publish a calendar → ICS link."
                         : root.kind === "caldav"
                         ? "Examples: Nextcloud https://cloud.example.com/remote.php/dav · Fastmail https://caldav.fastmail.com · mailbox.org https://dav.mailbox.org"
-                        : root.kind === "local" ? "The file is created if it doesn't exist. Point it at an existing .ics to use that." : ""
+                        : root.kind === "local" ? "The file is created if it doesn't exist. Point it at an existing .ics to use that."
+                        : root.kind === "m365" ? "Signs in through microsoft.com with a one-time code, so your password and MFA stay with Microsoft. Events can be edited here.<br>Some organizations only allow apps their admin approved. Then ask IT, or use an own app registration under Advanced." : ""
                     textFormat: Text.StyledText
                     linkColor: Colors.color6
                     color: Colors.fade(0.75)
@@ -221,7 +272,7 @@ Modal {
 
             SearchField {
                 Layout.fillWidth: true
-                visible: root.kind !== "icloud"
+                visible: root.kind !== "icloud" && root.kind !== "m365"
                 icon: root.kind === "local" ? "󰈔" : "󰖟"
                 placeholderText: root.kind === "local" ? "File path" : root.kindInfo.type === "ics" ? "Calendar link (https:// or webcal://)" : "Server address"
                 text: root.fUrl
@@ -247,10 +298,89 @@ Modal {
             }
             SearchField {
                 Layout.fillWidth: true
+                visible: root.kind !== "m365"
                 icon: "󰑕"
                 placeholderText: "Name (optional)"
                 text: root.fName
                 onTextEdited: root.fName = text
+            }
+
+            // Microsoft 365: the code to enter on microsoft.com
+            Rectangle {
+                Layout.fillWidth: true
+                visible: root.kind === "m365" && root.loginCode !== null
+                implicitHeight: codeCol.implicitHeight + 28
+                radius: 14
+                color: Colors.card
+                border.width: Properties.panelBorderWidth
+                border.color: Properties.cardBorder
+                ColumnLayout {
+                    id: codeCol
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.margins: 16
+                    spacing: 8
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "Enter this code at " + (root.loginCode?.url ?? "").replace(/^https?:\/\//, "")
+                        color: Colors.fade(0.6)
+                        font.pixelSize: 11
+                        font.family: Properties.fontFamily
+                    }
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: root.loginCode?.userCode ?? ""
+                        color: Colors.ink
+                        font.pixelSize: 26
+                        font.bold: true
+                        font.letterSpacing: 3
+                        font.family: Properties.fontFamily
+                    }
+                    ActionButton {
+                        Layout.alignment: Qt.AlignHCenter
+                        icon: "󰆏"
+                        text: "Copy code & open browser"
+                        primary: true
+                        onClicked: root.copyAndOpen()
+                    }
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: "󰔟  Waiting for you to sign in…"
+                        color: Colors.fade(0.45)
+                        font.pixelSize: 11
+                        font.family: Properties.fontFamily
+                    }
+                }
+            }
+
+            Text {
+                visible: root.kind === "m365" && root.loginCode === null
+                text: (root.advanced ? "󰅀" : "󰅂") + "  Advanced"
+                color: Colors.fade(0.5)
+                font.pixelSize: 11
+                font.family: Properties.fontFamily
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.advanced = !root.advanced
+                }
+            }
+            SearchField {
+                Layout.fillWidth: true
+                visible: root.kind === "m365" && root.advanced && root.loginCode === null
+                icon: "󰒋"
+                placeholderText: "Organization domain or tenant ID (optional)"
+                text: root.fTenant
+                onTextEdited: root.fTenant = text
+            }
+            SearchField {
+                Layout.fillWidth: true
+                visible: root.kind === "m365" && root.advanced && root.loginCode === null
+                icon: "󰌆"
+                placeholderText: "Own app (client) ID (optional)"
+                text: root.fClient
+                onTextEdited: root.fClient = text
             }
         }
 
@@ -324,18 +454,21 @@ Modal {
             spacing: 8
             Text {
                 Layout.fillWidth: true
-                text: root.kindInfo.type === "caldav" && root.step === 1 ? "󰌾  The password is stored in your keyring." : ""
+                text: root.step !== 1 ? ""
+                    : root.kindInfo.type === "caldav" ? "󰌾  The password is stored in your keyring."
+                    : root.kindInfo.type === "graph" ? "󰌾  The sign-in is stored in your keyring." : ""
                 color: Colors.fade(0.4)
                 font.pixelSize: 10
                 font.family: Properties.fontFamily
             }
             ActionButton {
-                visible: root.step === 1
-                icon: CalendarStore.working ? "󰔟" : "󰅂"
-                text: CalendarStore.working ? "Connecting…" : "Continue"
+                visible: root.step === 1 && !(root.kind === "m365" && root.loggingIn)
+                icon: root.kind === "m365" ? "󰍂" : CalendarStore.working ? "󰔟" : "󰅂"
+                text: root.kind === "m365" ? "Sign in" : CalendarStore.working ? "Connecting…" : "Continue"
                 primary: true
-                interactive: !CalendarStore.working && root.fUrl.trim() !== ""
-                             && (root.kindInfo.type !== "caldav" || (root.fUser.trim() !== "" && root.fPass !== ""))
+                interactive: root.kind === "m365" ? !root.loggingIn
+                             : !CalendarStore.working && root.fUrl.trim() !== ""
+                               && (root.kindInfo.type !== "caldav" || (root.fUser.trim() !== "" && root.fPass !== ""))
                 onClicked: root.check()
             }
             ActionButton {

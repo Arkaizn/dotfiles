@@ -28,6 +28,7 @@ ColumnLayout {
             spacing: 6
             Text {
                 text: root.account.type === "ics" ? "󰑫" : root.account.type === "local" ? "󰋜"
+                    : root.account.type === "graph" ? "󰴢"
                     : /icloud/i.test(root.account.url) ? "󰀵" : "󰒍"
                 color: Colors.fade(0.45)
                 font.pixelSize: 12

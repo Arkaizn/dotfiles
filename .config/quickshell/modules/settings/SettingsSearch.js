@@ -41,7 +41,7 @@ const synonymGroups = [
     ["mouse", "pointer", "cursor", "touchpad", "trackpad", "sensitivity", "acceleration", "accel"],
     ["notification", "notifications", "popup", "popups", "toast", "alert", "alerts"],
     ["battery", "power", "charging", "charge", "low"],
-    ["calendar", "event", "events", "reminder", "reminders", "sync", "caldav"],
+    ["calendar", "event", "events", "reminder", "reminders", "sync", "caldav", "outlook", "exchange", "microsoft"],
     ["picture", "avatar", "photo", "image", "face", "profile"],
     ["name", "username", "user", "greeting"],
     ["export", "backup", "save", "transfer"],

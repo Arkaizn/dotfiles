@@ -7,7 +7,7 @@ import qs.services
 // Data side of the calendar app (modules/calendar).
 //
 // Network / file work is done by scripts/calendar/calsync.py (CalDAV, .ics
-// subscriptions, local .ics files); this keeps the accounts, the synced
+// subscriptions, local .ics files, Microsoft 365); this keeps the accounts, the synced
 // events and runs the requests one after another.
 //
 // Per device, outside the dotfiles (Quickshell.stateDir/calendar):
@@ -19,7 +19,7 @@ Singleton {
     readonly property string dir: Quickshell.stateDir + "/calendar"
     readonly property string script: Quickshell.shellDir + "/scripts/calendar/calsync.py"
 
-    // [{ id, type: caldav|ics|local, name, url, username,
+    // [{ id, type: caldav|ics|local|graph, name, url, username, (graph: tenant, clientId)
     //    calendars: [{ id, href, name, color, readOnly, enabled, notify }] }]
     //    (notify: false = no reminders from that calendar)
     property var accounts: []
@@ -188,8 +188,11 @@ Singleton {
         run("discover", form, res => { root.working = false; done(res) })
     }
 
+    function newAccountId() { return "acc-" + Date.now().toString(36) }
+
+    // form.id: given when the keyring entry already exists (Microsoft 365 sign-in)
     function addAccount(form, calendars) {
-        const id = "acc-" + Date.now().toString(36)
+        const id = form.id || newAccountId()
         const used = root.calendars.length
         const acc = {
             id: id, type: form.type, name: form.name || form.url, url: form.url, username: form.username || "",
@@ -199,6 +202,8 @@ Singleton {
                 readOnly: !!c.readOnly, enabled: c.enabled !== false
             }))
         }
+        if (form.tenant) acc.tenant = form.tenant
+        if (form.clientId) acc.clientId = form.clientId
         const add = () => {
             root.accounts = root.accounts.concat([acc])
             saveAccounts()
@@ -213,6 +218,42 @@ Singleton {
             add()
         }
     }
+
+    // ── Microsoft 365 sign-in ────────────────────────────────────────────────
+    // Device code: calsync prints the code at once, then waits until it was
+    // approved in the browser (up to 15 min), so it runs beside the queue.
+    // form: { id, tenant, clientId }; onCode({ userCode, url, expiresIn });
+    // done({ ok, calendars, username | error }). The tokens land in the keyring
+    // under form.id: forgetSecret(id) if the account doesn't get added after all.
+    property int loginRun: 0
+
+    function graphLogin(form, onCode, done) {
+        const run = ++root.loginRun
+        let answered = false
+        Jobs.start("calendar-graph-login", ["python3", root.script, "graph-login"], {
+            env: { CAL_REQUEST: JSON.stringify(form) }, store: false, timeout: 16 * 60000,
+            onLine: (line, isErr) => {
+                if (isErr || run !== root.loginRun) return
+                let msg
+                try { msg = JSON.parse(line) } catch (e) { return }
+                if (msg.step === "code") onCode(msg)
+                else { answered = true; done(msg) }
+            },
+            onExit: code => {
+                if (answered || run !== root.loginRun) return
+                const st = Jobs.state("calendar-graph-login")
+                done({ ok: false, error: st.timedOut ? "The code expired — start again"
+                                      : "calendar helper failed (exit " + code + ")" })
+            }
+        })
+    }
+
+    function cancelGraphLogin() {
+        root.loginRun++
+        Jobs.cancel("calendar-graph-login")
+    }
+
+    function forgetSecret(id) { run("forget-secret", { id: id }, () => {}) }
 
     function removeAccount(id) {
         run("forget-secret", { id: id }, () => {})
