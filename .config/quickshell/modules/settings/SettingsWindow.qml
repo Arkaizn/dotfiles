@@ -59,6 +59,9 @@ Scope {
         function close(): void { root.open = false }
         // e.g. qs ipc call settings openPage niriInput
         function openPage(id: string): void {
+            if (id === "packages") { id = "cleanup"; root.pendingAnchor = "packages" }      // merged into Cleanup & packages
+            const layoutTab = { barlayout: "bar", dashlayout: "dashboard", cclayout: "cc" }[id]      // merged into Layouts
+            if (layoutTab) { id = "layouts"; root.pendingAnchor = layoutTab }
             if (root.visiblePages.some(p => p.id === id)) root.pageId = id
             root.show()
         }
@@ -113,8 +116,8 @@ Scope {
                 { key: "spacing", type: "int", min: 0, max: 24, label: "Space between modules" },
                 { key: "interval", type: "int", min: 100, max: 5000, step: 100, label: "Stats refresh (ms)",
                   desc: "How often CPU, GPU and memory update" } ] } ] },
-        { id: "profiles", group: "Shell", icon: "󰆓", title: "Profiles", custom: "profiles",
-          keywords: "profile profiles preset snapshot switch work gaming save settings mode",
+        { id: "profiles", group: "Shell", nav: false, icon: "󰆓", title: "Profiles", custom: "profiles",
+          keywords: "profile profiles preset snapshot switch work gaming save settings mode export import share icon",
           desc: "Save settings under a name and switch between them" },
         { id: "theme", group: "Shell", icon: "󰏘", title: "Theme", custom: "theme",
           keywords: "pywal wal colors color scheme palette light dark mode saturation backend saved themes base16",
@@ -122,15 +125,9 @@ Scope {
         { id: "notifications", group: "Shell", icon: "󰂚", title: "Notifications", custom: "notifications",
           keywords: "do not disturb dnd quiet silent schedule night popup position timeout rules mute app test",
           desc: "Do not disturb, popups and per-app rules" },
-        { id: "barlayout", group: "Shell", icon: "󰕮", title: "Bar layout", custom: "barlayout",
-          keywords: "modules widgets order arrange drag position left right center clock tray workspaces cpu gpu memory temperature",
-          desc: "Which modules sit where on the bar, per monitor" },
-        { id: "dashlayout", group: "Shell", icon: "󰕮", title: "Dashboard layout", custom: "dashlayout",
-          keywords: "dashboard cards columns order arrange drag hide profile music media calendar stats edit live wiggle",
-          desc: "Which cards the dashboard shows, in which column" },
-        { id: "cclayout", group: "Shell", icon: "󰂚", title: "Control center layout", custom: "cclayout",
-          keywords: "control center notification center cards order arrange drag hide own custom card tiles buttons edit live wiggle",
-          desc: "Order of its cards, which button sits in which card, own cards" },
+        { id: "layouts", group: "Shell", icon: "󰕮", title: "Layouts", custom: "layouts",
+          keywords: "layout bar dashboard control center notification center modules widgets cards tiles buttons order arrange drag position hide own custom card left right center clock tray workspaces cpu gpu memory temperature profile music media calendar stats per monitor edit live wiggle",
+          desc: "What sits where: bar modules, dashboard cards, control center cards" },
 
         { id: "panels", group: "Shell", icon: "󰖯", title: "Panels", store: "properties",
           desc: "Bar background, popups, dashboard, launcher and cards",
@@ -188,7 +185,11 @@ Scope {
                 { key: "testCritical", type: "button", icon: "󰂃", text: "Send test", dependsOn: "criticalAlert",
                   label: "Try it", run: () => BatteryAlerts.test(true) } ] } ] },
 
-        { id: "health", group: "Maintenance", icon: "󰓙", title: "Health", custom: "health",
+        { id: "maintenance", group: "System", icon: "󰖷", title: "Maintenance", custom: "maintenance",
+          keywords: "maintenance overview tools status system care attention",
+          desc: "Every maintenance tool at a glance" },
+
+        { id: "health", group: "Maintenance", parent: "maintenance", icon: "󰓙", title: "Health", custom: "health",
           keywords: "doctor diagnose problems missing packages dependencies check",
           desc: "Is everything the shell needs installed and working?" },
 
@@ -210,37 +211,34 @@ Scope {
         { id: "power", group: "System", icon: "󰓅", title: "Power", custom: "power",
           keywords: "power profile performance balanced saver battery energy powerprofilesctl",
           desc: "Power profiles" },
-        { id: "updates", group: "Maintenance", icon: "󰚰", title: "Updates", custom: "updates",
+        { id: "updates", group: "Maintenance", parent: "maintenance", icon: "󰚰", title: "Updates", custom: "updates",
           keywords: "updates upgrade pacman yay aur checkupdates pacnew reboot kernel arch news",
           desc: "Pending updates, reboot needed, Arch news, .pacnew files" },
-        { id: "cleanup", group: "Maintenance", icon: "󰃢", title: "Cleanup", custom: "cleanup",
-          keywords: "cache clean free space orphan packages pacman cache journal crash dumps coredump trash empty",
-          desc: "Free space: caches, old packages, logs, trash" },
-        { id: "diskusage", group: "Maintenance", icon: "󰋊", title: "Disk usage", custom: "diskusage",
+        { id: "cleanup", group: "Maintenance", parent: "maintenance", icon: "󰃢", title: "Cleanup & packages", custom: "cleanup",
+          keywords: "cache clean free space orphan packages pacman cache journal crash dumps coredump trash empty installed biggest size aur explicit dependency pacman log history recently unused remove orphans",
+          desc: "Free space (caches, logs, trash) and package upkeep (unused, biggest, recent)" },
+        { id: "diskusage", group: "Maintenance", parent: "maintenance", icon: "󰋊", title: "Disk usage", custom: "diskusage",
           keywords: "disk usage space ncdu treesize gdu du biggest files folders full",
           desc: "What takes space, folder by folder" },
-        { id: "packages", group: "Maintenance", icon: "󰏗", title: "Packages", custom: "packages",
-          keywords: "packages installed biggest size aur explicit dependency pacman log history recently unused remove orphans maintenance clean",
-          desc: "Package maintenance: unused programs, orphans, biggest, recent changes" },
-        { id: "services", group: "Maintenance", icon: "󰒏", title: "Failed services", custom: "services",
+        { id: "services", group: "Maintenance", parent: "maintenance", icon: "󰒏", title: "Failed services", custom: "services",
           keywords: "systemd failed services units restart reset failed systemctl",
           desc: "Services that failed, with their log" },
-        { id: "errorlog", group: "Maintenance", icon: "󰀦", title: "Error log", custom: "errorlog",
+        { id: "errorlog", group: "Maintenance", parent: "maintenance", icon: "󰀦", title: "Error log", custom: "errorlog",
           keywords: "journal journalctl errors warnings log boot quickshell log",
           desc: "Errors of this or the last boot" },
-        { id: "boottime", group: "Maintenance", icon: "󰑮", title: "Boot time", custom: "boottime",
+        { id: "boottime", group: "Maintenance", parent: "maintenance", icon: "󰑮", title: "Boot time", custom: "boottime",
           keywords: "boot time startup slow systemd-analyze blame critical chain",
           desc: "What slows down booting" },
-        { id: "diskhealth", group: "Maintenance", icon: "󰋊", title: "Disk health", custom: "diskhealth",
+        { id: "diskhealth", group: "Maintenance", parent: "maintenance", icon: "󰋊", title: "Disk health", custom: "diskhealth",
           keywords: "smart smartctl ssd nvme health wear temperature errors disk",
           desc: "SMART status of your drives" },
-        { id: "mirrors", group: "Maintenance", icon: "󰒍", title: "Mirrors", custom: "mirrors",
+        { id: "mirrors", group: "Maintenance", parent: "maintenance", icon: "󰒍", title: "Mirrors", custom: "mirrors",
           keywords: "mirrors mirrorlist reflector pacman download speed",
           desc: "Pacman mirror list: age, refresh with reflector" },
-        { id: "dotfiles", group: "Maintenance", icon: "󰊢", title: "Dotfiles", custom: "dotfiles",
+        { id: "dotfiles", group: "Maintenance", parent: "maintenance", icon: "󰊢", title: "Dotfiles", custom: "dotfiles",
           keywords: "git repo sync push pull update backup github rsync check differences",
           desc: "Your dotfiles repo: status, differences with ~/.config, sync scripts" },
-        { id: "diagnostics", group: "Maintenance", icon: "󰛳", title: "Network tools", custom: "diagnostics",
+        { id: "diagnostics", group: "Maintenance", parent: "maintenance", icon: "󰛳", title: "Network tools", custom: "diagnostics",
           keywords: "ping traceroute port open nc netcat speed test speedtest internet bandwidth latency diagnose network",
           desc: "Ping, traceroute, port check, speed test" },
         { id: "network", group: "System", icon: "󰛳", title: "Network", custom: "network",
@@ -428,12 +426,15 @@ Scope {
         { page: "monitors", label: "Scale & rotation", keywords: "hidpi zoom portrait transform", icon: "󰍹" },
         { page: "monitors", label: "Arrange monitors", keywords: "position layout drag left right primary", icon: "󰍹" },
         { page: "monitors", label: "Variable refresh rate", keywords: "vrr freesync gsync adaptive sync", icon: "󰍹" },
-        { page: "barlayout", label: "Add a module to the bar", desc: "CPU, GPU, memory, temperatures, …", keywords: "widget show cpu gpu ram memory temperature stats", icon: "󰐕" },
-        { page: "barlayout", label: "Move bar modules", desc: "Drag between left, centre and right", keywords: "order arrange reorder position", icon: "󰕮" },
-        { page: "barlayout", label: "Per-monitor bar layout", keywords: "monitor screen output different", icon: "󰍹" },
-        { page: "barlayout", label: "Edit the bar live", desc: "Long-press an empty spot of the bar", keywords: "wiggle jiggle drag move icons", icon: "󰏫" },
-        { page: "dashlayout", label: "Edit the dashboard live", desc: "Long-press an empty spot of the dashboard", keywords: "wiggle jiggle drag move cards", icon: "󰏫" },
-        { page: "cclayout", label: "New control center card", desc: "An own card with tiles of your choice", keywords: "create add custom card tile button", icon: "󰐕" },
+        { page: "layouts", target: "bar", label: "Bar layout", desc: "Which modules sit where on the bar, per monitor", keywords: "modules widgets order arrange", icon: "󰕮" },
+        { page: "layouts", target: "dashboard", label: "Dashboard layout", desc: "Which cards the dashboard shows, in which column", keywords: "cards columns order hide", icon: "󰕰" },
+        { page: "layouts", target: "cc", label: "Control center layout", desc: "Order of its cards, which button sits in which card, own cards", keywords: "notification center cards tiles buttons order", icon: "󰂚" },
+        { page: "layouts", target: "bar", label: "Add a module to the bar", desc: "CPU, GPU, memory, temperatures, …", keywords: "widget show cpu gpu ram memory temperature stats", icon: "󰐕" },
+        { page: "layouts", target: "bar", label: "Move bar modules", desc: "Drag between left, centre and right", keywords: "order arrange reorder position", icon: "󰕮" },
+        { page: "layouts", target: "bar", label: "Per-monitor bar layout", keywords: "monitor screen output different", icon: "󰍹" },
+        { page: "layouts", target: "bar", label: "Edit the bar live", desc: "Long-press an empty spot of the bar", keywords: "wiggle jiggle drag move icons", icon: "󰏫" },
+        { page: "layouts", target: "dashboard", label: "Edit the dashboard live", desc: "Long-press an empty spot of the dashboard", keywords: "wiggle jiggle drag move cards", icon: "󰏫" },
+        { page: "layouts", target: "cc", label: "New control center card", desc: "An own card with tiles of your choice", keywords: "create add custom card tile button", icon: "󰐕" },
         { page: "connections", label: "New SSH / RDP / VNC connection", keywords: "add remote desktop server", icon: "󰐕" },
         { page: "connections", label: "Import connections", desc: "From your scripts and ~/.ssh/config", keywords: "rdp scripts ssh config import", icon: "󰋺" },
         { page: "connections", label: "RDP password in keyring", keywords: "secret-tool password store remote desktop", icon: "󰌋" },
@@ -471,10 +472,17 @@ Scope {
         { page: "updates", label: "Check for updates", keywords: "pacman yay aur upgrade", icon: "󰚰" },
         { page: "updates", label: ".pacnew files", keywords: "pacdiff pacnew pacsave etc config merge", icon: "󰈙" },
         { page: "profiles", label: "Save settings as a profile", keywords: "profile preset snapshot", icon: "󰆓" },
-        { page: "profiles", label: "Switch settings profile", keywords: "profile switch apply work gaming", icon: "󰆓" },
-        { page: "cleanup", label: "Free up disk space", keywords: "clean cache full disk space", icon: "󰃢" },
-        { page: "cleanup", label: "Remove orphan packages", keywords: "orphans pacman -Qdt unused dependencies", icon: "󰏗" },
-        { page: "cleanup", label: "Empty the trash", keywords: "trash bin empty", icon: "󰩹" },
+        { page: "profiles", label: "Switch settings profile", desc: "Or the icons at the bottom of the sidebar", keywords: "profile switch apply work gaming", icon: "󰆓" },
+        { page: "profiles", label: "Export profiles", desc: "One or all, into one file", keywords: "profile export backup share save file", icon: "󰈝" },
+        { page: "profiles", label: "Import profiles", desc: "One or more files", keywords: "profile import restore load file", icon: "󰋺" },
+        { page: "profiles", label: "Profile icon", desc: "Shown in the switcher at the bottom of the sidebar", keywords: "profile icon glyph symbol", icon: "󰆓" },
+        { page: "cleanup", target: "space", label: "Free up disk space", keywords: "clean cache full disk space", icon: "󰃢" },
+        { page: "cleanup", target: "space", label: "Remove orphan packages", keywords: "orphans pacman -Qdt unused dependencies", icon: "󰏗" },
+        { page: "cleanup", target: "space", label: "Empty the trash", keywords: "trash bin empty", icon: "󰩹" },
+        { page: "cleanup", target: "packages", label: "Unused programs", desc: "Installed apps you haven't run in a while", keywords: "unused packages remove uninstall old", icon: "󰒡" },
+        { page: "cleanup", target: "packages", label: "Biggest packages", keywords: "large packages size installed", icon: "󰏗" },
+        { page: "cleanup", target: "packages", label: "Recently installed / updated packages", keywords: "pacman log history new removed", icon: "󰋚" },
+        { page: "maintenance", label: "What needs attention", desc: "Status of every maintenance tool", keywords: "overview status check problems", icon: "󰖷" },
         { page: "diskusage", label: "Biggest files", keywords: "large files big", icon: "󰈔" },
         { page: "mirrors", label: "Refresh pacman mirrors", keywords: "reflector mirrorlist slow downloads", icon: "󰒍" },
         { page: "keybinds", target: "new", label: "New keybind", keywords: "add create shortcut hotkey", icon: "󰐕" },
@@ -491,8 +499,9 @@ Scope {
     readonly property var searchIndex: {
         const out = []
         for (const p of visiblePages) {
+            const where = p.parent ? pages.find(x => x.id === p.parent)?.title ?? p.group : p.group
             out.push({ kind: "page", pageId: p.id, label: p.title, desc: p.desc ?? "", keywords: (p.keywords ?? "") + " page",
-                       page: p.group, crumb: p.group, icon: p.icon, boost: 3 })
+                       page: where, crumb: where, icon: p.icon, boost: 3 })
             for (const s of p.sections ?? []) for (const i of s.items) {
                 const sp = fullSpec(p.store, i)
                 if (sp.type === "button") continue
@@ -558,7 +567,10 @@ Scope {
         id: profileChecker
         visible: false
         pages: root.pages
-        Component.onCompleted: SettingsProfiles.validator = s => profileChecker.validate(s, {})
+        Component.onCompleted: {
+            SettingsProfiles.validator = s => profileChecker.validate(s, {})
+            Health.exportCheck = () => profileChecker.checkCurrent()
+        }
     }
 
     LazyLoader {
@@ -578,6 +590,7 @@ Scope {
             property string query: ""
             readonly property string pageId: root.pageId
             readonly property var page: root.visiblePages.find(p => p.id === pageId) ?? root.visiblePages[0]
+            readonly property var hub: page.parent ? root.visiblePages.find(p => p.id === page.parent) ?? null : null
 
             // the page's sections (search shows SearchResults instead)
             readonly property var sections: query.trim() !== "" ? []
@@ -596,6 +609,22 @@ Scope {
             }
             readonly property string suggestion: query.trim() !== "" && results.length === 0 ? SI.suggest(query, root.searchVocabulary) : ""
             onQueryChanged: { selected = 0; flick.contentY = 0 }
+
+            // a page's parts come in one after another (StaggerIn): the cards
+            // of a custom page, or the sections of a settings page
+            StaggerIn { id: pageEnter }
+            function animatePage() {
+                if (query.trim() !== "") return
+                const parts = []
+                for (const c of content.children) {
+                    if (!c.visible) continue
+                    if (c.sourceComponent !== undefined) {           // a page's Loader
+                        if (c.item && !c.item.ownEntrance) for (const x of c.item.children) parts.push(x)
+                    } else parts.push(c)
+                }
+                pageEnter.run(parts)
+            }
+            onPageIdChanged: Qt.callLater(animatePage)
 
             // go to a result
             function openEntry(e) {
@@ -620,7 +649,7 @@ Scope {
                 onActivated: { searchField.forceActiveFocus(); searchField.selectAll() }
             }
 
-            Component.onCompleted: { Compositor.settings.refresh(); Network.refresh() }
+            Component.onCompleted: { Compositor.settings.refresh(); Network.refresh(); Qt.callLater(animatePage) }
 
             Rectangle {
                 id: bg
@@ -670,6 +699,18 @@ Scope {
                                         font.bold: true
                                         font.family: Properties.fontFamily
                                     }
+                                    IconButton {
+                                        icon: "󰈝"
+                                        tooltip: "Export all settings to a file"
+                                        interactive: transfer.mode !== "busy"
+                                        onClicked: transfer.exportSettings()
+                                    }
+                                    IconButton {
+                                        icon: "󰋺"
+                                        tooltip: "Import settings from a file"
+                                        interactive: transfer.mode !== "busy"
+                                        onClicked: transfer.importSettings()
+                                    }
                                 }
                                 DragHandler {
                                     target: null
@@ -711,7 +752,8 @@ Scope {
                                     spacing: 6
 
                                     Repeater {
-                                        model: ["Shell", "System", "Maintenance", "Apps", root.wmGroup, "Developer"]   // Developer: config syntax / import, last
+                                        // Maintenance tools sit under the Maintenance overview (System), profiles at the bottom
+                                        model: ["Shell", "System", "Apps", root.wmGroup, "Developer"]   // Developer: config syntax / import, last
                                         ColumnLayout {
                                             id: group
                                             required property string modelData
@@ -731,13 +773,13 @@ Scope {
                                             }
 
                                             Repeater {
-                                                model: root.visiblePages.filter(p => p.group === group.modelData)
+                                                model: root.visiblePages.filter(p => p.group === group.modelData && !p.parent && p.nav !== false)
                                                 NavItem {
                                                     required property var modelData
                                                     Layout.fillWidth: true
                                                     icon: modelData.icon
                                                     label: modelData.title
-                                                    selected: win.query === "" && win.pageId === modelData.id
+                                                    selected: win.query === "" && (win.pageId === modelData.id || win.page.parent === modelData.id)
                                                     changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
                                                         .filter(k => Settings[modelData.store]?.[k] !== undefined).length
                                                     onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
@@ -748,34 +790,11 @@ Scope {
                                 }
                             }
 
-                            RowLayout {
+                            // settings profiles, like Zen's spaces
+                            ProfileSwitcher {
                                 Layout.fillWidth: true
-                                Layout.topMargin: 6
-                                spacing: 6
-                                ActionButton {
-                                    Layout.fillWidth: true
-                                    icon: "󰈝"
-                                    text: "Export"
-                                    interactive: transfer.mode !== "busy"
-                                    onClicked: transfer.exportSettings()
-                                }
-                                ActionButton {
-                                    Layout.fillWidth: true
-                                    icon: "󰋺"
-                                    text: "Import"
-                                    interactive: transfer.mode !== "busy"
-                                    onClicked: transfer.importSettings()
-                                }
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                Layout.leftMargin: 8
-                                text: "Changes apply right away (monitors after Apply).\nThe dot marks changed values."
-                                color: Colors.fade(0.35)
-                                font.pixelSize: 10
-                                font.family: Properties.fontFamily
-                                wrapMode: Text.WordWrap
+                                onManage: { root.pageId = "profiles"; searchField.text = ""; flick.contentY = 0 }
+                                onFailed: root.pageId = "profiles"
                             }
                         }
                     }
@@ -801,9 +820,23 @@ Scope {
                                 anchors.leftMargin: 6
                                 spacing: 8
 
+                                IconButton {
+                                    visible: win.query === "" && win.hub !== null
+                                    icon: "󰁍"
+                                    tooltip: "Back to " + (win.hub?.title ?? "")
+                                    onClicked: { root.pageId = win.hub.id; flick.contentY = 0 }
+                                }
+
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 0
+                                    Text {
+                                        visible: win.query === "" && win.hub !== null
+                                        text: (win.hub?.title ?? "") + "  ›"
+                                        color: Colors.fade(0.45)
+                                        font.pixelSize: 11
+                                        font.family: Properties.fontFamily
+                                    }
                                     Text {
                                         text: win.query !== "" ? "Search" : win.page.title
                                         color: Colors.ink
@@ -973,21 +1006,27 @@ Scope {
                                 }
                                 Loader {
                                     Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "maintenance"
+                                    visible: active
+                                    sourceComponent: MaintenancePage {
+                                        tools: root.visiblePages.filter(p => p.parent === "maintenance")
+                                        onOpenPage: id => { root.pageId = id; flick.contentY = 0 }
+                                    }
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
                                     active: win.query === "" && win.page.custom === "cleanup"
                                     visible: active
-                                    sourceComponent: CleanupPage {}
+                                    sourceComponent: CleanupPackagesPage {
+                                        anchor: root.pendingAnchor
+                                        onAnchorConsumed: root.pendingAnchor = ""
+                                    }
                                 }
                                 Loader {
                                     Layout.fillWidth: true
                                     active: win.query === "" && win.page.custom === "diskusage"
                                     visible: active
                                     sourceComponent: DiskUsagePage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "packages"
-                                    visible: active
-                                    sourceComponent: PackagesPage {}
                                 }
                                 Loader {
                                     Layout.fillWidth: true
@@ -1099,23 +1138,13 @@ Scope {
                                 }
                                 Loader {
                                     Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "barlayout"
+                                    active: win.query === "" && win.page.custom === "layouts"
                                     visible: active
-                                    sourceComponent: BarLayoutPage {}
+                                    sourceComponent: LayoutsPage {
+                                        anchor: root.pendingAnchor
+                                        onAnchorConsumed: root.pendingAnchor = ""
+                                    }
                                 }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "dashlayout"
-                                    visible: active
-                                    sourceComponent: DashLayoutPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "cclayout"
-                                    visible: active
-                                    sourceComponent: CcLayoutPage {}
-                                }
-
                                 Loader {
                                     Layout.fillWidth: true
                                     active: win.query === "" && win.page.custom === "health"

@@ -8,7 +8,13 @@ import QtQuick
 // "Gaming", switched in one go.
 //
 // ~/.local/share/quickshell/profiles/<name>.json:
-//   { name, saved, groups: [...], settings: { group: {…} }, colors: {pywal colors.json} | null }
+//   { name, saved, icon, settings: { group: {…} }, colors: {pywal colors.json} | null }
+//   (icon: a Nerd Font glyph for the switcher at the bottom of the settings
+//   sidebar; none = the name's first letter)
+// Export: one file with any number of profiles
+//   { quickshellProfiles: 1, exported, profiles: [ <profile>, … ] }
+// Import takes such files and single profile files, checks every profile like
+// an import of settings, then writes them (same name = replaced).
 // Applying checks the file with the same validation as an import (the
 // settings window registers it as `validator`), keeps the current values of
 // those groups for Undo, then replaces only the groups in the profile.
@@ -26,7 +32,9 @@ Singleton {
     readonly property var deviceGroups: ["monitors", "connections", "dotfiles", "settingsProfiles", "wizard", "health"]
     function defaultGroups() { return Settings.groups.filter(g => !deviceGroups.includes(g) && Object.keys(Settings[g] ?? {}).length > 0) }
 
-    property var profiles: []               // [{ name, file, saved, groups, hasColors }]
+    property var profiles: []               // [{ name, file, saved, icon, groups, hasColors }]
+    // a few icons to pick from (any glyph works in the file)
+    readonly property var iconChoices: ["󰆓", "󰃖", "󰊗", "󰎆", "󰈹", "󰖔", "󰖙", "󰌢", "󰋜", "󰠮", "󰐱", "󱓞", "󰏘", "󰉋", "󰇄", "󰓅"]
     readonly property string active: Settings.settingsProfiles.active ?? ""
     property bool hasUndo: false
     property string error: ""
@@ -48,7 +56,8 @@ Singleton {
                 try {
                     const p = JSON.parse(chunk.slice(nl + 1))
                     list.push({ name: chunk.slice(0, nl).replace(/.*\//, "").replace(/\.json$/, ""), file: chunk.slice(0, nl),
-                                saved: p.saved ?? "", groups: Object.keys(p.settings ?? {}), hasColors: !!p.colors })
+                                saved: p.saved ?? "", icon: typeof p.icon === "string" ? p.icon : "",
+                                groups: Object.keys(p.settings ?? {}), hasColors: !!p.colors })
                 } catch (e) {
                     list.push({ name: chunk.slice(0, nl).replace(/.*\//, "").replace(/\.json$/, ""), file: chunk.slice(0, nl), broken: true, groups: [] })
                 }
@@ -63,18 +72,89 @@ Singleton {
         Jobs.runInput(["sh", "-c", 'mkdir -p -- "$(dirname -- "$1")" && cat > "$1"', "sh", path], JSON.stringify(obj, null, 2) + "\n", code => cb(code === 0))
     }
 
-    function save(name, groups, withColors, cb) {
+    function read(name) {
+        try { return JSON.parse(NiriSettings.readFile(dir + "/" + name + ".json")) } catch (x) { return null }
+    }
+
+    // icon: undefined = keep the one it has
+    function save(name, groups, withColors, cb, icon) {
         const e = validName(name)
         if (e) return cb(false, e)
         name = name.trim()
+        if (icon === undefined) icon = read(name)?.icon ?? ""
         const settings = {}
         for (const g of groups) if (Settings.groups.includes(g)) settings[g] = Settings[g] ?? {}
         let colors = null
         if (withColors) { try { colors = JSON.parse(NiriSettings.readFile(home + "/.cache/wal/colors.json")) } catch (x) { colors = null } }
-        write(dir + "/" + name + ".json", { name: name, saved: new Date().toISOString(), settings: settings, colors: colors }, ok => {
+        write(dir + "/" + name + ".json", { name: name, saved: new Date().toISOString(), icon: icon, settings: settings, colors: colors }, ok => {
             refresh()
             cb(ok, ok ? "" : "couldn't write " + dir)
         })
+    }
+
+    function setIcon(name, icon) {
+        const p = read(name)
+        if (!p || validName(name)) return
+        p.icon = icon
+        write(dir + "/" + name + ".json", p, () => refresh())
+    }
+
+    // ── Export / import ──────────────────────────────────────────────────────
+    // cb(ok, message)
+    function exportTo(path, names, cb) {
+        const list = names.map(n => read(n)).filter(p => p)
+        if (list.length === 0) return cb(false, "nothing to export")
+        write(path, { quickshellProfiles: 1, exported: new Date().toISOString(), profiles: list },
+              ok => cb(ok, ok ? list.length + (list.length === 1 ? " profile" : " profiles") + " exported to " + path : "couldn't write " + path))
+    }
+
+    // checks one profile object → "" or what's wrong with it
+    function checkProfile(p) {
+        if (!p || typeof p !== "object" || Array.isArray(p)) return "not a profile { … }"
+        const n = validName(p.name)
+        if (n) return "name: " + n
+        if (p.icon !== undefined && (typeof p.icon !== "string" || p.icon.length > 8)) return "icon must be a short text (one glyph)"
+        if (p.colors !== undefined && p.colors !== null && (typeof p.colors !== "object" || Array.isArray(p.colors) || typeof p.colors.colors !== "object"))
+            return "colors must be a pywal colors.json or null"
+        const s = p.settings
+        if (!s || typeof s !== "object" || Array.isArray(s)) return "no settings in it"
+        if (!validator) return "open the settings app once (it provides the checks)"
+        const errs = validator(s)
+        return errs.length === 0 ? "" : errs.slice(0, 3).map(x => x.message).join("; ") + (errs.length > 3 ? " (+" + (errs.length - 3) + " more)" : "")
+    }
+
+    // files → [{ name, profile, problem, exists, file }] (problem "" = can be imported)
+    function readImport(paths) {
+        const out = []
+        for (const path of paths) {
+            const file = path.replace(/.*\//, "")
+            let o
+            try { o = JSON.parse(NiriSettings.readFile(path)) }
+            catch (x) { out.push({ name: file, file: file, problem: "isn't valid JSON" }); continue }
+            const list = Array.isArray(o?.profiles) ? o.profiles : [o]
+            if (o?.quickshellSettings !== undefined) { out.push({ name: file, file: file, problem: "is a settings export (use Import at the top of the sidebar)" }); continue }
+            for (const p of list) {
+                const name = String(p?.name ?? "").trim()
+                out.push({ name: name || "?", file: file, profile: p, problem: checkProfile(p), exists: profiles.some(x => x.name === name) })
+            }
+        }
+        // the same name twice: the last one wins
+        return out.filter((e, i) => e.problem !== "" || !out.slice(i + 1).some(x => x.problem === "" && x.name === e.name))
+    }
+
+    // writes the good ones of readImport(); cb(count)
+    function importProfiles(list, cb) {
+        const good = list.filter(e => e.problem === "")
+        let left = good.length, okCount = 0
+        if (left === 0) return cb(0)
+        for (const e of good) {
+            const p = e.profile
+            write(dir + "/" + e.name + ".json", { name: e.name, saved: p.saved ?? new Date().toISOString(), icon: p.icon ?? "",
+                                                   settings: p.settings, colors: p.colors ?? null }, ok => {
+                if (ok) okCount++
+                if (--left === 0) { refresh(); cb(okCount) }
+            })
+        }
     }
 
     function remove(name) {

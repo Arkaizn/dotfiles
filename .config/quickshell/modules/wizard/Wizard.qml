@@ -50,8 +50,8 @@ Scope {
             visible: true
             implicitWidth: 760
             implicitHeight: 600
-            // same as the settings window
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.95)
+            // opaque: nothing of the desktop (or the compositor's blur) shows through
+            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 1)
             onClosed: root.open = false
 
             ColumnLayout {

@@ -25,6 +25,9 @@ Singleton {
     property real lastRun: 0
     // set by the polkit dialog (modules/polkit) when its agent registers
     property bool polkitAgent: false
+    // set by the settings app: () → [{ message }], the current settings checked
+    // like an import (would an export of them import again?)
+    property var exportCheck: null
 
     readonly property int errors: results.filter(r => r.status === "error").length
     readonly property int warnings: results.filter(r => r.status === "warn").length
@@ -130,11 +133,17 @@ Singleton {
         case "settings": {
             const text = NiriSettings.readFile(Settings.path)
             if (text === "") return done("ok", "no settings.json yet (all defaults)")
-            try { JsonCheck.parse(text); done("ok", "valid, version " + Settings.version) }
+            try { JsonCheck.parse(text) }
             catch (e) {
-                done("error", e.line !== undefined ? "line " + e.line + ", column " + e.col + ": " + e.message : String(e),
-                     "fix the file, or restore it from an export (it was not loaded; defaults are used)")
+                return done("error", e.line !== undefined ? "line " + e.line + ", column " + e.col + ": " + e.message : String(e),
+                            "fix the file, or restore it from an export (it was not loaded; defaults are used)")
             }
+            const errs = exportCheck ? exportCheck() : []
+            if (errs.length > 0)
+                return done("warn", "an export of these settings wouldn't import again: " + errs.slice(0, 4).map(e => e.message).join("; ")
+                                    + (errs.length > 4 ? " (+" + (errs.length - 4) + " more)" : ""),
+                            "a setting the import check doesn't know: add it to modules/settings/SettingsTransfer.qml")
+            done("ok", "valid, version " + Settings.version + (exportCheck ? ", export / import checked" : ""))
             break
         }
         case "colors": {

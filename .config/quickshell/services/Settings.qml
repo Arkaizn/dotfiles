@@ -77,6 +77,19 @@ Singleton {
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
                                    "dashboard", "controlCenter"]
+    // how each group is called in the UI (export / import messages, profiles).
+    // A new group needs: a property above, an entry in `groups`, a label here,
+    // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
+    // warns when the current settings wouldn't pass the import check)
+    readonly property var groupLabels: ({ properties: "Appearance / bar / panels", niri: "niri", hyprland: "Hyprland",
+        monitors: "Monitors", calendar: "Calendar", network: "Network page", battery: "Battery alerts", profile: "Profile",
+        autostart: "Autostart", keybinds: "Keybinds", syntax: "Syntax", bar: "Bar layout", notifications: "Notifications",
+        theme: "Theme", audio: "Audio", bluetooth: "Bluetooth", power: "Power", defaultApps: "Default apps",
+        clipboard: "Clipboard", connections: "Connections", capture: "Screenshots", dotfiles: "Dotfiles",
+        netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
+        health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
+        monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout" })
+    function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────
     // 1: no "version" field (everything up to now)

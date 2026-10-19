@@ -28,14 +28,7 @@ Rectangle {
     readonly property string defaultPath: Quickshell.env("HOME") + "/quickshell-settings.json"
     // every group of settings.json (one list: services/Settings.qml)
     readonly property var groups: Settings.groups
-    readonly property var groupNames: ({ properties: "shell", niri: "niri", hyprland: "Hyprland", monitors: "monitors",
-        calendar: "calendar", network: "network page", battery: "battery", profile: "profile", autostart: "autostart",
-        keybinds: "keybinds", syntax: "syntax", bar: "bar layout", notifications: "notifications", theme: "theme",
-        audio: "audio", bluetooth: "bluetooth", power: "power", defaultApps: "default apps", clipboard: "clipboard",
-        connections: "connections", capture: "screenshots", dotfiles: "dotfiles", netTools: "network tools",
-        updates: "updates", settingsProfiles: "settings profiles", wizard: "first-run", health: "health check",
-        perfmon: "performance monitor", launcher: "launcher", icons: "icons", monitorsPage: "monitors page",
-        dashboard: "dashboard layout", controlCenter: "control center layout" })
+    readonly property var groupNames: Settings.groupLabels
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
@@ -57,7 +50,8 @@ Rectangle {
         updates: (v, err) => {
             for (const k of Object.keys(v)) {
                 if (k === "interval") { if (!Number.isInteger(v[k]) || v[k] < 0 || v[k] > 1440) err([k], "interval is 0–1440 minutes") }
-                else if (k === "aur" || k === "notify") { if (typeof v[k] !== "boolean") err([k], k + " must be true or false") }
+                else if (k === "aur" || k === "notify" || k === "rebootNotify") { if (typeof v[k] !== "boolean") err([k], k + " must be true or false") }
+                else if (k === "keepPackages") { if (!Array.isArray(v[k]) || v[k].some(n => typeof n !== "string")) err([k], "keepPackages is a list of package names") }
                 else if (k === "mirrorCountries") { if (typeof v[k] !== "string" || !/^[A-Za-z ,]*$/.test(v[k])) err([k], "mirrorCountries: names or codes separated by commas") }
                 else err([k], "unknown setting \"" + k + "\"")
             }
@@ -268,6 +262,17 @@ Rectangle {
                 if (problem) err([g, k], g + "." + k + ": " + problem)
             }
         }
+        return errors
+    }
+
+    // the current settings, as an export would write them, checked like an
+    // import: a setting the code writes but the checks above don't know (or a
+    // group without a label) shows up here (Health → settings.json warns)
+    function checkCurrent() {
+        const o = {}
+        for (const g of groups) o[g] = Settings[g]
+        const errors = validate(o, {})
+        for (const g of groups) if (!Settings.groupLabels[g]) errors.push({ line: 0, message: g + ": no label in Settings.groupLabels" })
         return errors
     }
 

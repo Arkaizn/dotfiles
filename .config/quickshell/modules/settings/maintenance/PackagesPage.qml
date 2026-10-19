@@ -17,7 +17,7 @@ import "../network"
 //     (scripts/remove-packages.sh: skips what other packages still need, then
 //     pacman -Rns, which shows everything and asks first).
 //     Data: scripts/package-usage.sh
-//   · Orphans: dependencies nothing needs any more.
+//   · Orphans: just the count (removing them: CleanupPage, the other tab).
 //   · Biggest packages, and what was recently installed / updated / removed.
 // Packages without programs (fonts, themes, libraries) can't be rated by use.
 ColumnLayout {
@@ -155,12 +155,6 @@ ColumnLayout {
     function ask(id) { confirm = id; confirmTimer.restart() }
     Timer { id: confirmTimer; interval: 3000; onTriggered: page.confirm = "" }
 
-    // a terminal for root actions; fixed script, package names passed as data
-    function terminal(title, script, args) {
-        Quickshell.execDetached(["kitty", "--title", title, "bash", "-c",
-            script + '\necho; read -r -p "Done. Press Enter to close (then Reload here)." _', "bash"].concat(args ?? []))
-    }
-
     NetCard {
         Layout.fillWidth: true
         title: "Installed"
@@ -175,14 +169,7 @@ ColumnLayout {
         NetRow {
             label: page.orphans.length === 0 ? "No orphans" : page.orphans.length + " orphans"
             desc: page.orphans.length === 0 ? "every dependency is still needed by something"
-                  : "dependencies nothing needs any more (some may be optional extras you use): " + page.orphans.slice(0, 10).join(", ") + (page.orphans.length > 10 ? ", …" : "")
-                    + "\nThe terminal shows pacman's full list and asks before removing."
-            ActionButton {
-                text: page.confirm === "orphans" ? "Open terminal" : "Remove…"
-                interactive: page.orphans.length > 0
-                onClicked: page.confirm === "orphans" ? (page.terminal("Remove orphan packages", 'sudo pacman -Rns -- "$@"', page.orphans), page.confirm = "")
-                                                      : page.ask("orphans")
-            }
+                  : "dependencies nothing needs any more: review and remove them in the Free space tab"
         }
     }
 
