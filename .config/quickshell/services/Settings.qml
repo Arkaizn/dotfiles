@@ -20,6 +20,7 @@ import QtQuick
 //   autostart  → programs started at login: { items: [{ id, name, cmd, enabled, on }] }
 //   keybinds   → own / changed keybinds: { binds: [{ id, keys, name, kind, … }] }
 //   syntax     → edited config templates / option paths (Syntax.qml)
+//   icons      → changed icons { "<id>": "<glyph>" } (Icons.qml)
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
 //   clipboard, connections, capture, dotfiles, netTools, updates,
 //   settingsProfiles, wizard, health, perfmon
@@ -61,6 +62,7 @@ Singleton {
     property var health: ({})
     property var perfmon: ({})
     property var launcher: ({})
+    property var icons: ({})
     property bool loaded: false
 
     // every group, in the order they're written
@@ -68,7 +70,7 @@ Singleton {
                                    "battery", "profile", "autostart", "keybinds", "syntax",
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
-                                   "settingsProfiles", "wizard", "health", "perfmon", "launcher"]
+                                   "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons"]
 
     // ── File format ──────────────────────────────────────────────────────────
     // 1: no "version" field (everything up to now)

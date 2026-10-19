@@ -16,7 +16,7 @@ Item {
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        iconText: "󰣇"
+        iconText: Icons.get("arch")
     }
 
     MouseArea {

@@ -31,13 +31,13 @@ Item {
     }
 
     readonly property string batteryIcon: {
-        if (isCharging)        return "󰂄 "
-        if (batteryLevel < 10) return "󰁺 "
-        if (batteryLevel < 20) return "󰁻 "
-        if (batteryLevel < 40) return "󰁽 "
-        if (batteryLevel < 60) return "󰁿 "
-        if (batteryLevel < 80) return "󰂁 "
-        return "󰁹 "
+        if (isCharging)        return Icons.get("batCharging") + " "
+        if (batteryLevel < 10) return Icons.get("bat10") + " "
+        if (batteryLevel < 20) return Icons.get("bat20") + " "
+        if (batteryLevel < 40) return Icons.get("bat40") + " "
+        if (batteryLevel < 60) return Icons.get("bat60") + " "
+        if (batteryLevel < 80) return Icons.get("bat80") + " "
+        return Icons.get("batFull") + " "
     }
 
 

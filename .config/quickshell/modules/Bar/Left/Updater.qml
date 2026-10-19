@@ -22,7 +22,7 @@ Item {
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        iconText: Updates.count > 0 ? "󰅢 " + Updates.count + (Updates.rebootNeeded ? " 󰜉" : "") : "󰜉 Reboot"
+        iconText: Updates.count > 0 ? Icons.get("updates") + " " + Updates.count + (Updates.rebootNeeded ? " " + Icons.get("reboot") : "") : Icons.get("reboot") + " Reboot"
         iconSize: 14
         textColor: Updates.rebootNeeded ? Colors.orange : Properties.color
     }

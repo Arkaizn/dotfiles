@@ -1,7 +1,7 @@
 import qs.services
 
 StatModule {
-    icon: ""
+    icon: Icons.get("cpuTemp")
     value: SysStats.cpuTemp
     suffix: "°"
 }

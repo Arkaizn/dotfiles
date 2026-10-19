@@ -19,7 +19,7 @@ Item {
         id: buttonBackground
         hovered: root.hovered
         textColor: Capture.recording ? Colors.red : Properties.color
-        iconText: Capture.recording ? (root.hovered ? "󰓛 stop" : "󰑊 " + root.time) : "󰔟 " + Capture.countdown
+        iconText: Capture.recording ? (root.hovered ? "󰓛 stop" : Icons.get("recording") + " " + root.time) : "󰔟 " + Capture.countdown
     }
 
     MouseArea {

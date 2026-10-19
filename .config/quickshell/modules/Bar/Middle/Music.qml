@@ -92,7 +92,7 @@ Item {
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
             visible: albumArt.status === Image.Error || albumArt.status === Image.Null
-            text: "󰎇"  // nerd font music note icon
+            text: Icons.get("music")
             font.pixelSize: music.height * 0.5
             color: Colors.ink
         }
@@ -144,7 +144,7 @@ Item {
             // Previous
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "󰒮"   // nerd font: skip-previous
+                text: Icons.get("previous")
                 font.pixelSize: Properties.pixelSize +7 //music.height * 0.38
                 color: Colors.ink
                 opacity: prevHover.containsMouse ? 1.0 : 0.65
@@ -164,7 +164,7 @@ Item {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 property bool isPlaying: music.player && music.player.playbackStatus === Mpris.Playing
-                text: player.isPlaying ? "" : ""  // pause : play
+                text: player.isPlaying ? Icons.get("pause") : Icons.get("play")
                 font.pixelSize: Properties.pixelSize + 3
                 color: Colors.ink
                 opacity: playHover.containsMouse ? 1.0 : 0.65
@@ -191,7 +191,7 @@ Item {
             // Next
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                text: "󰒭"   // nerd font: skip-next
+                text: Icons.get("next")
                 font.pixelSize: Properties.pixelSize +7
                 color: Colors.ink
                 opacity: nextHover.containsMouse ? 1.0 : 0.65

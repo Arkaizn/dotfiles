@@ -18,15 +18,15 @@ Item {
     PwObjectTracker { objects: root.sink ? [root.sink] : [] }
 
     readonly property string label: {
-        if (!audio) return "󰖁 --%"
+        if (!audio) return Icons.get("volNone") + " --%"
         const v = isNaN(audio.volume) ? 0 : Math.round(audio.volume * 100)
-        if (audio.muted) return "󰝟 " + v + "%"
+        if (audio.muted) return Icons.get("volMuted") + " " + v + "%"
         const name = (sink.name + " " + (sink.description ?? "")).toLowerCase()
         // headphones keep their own icon, speakers follow the level
-        const icon = name.includes("headset") || name.includes("headphone") ? "󰋋"
-                   : v < 34 ? "󰕿"
-                   : v < 67 ? "󰖀"
-                   : "󰕾"
+        const icon = name.includes("headset") || name.includes("headphone") ? Icons.get("headphones")
+                   : v < 34 ? Icons.get("volLow")
+                   : v < 67 ? Icons.get("volMid")
+                   : Icons.get("volHigh")
         return icon + " " + v + "%"
     }
 

@@ -20,9 +20,9 @@ Item {
     visible: adapter !== null
 
     readonly property string icon: {
-        if (!adapter?.enabled) return "󰂲"
-        if (anyConnected) return "󰂱 " + BluetoothPower.connected.map(d => BluetoothPower.iconFor(d)).join(" ")
-        return "󰂯"
+        if (!adapter?.enabled) return Icons.get("btOff")
+        if (anyConnected) return Icons.get("btConnected") + " " + BluetoothPower.connected.map(d => BluetoothPower.iconFor(d)).join(" ")
+        return Icons.get("btOn")
     }
 
     ButtonBackground {

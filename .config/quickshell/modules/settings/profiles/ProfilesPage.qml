@@ -21,7 +21,7 @@ ColumnLayout {
         keybinds: "Keybinds", syntax: "Syntax", bar: "Bar layout", notifications: "Notifications", theme: "Theme", audio: "Audio",
         bluetooth: "Bluetooth", power: "Power", defaultApps: "Default apps", clipboard: "Clipboard", connections: "Connections",
         capture: "Screenshots", dotfiles: "Dotfiles", netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles",
-        wizard: "First run", health: "Health", perfmon: "Performance monitor", launcher: "Launcher" })
+        wizard: "First run", health: "Health", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons" })
 
     Component.onCompleted: SettingsProfiles.refresh()
 

@@ -19,15 +19,15 @@ RowLayout {
     property string armed: ""   // id of the action waiting for its confirm click
 
     readonly property var actions: [
-        { id: "lock",     icon: "󰌾", tip: "Lock",      confirm: false,
+        { id: "lock",     icon: Icons.get("lock"), tip: "Lock",      confirm: false,
           cmd: "bash ~/.config/quickshell/scripts/lock.sh" },
-        { id: "suspend",  icon: "󰤄", tip: "Suspend",   confirm: false,
+        { id: "suspend",  icon: Icons.get("suspend"), tip: "Suspend",   confirm: false,
           cmd: "systemctl suspend || loginctl suspend" },
-        { id: "logout",   icon: "󰍃", tip: "Log out",   confirm: true,
+        { id: "logout",   icon: Icons.get("logout"), tip: "Log out",   confirm: true,
           cmd: Compositor.quitCommand },
-        { id: "reboot",   icon: "󰜉", tip: "Reboot",    confirm: true,
+        { id: "reboot",   icon: Icons.get("powerReboot"), tip: "Reboot",    confirm: true,
           cmd: "systemctl reboot || loginctl reboot" },
-        { id: "poweroff", icon: "󰐥", tip: "Shut down", confirm: true,
+        { id: "poweroff", icon: Icons.get("poweroff"), tip: "Shut down", confirm: true,
           cmd: "systemctl poweroff || loginctl poweroff" }
     ]
 

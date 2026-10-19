@@ -21,18 +21,18 @@ Singleton {
     // BlueZ's icon name (freedesktop style, e.g. "audio-headset") → glyph
     function iconFor(d) {
         const i = d?.icon || ""
-        if (i.includes("headset") || i.includes("headphone")) return "󰋋"
-        if (i.includes("audio")) return "󰓃"
-        if (i.includes("gaming") || i.includes("joystick")) return "󰊴"
-        if (i.includes("mouse")) return "󰍽"
-        if (i.includes("keyboard")) return "󰌌"
-        if (i.includes("tablet")) return "󰓶"
-        if (i.includes("phone")) return "󰏲"
-        if (i.includes("watch")) return "󰖉"
-        if (i.includes("computer")) return "󰟀"
-        if (i.includes("printer")) return "󰐪"
-        if (i.includes("camera")) return "󰄀"
-        return "󰂯"
+        if (i.includes("headset") || i.includes("headphone")) return Icons.get("btHeadset")
+        if (i.includes("audio")) return Icons.get("btSpeaker")
+        if (i.includes("gaming") || i.includes("joystick")) return Icons.get("btController")
+        if (i.includes("mouse")) return Icons.get("btMouse")
+        if (i.includes("keyboard")) return Icons.get("btKeyboard")
+        if (i.includes("tablet")) return Icons.get("btTablet")
+        if (i.includes("phone")) return Icons.get("btPhone")
+        if (i.includes("watch")) return Icons.get("btWatch")
+        if (i.includes("computer")) return Icons.get("btComputer")
+        if (i.includes("printer")) return Icons.get("btPrinter")
+        if (i.includes("camera")) return Icons.get("btCamera")
+        return Icons.get("btOn")
     }
     // battery in %, -1 when the device doesn't report one
     function battery(d) { return d?.batteryAvailable ? Math.round(d.battery * 100) : -1 }

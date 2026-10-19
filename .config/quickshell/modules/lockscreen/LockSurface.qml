@@ -396,9 +396,9 @@ Item {
 
             Repeater {
                 model: [
-                    { id: "suspend",  icon: "󰤄", tip: "Suspend",   confirm: false, cmd: "systemctl suspend || loginctl suspend" },
-                    { id: "reboot",   icon: "󰜉", tip: "Reboot",    confirm: true,  cmd: "systemctl reboot || loginctl reboot" },
-                    { id: "poweroff", icon: "󰐥", tip: "Shut down", confirm: true,  cmd: "systemctl poweroff || loginctl poweroff" }
+                    { id: "suspend",  icon: Icons.get("suspend"), tip: "Suspend",   confirm: false, cmd: "systemctl suspend || loginctl suspend" },
+                    { id: "reboot",   icon: Icons.get("powerReboot"), tip: "Reboot",    confirm: true,  cmd: "systemctl reboot || loginctl reboot" },
+                    { id: "poweroff", icon: Icons.get("poweroff"), tip: "Shut down", confirm: true,  cmd: "systemctl poweroff || loginctl poweroff" }
                 ]
                 IconButton {
                     required property var modelData

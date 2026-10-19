@@ -1,7 +1,7 @@
 import qs.services
 
 StatModule {
-    icon: ""
+    icon: Icons.get("memory")
     value: SysStats.mem
     suffix: "%"
 }

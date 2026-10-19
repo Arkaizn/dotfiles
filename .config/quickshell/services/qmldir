@@ -34,3 +34,4 @@ singleton Clipboard Clipboard.qml
 singleton CryptoKeys CryptoKeys.qml
 singleton SettingsProfiles SettingsProfiles.qml
 singleton PerfMon PerfMon.qml
+singleton Icons Icons.qml

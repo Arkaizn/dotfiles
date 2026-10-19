@@ -182,6 +182,7 @@ Item {
                 case "color": return colorPicker
                 case "choice": return choice
                 case "button": return button
+                case "font": return fontPicker
                 default: return textField
                 }
             }
@@ -227,6 +228,20 @@ Item {
         id: choice
         ChoiceControl {
             options: root.spec.options
+            value: root.current
+            onEdited: v => root.set(v)
+        }
+    }
+    // installed Nerd Fonts (the icons need one), plus the current value
+    Component {
+        id: fontPicker
+        DropdownControl {
+            implicitWidth: 240
+            options: {
+                const f = Qt.fontFamilies().filter(x => /Nerd Font|\bNF[MP]?\b/.test(x))
+                if (!f.includes(root.current)) f.push(root.current)
+                return [...new Set(f)].sort().map(x => ({ label: x, value: x }))
+            }
             value: root.current
             onEdited: v => root.set(v)
         }

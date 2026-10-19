@@ -16,7 +16,7 @@ Item {
         id: buttonBackground
         hovered: notifBtn.hovered
         // bell with a slash while do-not-disturb is on
-        iconText: Notifs.dnd ? "󰂛" : "󰂚"
+        iconText: Notifs.dnd ? Icons.get("dnd") : Icons.get("notifications")
     }
 
     // Optional unread badge

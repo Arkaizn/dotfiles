@@ -467,11 +467,11 @@ PanelWindow {
 
                     Repeater {
                         model: [
-                            { value: "apps",       glyph: "󰀻", tip: "Apps" },
-                            { value: "clipboard",  glyph: "󰅍", tip: "Clipboard history" },
-                            { value: "connections", glyph: "󰢹", tip: "Connections" },
-                            { value: "wallpapers", glyph: "󰸉", tip: "Wallpapers" },
-                            { value: "keybinds",   glyph: "󰌌", tip: "Keybinds" }
+                            { value: "apps",       glyph: Icons.get("modeApps"), tip: "Apps" },
+                            { value: "clipboard",  glyph: Icons.get("modeClipboard"), tip: "Clipboard history" },
+                            { value: "connections", glyph: Icons.get("modeConnections"), tip: "Connections" },
+                            { value: "wallpapers", glyph: Icons.get("modeWallpapers"), tip: "Wallpapers" },
+                            { value: "keybinds",   glyph: Icons.get("modeKeybinds"), tip: "Keybinds" }
                         ]
 
                         IconButton {

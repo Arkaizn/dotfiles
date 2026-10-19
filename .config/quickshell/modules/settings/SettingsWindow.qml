@@ -21,6 +21,7 @@ import "keys"
 import "updates"
 import "profiles"
 import "maintenance"
+import "icons"
 import "SettingsSearch.js" as SI
 
 // Settings app: a normal (floating) window to change the Properties.qml
@@ -89,12 +90,16 @@ Scope {
           desc: "Font, text and icons used all over the shell",
           sections: [
             { title: "Text", items: [
-                { key: "fontFamily", type: "font", label: "Font", desc: "Used by the bar, popups and widgets" },
+                { key: "fontFamily", type: "font", label: "Font", desc: "A Nerd Font (the icons come from it); used by the bar, popups and widgets" },
                 { key: "pixelSize", type: "int", min: 8, max: 24, label: "Text size", desc: "Bar labels and stats" },
                 { key: "fontBold", type: "bool", label: "Bold button text" },
                 { key: "color", keywords: "text color font colour icon tint", type: "color", label: "Text & icon color", desc: "Buttons, fields and bar icons" } ] },
             { title: "Icons", items: [
                 { key: "iconSize", type: "int", min: 10, max: 32, label: "Icon size", desc: "Bar buttons, tray and profile" } ] } ] },
+
+        { id: "icons", group: "Shell", icon: "󰀻", title: "Icons", custom: "icons",
+          keywords: "icons icon glyph nerd font change arch logo symbol font family",
+          desc: "The shell's Nerd Font, and every icon (click one to change it)" },
 
         { id: "bar", group: "Shell", icon: "󰍜", title: "Bar", store: "properties",
           desc: "Shape and spacing of the top bar",
@@ -1016,6 +1021,12 @@ Scope {
                                     active: win.query === "" && win.page.custom === "updates"
                                     visible: active
                                     sourceComponent: UpdatesPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "icons"
+                                    visible: active
+                                    sourceComponent: IconsPage {}
                                 }
                                 Loader {
                                     Layout.fillWidth: true

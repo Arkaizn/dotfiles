@@ -18,7 +18,7 @@ Item {
     ButtonBackground {
         id: buttonBackground
         hovered: root.hovered
-        iconText: "  󰁹 " + root.level + "%"
+        iconText: Icons.get("headphones") + "  " + Icons.get("batFull") + " " + root.level + "%"
     }
 
     MouseArea {

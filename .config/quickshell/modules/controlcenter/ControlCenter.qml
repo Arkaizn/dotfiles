@@ -156,8 +156,8 @@ BarPopup {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
                     // one device connected: its kind (headset, controller, …)
-                    icon: !root.btAdapter?.enabled ? "󰂲" : root.btConnected.length === 1 ? BluetoothPower.iconFor(root.btConnected[0])
-                        : root.btConnected.length > 0 ? "󰂱" : "󰂯"
+                    icon: !root.btAdapter?.enabled ? Icons.get("btOff") : root.btConnected.length === 1 ? BluetoothPower.iconFor(root.btConnected[0])
+                        : root.btConnected.length > 0 ? Icons.get("btConnected") : Icons.get("btOn")
                     title: "Bluetooth"
                     subtitle: !root.btAdapter ? "No adapter"
                         : !root.btAdapter.enabled ? "Off"
