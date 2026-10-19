@@ -387,17 +387,36 @@ ColumnLayout {
     }
 
     // ── Apps and shell actions for new binds ────────────────────────────────
+    // every shell action worth a keybind (hint = where it belongs);
+    // the keybind list names them from Keybinds.qsNames
     readonly property var shellActions: [
-        { label: "App launcher", value: "qs ipc call Launcher toggleAppSearch" },
-        { label: "Clipboard history", value: "qs ipc call Launcher toggleClipboard" },
-        { label: "Wallpaper picker", value: "qs ipc call Launcher toggleWallpapers" },
-        { label: "Keybind cheatsheet", value: "qs ipc call Launcher toggleKeybinds" },
-        { label: "Dashboard", value: "qs ipc call dashboard toggle" },
-        { label: "Control center", value: "qs ipc call controlCenter toggle" },
-        { label: "Settings", value: "qs ipc call settings toggle" },
-        { label: "Calendar", value: "qs ipc call calendar toggle" },
-        { label: "Lock screen", value: "qs ipc call lockscreen lock" },
-        { label: "Dismiss latest notification", value: "qs ipc call notifs dismissLatest" }
+        { label: "App launcher", value: "qs ipc call Launcher toggleAppSearch", hint: "launcher" },
+        { label: "Clipboard history", value: "qs ipc call Launcher toggleClipboard", hint: "launcher" },
+        { label: "Connections (SSH, RDP, VNC)", value: "qs ipc call Launcher toggleConnections", hint: "launcher" },
+        { label: "Wallpaper picker", value: "qs ipc call Launcher toggleWallpapers", hint: "launcher" },
+        { label: "Keybind cheatsheet", value: "qs ipc call Launcher toggleKeybinds", hint: "launcher" },
+        { label: "Dashboard", value: "qs ipc call dashboard toggle", hint: "panels" },
+        { label: "Control center", value: "qs ipc call controlCenter toggle", hint: "panels" },
+        { label: "Notification center", value: "qs ipc call notifCenter toggle", hint: "panels" },
+        { label: "Settings", value: "qs ipc call settings toggle", hint: "apps" },
+        { label: "Calendar", value: "qs ipc call calendar toggle", hint: "apps" },
+        { label: "Performance monitor", value: "qs ipc call perfmon toggle", hint: "apps" },
+        { label: "Capture menu", value: "qs ipc call capture menu", hint: "capture" },
+        { label: "Screenshot of a region", value: "qs ipc call capture screenshot region", hint: "capture" },
+        { label: "Screenshot of the screen", value: "qs ipc call capture screenshot screen", hint: "capture" },
+        { label: "Screenshot of a window", value: "qs ipc call capture screenshot window", hint: "capture" },
+        { label: "Copy text from a region (OCR)", value: "qs ipc call capture ocr", hint: "capture" },
+        { label: "Record the screen / stop", value: "qs ipc call capture record screen", hint: "capture" },
+        { label: "Record a window / stop", value: "qs ipc call capture record window", hint: "capture" },
+        { label: "Record all screens / stop", value: "qs ipc call capture recordAll", hint: "capture" },
+        { label: "Stop recording", value: "qs ipc call capture stop", hint: "capture" },
+        { label: "Do not disturb on / off", value: "qs ipc call notifs toggleDnd", hint: "notifications" },
+        { label: "Dismiss latest notification", value: "qs ipc call notifs dismissLatest", hint: "notifications" },
+        { label: "Clear all notifications", value: "qs ipc call notifs clearAll", hint: "notifications" },
+        { label: "Next power profile", value: "qs ipc call power cycle", hint: "system" },
+        { label: "Check for updates", value: "qs ipc call updates check", hint: "system" },
+        { label: "Light / dark mode", value: "qs ipc call theme mode toggle", hint: "system" },
+        { label: "Lock screen", value: "qs ipc call lockscreen lock", hint: "system" }
     ]
 
     // ── Changed here ────────────────────────────────────────────────────────

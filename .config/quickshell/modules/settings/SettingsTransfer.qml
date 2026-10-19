@@ -34,11 +34,11 @@ Rectangle {
         audio: "audio", bluetooth: "bluetooth", power: "power", defaultApps: "default apps", clipboard: "clipboard",
         connections: "connections", capture: "screenshots", dotfiles: "dotfiles", netTools: "network tools",
         updates: "updates", settingsProfiles: "settings profiles", wizard: "first-run", health: "health check",
-        perfmon: "performance monitor", launcher: "launcher", icons: "icons" })
+        perfmon: "performance monitor", launcher: "launcher", icons: "icons", monitorsPage: "monitors page" })
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
-        "health", "icons"]
+        "health", "icons", "monitorsPage"]
     // group → function(value, err) for the feature groups that need more than "is an object"
     property var validators: ({
         wizard: (v, err) => {
@@ -112,6 +112,14 @@ Rectangle {
         },
         connections: (v, err) => {
             for (const k of Object.keys(v)) {
+                if (k === "server") {          // VNC server options (VncServer.qml)
+                    const sv = v.server
+                    if (!sv || typeof sv !== "object" || Array.isArray(sv)) { err(["server"], "server must be an object"); continue }
+                    if (sv.port !== undefined && !(Number.isInteger(sv.port) && sv.port >= 1024 && sv.port <= 65535)) err(["server", "port"], "port: 1024 … 65535")
+                    for (const f of ["viewOnly", "autostart"]) if (sv[f] !== undefined && typeof sv[f] !== "boolean") err(["server", f], f + " must be true / false")
+                    if (sv.output !== undefined && typeof sv.output !== "string") err(["server", "output"], "output must be a monitor name")
+                    continue
+                }
                 if (k !== "list") { err([k], "unknown setting \"" + k + "\""); continue }
                 if (!Array.isArray(v.list)) { err(["list"], "list must be a list"); continue }
                 v.list.forEach((c, i) => {

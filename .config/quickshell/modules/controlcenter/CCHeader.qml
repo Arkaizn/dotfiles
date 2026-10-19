@@ -33,6 +33,8 @@ RowLayout {
 
     // each runs `qs ipc call <call…>`
     readonly property var shortcuts: [
+        { icon: "󰃭", tip: "Calendar", call: ["calendar", "open"] },
+        { icon: "󰓅", tip: "Performance monitor", call: ["perfmon", "toggle"] },
         { icon: "󰌌", tip: "Keybinds", call: ["Launcher", "toggleKeybinds"] },
         { icon: "󰒓", tip: "Settings", call: ["settings", "open"] }
     ]

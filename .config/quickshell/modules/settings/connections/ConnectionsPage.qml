@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import qs.components
@@ -6,7 +7,8 @@ import ".."
 import "../network"
 
 // Connections page: saved SSH / RDP / VNC connections (services/RemoteConnections.qml),
-// opened from the launcher's connections tab.
+// opened from the launcher's connections tab; and this device's own VNC
+// server (services/VncServer.qml) with its firewall rule.
 ColumnLayout {
     id: page
     spacing: 16
@@ -16,10 +18,20 @@ ColumnLayout {
     property string confirmDelete: ""
     property var have: ({})
 
+    property string firewall: ""            // ufw: "active" / "inactive" / "" (not installed)
     Component.onCompleted: {
         Jobs.which(["ssh", "xfreerdp3", "vncviewer", "kitty", "nc", "secret-tool", "zenity"], h => page.have = h)
         RemoteConnections.probe()
+        VncServer.refresh()
+        Jobs.run(["sh", "-c", "command -v ufw >/dev/null && systemctl is-active ufw"], (c, out) => page.firewall = out.trim())
     }
+    // a terminal for root actions (firewall); fixed script, values passed as data
+    function terminal(title, script, args) {
+        Quickshell.execDetached(["kitty", "--title", title, "bash", "-c",
+            script + '\necho; read -r -p "Done. Press Enter to close." _', "bash"].concat(args ?? []))
+    }
+    // a change to a running server applies by restarting it
+    function setServer(k, v) { VncServer.setOpt(k, v); if (VncServer.running) VncServer.restart() }
 
     readonly property var missing: Object.keys(have).filter(b => !have[b])
 
@@ -112,6 +124,88 @@ ColumnLayout {
         }
     }
     Timer { id: confirmTimer; interval: 3000; onTriggered: page.confirmDelete = "" }
+
+    NetCard {
+        Layout.fillWidth: true
+        title: "This device (VNC server)"
+        icon: "󰢹"
+        NetRow {
+            first: true
+            label: VncServer.starting ? "Starting…"
+                 : VncServer.running ? "On  ·  " + (VncServer.lanAddress || "all addresses") + ":" + VncServer.port
+                 : "Off"
+            desc: VncServer.error !== "" ? "󰀦 " + VncServer.error
+                : "Lets another computer see" + (VncServer.viewOnly ? "" : " and control") + " this screen (wayvnc). Login: your user name and password, over an encrypted connection (RSA-AES)."
+            ToggleSwitch {
+                checked: VncServer.running || VncServer.starting
+                onToggled: v => v ? VncServer.start() : VncServer.stop()
+            }
+        }
+        NetRow {
+            sub: true
+            visible: VncServer.running
+            label: "Connect from another computer"
+            desc: "vncviewer " + (VncServer.lanAddress || "<this device>") + "::" + VncServer.port
+                  + "  ·  needs a viewer with RSA-AES (TigerVNC 1.13+, RealVNC). You get a notification when someone connects."
+        }
+        Repeater {
+            model: VncServer.clients
+            NetRow {
+                required property var modelData
+                sub: true
+                label: "󰀄  " + (modelData.username || "connected") + (modelData.address ? "  ·  " + modelData.address : "")
+                ActionButton { icon: "󰅖"; text: "Disconnect"; onClicked: VncServer.disconnect(modelData.id) }
+            }
+        }
+        NetRow {
+            label: "Monitor"
+            desc: "the one it shows (one at a time)"
+            DropdownControl {
+                implicitWidth: 200
+                options: [{ label: "Focused when started", value: "" }].concat(Quickshell.screens.map(s => ({ label: s.name, value: s.name, hint: s.width + "×" + s.height })))
+                value: VncServer.output
+                onEdited: v => page.setServer("output", v)
+            }
+        }
+        NetRow {
+            label: "View only"
+            desc: "the other side sees the screen but can't use mouse or keyboard"
+            ToggleSwitch { checked: VncServer.viewOnly; onToggled: v => page.setServer("viewOnly", v) }
+        }
+        NetRow {
+            label: "Port"
+            NumberControl { from: 1024; to: 65535; value: VncServer.port; onEdited: v => page.setServer("port", Math.round(v)) }
+        }
+        NetRow {
+            label: "Start with the shell"
+            desc: "turns it on at login (only while you're logged in: it shares your session)"
+            ToggleSwitch { checked: VncServer.autostart; onToggled: v => VncServer.setOpt("autostart", v) }
+        }
+        NetRow {
+            label: "Firewall"
+            desc: page.firewall === "active"
+                  ? "ufw is on: the port has to be allowed. Your network only (" + (VncServer.lanNet || "LAN") + ") is safest; never open it to the internet."
+                  : page.firewall === "inactive" ? "ufw is installed but off: nothing blocks the port"
+                  : "no ufw: nothing here blocks the port"
+            RowLayout {
+                spacing: 6
+                visible: page.firewall !== ""
+                ActionButton {
+                    icon: "󰒃"
+                    text: "Allow from my network"
+                    interactive: VncServer.lanNet !== ""
+                    onClicked: page.terminal("Firewall: allow VNC", 'sudo ufw allow from "$1" to any port "$2" proto tcp comment "VNC (quickshell)" && sudo ufw status',
+                                             [VncServer.lanNet, String(VncServer.port)])
+                }
+                ActionButton {
+                    icon: "󰅖"
+                    text: "Remove rule"
+                    onClicked: page.terminal("Firewall: remove VNC rule", 'sudo ufw delete allow from "$1" to any port "$2" proto tcp; sudo ufw status',
+                                             [VncServer.lanNet, String(VncServer.port)])
+                }
+            }
+        }
+    }
 
     NetCard {
         Layout.fillWidth: true

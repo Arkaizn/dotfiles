@@ -330,7 +330,31 @@ Singleton {
         "Launcher.toggleKeybinds": "Keybind cheatsheet",
         "dashboard.toggle": "Dashboard",
         "controlCenter.toggle": "Control center",
-        "testing.toggle": "Testing panel"
+        "testing.toggle": "Testing panel",
+        "Launcher.toggleConnections": "Connections",
+        "notifCenter.toggle": "Notification center",
+        "calendar.toggle": "Calendar",
+        "calendar.open": "Calendar",
+        "perfmon.toggle": "Performance monitor",
+        "capture.menu": "Capture menu",
+        "capture.screenshot region": "Screenshot of a region",
+        "capture.screenshot screen": "Screenshot of the screen",
+        "capture.screenshot window": "Screenshot of a window",
+        "capture.screenshot": "Screenshot of a region",
+        "capture.ocr": "Copy text from a region (OCR)",
+        "capture.record screen": "Record the screen",
+        "capture.record window": "Record a window",
+        "capture.record": "Record the screen",
+        "capture.recordAll": "Record all screens",
+        "capture.stop": "Stop recording",
+        "notifs.toggleDnd": "Do not disturb",
+        "notifs.dismissLatest": "Dismiss latest notification",
+        "notifs.clearAll": "Clear all notifications",
+        "power.cycle": "Next power profile",
+        "updates.check": "Check for updates",
+        "theme.mode": "Light / dark mode",
+        "lockscreen.lock": "Lock screen",
+        "wizard.open": "First-run wizard"
     })
 
     readonly property var actionNames: ({
@@ -372,8 +396,10 @@ Singleton {
 
     // what a command does; `argv` when it runs a program directly (niri spawn)
     function describeCommand(cmd, argv) {
-        const ipc = /qs ipc(?: -[pc] \S+)? call (\S+) (\S+)/.exec(cmd)
-        if (ipc) return qsNames[ipc[1] + "." + ipc[2]] ?? "Quickshell: " + ipc[1] + " " + ipc[2]
+        // "target.function argument" first (capture screenshot region), then "target.function"
+        const ipc = /qs ipc(?: -[pc] \S+)? call (\S+) (\S+)(?: "?([^\s"]+)"?)?/.exec(cmd)
+        if (ipc) return qsNames[ipc[1] + "." + ipc[2] + " " + ipc[3]] ?? qsNames[ipc[1] + "." + ipc[2]]
+                        ?? "Quickshell: " + ipc[1] + " " + ipc[2] + (ipc[3] ? " " + ipc[3] : "")
         if (/lock\.sh|loginctl lock|swaylock|hyprlock/.test(cmd)) return "Lock screen"
         if (/wlogout/.test(cmd)) return "Power menu"
         if (/grim|hyprshot|quicksnip|flameshot|grimblast/.test(cmd)) {

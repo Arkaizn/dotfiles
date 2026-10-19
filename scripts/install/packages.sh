@@ -102,6 +102,17 @@ necessary_packages=(
     nextcloud-client
     polkit
     polkit-gnome
+
+    # Quickshell features
+    wl-clipboard          # copy buttons, screenshots, OCR
+    libnotify             # notify-send
+    jq                    # window picking (Hyprland)
+    wf-recorder           # screen recording
+    gpu-screen-recorder   # recording a single window
+    ffmpeg                # merging multi-monitor recordings
+    python-fonttools      # icon picker (names of the Nerd Font icons)
+    tigervnc              # VNC connections (vncviewer)
+    ufw                   # firewall (VNC server rule)
 )
 
 niri_packages=(

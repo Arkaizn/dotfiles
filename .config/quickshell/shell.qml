@@ -43,6 +43,8 @@ ShellRoot {
     readonly property int healthErrors: QsServices.Health.errors
     // and the dotfiles IPC target (it runs nothing until called)
     readonly property bool dotfilesRepo: QsServices.Dotfiles.isRepo
+    // and the VNC server (start with the shell, IPC target, connect notifications)
+    readonly property bool vncServer: QsServices.VncServer.running
     // and the power IPC target / power-saver-on-battery
     readonly property string powerProfile: QsServices.Power.current
     // and the profiles IPC target

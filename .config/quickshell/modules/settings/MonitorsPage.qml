@@ -19,6 +19,13 @@ ColumnLayout {
     property bool edited: false
     property var frozen: null          // canvas mapping held still while dragging
     property bool identifying: false
+    // where Identify shows each monitor's name (Settings.monitorsPage.identifyAt)
+    readonly property string identifyAt: Settings.monitorsPage.identifyAt ?? "top-left"
+    readonly property var identifySpots: [
+        { label: "Top left", value: "top-left" }, { label: "Top", value: "top" }, { label: "Top right", value: "top-right" },
+        { label: "Left", value: "left" }, { label: "Center", value: "center" }, { label: "Right", value: "right" },
+        { label: "Bottom left", value: "bottom-left" }, { label: "Bottom", value: "bottom" }, { label: "Bottom right", value: "bottom-right" }
+    ]
 
     readonly property var sel: draft[selected] ?? null
 
@@ -161,6 +168,14 @@ ColumnLayout {
         RowLayout {
             anchors { right: parent.right; top: parent.top; margins: 10 }
             spacing: 6
+            // where the names show up (picking one shows them right away)
+            DropdownControl {
+                implicitWidth: 130
+                implicitHeight: 30
+                options: page.identifySpots
+                value: page.identifyAt
+                onEdited: v => { Settings.set("monitorsPage", "identifyAt", v); page.identifying = true; identifyTimer.restart() }
+            }
             IconButton {
                 implicitWidth: 30; implicitHeight: 30
                 icon: "󰍺"
@@ -548,7 +563,7 @@ ColumnLayout {
         color: Colors.fade(0.06)
     }
 
-    // ── Identify: big name on every screen for a moment ──────────────────────
+    // ── Identify: big name on every screen for a moment, at the chosen edge ──
     Timer { id: identifyTimer; interval: 2500; onTriggered: page.identifying = false }
 
     LazyLoader {
@@ -557,11 +572,22 @@ ColumnLayout {
             model: Quickshell.screens
             PanelWindow {
                 required property var modelData
+                readonly property string at: page.identifyAt
                 screen: modelData
                 color: "transparent"
+                // no anchor on an axis = centred on it
+                anchors {
+                    top: at.startsWith("top")
+                    bottom: at.startsWith("bottom")
+                    left: at.endsWith("left")
+                    right: at.endsWith("right")
+                }
+                margins { top: 24; bottom: 24; left: 24; right: 24 }
                 implicitWidth: 340
                 implicitHeight: 150
-                exclusionMode: ExclusionMode.Ignore
+                // stays clear of the bar (and other panels) at that edge
+                exclusionMode: ExclusionMode.Normal
+                exclusiveZone: 0
                 WlrLayershell.layer: WlrLayer.Overlay
                 WlrLayershell.namespace: "quickshell"
 
