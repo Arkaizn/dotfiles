@@ -55,7 +55,7 @@ Rectangle {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 visible: zoneBox.ids.length === 0
-                text: zoneBox.page.editable ? "Drop modules here" : "empty"
+                text: zoneBox.page.editable ? "Drop here" : "empty"
                 color: Colors.fade(0.3)
                 font.pixelSize: 11
                 font.italic: true

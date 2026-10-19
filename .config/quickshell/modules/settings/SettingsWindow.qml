@@ -125,6 +125,12 @@ Scope {
         { id: "barlayout", group: "Shell", icon: "󰕮", title: "Bar layout", custom: "barlayout",
           keywords: "modules widgets order arrange drag position left right center clock tray workspaces cpu gpu memory temperature",
           desc: "Which modules sit where on the bar, per monitor" },
+        { id: "dashlayout", group: "Shell", icon: "󰕮", title: "Dashboard layout", custom: "dashlayout",
+          keywords: "dashboard cards columns order arrange drag hide profile music media calendar stats edit live wiggle",
+          desc: "Which cards the dashboard shows, in which column" },
+        { id: "cclayout", group: "Shell", icon: "󰂚", title: "Control center layout", custom: "cclayout",
+          keywords: "control center notification center cards order arrange drag hide own custom card tiles buttons edit live wiggle",
+          desc: "Order of its cards, which button sits in which card, own cards" },
 
         { id: "panels", group: "Shell", icon: "󰖯", title: "Panels", store: "properties",
           desc: "Bar background, popups, dashboard, launcher and cards",
@@ -425,6 +431,9 @@ Scope {
         { page: "barlayout", label: "Add a module to the bar", desc: "CPU, GPU, memory, temperatures, …", keywords: "widget show cpu gpu ram memory temperature stats", icon: "󰐕" },
         { page: "barlayout", label: "Move bar modules", desc: "Drag between left, centre and right", keywords: "order arrange reorder position", icon: "󰕮" },
         { page: "barlayout", label: "Per-monitor bar layout", keywords: "monitor screen output different", icon: "󰍹" },
+        { page: "barlayout", label: "Edit the bar live", desc: "Long-press an empty spot of the bar", keywords: "wiggle jiggle drag move icons", icon: "󰏫" },
+        { page: "dashlayout", label: "Edit the dashboard live", desc: "Long-press an empty spot of the dashboard", keywords: "wiggle jiggle drag move cards", icon: "󰏫" },
+        { page: "cclayout", label: "New control center card", desc: "An own card with tiles of your choice", keywords: "create add custom card tile button", icon: "󰐕" },
         { page: "connections", label: "New SSH / RDP / VNC connection", keywords: "add remote desktop server", icon: "󰐕" },
         { page: "connections", label: "Import connections", desc: "From your scripts and ~/.ssh/config", keywords: "rdp scripts ssh config import", icon: "󰋺" },
         { page: "connections", label: "RDP password in keyring", keywords: "secret-tool password store remote desktop", icon: "󰌋" },
@@ -1093,6 +1102,18 @@ Scope {
                                     active: win.query === "" && win.page.custom === "barlayout"
                                     visible: active
                                     sourceComponent: BarLayoutPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "dashlayout"
+                                    visible: active
+                                    sourceComponent: DashLayoutPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "cclayout"
+                                    visible: active
+                                    sourceComponent: CcLayoutPage {}
                                 }
 
                                 Loader {

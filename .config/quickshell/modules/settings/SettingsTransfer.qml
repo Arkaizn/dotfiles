@@ -34,11 +34,12 @@ Rectangle {
         audio: "audio", bluetooth: "bluetooth", power: "power", defaultApps: "default apps", clipboard: "clipboard",
         connections: "connections", capture: "screenshots", dotfiles: "dotfiles", netTools: "network tools",
         updates: "updates", settingsProfiles: "settings profiles", wizard: "first-run", health: "health check",
-        perfmon: "performance monitor", launcher: "launcher", icons: "icons", monitorsPage: "monitors page" })
+        perfmon: "performance monitor", launcher: "launcher", icons: "icons", monitorsPage: "monitors page",
+        dashboard: "dashboard layout", controlCenter: "control center layout" })
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
-        "health", "icons", "monitorsPage"]
+        "health", "icons", "monitorsPage", "dashboard", "controlCenter"]
     // group → function(value, err) for the feature groups that need more than "is an object"
     property var validators: ({
         wizard: (v, err) => {

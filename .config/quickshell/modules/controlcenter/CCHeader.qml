@@ -4,53 +4,30 @@ import QtQuick.Layouts
 import qs.components
 import qs.services
 
-// Time/date (and batteries under it) on the left; on the right two rows: power actions, and below
-// them shortcuts to the shell's apps (add more to `shortcuts`, they wrap
-// onto further rows, right-aligned, so the panel never gets wider).
-// Logout / reboot / shut down need a second click within 3s to confirm.
+// The clock card's content: time/date (and batteries under it) on the left;
+// on the right its buttons (PanelLayout.ccItems.header — power actions and app
+// shortcuts by default) in right-aligned rows of five, so the panel never gets
+// wider. Logout / reboot / shut down need a second click within 3s (host.confirm).
+// The clock itself stays put; its buttons can be moved while the control
+// center's buttons are edited live.
 RowLayout {
     id: root
 
-    signal actionStarted()   // lets the control center close itself
-    property var batteries: []   // [{ icon, name, level }] from the control center
+    required property var host           // the control center
+    property var batteries: []           // [{ icon, name, level }] from the control center
+
+    readonly property string holderId: "header"
+    readonly property var ids: PanelLayout.ccItems.header ?? []
+    readonly property var rows: {
+        const out = []
+        for (let i = 0; i < ids.length; i += 5) out.push(ids.slice(i, i + 5))
+        return out
+    }
+    readonly property Item area: buttons       // where buttons can be dropped
+    Component.onCompleted: host.registerHolder(root)
+    Component.onDestruction: host.unregisterHolder(root)
 
     spacing: 6
-
-    property string armed: ""   // id of the action waiting for its confirm click
-
-    readonly property var actions: [
-        { id: "lock",     icon: Icons.get("lock"), tip: "Lock",      confirm: false,
-          cmd: "bash ~/.config/quickshell/scripts/lock.sh" },
-        { id: "suspend",  icon: Icons.get("suspend"), tip: "Suspend",   confirm: false,
-          cmd: "systemctl suspend || loginctl suspend" },
-        { id: "logout",   icon: Icons.get("logout"), tip: "Log out",   confirm: true,
-          cmd: Compositor.quitCommand },
-        { id: "reboot",   icon: Icons.get("powerReboot"), tip: "Reboot",    confirm: true,
-          cmd: "systemctl reboot || loginctl reboot" },
-        { id: "poweroff", icon: Icons.get("poweroff"), tip: "Shut down", confirm: true,
-          cmd: "systemctl poweroff || loginctl poweroff" }
-    ]
-
-    // each runs `qs ipc call <call…>`
-    readonly property var shortcuts: [
-        { icon: "󰃭", tip: "Calendar", call: ["calendar", "open"] },
-        { icon: "󰓅", tip: "Performance monitor", call: ["perfmon", "toggle"] },
-        { icon: "󰌌", tip: "Keybinds", call: ["Launcher", "toggleKeybinds"] },
-        { icon: "󰒓", tip: "Settings", call: ["settings", "open"] }
-    ]
-
-    function run(a) {
-        if (a.confirm && root.armed !== a.id) {
-            root.armed = a.id
-            disarmTimer.restart()
-            return
-        }
-        root.armed = ""
-        root.actionStarted()
-        Quickshell.execDetached(["bash", "-c", a.cmd])
-    }
-
-    Timer { id: disarmTimer; interval: 3000; onTriggered: root.armed = "" }
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -64,10 +41,10 @@ RowLayout {
             font.family: Properties.fontFamily
         }
         Text {
-            text: root.armed !== ""
-                ? "Click again to " + root.actions.find(a => a.id === root.armed).tip.toLowerCase()
+            text: root.host.armed !== ""
+                ? "Click again to " + PanelLayout.item(root.host.armed).name.toLowerCase()
                 : Time.format("dddd, d. MMMM")
-            color: root.armed !== "" ? Colors.red : Colors.fade(0.6)
+            color: root.host.armed !== "" ? Colors.red : Colors.fade(0.6)
             font.pixelSize: 12
         }
         // batteries
@@ -104,41 +81,25 @@ RowLayout {
     Item { Layout.fillWidth: true }
 
     ColumnLayout {
+        id: buttons
         Layout.alignment: Qt.AlignVCenter
+        Layout.minimumWidth: root.host.editButtons ? Properties.buttonHeight * 2 + 6 : 0
+        Layout.minimumHeight: root.host.editButtons ? Properties.buttonHeight : 0
         spacing: 6
 
-        RowLayout {
-            id: powerRow
-            Layout.alignment: Qt.AlignRight
-            spacing: 6
-            Repeater {
-                model: root.actions
-                IconButton {
-                    required property var modelData
-                    icon: modelData.icon
-                    tooltip: modelData.tip
-                    active: root.armed === modelData.id
-                    textColor: root.armed === modelData.id || modelData.id === "poweroff" ? Colors.red : Properties.color
-                    onClicked: root.run(modelData)
-                }
-            }
-        }
-
-        // as wide as the power row; right to left so a short last row sits on
-        // the right (the list is reversed to keep its order left → right)
-        Flow {
-            Layout.preferredWidth: powerRow.implicitWidth
-            layoutDirection: Qt.RightToLeft
-            spacing: 6
-            Repeater {
-                model: root.shortcuts.slice().reverse()
-                IconButton {
-                    required property var modelData
-                    icon: modelData.icon
-                    tooltip: modelData.tip
-                    onClicked: {
-                        root.actionStarted()
-                        Quickshell.execDetached(["qs", "ipc", "call"].concat(modelData.call))
+        Repeater {
+            model: root.rows
+            RowLayout {
+                required property var modelData
+                Layout.alignment: Qt.AlignRight
+                spacing: 6
+                Repeater {
+                    model: parent.modelData
+                    CCItem {
+                        required property string modelData
+                        itemId: modelData
+                        host: root.host
+                        compact: true
                     }
                 }
             }

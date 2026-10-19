@@ -36,3 +36,5 @@ singleton SettingsProfiles SettingsProfiles.qml
 singleton PerfMon PerfMon.qml
 singleton Icons Icons.qml
 singleton VncServer VncServer.qml
+singleton EditMode EditMode.qml
+singleton PanelLayout PanelLayout.qml

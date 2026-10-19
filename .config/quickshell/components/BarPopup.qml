@@ -37,6 +37,11 @@ PanelWindow {
     property int padding: 10
     property bool autoClose: true      // close shortly after the pointer leaves
     property string ipcName: ""
+    // live editing (EditMode): the surface covers the screen so a dragged part
+    // can follow the pointer anywhere; only the panel takes input (mask)
+    property bool fullscreen: false
+    // above the panel, not clipped, window coordinates: for drag ghosts
+    readonly property alias overlay: overlayItem
 
     default property alias content: body.data
 
@@ -72,13 +77,14 @@ PanelWindow {
     exclusiveZone: 0
     // side "at" spans the whole width and moves the panel inside the surface
     // (see `ox`), so moving to a new spot is a smooth animation, not a jump.
-    anchors { top: true; left: side === "left" || side === "at"; right: side === "right" || side === "at" }
+    readonly property bool _wide: side === "at" || fullscreen
+    anchors { top: true; left: side === "left" || _wide; right: side === "right" || _wide }
     margins {
-        left: side === "left" ? Properties.barInset : 0
-        right: side === "right" ? Properties.barInset : 0
+        left: side === "left" && !_wide ? Properties.barInset : 0
+        right: side === "right" && !_wide ? Properties.barInset : 0
     }
     implicitWidth: panelWidth + flareL + flareR
-    implicitHeight: maxHeight
+    implicitHeight: fullscreen ? Math.max(maxHeight, (screen?.height ?? 1440) - 80) : maxHeight
 
     // ── API ───────────────────────────────────────────────────
     // `scr`: the screen whose bar was clicked (optional) — opens there.
@@ -129,8 +135,16 @@ PanelWindow {
         return Math.max(Properties.barInset, Math.min(sw - Properties.barInset - implicitWidth, x))
     }
 
+    // where the panel sits on its own (left / right / center), for a full-width surface
+    readonly property int _fixedLeft: {
+        const sw = screen?.width ?? 0
+        return side === "left" ? Properties.barInset
+             : side === "right" ? sw - Properties.barInset - implicitWidth
+             : Math.floor((sw - implicitWidth) / 2)
+    }
+
     // x of the panel (incl. flares) inside the surface; animates for side "at"
-    property real ox: side === "at" ? _atLeft : 0
+    property real ox: side === "at" ? _atLeft : fullscreen ? _fixedLeft : 0
     Behavior on ox {
         enabled: root.shown && root.side === "at"
         NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
@@ -260,5 +274,11 @@ PanelWindow {
             height: root.panelHeight - root.padding * 2
             opacity: Math.min(1, root.reveal * 1.5)
         }
+    }
+
+    Item {
+        id: overlayItem
+        anchors.fill: parent
+        z: 10
     }
 }

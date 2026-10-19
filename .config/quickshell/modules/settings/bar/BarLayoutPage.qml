@@ -77,12 +77,19 @@ Item {
         NetCard {
             Layout.fillWidth: true
             title: "Preview"
-            header: ActionButton {
-                icon: "󰑓"
-                text: "Reset"
-                interactive: page.editable
-                onClicked: BarLayout.reset(page.screenName)
-            }
+            header: [
+                ActionButton {
+                    icon: "󰏫"
+                    text: "Edit live"
+                    onClicked: EditMode.start("bar", page.screenName)
+                },
+                ActionButton {
+                    icon: "󰑓"
+                    text: "Reset"
+                    interactive: page.editable
+                    onClicked: BarLayout.reset(page.screenName)
+                }
+            ]
 
             Item {
                 Layout.fillWidth: true

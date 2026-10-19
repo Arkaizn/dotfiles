@@ -7,3 +7,6 @@ BarPopup BarPopup.qml
 IconButton IconButton.qml
 SearchField SearchField.qml
 SmoothWheel SmoothWheel.qml
+EditBadge EditBadge.qml
+DropZone DropZone.qml
+DragGhost DragGhost.qml

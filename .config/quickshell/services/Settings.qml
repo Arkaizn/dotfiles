@@ -22,6 +22,7 @@ import QtQuick
 //   syntax     → edited config templates / option paths (Syntax.qml)
 //   icons      → changed icons { "<id>": "<glyph>" } (Icons.qml)
 //   monitorsPage → monitors page options { identifyAt: "top-left" | … }
+//   dashboard, controlCenter → which cards sit where (PanelLayout.qml)
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
 //   clipboard, connections, capture, dotfiles, netTools, updates,
 //   settingsProfiles, wizard, health, perfmon
@@ -65,6 +66,8 @@ Singleton {
     property var launcher: ({})
     property var icons: ({})
     property var monitorsPage: ({})
+    property var dashboard: ({})
+    property var controlCenter: ({})
     property bool loaded: false
 
     // every group, in the order they're written
@@ -72,7 +75,8 @@ Singleton {
                                    "battery", "profile", "autostart", "keybinds", "syntax",
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
-                                   "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage"]
+                                   "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
+                                   "dashboard", "controlCenter"]
 
     // ── File format ──────────────────────────────────────────────────────────
     // 1: no "version" field (everything up to now)

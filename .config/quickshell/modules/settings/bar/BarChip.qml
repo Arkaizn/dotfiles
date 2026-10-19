@@ -13,7 +13,8 @@ Rectangle {
     required property string zone          // "" = not on the bar
     required property Item page            // BarLayoutPage (drag state + ghost)
 
-    readonly property var mod: BarLayout.module(modId)
+    // other layout pages (dashboard, control center) bring their own info() / addZone
+    readonly property var mod: page.info ? page.info(modId) : BarLayout.module(modId)
     readonly property bool dragged: page.dragId === modId
 
     implicitWidth: row.implicitWidth + 20
@@ -74,7 +75,7 @@ Rectangle {
                 anchors.margins: -4
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: chip.zone === "" ? chip.page.place(chip.modId, "right", 0)
+                onClicked: chip.zone === "" ? chip.page.place(chip.modId, chip.page.addZone ?? "right", chip.page.addIndex ?? 0)
                                             : chip.page.place(chip.modId, "", 0)
             }
         }

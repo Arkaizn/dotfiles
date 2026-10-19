@@ -17,8 +17,26 @@ RowLayout {
     property string zone
     spacing: Properties.spacing
 
+    // for the live editor (BarEditLayer): the modules' ids and items
+    readonly property var ids: BarLayout.layoutFor(section.screenName)[section.zone]
+    property bool editing: false        // this bar is edited live: modules wiggle
+    property string dragId: ""          // the module being dragged fades
+    property int rev: 0                 // bumps when delegates are (re)created
+    function itemAt(i) { return rep.itemAt(i) }
+
     Repeater {
-        model: BarLayout.layoutFor(section.screenName)[section.zone]
+        id: rep
+        model: section.ids
+        // plain bindings (not Binding elements) so a module always goes back
+        // to straight / opaque when editing ends, whatever got rebuilt meanwhile
+        onItemAdded: (i, item) => {
+            const id = section.ids[i]
+            const seed = EditMode.seed(id)
+            item.rotation = Qt.binding(() => section.editing && section.dragId !== id ? EditMode.wiggle(seed, 2.4) : 0)
+            item.opacity = Qt.binding(() => section.dragId === id ? 0.25 : 1)
+            section.rev++
+        }
+        onItemRemoved: section.rev++
         delegate: DelegateChooser {
             role: "modelData"
             DelegateChoice { roleValue: "arch"; ArchIcon {} }
