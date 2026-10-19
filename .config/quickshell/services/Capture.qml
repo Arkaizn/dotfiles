@@ -229,13 +229,9 @@ Singleton {
         })
     }
 
-    Component { id: detachedProc; Process {} }
-
     // scripts/record.sh does the recording (and the sound mix / merging)
     function startRecording(file, audio, mode, targets) {
-        const p = detachedProc.createObject(root, { command: [Quickshell.shellDir + "/scripts/record.sh", stateFile, file, audio, mode].concat(targets) })
-        p.startDetached()
-        p.destroy()
+        Jobs.detached([Quickshell.shellDir + "/scripts/record.sh", stateFile, file, audio, mode].concat(targets))
         later(400, refresh)
         if (mode === "window") later(3000, refresh)    // after the share dialog
     }
@@ -250,21 +246,15 @@ Singleton {
 
     // read the state file (synchronously); its pid must still be a wf-recorder
     function refresh() {
-        const l = readText(stateFile).split("\n")
+        const l = Files.read(stateFile).split("\n")
         const pids = (l[0] ?? "").trim().split(/\s+/).map(Number).filter(p => p > 0)
-        const alive = pids.filter(p => ["wf-recorder", "gpu-screen-reco"].includes(readText("/proc/" + p + "/comm").trim()))
+        const alive = pids.filter(p => ["wf-recorder", "gpu-screen-reco"].includes(Files.read("/proc/" + p + "/comm").trim()))
         if (alive.length === 0) return setIdle()
         recPids = alive
         recFile = l[1] ?? ""
         recStart = Number(l[2]) || Date.now() / 1000
         now = Date.now() / 1000
         recording = true
-    }
-    FileView { id: reader; blockLoading: true; printErrors: false }
-    function readText(p) {
-        reader.path = ""
-        reader.path = p
-        return reader.text() ?? ""
     }
     function setIdle() { recording = false; recPids = []; recFile = "" }
 
@@ -295,11 +285,7 @@ Singleton {
         }
     }
 
-    Component {
-        id: timerComp
-        Timer { property var fn; onTriggered: { fn(); destroy() } }
-    }
-    function later(ms, fn) { timerComp.createObject(root, { interval: ms, fn: fn, running: true }) }
+    function later(ms, fn) { Jobs.later(ms, fn) }
 
     function notify(title, body) {
         message(title + ": " + body)

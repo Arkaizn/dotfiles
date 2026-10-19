@@ -10,3 +10,5 @@ SmoothWheel SmoothWheel.qml
 EditBadge EditBadge.qml
 DropZone DropZone.qml
 DragGhost DragGhost.qml
+BarButton BarButton.qml
+ConfirmArm ConfirmArm.qml

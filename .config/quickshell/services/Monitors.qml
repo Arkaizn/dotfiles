@@ -67,7 +67,7 @@ Singleton {
             return
         }
         scanProc.running = true
-        root.included = NiriSettings.readFile(NiriSettings.mainConfig).split("\n").some(l => l.trim() === root.includeLine)
+        root.included = Files.read(NiriSettings.mainConfig).split("\n").some(l => l.trim() === root.includeLine)
     }
 
     // Hyprland: modes are "2560x1440@359.98Hz" (the first is the preferred one),
@@ -329,7 +329,7 @@ Singleton {
     // writes the file of every compositor that's set up here, so switching
     // between them keeps the same monitor setup
     function write() {
-        if (NiriSettings.readFile(NiriSettings.mainConfig) !== "") {
+        if (Files.read(NiriSettings.mainConfig) !== "") {
             writeProc.command = ["sh", "-c", NiriSettings.installScript, "sh", generate(), root.outputsPath]
             writeProc.running = true
         }

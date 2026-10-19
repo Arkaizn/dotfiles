@@ -26,7 +26,7 @@ ColumnLayout {
     Component.onCompleted: load()
 
     function load() {
-        const text = NiriSettings.readFile(file)
+        const text = Files.read(file)
         servers = text.split("\n").map(l => /^\s*Server\s*=\s*(\S+)/.exec(l)).filter(m => m).map(m => m[1])
         generated = (/(?:Generated on|When:)\s*(.+)/.exec(text)?.[1] ?? "").trim()
         Jobs.run(["stat", "-c", "%Y", file], (c, o) => ageDays = c === 0 ? Math.floor((Date.now() / 1000 - Number(o)) / 86400) : -1)

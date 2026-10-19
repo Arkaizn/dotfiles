@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import ".."
 import "../network"
 
@@ -55,8 +56,8 @@ ColumnLayout {
         if (nv) {
             f.push(["Wear (used of its rated life)", nv.percentage_used + " %"])
             f.push(["Spare blocks left", nv.available_spare + " % (warns below " + nv.available_spare_threshold + " %)"])
-            f.push(["Written", PerfMon.bytes(nv.data_units_written * 512000)])
-            f.push(["Read", PerfMon.bytes(nv.data_units_read * 512000)])
+            f.push(["Written", Format.bytes(nv.data_units_written * 512000)])
+            f.push(["Read", Format.bytes(nv.data_units_read * 512000)])
             f.push(["Media errors", String(nv.media_errors)])
             f.push(["Unsafe shutdowns", String(nv.unsafe_shutdowns)])
         } else {

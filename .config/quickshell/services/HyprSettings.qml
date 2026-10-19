@@ -145,18 +145,10 @@ Singleton {
     }
 
     // ── Reading the current values ───────────────────────────────────────────
-    FileView { id: reader; blockLoading: true; printErrors: false }
-
-    function readFile(p) {
-        reader.path = ""
-        reader.path = p
-        return reader.text() ?? ""
-    }
-
     function refresh() {
-        const main = readFile(mainConfig)
+        const main = Files.read(mainConfig)
         root.available = main !== ""
-        root.legacyConfig = !root.available && readFile(configDir + "/hyprland.conf") !== ""
+        root.legacyConfig = !root.available && Files.read(configDir + "/hyprland.conf") !== ""
         // a line that loads quickshell.lua and isn't commented out
         root.included = main.split("\n").some(l => !/^\s*--/.test(l) && l.includes("quickshell.lua"))
         if (Compositor.isHyprland && !optionsProc.running) {
@@ -317,7 +309,7 @@ Singleton {
         if (!available) return
         if (applyProc.running) { applyTimer.restart(); return }
         const text = generate()
-        if (text === readFile(overridePath)) { root.error = ""; return }
+        if (text === Files.read(overridePath)) { root.error = ""; return }
         root.applying = true
         applyProc.command = ["sh", "-c", installScript, "sh", text, overridePath]
         applyProc.running = true

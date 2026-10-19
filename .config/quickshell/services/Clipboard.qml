@@ -70,7 +70,7 @@ Singleton {
         if (!["max-items", "min-store-length"].includes(key)) return
         const n = Math.round(Number(value))
         if (!(n >= 0 && n <= 100000) || (key === "max-items" && n < 1)) return cb && cb(false)
-        const text = NiriSettings.readFile(configFile)
+        const text = Files.read(configFile)
         const lines = text.split("\n").filter(l => l.trim() !== "" && !l.trim().startsWith(key + " "))
         lines.push(key + " " + n)
         Jobs.runInput(["sh", "-c", 'mkdir -p -- "$(dirname -- "$1")" && cat > "$1"', "sh", configFile], lines.join("\n") + "\n", code => {
@@ -79,6 +79,5 @@ Singleton {
         })
     }
 
-    Component { id: laterTimer; Timer { property var fn; interval: 400; running: true; onTriggered: { fn(); destroy() } } }
-    function later(fn) { laterTimer.createObject(root, { fn: fn }) }
+    function later(fn) { Jobs.later(400, fn) }
 }

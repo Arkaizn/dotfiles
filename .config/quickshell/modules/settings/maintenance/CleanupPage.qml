@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import ".."
 import "../network"
 
@@ -79,7 +80,7 @@ ColumnLayout {
 
     NetCard {
         Layout.fillWidth: true
-        title: "App caches (" + PerfMon.bytes(page.cacheTotal) + ")"
+        title: "App caches (" + Format.bytes(page.cacheTotal) + ")"
         icon: "󰃢"
         header: ActionButton { icon: "󰑓"; text: page.loading ? "Measuring…" : "Measure again"; onClicked: page.refresh() }
         NetRow {
@@ -96,9 +97,9 @@ ColumnLayout {
                 label: modelData.path.replace(page.home, "~")
                 RowLayout {
                     spacing: 8
-                    Text { text: PerfMon.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                     ActionButton {
-                        text: page.armed(modelData.path) ? "Delete " + PerfMon.bytes(modelData.size) : "Clear…"
+                        text: page.armed(modelData.path) ? "Delete " + Format.bytes(modelData.size) : "Clear…"
                         textColor: page.armed(modelData.path) ? Colors.red : Colors.ink
                         onClicked: page.armed(modelData.path) ? (page.clearCache(modelData.path), page.confirm = "") : page.ask(modelData.path)
                     }
@@ -133,7 +134,7 @@ ColumnLayout {
         }
         NetRow {
             label: "Crash dumps"
-            desc: (page.coredumps < 0 ? "…" : PerfMon.bytes(page.coredumps)) + " in /var/lib/systemd/coredump (only needed to debug a crash)"
+            desc: (page.coredumps < 0 ? "…" : Format.bytes(page.coredumps)) + " in /var/lib/systemd/coredump (only needed to debug a crash)"
             ActionButton {
                 text: page.armed("dumps") ? "Open terminal" : "Delete…"
                 interactive: page.coredumps > 0
@@ -143,10 +144,10 @@ ColumnLayout {
         }
         NetRow {
             wide: page.orphans.length > 0
-            label: page.orphans.length + " orphan packages  ·  " + PerfMon.bytes(page.orphans.reduce((a, o) => a + o.size, 0))
+            label: page.orphans.length + " orphan packages  ·  " + Format.bytes(page.orphans.reduce((a, o) => a + o.size, 0))
             desc: page.orphans.length === 0 ? "installed as dependencies, nothing needs them any more"
                   : "installed as dependencies that nothing needs any more (some may be optional extras you use!). Biggest: "
-                    + page.orphans.slice(0, 12).map(o => o.name + " " + PerfMon.bytes(o.size)).join(", ") + (page.orphans.length > 12 ? ", …" : "")
+                    + page.orphans.slice(0, 12).map(o => o.name + " " + Format.bytes(o.size)).join(", ") + (page.orphans.length > 12 ? ", …" : "")
                     + "\nThe terminal shows pacman's full list and asks before removing."
             ActionButton {
                 text: page.armed("orphans") ? "Open terminal" : "Review…"
@@ -163,7 +164,7 @@ ColumnLayout {
         icon: "󰩹"
         NetRow {
             first: true
-            label: page.trash < 0 ? "…" : page.trash === 0 ? "Empty" : PerfMon.bytes(page.trash)
+            label: page.trash < 0 ? "…" : page.trash === 0 ? "Empty" : Format.bytes(page.trash)
             desc: "~/.local/share/Trash"
             RowLayout {
                 spacing: 6

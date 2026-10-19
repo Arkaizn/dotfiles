@@ -144,14 +144,6 @@ Singleton {
     }
 
     // ── Reading your config ──────────────────────────────────────────────────
-    FileView { id: reader; blockLoading: true; printErrors: false }
-
-    function readFile(p) {
-        reader.path = ""
-        reader.path = p
-        return reader.text() ?? ""
-    }
-
     function expand(p, baseDir) {
         if (p.startsWith("~/")) return Quickshell.env("HOME") + p.slice(1)
         if (p.startsWith("/")) return p
@@ -221,7 +213,7 @@ Singleton {
     // fills `out` with "path/to/node" → { args, order }; later nodes win
     function parseInto(file, out, state, depth) {
         if (depth > 8) return
-        const src = readFile(file)
+        const src = Files.read(file)
         const baseDir = file.replace(/\/[^/]*$/, "")
         const stack = []
         let cur = null
@@ -287,7 +279,7 @@ Singleton {
             else eff[s.key] = a
         }
         root.effective = eff
-        root.included = readFile(mainConfig).split("\n").some(l => l.trim() === root.includeLine)
+        root.included = Files.read(mainConfig).split("\n").some(l => l.trim() === root.includeLine)
     }
 
     // ── Writing the override file ────────────────────────────────────────────
@@ -387,10 +379,10 @@ Singleton {
         + 'else rm -f "$tmp"; printf "%s\\n" "$out" | sed "s/\\x1b\\[[0-9;]*m//g" | grep -vE " (DEBUG|INFO) " >&2; exit 1; fi'
 
     function apply() {
-        if (readFile(mainConfig) === "") return     // no niri config here (e.g. a Hyprland-only machine)
+        if (Files.read(mainConfig) === "") return     // no niri config here (e.g. a Hyprland-only machine)
         if (applyProc.running) { applyTimer.restart(); return }
         const text = generate()
-        if (text === readFile(overridePath)) { root.error = ""; return }
+        if (text === Files.read(overridePath)) { root.error = ""; return }
         root.applying = true
         applyProc.command = ["sh", "-c", installScript, "sh", text, overridePath]
         applyProc.running = true

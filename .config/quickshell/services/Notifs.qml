@@ -355,14 +355,5 @@ Singleton {
         return -1
     }
 
-    function _later(fn, delay) {
-        const t = laterTimer.createObject(root, { interval: delay ?? exitDuration })
-        t.triggered.connect(() => { fn(); t.destroy() })
-        t.start()
-    }
-
-    Component {
-        id: laterTimer
-        Timer { repeat: false }
-    }
+    function _later(fn, delay) { Jobs.later(delay ?? exitDuration, fn) }
 }

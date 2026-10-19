@@ -6,7 +6,7 @@ Item {
     id: root
 
     // Properties to pass in from the parent, setting here just that they exist
-    property bool hovered: Properties.hovered
+    property bool hovered: false
     property string iconText: ""
     property int iconSize: Properties.iconSize
     property color textColor: Properties.color

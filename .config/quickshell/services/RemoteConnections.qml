@@ -2,7 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "../modules/settings/Valid.js" as Valid
+import qs.services.lib
 
 // Saved SSH / RDP / VNC connections (launcher tab + settings app → Apps →
 // Connections).
@@ -176,16 +176,7 @@ Singleton {
         save(list.map(c => c.id === id ? Object.assign({}, c, { lastUsed: Date.now() }) : c))
     }
 
-    Component {
-        id: detachedProc
-        Process {}
-    }
-    function detached(argv, env) {
-        const p = detachedProc.createObject(root, { command: argv })
-        if (env) p.environment = env
-        p.startDetached()
-        p.destroy()
-    }
+    function detached(argv, env) { Jobs.detached(argv, env) }
 
     // ── Reachability (only while someone looks: launcher tab / page) ────────
     // id → "up" | "down" | "checking"
@@ -222,7 +213,7 @@ Singleton {
                 const r = parseScriptLine(line, file)
                 if (r) found.push(r)
             }
-            for (const r of parseSshConfig(NiriSettings.readFile(home + "/.ssh/config"))) found.push(r)
+            for (const r of parseSshConfig(Files.read(home + "/.ssh/config"))) found.push(r)
             for (const r of found) {
                 r.exists = list.some(c => c.type === r.conn.type && c.host === r.conn.host
                                           && Number(c.port) === Number(r.conn.port) && c.user === r.conn.user)

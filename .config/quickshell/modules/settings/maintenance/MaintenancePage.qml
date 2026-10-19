@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import ".."
 
 // Maintenance overview: every maintenance tool of the settings app as a tile
@@ -42,7 +43,7 @@ ColumnLayout {
             Jobs.run(["du", "-sb", "--", home + "/.local/share/Trash", (Quickshell.env("XDG_CACHE_HOME") || home + "/.cache")], (c2, o2) => {
                 const sizes = o2.split("\n").map(l => Number(l.split("\t")[0]) || 0)
                 const parts = [n === 0 ? "no orphans" : n + (n === 1 ? " orphan" : " orphans"),
-                               "cache " + PerfMon.bytes(sizes[1] ?? 0), "trash " + (sizes[0] ? PerfMon.bytes(sizes[0]) : "empty")]
+                               "cache " + Format.bytes(sizes[1] ?? 0), "trash " + (sizes[0] ? Format.bytes(sizes[0]) : "empty")]
                 put("cleanup", n > 0 || (sizes[0] ?? 0) > 1073741824 ? "warn" : "ok", parts.join("  ·  "))
             })
         })
@@ -52,7 +53,7 @@ ColumnLayout {
             if (rows.length === 0) return put("diskusage", "info", "")
             const worst = Math.max(...rows.map(f => 1 - Number(f[1]) / Number(f[0])))
             put("diskusage", worst > 0.95 ? "error" : worst > 0.85 ? "warn" : "ok",
-                rows.map(f => f[2].replace(home, "~") + " " + PerfMon.bytes(Number(f[1])) + " free").join("  ·  "))
+                rows.map(f => f[2].replace(home, "~") + " " + Format.bytes(Number(f[1])) + " free").join("  ·  "))
         })
         let failed = 0, pending = 2
         for (const user of [false, true])

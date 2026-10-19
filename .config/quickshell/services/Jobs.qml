@@ -16,6 +16,8 @@ import QtQuick
 //   Jobs.cancel(id)                       stop it (SIGTERM via running = false)
 //   Jobs.state(id)                        { running, lines: [{ text, err }], code, cancelled, timedOut, missing }
 //   Jobs.which(bins, cb)                  cb({ bin: true/false }) — which tools are installed
+//   Jobs.detached(argv, env, cwd)         start a program that outlives the shell
+//   Jobs.later(ms, fn)                    run fn once after ms
 //
 // A job whose program isn't installed ends with `missing: "<program>"`, so the
 // UI can show "install …" instead of an empty failure.
@@ -79,6 +81,27 @@ Singleton {
         p.running = true
         return p
     }
+
+    // ── Detached: keeps running when the shell restarts ─────────────────────
+    // (Quickshell.execDetached can't take a JS object for env / cwd on 0.3.2,
+    // so a Process is made just to start it detached)
+    Component { id: detachedProc; Process {} }
+
+    function detached(argv, env, cwd) {
+        const p = detachedProc.createObject(root, { command: argv })
+        if (env) p.environment = env
+        if (cwd) p.workingDirectory = cwd
+        p.startDetached()
+        p.destroy()
+    }
+
+    // ── fn() after `ms` milliseconds, once ──────────────────────────────────
+    Component {
+        id: laterTimer
+        Timer { property var fn; onTriggered: { try { fn() } finally { destroy() } } }
+    }
+
+    function later(ms, fn) { laterTimer.createObject(root, { interval: ms, fn: fn, running: true }) }
 
     // which of `bins` are installed: cb({ bin: bool })
     function which(bins, cb) {

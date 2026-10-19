@@ -243,7 +243,7 @@ Singleton {
     function collect(file, found, depth) {
         if (depth > 8) return
         const baseDir = file.replace(/\/[^/]*$/, "")
-        for (const n of tree(NiriSettings.tokenize(NiriSettings.readFile(file)))) {
+        for (const n of tree(NiriSettings.tokenize(Files.read(file)))) {
             if (n.skip) continue
             if (n.name === "include" && n.args.length > 0) {
                 collect(NiriSettings.expand(n.args[n.args.length - 1], baseDir), found, depth + 1)

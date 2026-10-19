@@ -1,8 +1,12 @@
 pragma Singleton
+import Quickshell
 import QtQuick
 import qs.services
 
-Rectangle {
+// The shell's look: sizes, fonts, panel colors. Defaults are written here;
+// the settings app stores changes in settings.json (services/Settings.qml),
+// applied by applySettings() below.
+Singleton {
     id: root
 
     // properties / settings
@@ -12,11 +16,8 @@ Rectangle {
     property int interval: 500 // interval update components in bar
     property int bDuration: 140
 
-    // Button Background
-    property bool hovered: false
-    property string iconText: ""
+    // text and icon color of buttons, fields and bar icons
     property color color: Colors.ink
-    
 
     // Text / Font
     property int pixelSize: 13
@@ -24,8 +25,6 @@ Rectangle {
     property bool fontBold: false   
 
     // Margin
-    property int barMarginBottom: 0
-    property int barMarginTop: 0
     property int barMarginLeft: 10
     property int barMarginRight: 10
 
@@ -52,14 +51,6 @@ Rectangle {
     property int buttonHeight: 32
     property int buttonWidth: 20
     property int buttonradius: 10
-
-
-    // Colors
-    property color colorfg: Qt.rgba(0, 0, 0, 0.54)
-    property color colorfgHovered: Qt.rgba(0.12, 0.12, 0.12, 0.1) 
-    property color buttonColorIfHovered: root.hovered ? Qt.rgba(0, 0, 0, 0.31) : Qt.rgba(0, 0, 0, 0.3)
-    property color textColorIfHovered: root.hovered ? Colors.color6 : Colors.foreground
-
 
     // ── Settings app ─────────────────────────────────────────────────────────
     // The values above are the defaults. The settings app stores changes in

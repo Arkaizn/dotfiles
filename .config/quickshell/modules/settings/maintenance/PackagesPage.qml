@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import ".."
 import "../network"
 
@@ -162,7 +163,7 @@ ColumnLayout {
         header: ActionButton { icon: "󰑓"; text: page.loading ? "Reading…" : "Reload"; onClicked: page.load() }
         NetRow {
             first: true
-            label: page.loading ? "Reading the package database…" : page.pkgs.length + " packages  ·  " + PerfMon.bytes(page.totalSize)
+            label: page.loading ? "Reading the package database…" : page.pkgs.length + " packages  ·  " + Format.bytes(page.totalSize)
             desc: page.pkgs.filter(p => p.explicit).length + " installed by you, " + page.pkgs.filter(p => !p.explicit).length
                   + " as dependencies, " + page.pkgs.filter(p => p.aur).length + " from the AUR / not in the repos"
         }
@@ -227,7 +228,7 @@ ColumnLayout {
                       + (needed ? "\nneeded by " + modelData.requiredBy.slice(0, 4).join(", ") + (modelData.requiredBy.length > 4 ? ", …" : "") + ": can't be removed alone" : "")
                 RowLayout {
                     spacing: 8
-                    Text { Layout.preferredWidth: 72; horizontalAlignment: Text.AlignRight; text: PerfMon.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { Layout.preferredWidth: 72; horizontalAlignment: Text.AlignRight; text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                     IconButton {
                         icon: "󰐃"
                         tooltip: "Keep: never suggest it here"
@@ -251,7 +252,7 @@ ColumnLayout {
         }
         NetRow {
             visible: page.picked.length > 0
-            label: page.picked.length + " picked  ·  " + PerfMon.bytes(page.picked.reduce((a, p) => a + p.size, 0))
+            label: page.picked.length + " picked  ·  " + Format.bytes(page.picked.reduce((a, p) => a + p.size, 0))
             desc: page.picked.map(p => p.name).join(", ")
                   + "\nOnes other packages still need are skipped; pacman -Rns also removes what only these needed. The terminal lists everything and asks first."
             RowLayout {
@@ -299,7 +300,7 @@ ColumnLayout {
                         implicitWidth: 120 * Math.min(1, modelData.size / Math.max(1, page.shown[0]?.size ?? 1))
                         implicitHeight: 6; radius: 3; color: Colors.color6
                     }
-                    Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: PerfMon.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                 }
             }
         }

@@ -222,7 +222,7 @@ ColumnLayout {
     function deleteCustom(wm) {
         const file = wm === "niri" ? niriFile : hyprFile
         const main = wm === "niri" ? NiriSettings.mainConfig : HyprSettings.mainConfig
-        const text = (wm === "niri" ? NiriSettings : HyprSettings).readFile(main)
+        const text = Files.read(main)
         if (text === "") { Network.say("Couldn't read " + main, true); return }
         deleter.wm = wm
         deleter.command = ["sh", "-c", deleteScript, "sh", file, main, withoutInclude(text, wm), backupDir, wm]

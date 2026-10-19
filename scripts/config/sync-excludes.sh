@@ -33,4 +33,7 @@ NEVER_PUSH=(
     "cava"
     "wal/templates/Colors.qml"              # retired: quickshell reads ~/.cache/wal/colors.json now
     "*.example"                             # repo-only templates (excluded = also safe from --delete)
+    "quickshell/REFACTOR_PLAN.md"           # quickshell refactor tracking: local notes, not config
+    "quickshell/MANUAL_TESTING.md"
+    "quickshell/REFACTOR_REPORT.md"
 )

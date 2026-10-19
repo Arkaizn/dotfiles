@@ -3,7 +3,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import qs.services
-import "../modules/settings/JsonCheck.js" as JsonCheck
+import qs.services.lib
 
 // Health check (settings app → Maintenance → Health): is everything the shell
 // relies on there and working? Each check gives a status, details and a fix.
@@ -73,7 +73,7 @@ Singleton {
             { id: "colors", group: "Config", title: "pywal colors" },
             { id: "files", group: "Config", title: "Files the config uses" }
         ]
-        if (Compositor.isNiri || NiriSettings.readFile(NiriSettings.mainConfig) !== "") {
+        if (Compositor.isNiri || Files.read(NiriSettings.mainConfig) !== "") {
             c.push({ id: "niri", group: "Compositor", title: "niri config (niri validate)" })
             c.push({ id: "includes", group: "Compositor", title: "niri includes" })
         }
@@ -131,7 +131,7 @@ Singleton {
                            : done("error", "python3 can't import dateutil (calendar sync fails)", "sudo pacman -S python-dateutil"))
             break
         case "settings": {
-            const text = NiriSettings.readFile(Settings.path)
+            const text = Files.read(Settings.path)
             if (text === "") return done("ok", "no settings.json yet (all defaults)")
             try { JsonCheck.parse(text) }
             catch (e) {
@@ -148,7 +148,7 @@ Singleton {
         }
         case "colors": {
             const p = home + "/.cache/wal/colors.json"
-            const text = NiriSettings.readFile(p)
+            const text = Files.read(p)
             if (text === "") return done("warn", "no " + p + " (default colors are used)", "pick a wallpaper (launcher → wallpapers) or run wal -i <image>")
             try { const j = JSON.parse(text); done(j.colors?.color6 ? "ok" : "warn", j.colors?.color6 ? "16 colors" : "colors.json has no colors") }
             catch (e) { done("error", "colors.json isn't valid JSON", "run wal again") }
@@ -173,7 +173,7 @@ Singleton {
             break
         case "includes": {
             // non-optional includes of config.kdl must exist (niri refuses to load otherwise)
-            const text = NiriSettings.readFile(NiriSettings.mainConfig)
+            const text = Files.read(NiriSettings.mainConfig)
             const dir = NiriSettings.configDir
             const paths = []
             for (const l of text.split("\n")) {

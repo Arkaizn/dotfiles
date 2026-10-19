@@ -58,7 +58,7 @@ Singleton {
         }
         loadHeld()
         Jobs.run(["pacdiff", "-o"], (code, out) => pacnew = out.split("\n").filter(l => l.startsWith("/")))
-        const kernel = NiriSettings.readFile("/proc/sys/kernel/osrelease").trim()
+        const kernel = Files.read("/proc/sys/kernel/osrelease").trim()
         if (kernel !== "") Jobs.run(["test", "-d", "/usr/lib/modules/" + kernel], code => rebootNeeded = code !== 0)
     }
 

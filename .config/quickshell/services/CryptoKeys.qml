@@ -2,7 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
-import "../modules/settings/Valid.js" as Valid
+import qs.services.lib
 
 // SSH and GPG overview (settings app → Developer → SSH & GPG). Read-only,
 // plus: copy a *public* key, remove a host from known_hosts (ssh-keygen -R,
@@ -59,7 +59,7 @@ Singleton {
                 agentKeys = code === 0 ? out.split("\n").map(l => l.split(" ")[1]).filter(x => x) : []
             })
         else { agentUp = false; agentKeys = [] }
-        sshHosts = RemoteConnections.parseSshConfig(NiriSettings.readFile(sshDir + "/config")).map(r => r.conn.host)
+        sshHosts = RemoteConnections.parseSshConfig(Files.read(sshDir + "/config")).map(r => r.conn.host)
 
         Jobs.run(["gpg", "--list-keys", "--with-colons", "--fixed-list-mode"], (code, out) => {
             Jobs.run(["gpg", "--list-secret-keys", "--with-colons", "--fixed-list-mode"], (code2, out2) => {

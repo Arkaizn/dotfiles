@@ -4,8 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
-import "JsonCheck.js" as JsonCheck
-import "Valid.js" as Valid
+import qs.services.lib
 
 // Export / import of settings.json, plus the banner that reports on it.
 //
@@ -43,7 +42,7 @@ Rectangle {
         },
         settingsProfiles: (v, err) => {
             for (const k of Object.keys(v)) {
-                if (k === "active") { if (typeof v[k] !== "string" || (v[k] !== "" && SettingsProfiles.validName(v[k]) !== "")) err([k], "active is a profile name") }
+                if (k === "active") { if (typeof v[k] !== "string" || (v[k] !== "" && Valid.name(v[k]) !== "")) err([k], "active is a profile name") }
                 else err([k], "unknown setting \"" + k + "\"")
             }
         },

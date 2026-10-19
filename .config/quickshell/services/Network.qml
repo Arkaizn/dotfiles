@@ -36,25 +36,8 @@ Singleton {
     function say(text, error) { message = { text: text, error: !!error, id: Date.now() } }
 
     // ── Running commands ─────────────────────────────────────────────────────
-    Component {
-        id: procComponent
-        Process {
-            property var callback
-            stdout: StdioCollector { id: out }
-            stderr: StdioCollector { id: err }
-            onExited: code => {
-                const cb = callback, o = out.text, e = err.text
-                destroy()
-                if (cb) cb(code, o, e)
-            }
-        }
-    }
-
     // cb(code, stdout, stderr)
-    function run(command, cb) {
-        const p = procComponent.createObject(root, { command: command, callback: cb })
-        p.running = true
-    }
+    function run(command, cb) { Jobs.run(command, cb) }
 
     // the first useful line of nmcli's complaint
     function errorText(e, fallback) {

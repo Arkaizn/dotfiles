@@ -2,10 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import ".."
 import "../network"
-import "../Valid.js" as Valid
-
 // Network diagnostics: ping, traceroute, port check, speed test. Every field
 // is checked (Valid.js) before anything runs; commands are argument lists;
 // each job can be cancelled and is stopped when the page closes.

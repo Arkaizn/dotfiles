@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import "../settings"
 
 // Performance monitor (inspired by NZXT CAM): an overview of gauges, load /
@@ -373,7 +374,7 @@ Scope {
                                         Text { text: "󰋊"; color: Colors.fade(0.5); font.pixelSize: 13; font.family: Properties.fontFamily }
                                         Text { text: disk.d.mount; color: Colors.ink; font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily; elide: Text.ElideMiddle; Layout.maximumWidth: 140 }
                                         Text { Layout.fillWidth: true; text: disk.d.device + " · " + disk.d.fs; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideRight }
-                                        Text { text: PerfMon.ibytes(disk.d.used) + " / " + PerfMon.ibytes(disk.d.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                                        Text { text: Format.ibytes(disk.d.used) + " / " + Format.ibytes(disk.d.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                                         Text { Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight; text: Math.round(disk.frac * 100) + "%"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
                                     }
                                     Rectangle {
@@ -424,8 +425,8 @@ Scope {
                                 RowLayout {
                                     Layout.fillWidth: true
                                     spacing: 8
-                                    Stat { label: "󰇚 DOWN"; labelColor: root.rxColor; value: PerfMon.ibytes(PerfMon.netRx) + "/s" }
-                                    Stat { label: "󰕒 UP"; labelColor: root.txColor; value: PerfMon.ibytes(PerfMon.netTx) + "/s" }
+                                    Stat { label: "󰇚 DOWN"; labelColor: root.rxColor; value: Format.ibytes(PerfMon.netRx) + "/s" }
+                                    Stat { label: "󰕒 UP"; labelColor: root.txColor; value: Format.ibytes(PerfMon.netTx) + "/s" }
                                 }
                                 Chart {
                                     Layout.fillWidth: true
@@ -436,7 +437,7 @@ Scope {
                                     min: 0; max: 1024
                                     gutter: 62
                                     gridLines: 2
-                                    format: v => PerfMon.ibytes(v) + "/s"
+                                    format: v => Format.ibytes(v) + "/s"
                                     series: [{ label: "Down", values: PerfMon.hist.rx, color: root.rxColor, fill: true },
                                              { label: "Up", values: PerfMon.hist.tx, color: root.txColor }]
                                 }

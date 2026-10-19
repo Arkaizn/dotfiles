@@ -62,16 +62,13 @@ Singleton {
         })
     }
 
-    Component { id: detachedProc; Process {} }
     function launch() {
         const args = ["-C", dir + "/config", "-S", socket, "-f", "30", "-r"]
         if (output !== "") args.push("-o", output)
         if (viewOnly) args.push("-d")
-        const p = detachedProc.createObject(root, { command: ["sh", "-c",
+        Jobs.detached(["sh", "-c",
             'log=$1; shift; rm -f "$log.old"; [ -f "$log" ] && mv "$log" "$log.old"; exec wayvnc "$@" >"$log" 2>&1',
-            "sh", dir + "/wayvnc.log"].concat(args) })
-        p.startDetached()
-        p.destroy()
+            "sh", dir + "/wayvnc.log"].concat(args))
         later(1200, () => { starting = false; refresh(true) })
     }
 
@@ -128,11 +125,7 @@ Singleton {
     // slow check while it runs (it can be stopped from elsewhere)
     Timer { running: root.running; interval: 10000; repeat: true; onTriggered: root.refresh() }
 
-    Component {
-        id: timerComp
-        Timer { property var fn; onTriggered: { fn(); destroy() } }
-    }
-    function later(ms, fn) { timerComp.createObject(root, { interval: ms, fn: fn, running: true }) }
+    function later(ms, fn) { Jobs.later(ms, fn) }
 
     Component.onCompleted: {
         refresh()

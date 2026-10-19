@@ -52,3 +52,11 @@ function sshTarget(s) {
     if (m[1] !== undefined && m[1].startsWith("-")) return "user can't start with \"-\""
     return host(m[2])
 }
+
+// a name that becomes a file name (saved themes, settings profiles)
+function name(n) {
+    n = String(n ?? "").trim()
+    if (n === "") return "enter a name"
+    if (!/^[A-Za-z0-9 _-]{1,40}$/.test(n)) return "letters, digits, space, _ and - (max 40)"
+    return ""
+}

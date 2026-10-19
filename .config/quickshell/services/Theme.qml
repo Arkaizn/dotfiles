@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.services.lib
 
 // pywal themes (settings app → Shell → Theme): preview a scheme before it's
 // applied, light / dark, saved themes and pywal's built-in ones.
@@ -37,17 +38,15 @@ Singleton {
     readonly property bool previewing: Jobs.isRunning("theme-preview")
 
     // so `qs ipc call theme undo` knows about the undo file right after startup
-    Component.onCompleted: { hasUndo = read(undoFile) !== ""; detect() }
+    Component.onCompleted: { hasUndo = Files.read(undoFile) !== ""; detect() }
 
     function refresh() {
-        current = parse(read(currentFile))
-        hasUndo = read(undoFile) !== ""
+        current = parse(Files.read(currentFile))
+        hasUndo = Files.read(undoFile) !== ""
         listSaved()
     }
 
     // ── files ───────────────────────────────────────────────────────────────
-    FileView { id: reader; blockLoading: true; printErrors: false }
-    function read(p) { reader.path = ""; reader.path = p; return reader.text() ?? "" }
     function parse(text) {
         try {
             const j = JSON.parse(text)
@@ -70,7 +69,7 @@ Singleton {
                 onExit: code => {
                     const st = Jobs.state("theme-preview")
                     if (st.missing) { error = "wal isn't installed: " + Jobs.installHint("wal"); return }
-                    const j = code === 0 ? parse(read(previewDir + "/colors.json")) : null
+                    const j = code === 0 ? parse(Files.read(previewDir + "/colors.json")) : null
                     if (!j) { error = st.timedOut ? "wal took too long" : (st.lines.filter(l => l.err).map(l => l.text).slice(-2).join(" ") || "wal failed (exit " + code + ")"); return }
                     preview = { name: (opts.light ? "light" : "dark") + " · " + (opts.backend || "wal") + (opts.saturate >= 0 ? " · saturation " + opts.saturate : ""),
                                 file: previewDir + "/colors.json", colors: j.colors, special: j.special }
@@ -82,7 +81,7 @@ Singleton {
     // data: the parsed theme if the caller has it already (lists), else the file is read
     function previewFile(name, file, data) {
         error = ""
-        const j = data ?? parse(read(file))
+        const j = data ?? parse(Files.read(file))
         if (!j) { error = name + " isn't a pywal theme"; return }
         preview = { name: name, file: file, colors: j.colors, special: j.special }
     }
@@ -113,12 +112,6 @@ Singleton {
     function undo() { if (hasUndo) apply(undoFile) }
 
     // ── saved themes ────────────────────────────────────────────────────────
-    function validName(n) {
-        n = String(n ?? "").trim()
-        if (n === "") return "enter a name"
-        if (!/^[A-Za-z0-9 _-]{1,40}$/.test(n)) return "letters, digits, space, _ and - (max 40)"
-        return ""
-    }
     // all files in one go (one FileView read per file in a loop returns stale text)
     function listSaved() {
         Jobs.run(["sh", "-c", 'for f in "$1"/*.json; do [ -f "$f" ] && printf "\\036%s\\n" "$f" && tr "\\n" " " < "$f" && echo; done', "sh", savedDir], (code, out) => {
@@ -132,7 +125,7 @@ Singleton {
         })
     }
     function save(name, cb) {
-        const e = validName(name)
+        const e = Valid.name(name)
         if (e) return cb(false, e)
         name = name.trim()
         Jobs.run(["mkdir", "-p", "--", savedDir], () => Jobs.run(["cp", "--", currentFile, savedDir + "/" + name + ".json"], code => {
@@ -141,7 +134,7 @@ Singleton {
         }))
     }
     function remove(name) {
-        if (validName(name)) return
+        if (Valid.name(name)) return
         Jobs.run(["rm", "-f", "--", savedDir + "/" + name + ".json"], () => listSaved())
     }
 

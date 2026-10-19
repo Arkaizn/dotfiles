@@ -2,7 +2,7 @@ import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import qs.services
-import "../settings/Valid.js" as Valid
+import qs.services.lib
 
 // Extra results of the app search (AppSearch.qml), above the app list:
 //   2+2, 5 km to mi, =anything   calculator (qalc); Enter copies the result
@@ -77,7 +77,7 @@ ColumnLayout {
 
     // ── ssh ─────────────────────────────────────────────────────────────────
     readonly property string sshQuery: prefix === "ssh" ? q.slice(3).trim() : ""
-    readonly property var sshHosts: prefix === "ssh" ? RemoteConnections.parseSshConfig(NiriSettings.readFile(Quickshell.env("HOME") + "/.ssh/config")).map(r => r.conn.host) : []
+    readonly property var sshHosts: prefix === "ssh" ? RemoteConnections.parseSshConfig(Files.read(Quickshell.env("HOME") + "/.ssh/config")).map(r => r.conn.host) : []
 
     // ── what to show ────────────────────────────────────────────────────────
     // [{ icon, title, subtitle, run: fn, disabled }]

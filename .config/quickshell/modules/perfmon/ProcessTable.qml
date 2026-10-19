@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import "../settings"
 
 // Process table of the performance monitor: sortable columns (click a header;
@@ -168,7 +169,7 @@ PerfCard {
                         spacing: 8
                         Text {
                             id: memText
-                            text: PerfMon.ibytes(row.mem)
+                            text: Format.ibytes(row.mem)
                             color: row.mem < 1048576 ? Colors.fade(0.4) : Colors.ink
                             font.pixelSize: 12
                             font.family: Properties.fontFamily

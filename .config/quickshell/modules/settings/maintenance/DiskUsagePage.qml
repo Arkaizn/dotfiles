@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import ".."
 import "../network"
 
@@ -90,7 +91,7 @@ ColumnLayout {
         NetRow {
             first: true
             wide: true
-            label: page.scanning ? "Scanning " + page.path + " …" : page.path + "  ·  " + PerfMon.bytes(page.total)
+            label: page.scanning ? "Scanning " + page.path + " …" : page.path + "  ·  " + Format.bytes(page.total)
             desc: page.error !== "" ? "󰀦 " + page.error : "stays on one file system (other disks and mounts are skipped)"
             RowLayout {
                 Layout.fillWidth: true
@@ -148,7 +149,7 @@ ColumnLayout {
                         Text { text: row.modelData.dir ? "󰉋" : "󰈔"; color: row.modelData.dir ? Colors.color6 : Colors.fade(0.5); font.pixelSize: 15; font.family: Properties.fontFamily }
                         Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
                         Text { text: (page.total > 0 ? Math.round(100 * row.modelData.size / page.total) : 0) + " %"; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
-                        Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: PerfMon.bytes(row.modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                        Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: Format.bytes(row.modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                         IconButton {
                             visible: row.full.startsWith(page.home + "/")
                             icon: page.confirmTrash === row.full ? "󰄬" : "󰩹"
@@ -193,7 +194,7 @@ ColumnLayout {
                 label: modelData.path.replace(page.home, "~")
                 RowLayout {
                     spacing: 6
-                    Text { text: PerfMon.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
                     IconButton { icon: "󰉋"; tooltip: "Show the folder"; onClicked: Quickshell.execDetached(["xdg-open", modelData.path.replace(/\/[^/]*$/, "")]) }
                 }
             }

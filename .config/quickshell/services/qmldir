@@ -20,6 +20,7 @@ singleton Network Network.qml
 singleton BatteryAlerts BatteryAlerts.qml
 singleton Syntax Syntax.qml
 singleton Jobs Jobs.qml
+singleton Files Files.qml
 singleton Health Health.qml
 singleton SysStats SysStats.qml
 singleton BarLayout BarLayout.qml
@@ -38,3 +39,7 @@ singleton Icons Icons.qml
 singleton VncServer VncServer.qml
 singleton EditMode EditMode.qml
 singleton PanelLayout PanelLayout.qml
+singleton Panels Panels.qml
+singleton Session Session.qml
+singleton Media Media.qml
+singleton NiriIpc NiriIpc.qml

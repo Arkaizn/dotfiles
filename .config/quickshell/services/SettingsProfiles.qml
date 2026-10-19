@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.services.lib
 
 // Settings profiles (settings app → Shell → Profiles): named snapshots of
 // chosen settings groups (+ optionally the pywal colors), e.g. "Work" /
@@ -41,12 +42,6 @@ Singleton {
     // fn(settingsObject) → [{ message }] (set by the settings window)
     property var validator: null
 
-    function validName(n) {
-        n = String(n ?? "").trim()
-        if (n === "") return "enter a name"
-        if (!/^[A-Za-z0-9 _-]{1,40}$/.test(n)) return "letters, digits, space, _ and - (max 40)"
-        return ""
-    }
 
     function refresh() {
         Jobs.run(["sh", "-c", 'for f in "$1"/*.json; do [ -f "$f" ] && printf "\\036%s\\n" "$f" && tr "\\n" " " < "$f" && echo; done', "sh", dir], (code, out) => {
@@ -64,7 +59,7 @@ Singleton {
             }
             profiles = list.sort((a, b) => a.name.localeCompare(b.name))
         })
-        hasUndo = NiriSettings.readFile(undoFile) !== ""
+        hasUndo = Files.read(undoFile) !== ""
     }
     Component.onCompleted: refresh()
 
@@ -73,19 +68,19 @@ Singleton {
     }
 
     function read(name) {
-        try { return JSON.parse(NiriSettings.readFile(dir + "/" + name + ".json")) } catch (x) { return null }
+        try { return JSON.parse(Files.read(dir + "/" + name + ".json")) } catch (x) { return null }
     }
 
     // icon: undefined = keep the one it has
     function save(name, groups, withColors, cb, icon) {
-        const e = validName(name)
+        const e = Valid.name(name)
         if (e) return cb(false, e)
         name = name.trim()
         if (icon === undefined) icon = read(name)?.icon ?? ""
         const settings = {}
         for (const g of groups) if (Settings.groups.includes(g)) settings[g] = Settings[g] ?? {}
         let colors = null
-        if (withColors) { try { colors = JSON.parse(NiriSettings.readFile(home + "/.cache/wal/colors.json")) } catch (x) { colors = null } }
+        if (withColors) { try { colors = JSON.parse(Files.read(home + "/.cache/wal/colors.json")) } catch (x) { colors = null } }
         write(dir + "/" + name + ".json", { name: name, saved: new Date().toISOString(), icon: icon, settings: settings, colors: colors }, ok => {
             refresh()
             cb(ok, ok ? "" : "couldn't write " + dir)
@@ -94,7 +89,7 @@ Singleton {
 
     function setIcon(name, icon) {
         const p = read(name)
-        if (!p || validName(name)) return
+        if (!p || Valid.name(name)) return
         p.icon = icon
         write(dir + "/" + name + ".json", p, () => refresh())
     }
@@ -111,7 +106,7 @@ Singleton {
     // checks one profile object → "" or what's wrong with it
     function checkProfile(p) {
         if (!p || typeof p !== "object" || Array.isArray(p)) return "not a profile { … }"
-        const n = validName(p.name)
+        const n = Valid.name(p.name)
         if (n) return "name: " + n
         if (p.icon !== undefined && (typeof p.icon !== "string" || p.icon.length > 8)) return "icon must be a short text (one glyph)"
         if (p.colors !== undefined && p.colors !== null && (typeof p.colors !== "object" || Array.isArray(p.colors) || typeof p.colors.colors !== "object"))
@@ -129,7 +124,7 @@ Singleton {
         for (const path of paths) {
             const file = path.replace(/.*\//, "")
             let o
-            try { o = JSON.parse(NiriSettings.readFile(path)) }
+            try { o = JSON.parse(Files.read(path)) }
             catch (x) { out.push({ name: file, file: file, problem: "isn't valid JSON" }); continue }
             const list = Array.isArray(o?.profiles) ? o.profiles : [o]
             if (o?.quickshellSettings !== undefined) { out.push({ name: file, file: file, problem: "is a settings export (use Import at the top of the sidebar)" }); continue }
@@ -158,16 +153,16 @@ Singleton {
     }
 
     function remove(name) {
-        if (validName(name)) return
+        if (Valid.name(name)) return
         Jobs.run(["rm", "-f", "--", dir + "/" + name + ".json"], () => refresh())
     }
 
     // cb(ok, message)
     function apply(name, cb) {
         cb = cb ?? (() => {})
-        if (validName(name)) return cb(false, "bad name")
+        if (Valid.name(name)) return cb(false, "bad name")
         let p
-        try { p = JSON.parse(NiriSettings.readFile(dir + "/" + name.trim() + ".json")) } catch (x) { return cb(false, name + ".json isn't valid JSON") }
+        try { p = JSON.parse(Files.read(dir + "/" + name.trim() + ".json")) } catch (x) { return cb(false, name + ".json isn't valid JSON") }
         applyObject(p, ok => { if (ok) Settings.set("settingsProfiles", "active", name.trim()) ; cb(ok, ok ? "" : error) })
     }
 
@@ -182,7 +177,7 @@ Singleton {
         // undo: the current values of exactly these groups (+ colors if the profile has some)
         const undo = { name: "undo", settings: {}, colors: null }
         for (const g of Object.keys(s)) undo.settings[g] = Settings[g] ?? {}
-        if (p.colors) { try { undo.colors = JSON.parse(NiriSettings.readFile(home + "/.cache/wal/colors.json")) } catch (x) {} }
+        if (p.colors) { try { undo.colors = JSON.parse(Files.read(home + "/.cache/wal/colors.json")) } catch (x) {} }
         write(undoFile, undo, ok => {
             if (!ok) { error = "couldn't write the undo file"; return cb(false) }
             for (const g of Object.keys(s)) Settings.setGroup(g, s[g])
@@ -198,7 +193,7 @@ Singleton {
     function undo(cb) {
         cb = cb ?? (() => {})
         let p
-        try { p = JSON.parse(NiriSettings.readFile(undoFile)) } catch (x) { return cb(false) }
+        try { p = JSON.parse(Files.read(undoFile)) } catch (x) { return cb(false) }
         applyObject(p, ok => { if (ok) Settings.set("settingsProfiles", "active", ""); cb(ok) })
     }
 
