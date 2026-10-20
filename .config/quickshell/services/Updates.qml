@@ -90,6 +90,13 @@ Singleton {
             upgradeProc.running = true;
     }
 
+    // Merges the .pacnew / .pacsave files (pacdiff, side by side in nvim) in a
+    // terminal, then re-checks once it closes
+    function mergePacnew() {
+        if (!pacdiffProc.running)
+            pacdiffProc.running = true;
+    }
+
     // a notification for packages that weren't pending before (Settings.updates.notify)
     property var notifiedNames: []
     property bool notifiedOnce: false
@@ -142,6 +149,12 @@ Singleton {
         // repos, then each AUR package on its own; failed ones can be retried
         // by hand or put on hold (scripts/upgrade.sh)
         command: ["kitty", "--class", "custom_hover", "--title", "System upgrade", "-e", Quickshell.shellDir + "/scripts/upgrade.sh"]
+        onExited: root.refresh()
+    }
+    Process {
+        id: pacdiffProc
+        command: ["kitty", "--class", "custom_hover", "--title", "Merge .pacnew files", "-e", "bash", "-c",
+                  'sudo DIFFPROG="nvim -d" pacdiff; echo; read -rp "Done. Press Enter to close" _']
         onExited: root.refresh()
     }
 

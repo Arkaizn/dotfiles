@@ -123,7 +123,15 @@ ColumnLayout {
             wide: Updates.pacnew.length > 0
             label: Updates.pacnew.length === 0 ? "No .pacnew files" : Updates.pacnew.length + " .pacnew / .pacsave files"
             desc: Updates.pacnew.length === 0 ? "config files in /etc are in sync with the packages"
-                  : Updates.pacnew.join("\n") + "\nnew defaults from packages next to your changed configs: merge them with  sudo DIFFPROG=\"nvim -d\" pacdiff"
+                  : Updates.pacnew.join("\n") + "\nnew defaults from packages next to your changed configs. Merge opens a terminal: sudo DIFFPROG=\"nvim -d\" pacdiff"
+                    + " (per file: view / merge side by side, overwrite with the new one, or remove it). After changing mkinitcpio.conf run  sudo mkinitcpio -P"
+            ActionButton {
+                visible: Updates.pacnew.length > 0
+                icon: "󰦒"
+                text: "Merge…"
+                primary: true
+                onClicked: Updates.mergePacnew()
+            }
         }
         NetRow {
             wide: Updates.news !== ""
