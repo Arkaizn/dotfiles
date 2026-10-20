@@ -68,7 +68,7 @@ window-rule {
 }
 
 window-rule {
-    match app-id="onlyoffice-desktopeditors"
+    match app-id="ONLYOFFICE"
     match app-id="RemoteDesktopManager"
     clip-to-geometry true
     draw-border-with-background false
