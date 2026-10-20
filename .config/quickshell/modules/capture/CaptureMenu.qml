@@ -25,6 +25,23 @@ PanelWindow {
     property string delay: Settings.capture.delay ?? "0"
     property string audio: Settings.capture.audio ?? "both"
 
+    // Panels.toggle("capture") / open / close; the state stays Capture.menuOpen
+    // (the capture service closes the menu itself when it starts a capture)
+    readonly property var api: ({
+        toggle: () => Capture.menuOpen = !Capture.menuOpen,
+        open: () => Capture.menuOpen = true,
+        close: () => Capture.menuOpen = false
+    })
+    Component.onCompleted: Panels.register("capture", api)
+    Component.onDestruction: Panels.unregister("capture", api)
+
+    // its monitor unplugged while open (undocking): closed for real, so the next
+    // shortcut opens it again instead of only "closing" a menu that's gone
+    Connections {
+        target: Quickshell
+        function onScreensChanged() { if (Capture.menuOpen && !Quickshell.screens.includes(win.screen)) Capture.menuOpen = false }
+    }
+
     Connections {
         target: Capture
         function onMenuOpenChanged() {
@@ -33,7 +50,7 @@ PanelWindow {
                 win.delay = Settings.capture.delay ?? "0"
                 win.audio = Settings.capture.audio ?? "both"
                 win.screenFor = ""
-                Capture.focusedOutput(name => {
+                Compositor.focusedOutput(name => {
                     const s = Quickshell.screens.find(x => x.name === name)
                     if (s) win.screen = s
                     win.visible = true
@@ -122,7 +139,7 @@ PanelWindow {
                 IconButton {
                     icon: "󰒓"
                     tooltip: "Options"
-                    onClicked: { Capture.menuOpen = false; Quickshell.execDetached(["qs", "ipc", "call", "settings", "openPage", "capture"]) }
+                    onClicked: { Capture.menuOpen = false; Panels.call("settings", "openPage", "capture") }
                 }
                 IconButton { icon: "󰅖"; tooltip: "Close (Esc)"; onClicked: Capture.menuOpen = false }
             }

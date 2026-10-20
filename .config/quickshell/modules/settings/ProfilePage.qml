@@ -233,17 +233,13 @@ ColumnLayout {
                     ActionButton {
                         id: removeBtn
                         visible: page.info !== ""
-                        property bool armed: false
+                        ConfirmArm { id: removeArm }
+                        readonly property bool armed: removeArm.armed !== ""
                         icon: "󰆴"
                         text: armed ? "Click again to remove" : "Remove"
                         textColor: armed ? Colors.red : Colors.ink
                         interactive: !page.busy
-                        onClicked: {
-                            if (!armed) { armed = true; disarm.restart(); return }
-                            armed = false
-                            removeProc.running = true
-                        }
-                        Timer { id: disarm; interval: 3000; onTriggered: removeBtn.armed = false }
+                        onClicked: if (removeArm.confirm("remove")) removeProc.running = true
                     }
                 }
             }

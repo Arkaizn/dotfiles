@@ -106,6 +106,11 @@ Singleton {
         })
     }
 
+    // push.sh in a terminal you can watch (the bar's push button); nothing is committed
+    function pushInTerminal(profile) {
+        Quickshell.execDetached(["kitty", "--title", "Dotfiles: push", "--directory", home, "bash", scripts + "/push.sh", profile])
+    }
+
     // these may ask for sudo and restart the shell: a terminal you can watch
     function pullUpdate(profile) {
         Quickshell.execDetached(["kitty", "--title", "Dotfiles: pull + update", "--directory", home, "bash", scripts + "/pull.sh", profile])

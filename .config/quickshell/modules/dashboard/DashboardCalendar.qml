@@ -6,6 +6,7 @@ import Qt5Compat.GraphicalEffects
 import Quickshell.Io
 import qs.components
 import qs.services
+import qs.services.lib
 
 Item {
     id: root
@@ -75,10 +76,11 @@ Item {
         return                           new Date(curYear, curMonth + 1, cell.d)
     }
 
-    // close the dashboard and run a calendar app IPC call for that day
+    // close the dashboard and call the calendar app (openDate / newEvent) for that day
     function calendarCall(fn, d) {
-        const iso = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")
-        Quickshell.execDetached(["sh", "-c", 'qs ipc call dashboard close; qs ipc call calendar "$1" "$2"', "sh", fn, iso])
+        const iso = Format.day(d)
+        Panels.close("dashboard")
+        Panels.call("calendar", fn, iso)
     }
 
     function prevMonth() {

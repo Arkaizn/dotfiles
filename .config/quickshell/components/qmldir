@@ -1,6 +1,5 @@
 module qs.components
 PopupAnimation PopupAnimation.qml
-InverseCorner InverseCorner.qml
 ButtonBackground ButtonBackground.qml
 ButtonGradient ButtonGradient.qml
 BarPopup BarPopup.qml

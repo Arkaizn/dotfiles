@@ -28,37 +28,58 @@ Scope {
         property string view: "month"
     }
 
+    // what the IPC target and the rest of the shell (Panels.call("calendar", …)) can do
+    function toggleWindow() { if (!root.open) root.resetView(); root.open = !root.open }
+    function openWindow() { if (!root.open) root.resetView(); root.show() }
+    // that day in the day view, e.g. "2026-10-16" (reminder notifications, dashboard)
+    function goToDate(date) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
+        if (m) root.jumpTo = new Date(+m[1], +m[2] - 1, +m[3])
+        if (root.view === "month" || root.view === "agenda") root.view = "day"
+        root.show()
+    }
+    // new event on that day (the dashboard's right-click uses it)
+    function newEventOn(date) {
+        const d = root.parseDay(date)
+        if (d) { root.pendingNew = true; root.jumpTo = d }     // flag first: the guard sees it
+        if (!root.open) root.resetView()
+        root.show()
+    }
+    // details of one event (id from CalendarStore), e.g. from the dashboard
+    function showEventId(id) {
+        const e = CalendarStore.visibleEvents.find(x => x.id === id)
+        if (e) { const d = new Date(e.start); d.setHours(0, 0, 0, 0); root.pendingEvent = id; root.jumpTo = d }
+        if (!root.open) root.resetView()
+        root.show()
+    }
+    function switchView(view) {
+        if (["day", "week", "month", "agenda"].includes(view)) root.view = view
+        root.show()
+    }
+
+    readonly property var api: ({
+        toggle: () => root.toggleWindow(),
+        open: () => root.openWindow(),
+        close: () => root.open = false,
+        openDate: date => root.goToDate(date),
+        newEvent: date => root.newEventOn(date),
+        showEvent: id => root.showEventId(id),
+        setView: view => root.switchView(view)
+    })
+    Component.onCompleted: Panels.register("calendar", api)
+    Component.onDestruction: Panels.unregister("calendar", api)
+
     IpcHandler {
         target: "calendar"
-        function toggle(): void { if (!root.open) root.resetView(); root.open = !root.open }
-        function open(): void { if (!root.open) root.resetView(); root.show() }
+        function toggle(): void { root.toggleWindow() }
+        function open(): void { root.openWindow() }
         function close(): void { root.open = false }
         // e.g. qs ipc call calendar setView week   ("show" clashes with `qs ipc show`)
         // e.g. qs ipc call calendar openDate 2026-10-16   (reminder notifications use it)
-        function openDate(date: string): void {
-            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
-            if (m) root.jumpTo = new Date(+m[1], +m[2] - 1, +m[3])
-            if (root.view === "month" || root.view === "agenda") root.view = "day"
-            root.show()
-        }
-        // new event on that day (the dashboard's right-click uses it)
-        function newEvent(date: string): void {
-            const d = root.parseDay(date)
-            if (d) { root.pendingNew = true; root.jumpTo = d }     // flag first: the guard sees it
-            if (!root.open) root.resetView()
-            root.show()
-        }
-        // details of one event (id from CalendarStore), e.g. from the dashboard
-        function showEvent(id: string): void {
-            const e = CalendarStore.visibleEvents.find(x => x.id === id)
-            if (e) { const d = new Date(e.start); d.setHours(0, 0, 0, 0); root.pendingEvent = id; root.jumpTo = d }
-            if (!root.open) root.resetView()
-            root.show()
-        }
-        function setView(view: string): void {
-            if (["day", "week", "month", "agenda"].includes(view)) root.view = view
-            root.show()
-        }
+        function openDate(date: string): void { root.goToDate(date) }
+        function newEvent(date: string): void { root.newEventOn(date) }
+        function showEvent(id: string): void { root.showEventId(id) }
+        function setView(view: string): void { root.switchView(view) }
     }
 
     readonly property string windowTitle: "Quickshell Calendar"

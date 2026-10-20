@@ -10,6 +10,8 @@ ColumnLayout {
     id: root
 
     readonly property int maxGroups: 5
+    // private: only the app and how many, no text (Settings → Lockscreen)
+    property bool privateMode: false
 
     spacing: 8
     visible: Notifs.count > 0
@@ -99,6 +101,7 @@ ColumnLayout {
                 }
                 Text {
                     Layout.fillWidth: true
+                    visible: !root.privateMode
                     text: card.latest?.summary ?? ""
                     color: "white"
                     font.pixelSize: 13
@@ -108,7 +111,7 @@ ColumnLayout {
                 }
                 Text {
                     Layout.fillWidth: true
-                    visible: text !== ""
+                    visible: text !== "" && !root.privateMode
                     text: (card.latest?.body ?? "").replace(/<[^>]*>/g, "")
                     color: Qt.rgba(1, 1, 1, 0.7)
                     font.pixelSize: 12

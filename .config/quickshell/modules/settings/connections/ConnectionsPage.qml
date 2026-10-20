@@ -15,7 +15,8 @@ ColumnLayout {
 
     property string editing: ""            // connection id, "new" or ""
     property bool importing: false
-    property string confirmDelete: ""
+    ConfirmArm { id: deleteArm }
+    readonly property alias confirmDelete: deleteArm.armed     // the connection waiting for its second click
     property var have: ({})
 
     property string firewall: ""            // ufw: "active" / "inactive" / "" (not installed)
@@ -106,8 +107,7 @@ ColumnLayout {
                             tooltip: page.confirmDelete === entry.c.id ? "Click again to delete" : "Delete (and its keyring password)"
                             textColor: page.confirmDelete === entry.c.id ? Colors.red : Properties.color
                             onClicked: {
-                                if (page.confirmDelete === entry.c.id) { RemoteConnections.remove(entry.c.id); page.confirmDelete = "" }
-                                else { page.confirmDelete = entry.c.id; confirmTimer.restart() }
+                                if (deleteArm.confirm(entry.c.id)) RemoteConnections.remove(entry.c.id)
                             }
                         }
                     }
@@ -123,7 +123,6 @@ ColumnLayout {
             }
         }
     }
-    Timer { id: confirmTimer; interval: 3000; onTriggered: page.confirmDelete = "" }
 
     NetCard {
         Layout.fillWidth: true

@@ -43,3 +43,6 @@ singleton Panels Panels.qml
 singleton Session Session.qml
 singleton Media Media.qml
 singleton NiriIpc NiriIpc.qml
+singleton WiredWifi WiredWifi.qml
+singleton Vpn Vpn.qml
+singleton DesktopWidgets DesktopWidgets.qml

@@ -1,3 +1,4 @@
+import Quickshell
 import QtQuick
 import qs.services
 import qs.components
@@ -16,10 +17,10 @@ Item {
         leftPadding: 10
         rightPadding: 10
         Repeater {
-            model: niri.workspaces
+            model: NiriIpc.workspaces
             Rectangle {
                 // Only show workspaces that belong to this bar's monitor
-                visible: model.output === bar.screen.name
+                visible: model.output === ((QsWindow.window as QsWindow)?.screen?.name ?? "")
                 color: Qt.rgba(0, 0, 0, 0)
                 implicitHeight: visible ? Properties.buttonHeight : 0
                 implicitWidth: visible ? text.implicitWidth + 10 : 0
@@ -46,7 +47,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: niri.focusWorkspaceById(model.id)
+                        onClicked: NiriIpc.focusWorkspaceById(model.id)
                     }
                     // needs to be here for the individual workspace hover
                     Behavior on scale {

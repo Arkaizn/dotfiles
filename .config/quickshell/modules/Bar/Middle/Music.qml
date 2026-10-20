@@ -1,12 +1,12 @@
 import Quickshell
 import QtQuick
 import Qt5Compat.GraphicalEffects
-import Quickshell.Services.Mpris
-import Quickshell.Io
 import qs.services
 import qs.components
 
-
+// Media player on the bar: album art + a 3-bar visualizer (Media's shared
+// cava). Left click: show the controls · right click: next player.
+// Own button behaviour (not BarButton): its controls take clicks.
 Item {
     id: music
     // implicitWidth: Properties.buttonWidth + visualizer.width + albumArt.width
@@ -15,15 +15,15 @@ Item {
     implicitWidth: expanded ? Properties.buttonWidth + visualizer.width + albumArt.width + controlsRow.width + 10
                             : Properties.buttonWidth + visualizer.width + albumArt.width 
 
-    // all players except playerctld: it only mirrors the active player, so
-    // that one would show up twice (e.g. two "Mozilla zen")
-    readonly property var players: Mpris.players.values.filter(p => !(p.dbusName || "").includes("playerctld"))
+    readonly property var players: Media.players
     property var player: players.length > 0 ? players[Math.min(currentPlayerIndex, players.length - 1)] : null
     property bool hovered: hoverHandler.hovered   // back to real hover for gradient
     property bool expanded: false
-    property int pulse: 0
-    property var barHeights: [3, 3, 3]
     property int currentPlayerIndex: 0
+    readonly property bool isPlaying: player?.isPlaying ?? false
+
+    Component.onCompleted: Media.acquireVisualizer()
+    Component.onDestruction: Media.releaseVisualizer()
 
     visible: player !== null
 
@@ -105,17 +105,15 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             height: 20
 
-            property bool isPlaying: music.player && music.player.playbackStatus === Mpris.Playing
-
             Repeater {
                 model: 3
                 Rectangle {
                     width: 3
                     anchors.verticalCenter: parent.verticalCenter  // parent is the Row
-                    height: visualizer.isPlaying ? (music.barHeights[index] ?? 3) : 3
+                    height: music.isPlaying ? (Media.visualizer[index] ?? 3) : 3
                     radius: width / 2
                     color: Colors.ink
-                    opacity: visualizer.isPlaying ? 1.0 : 0.6
+                    opacity: music.isPlaying ? 1.0 : 0.6
 
                     Behavior on height {
                         NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
@@ -156,15 +154,14 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: music.player.previous()
+                    onClicked: music.player?.previous()
                 }
             }
 
             // Play / Pause
             Text {
                 anchors.verticalCenter: parent.verticalCenter
-                property bool isPlaying: music.player && music.player.playbackStatus === Mpris.Playing
-                text: player.isPlaying ? Icons.get("pause") : Icons.get("play")
+                text: music.isPlaying ? Icons.get("pause") : Icons.get("play")
                 font.pixelSize: Properties.pixelSize + 3
                 color: Colors.ink
                 opacity: playHover.containsMouse ? 1.0 : 0.65
@@ -176,15 +173,11 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onPressed: (mouse) => {
-                        if (mouse.button === Qt.LeftButton) {
-                            if (player.isPlaying)
-                            music.player.pause()
-                            else
-                            music.player.play()
-                        }
+                    // on click, like the other controls
+                    onClicked: {
+                        if (music.isPlaying) music.player?.pause()
+                        else music.player?.play()
                     }
-
                 }
             }
 
@@ -203,33 +196,12 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: music.player && music.player.next()
+                    onClicked: music.player?.next()
                 }
             }
         }
     }
     
-    Process {
-        id: cavaProcess
-        command: ["cava", "-p", "/home/arkaizn/.config/cava/quickshell.ini"]
-        running: player !== null && player.isPlaying
-        stdout: SplitParser {
-            onRead: (line) => {
-                const parts = line.trim().split(" ")
-                if (parts.length === 3) {
-                    const vals = parts.map(v => {
-                        const n = parseInt(v)
-                        return isNaN(n) ? 3 : Math.max(3, n)
-                    })
-                    music.barHeights = vals
-                }
-            }
-        }
-        onRunningChanged: {
-            if (!running) music.barHeights = [3, 3, 3]
-        }
-    }
-
     HoverHandler {
         id: hoverHandler
         cursorShape: Qt.PointingHandCursor

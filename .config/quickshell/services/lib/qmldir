@@ -2,3 +2,8 @@ module qs.services.lib
 Valid 1.0 Valid.js
 JsonCheck 1.0 JsonCheck.js
 Format 1.0 Format.js
+Devices 1.0 Devices.js
+VpnParse 1.0 VpnParse.js
+NetCheck 1.0 NetCheck.js
+DeskWidgets 1.0 DeskWidgets.js
+LockItems 1.0 LockItems.js

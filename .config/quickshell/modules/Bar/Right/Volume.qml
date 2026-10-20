@@ -5,19 +5,14 @@ import qs.services
 import qs.components
 
 // Left click: control center · right click: mute · wheel: ±5%
-Item {
+BarButton {
     id: root
-    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
-    implicitHeight: Properties.buttonHeight
-    anchors.margins: 1
-
-    property bool hovered: mouseArea.containsMouse
 
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property var audio: sink?.audio ?? null
     PwObjectTracker { objects: root.sink ? [root.sink] : [] }
 
-    readonly property string label: {
+    text: {
         if (!audio) return Icons.get("volNone") + " --%"
         const v = isNaN(audio.volume) ? 0 : Math.round(audio.volume * 100)
         if (audio.muted) return Icons.get("volMuted") + " " + v + "%"
@@ -29,39 +24,30 @@ Item {
                    : Icons.get("volHigh")
         return icon + " " + v + "%"
     }
+    iconSize: 16
 
-    ButtonBackground {
-        id: buttonBackground
-        hovered: root.hovered
-        iconText: root.label
-        iconSize: 16
+    buttons: Qt.LeftButton | Qt.RightButton
+    wheelEnabled: true
+    // one step (Settings → Audio) per 120 units = one mouse notch; touchpads
+    // and hi-res wheels send smaller deltas, which add up
+    property real wheelRest: 0
+    onWheel: wheel => {
+        const d = wheel.angleDelta.y
+        if (d === 0) return                                          // sideways scroll
+        if (Math.sign(d) !== Math.sign(wheelRest)) wheelRest = 0     // changed direction
+        wheelRest += d
+        while (Math.abs(wheelRest) >= 120) {
+            Audio.nudge(root.audio, wheelRest > 0)
+            wheelRest -= Math.sign(wheelRest) * 120
+        }
     }
 
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        cursorShape: Qt.PointingHandCursor
-
-        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
-        onExited: buttonBackground.scale = Properties.onExitedButtonScale
-        onPressed: buttonBackground.scale = Properties.onPressedButtonScale
-        onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
-        onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-
-        onWheel: wheel => {
-            // step and limit: Settings → Audio
-            Audio.nudge(root.audio, wheel.angleDelta.y > 0)
-        }
-
-        // onClicked (not onPressed) so the press animation plays before the action
-        onClicked: mouse => {
-            if (mouse.button === Qt.RightButton) {
-                if (root.audio) root.audio.muted = !root.audio.muted
-            } else {
-                controlCenter.toggle(bar.screen)
-            }
+    // onClicked (not onPressed) so the press animation plays before the action
+    onClicked: mouse => {
+        if (mouse.button === Qt.RightButton) {
+            if (root.audio) root.audio.muted = !root.audio.muted
+        } else {
+            Panels.toggle("controlCenter", (QsWindow.window as QsWindow)?.screen)
         }
     }
 }

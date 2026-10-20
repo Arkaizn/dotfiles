@@ -11,7 +11,8 @@ ColumnLayout {
     id: page
     spacing: 16
 
-    property bool confirmWipe: false
+    ConfirmArm { id: wipeArm; timeout: 4000 }
+    readonly property bool confirmWipe: wipeArm.armed !== ""
     Component.onCompleted: Clipboard.refresh()
 
     NetCard {
@@ -54,10 +55,8 @@ ColumnLayout {
                 text: page.confirmWipe ? "Delete all" : "Clear…"
                 textColor: page.confirmWipe ? Colors.red : Colors.ink
                 onClicked: {
-                    if (page.confirmWipe) { Clipboard.wipe(); page.confirmWipe = false }
-                    else { page.confirmWipe = true; wipeTimer.restart() }
+                    if (wipeArm.confirm("wipe")) Clipboard.wipe()
                 }
-                Timer { id: wipeTimer; interval: 4000; onTriggered: page.confirmWipe = false }
             }
         }
     }

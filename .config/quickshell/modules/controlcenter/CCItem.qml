@@ -6,7 +6,7 @@ import qs.services
 
 // One button of the control center (PanelLayout.items): a small icon button in
 // the clock card (`compact`), a tile everywhere else. `host` is the control
-// center (state, close / runCapture / runTool, the two-click confirm, live editing).
+// center (state, close / runClosed / runTool, the two-click confirm, live editing).
 // While the buttons are edited live it wiggles, − hides it, dragging moves it.
 Item {
     id: root
@@ -52,6 +52,7 @@ Item {
         case "dnd": return Notifs.dnd ? (Notifs.dndScheduled && !Notifs.dndManual ? "On (schedule)" : "On") : "Off"
         case "powerprofile": return Power.current
         case "record": return Capture.recording ? Math.floor(Capture.elapsed / 60) + ":" + String(Capture.elapsed % 60).padStart(2, "0") : info.desc
+        case "vpn": return Vpn.upNames.length > 0 ? Vpn.upNames.join(", ") : Vpn.available ? "Off" : "None found"
         }
         return info.desc
     }
@@ -59,14 +60,22 @@ Item {
                                  : itemId === "bluetooth" ? (bt?.enabled ?? false)
                                  : itemId === "dnd" ? Notifs.dnd
                                  : itemId === "record" ? Capture.recording
+                                 : itemId === "vpn" ? Vpn.upNames.length > 0
                                  : armed
     // Wi-Fi / Bluetooth tiles open their list (in the card they're in)
-    readonly property bool expandable: !compact && (itemId === "wifi" ? host?.wifiDevice !== null
+    readonly property bool expandable: !compact && (itemId === "vpn" ? true : itemId === "wifi" ? host?.wifiDevice !== null
                                                   : itemId === "bluetooth" ? bt !== null : false)
     readonly property bool danger: armed || itemId === "poweroff"
 
+    // the VPN tile reads the VPNs while the control center is open
+    readonly property bool vpnWatch: itemId === "vpn" && (host?.shown ?? false)
+    property bool vpnWatching: false
+    onVpnWatchChanged: { if (vpnWatch !== vpnWatching) { Vpn.watchers += vpnWatch ? 1 : -1; vpnWatching = vpnWatch } }
+    Component.onDestruction: if (vpnWatching) Vpn.watchers -= 1
+
     // ── what it does ──
-    function ipc(args) { host?.close(); Quickshell.execDetached(["qs", "ipc", "call"].concat(args)) }
+    // another surface (Panels), with the control center out of the way
+    function show(name, fn) { host?.close(); Panels.call(name, fn) }
     function activate() {
         if (info.confirm && !host?.confirm(itemId)) return
         switch (itemId) {
@@ -74,27 +83,29 @@ Item {
         case "bluetooth": BluetoothPower.toggle(); break
         case "dnd": Notifs.setDnd(!Notifs.dndManual); break
         case "powerprofile": Power.cycle(); break
-        case "screenshot": host?.runCapture(() => Capture.screenshot("region")); break
-        case "screenfull": host?.runCapture(() => Capture.screenshot("screen")); break
-        case "ocr": host?.runCapture(() => Capture.ocr()); break
-        case "record": Capture.recording ? Capture.stop() : host?.runCapture(() => Capture.record("screen")); break
+        case "screenshot": host?.runClosed(() => Capture.screenshot("region")); break
+        case "screenfull": host?.runClosed(() => Capture.screenshot("screen")); break
+        case "ocr": host?.runClosed(() => Capture.ocr()); break
+        case "record": Capture.recording ? Capture.stop() : host?.runClosed(() => Capture.record("screen")); break
         case "color": host?.runTool("c=$(hyprpicker -a -f hex) && [ -n \"$c\" ]"
                                     + " && notify-send -a 'Control center' 'Color picker' \"$c copied to clipboard\""); break
-        case "capture": host?.close(); Capture.menuOpen = true; break
-        case "launcher": ipc(["Launcher", "toggleAppSearch"]); break
-        case "clipboard": ipc(["Launcher", "toggleClipboard"]); break
-        case "wallpapers": ipc(["Launcher", "toggleWallpapers"]); break
-        case "connections": ipc(["Launcher", "toggleConnections"]); break
-        case "dashboard": ipc(["dashboard", "open"]); break
-        case "calendar": ipc(["calendar", "open"]); break
-        case "perfmon": ipc(["perfmon", "toggle"]); break
-        case "keybinds": ipc(["Launcher", "toggleKeybinds"]); break
-        case "settings": ipc(["settings", "open"]); break
-        case "lock": host?.runTool("bash ~/.config/quickshell/scripts/lock.sh"); break
-        case "suspend": host?.runTool("systemctl suspend || loginctl suspend"); break
-        case "logout": host?.runTool(Compositor.quitCommand); break
-        case "reboot": host?.runTool("systemctl reboot || loginctl reboot"); break
-        case "poweroff": host?.runTool("systemctl poweroff || loginctl poweroff"); break
+        case "capture": show("capture", "open"); break
+        case "launcher": show("launcher", "toggle"); break
+        case "clipboard": show("clipboard", "toggle"); break
+        case "wallpapers": show("wallpapers", "toggle"); break
+        case "connections": show("connections", "toggle"); break
+        case "dashboard": show("dashboard", "open"); break
+        case "calendar": show("calendar", "open"); break
+        case "perfmon": show("perfmon", "toggle"); break
+        case "keybinds": show("keybinds", "toggle"); break
+        case "settings": show("settings", "open"); break
+        // the tile: its list (the list reads the VPNs while open)
+        case "vpn": if (compact) { host?.close(); Panels.call("settings", "openPage", "vpn") } else if (host) host.expanded = host.expanded === "vpn" ? "" : "vpn"; break
+        case "lock": host?.runClosed(() => Session.lock()); break
+        case "suspend": host?.runClosed(() => Session.suspend()); break
+        case "logout": host?.runClosed(() => Session.logout()); break
+        case "reboot": host?.runClosed(() => Session.reboot()); break
+        case "poweroff": host?.runClosed(() => Session.poweroff()); break
         }
     }
 
@@ -122,6 +133,7 @@ Item {
             subtitle: root.subtitle
             active: root.active
             expandable: root.expandable
+            switchable: root.itemId !== "vpn"
             expanded: root.host?.expanded === root.itemId
             onToggled: root.activate()
             onExpandClicked: root.host.expanded = expanded ? "" : root.itemId

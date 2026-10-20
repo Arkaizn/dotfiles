@@ -15,7 +15,9 @@ import "../settings"
 Scope {
     id: root
     property bool open: false
-    Connections { target: PerfMon; function onToggleRequested() { root.open = !root.open } }
+    readonly property var api: ({ toggle: () => { root.open = !root.open }, open: () => { root.open = true }, close: () => { root.open = false } })
+    Component.onCompleted: Panels.register("perfmon", api)
+    Component.onDestruction: Panels.unregister("perfmon", api)
     onOpenChanged: PerfMon.active = open
 
     // one color per component, the same everywhere (gauges, charts, bars)

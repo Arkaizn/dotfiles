@@ -3,7 +3,6 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell.Services.Mpris
-import Quickshell.Io
 import qs.services
 import qs.components
 
@@ -11,11 +10,12 @@ Item {
     id: root
     anchors.fill: parent
 
+    // set by the dashboard: true while it's open (position polling only then)
+    property bool active: false
+
     // ── Player selection ─────────────────────────────────────────────────────
     property int currentPlayerIndex: 0
-    // all players except playerctld: it only mirrors the active player, so
-    // that one would show up twice (e.g. two "Mozilla zen")
-    readonly property var players: Mpris.players.values.filter(p => !(p.dbusName || "").includes("playerctld"))
+    readonly property var players: Media.players
     property var player: players.length > 0
                          ? players[Math.min(currentPlayerIndex, players.length - 1)]
                          : null
@@ -47,7 +47,7 @@ Item {
         if (p.canRaise) p.raise()
         const key = (p.desktopEntry || p.identity || "").toLowerCase().replace(/^mozilla\s+/, "")
         // waits a moment first: the browser switches tab (its title changes)
-        Compositor.focusAppWindow(key, p.trackTitle || "", "qs ipc call dashboard close")
+        Compositor.focusAppWindow(key, p.trackTitle || "", () => Panels.close("dashboard"))
     }
 
     function nextPlayer() {
@@ -120,8 +120,9 @@ Item {
     // ── Position polling ─────────────────────────────────────────────────────
     Timer {
         interval: 1000
-        running: root.player && root.player.isPlaying
+        running: root.active && root.player !== null && root.player.isPlaying
         repeat: true
+        triggeredOnStart: true      // up to date as soon as the dashboard opens
         onTriggered: root.syncPosition()
     }
 
@@ -223,7 +224,7 @@ Item {
                 implicitHeight: 26
                 implicitWidth: pillRow.implicitWidth + 18
                 radius: 8
-                border.color: Colors.fade(sourcePill.hovered ? 0.28 : 0.18)
+                border.color: Colors.fade(sourceHover.containsMouse ? 0.28 : 0.18)
                 border.width: 0.5
                 gradient: ButtonGradient { hovered: sourceHover.containsMouse }
                 Rectangle {
@@ -275,7 +276,7 @@ Item {
                     }
                 }
 
-                Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                 MouseArea {
                     id: sourceHover
                     anchors.fill: parent
@@ -341,7 +342,7 @@ Item {
                     width: 34
                     height: 34
                     radius: 8
-                    border.color: Colors.fade(shuffleHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(shuffleHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: shuffleHover.containsMouse }
                     Rectangle {
@@ -356,7 +357,7 @@ Item {
                         color: root.player && root.player.shuffle
                                ? Colors.color6 : Colors.fade(0.35)
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
                         id: shuffleHover
                         anchors.fill: parent
@@ -376,7 +377,7 @@ Item {
                 // ── Previous ─────────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Colors.fade(prevHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(prevHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: prevHover.containsMouse }
                     Rectangle {
@@ -390,7 +391,7 @@ Item {
                         color: root.player && root.player.canGoPrevious
                                ? Colors.foreground : Colors.fade(0.25)
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
                         id: prevHover
                         anchors.fill: parent
@@ -408,7 +409,7 @@ Item {
                 // ── Play / Pause ─────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Colors.fade(playHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(playHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: playHover.containsMouse }
                     Rectangle {
@@ -421,7 +422,7 @@ Item {
                         font.pixelSize: 20
                         color: Colors.foreground
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
                         id: playHover
                         anchors.fill: parent
@@ -443,7 +444,7 @@ Item {
                 // ── Next ─────────────────────────────────────────────────────
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Colors.fade(nextHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(nextHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: nextHover.containsMouse }
                     Rectangle {
@@ -457,7 +458,7 @@ Item {
                         color: root.player && root.player.canGoNext
                                ? Colors.foreground : Colors.fade(0.25)
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
                         id: nextHover
                         anchors.fill: parent
@@ -476,7 +477,7 @@ Item {
                 // Cycles: MprisLoopState.None → All → Track → None
                 Rectangle {
                     width: 34; height: 34; radius: 8
-                    border.color: Colors.fade(repeatHover.hovered ? 0.28 : 0.18)
+                    border.color: Colors.fade(repeatHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: repeatHover.containsMouse }
                     Rectangle {
@@ -500,7 +501,7 @@ Item {
                             return Colors.color6
                         }
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.duration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
                         id: repeatHover
                         anchors.fill: parent
@@ -561,7 +562,7 @@ Item {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: (mouse) => {
                         if (root.player && root.player.canSeek && root.player.lengthSupported) {
-                            var ratio = mouse.x / width
+                            const ratio = mouse.x / width
                             root.localPosition = ratio * root.player.length
                             root.player.position = root.localPosition
                             root.seekPending = true

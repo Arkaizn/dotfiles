@@ -174,8 +174,8 @@ Modal {
                     Card {
                         id: accCard
                         required property var modelData
-                        property bool armed: false
-                        Timer { id: disarm; interval: 3000; onTriggered: accCard.armed = false }
+                        ConfirmArm { id: accArm }
+                        readonly property bool armed: accArm.armed !== ""
 
                         // account header: name + kind + remove
                         Item {
@@ -211,10 +211,7 @@ Modal {
                                     text: accCard.armed ? "Really remove" : "Remove"
                                     textColor: Colors.red
                                     primary: accCard.armed
-                                    onClicked: {
-                                        if (accCard.armed) CalendarStore.removeAccount(accCard.modelData.id)
-                                        else { accCard.armed = true; disarm.restart() }
-                                    }
+                                    onClicked: if (accArm.confirm("remove")) CalendarStore.removeAccount(accCard.modelData.id)
                                 }
                             }
                         }

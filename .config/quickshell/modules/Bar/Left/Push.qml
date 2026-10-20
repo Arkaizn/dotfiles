@@ -1,34 +1,15 @@
-import Quickshell
 import QtQuick
-import QtQuick.Controls
 import qs.services
 import qs.components
 
-Item {
-    id:root
-    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
-    implicitHeight: Properties.buttonHeight
-    anchors.margins: 1
+// push.sh in a terminal: ~/.config into the repo's working tree, nothing is
+// committed (Dotfiles service: repo and profile from Settings → Dotfiles).
+// First click arms ("Click again"), a second within 3 s runs it.
+BarButton {
+    ConfirmArm { id: arm }
+    readonly property bool armed: arm.armed !== ""
 
-    property bool hovered: mouseArea.containsMouse
-
-    ButtonBackground {
-        id: buttonBackground
-        hovered: root.hovered
-        iconText: Icons.get("push")
-    }
-
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
-        cursorShape: Qt.PointingHandCursor
-        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
-        onExited: buttonBackground.scale = Properties.onExitedButtonScale
-        onPressed: buttonBackground.scale = Properties.onPressedButtonScale
-        onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
-        onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: Quickshell.execDetached(["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/push.sh"])
-    }
+    text: Icons.get("push") + (armed ? " Click again" : "")
+    textColor: armed ? Colors.red : Properties.color
+    onClicked: if (arm.confirm("push")) Dotfiles.pushInTerminal(Settings.dotfiles.profile ?? "default")
 }

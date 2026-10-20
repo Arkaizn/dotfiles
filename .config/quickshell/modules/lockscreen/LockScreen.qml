@@ -3,6 +3,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Pam
 import QtQuick
+import qs.services
 
 // Lockscreen (ext-session-lock): one LockSurface per monitor, all sharing
 // the state below (typed password, auth view, errors).
@@ -22,6 +23,40 @@ Scope {
     property double lockedAt: 0
 
     readonly property bool locked: sessionLock.locked
+
+    // ── Which monitor shows the lockscreen (Settings → Lockscreen) ──
+    // The others show only the blurred wallpaper. No monitors chosen: all of
+    // them (as before). Otherwise the first chosen one that's connected, else
+    // the one you were using when it locked.
+    readonly property var preferred: Settings.lockscreen.monitors ?? []
+    property string focusedAtLock: ""
+    readonly property string mainScreen: {
+        if (preferred.length === 0) return ""
+        const names = Quickshell.screens.map(s => s.name)
+        const outs = Monitors.outputs
+        // an entry is "make model serial", or the output name when that isn't unique (see LockscreenPage)
+        const hit = preferred.map(id => outs.find(o => o.ident === id || o.name === id)).find(o => o && names.includes(o.name))
+        if (hit) return hit.name
+        return names.includes(focusedAtLock) ? focusedAtLock : (names[0] ?? "")
+    }
+    function showsUi(screenName) { return mainScreen === "" || screenName === mainScreen }
+    // monitor names ↔ "make model serial": kept current on every plug / unplug
+    Connections { target: Quickshell; function onScreensChanged() { Monitors.refresh() } }
+
+    // No config reload while locked (D11): Quickshell 0.3.2 can't hand a
+    // locked WlSessionLock over to the next generation — it unlocks the
+    // session, or (locked from the start / not handed over) dies on a Wayland
+    // protocol error. So files aren't watched while locked; a QML / JS file
+    // saved meanwhile is loaded right after unlocking. Set where the lock
+    // changes (not a Binding: Quickshell outlives each config generation, and
+    // an old generation's Binding restores its old value when destroyed; and
+    // WlSessionLock doesn't always signal `locked` going false).
+    onLockedChanged: if (!locked) Quickshell.watchFiles = true      // e.g. the compositor ended the lock
+    function reloadIfChanged() {
+        Jobs.run(["find", Quickshell.shellDir, "-newermt", "@" + Math.floor(lockedAt / 1000),
+                  "(", "-name", "*.qml", "-o", "-name", "*.js", ")", "-print", "-quit"],
+                 (code, out) => { if (out.trim() !== "") Quickshell.reload(false) })
+    }
 
     // Caps Lock from the keyboard LEDs (any keyboard), polled while locked
     property bool capsLock: false
@@ -51,7 +86,10 @@ Scope {
             "grep -q \"^$USER:\" \"${file:-$HOME/.yubico/authorized_yubikeys}\" 2>/dev/null"]
         onExited: code => root.yubikey = code === 0
     }
-    Component.onCompleted: yubikeyProc.running = true
+    // Session.lock() → Panels.open("lockscreen")
+    readonly property var api: ({ open: () => root.lock() })
+    Component.onCompleted: { yubikeyProc.running = true; Panels.register("lockscreen", api); Quickshell.watchFiles = !locked; Monitors.refresh() }
+    Component.onDestruction: Panels.unregister("lockscreen", api)
 
     function lock() {
         if (sessionLock.locked) return
@@ -63,6 +101,8 @@ Scope {
         status = ""
         unlocking = false
         lockedAt = Date.now()
+        Compositor.focusedOutput(name => root.focusedAtLock = name)
+        Quickshell.watchFiles = false
         sessionLock.locked = true
     }
 
@@ -138,6 +178,8 @@ Scope {
         interval: 350
         onTriggered: {
             sessionLock.locked = false
+            Quickshell.watchFiles = true
+            root.reloadIfChanged()
             root.authOpen = false
             root.password = ""
             root.unlocking = false

@@ -52,26 +52,42 @@ Scope {
         root.open = true
     }
 
+    // e.g. openPage("niriInput")
+    function openPage(id) {
+        if (id === "packages") { id = "cleanup"; root.pendingAnchor = "packages" }      // merged into Cleanup & packages
+        if (id === "vpn" || id === "wifi") { root.pendingAnchor = id; id = "network" }    // its tab (control center lists)
+        const layoutTab = { barlayout: "bar", dashlayout: "dashboard", cclayout: "cc" }[id]      // merged into Layouts
+        if (layoutTab) { id = "layouts"; root.pendingAnchor = layoutTab }
+        if (root.visiblePages.some(p => p.id === id)) root.pageId = id
+        root.show()
+    }
+    // the cheatsheet's edit button: Keybinds page with that bind's editor
+    // (keys normalized like Keybinds.normKeys, e.g. "mod+shift+s")
+    function editKeybind(keys) {
+        root.pendingKeybind = keys
+        root.pageId = "keybinds"
+        root.show()
+    }
+
+    // what the IPC target and the rest of the shell (Panels.call("settings", …)) can do
+    readonly property var api: ({
+        toggle: () => root.open = !root.open,
+        open: () => root.show(),
+        close: () => root.open = false,
+        openPage: id => root.openPage(id),
+        editKeybind: keys => root.editKeybind(keys)
+    })
+    Component.onCompleted: Panels.register("settings", api)
+    Component.onDestruction: Panels.unregister("settings", api)
+
     IpcHandler {
         target: "settings"
-        function toggle(): void { root.open = !root.open }
-        function open(): void { root.show() }
-        function close(): void { root.open = false }
+        function toggle(): void { root.api.toggle() }
+        function open(): void { root.api.open() }
+        function close(): void { root.api.close() }
         // e.g. qs ipc call settings openPage niriInput
-        function openPage(id: string): void {
-            if (id === "packages") { id = "cleanup"; root.pendingAnchor = "packages" }      // merged into Cleanup & packages
-            const layoutTab = { barlayout: "bar", dashlayout: "dashboard", cclayout: "cc" }[id]      // merged into Layouts
-            if (layoutTab) { id = "layouts"; root.pendingAnchor = layoutTab }
-            if (root.visiblePages.some(p => p.id === id)) root.pageId = id
-            root.show()
-        }
-        // the cheatsheet's edit button: Keybinds page with that bind's editor
-        // (keys normalized like Keybinds.normKeys, e.g. "mod+shift+s")
-        function editKeybind(keys: string): void {
-            root.pendingKeybind = keys
-            root.pageId = "keybinds"
-            root.show()
-        }
+        function openPage(id: string): void { root.api.openPage(id) }
+        function editKeybind(keys: string): void { root.api.editKeybind(keys) }
     }
 
     // ── Pages ────────────────────────────────────────────────────────────────
@@ -88,6 +104,10 @@ Scope {
     readonly property var pages: [
         { id: "profile", group: "Shell", icon: "󰀄", title: "Profile", custom: "profile",
           desc: "Your picture and name on the dashboard and lockscreen" },
+        { id: "lockscreen", group: "Shell", icon: "󰌾", title: "Lockscreen", custom: "lockscreen",
+          desc: "What the lockscreen shows, and on which monitor" },
+        { id: "desktopWidgets", group: "Shell", icon: "󰕮", title: "Desktop widgets", custom: "desktopWidgets",
+          desc: "Clock, calendar, media player, stats … on the wallpaper" },
 
         { id: "appearance", group: "Shell", icon: "󰏘", title: "Appearance", store: "properties",
           desc: "Font, text and icons used all over the shell",
@@ -239,8 +259,8 @@ Scope {
           keywords: "git repo sync push pull update backup github rsync check differences",
           desc: "Your dotfiles repo: status, differences with ~/.config, sync scripts" },
         { id: "diagnostics", group: "Maintenance", parent: "maintenance", icon: "󰛳", title: "Network tools", custom: "diagnostics",
-          keywords: "ping traceroute port open nc netcat speed test speedtest internet bandwidth latency diagnose network",
-          desc: "Ping, traceroute, port check, speed test" },
+          keywords: "ping traceroute port open nc netcat speed test speedtest internet bandwidth latency diagnose network connectivity captive portal online offline dns router gateway",
+          desc: "Connectivity, ping, traceroute, port check, speed test" },
         { id: "network", group: "System", icon: "󰛳", title: "Network", custom: "network",
           desc: "Interfaces, IP settings, DNS and profiles (NetworkManager)" },
 
@@ -280,7 +300,7 @@ Scope {
                 { key: "chartRange", type: "choice", def: "1 min", options: ["1 min", "5 min", "15 min"], label: "History shown",
                   desc: "Time span of the load, temperature and network charts" },
                 { key: "open", type: "button", icon: "󰓅", text: "Open", label: "Performance monitor",
-                  desc: "also: qs ipc call perfmon toggle", run: () => PerfMon.toggleRequested() } ] },
+                  desc: "also: qs ipc call perfmon toggle", run: () => Panels.toggle("perfmon") } ] },
             { title: "Processes", items: [
                 { key: "procInterval", type: "int", def: 2000, min: 1000, max: 10000, step: 500, label: "Scan every (ms)",
                   desc: "How often the process table reads /proc" },
@@ -313,7 +333,7 @@ Scope {
                   desc: "desktop: what you hear (monitor of the default output) · mic: default input · both: mixed into one track" } ] },
             { title: "Menu", items: [
                 { key: "openMenu", type: "button", icon: "󰄀", text: "Open the capture menu", label: "Capture menu",
-                  desc: "Keys in the menu: 1 region · 2 screen · 3 window · 4 text (OCR) · 5 record a window · 6 record a screen", run: () => Capture.menuOpen = true } ] } ] },
+                  desc: "Keys in the menu: 1 region · 2 screen · 3 window · 4 text (OCR) · 5 record a window · 6 record a screen", run: () => Panels.open("capture") } ] } ] },
         { id: "calendar", group: "Apps", icon: "󰃭", title: "Calendar", store: "calendar",
           desc: "Reminders and syncing of the calendar app",
           sections: [
@@ -415,6 +435,16 @@ Scope {
     // Places on the custom pages (no settings list of their own), so search
     // finds them too. target: where on the page (tab / editor), action: run it.
     readonly property var places: [
+        { page: "network", target: "wifi", label: "Saved Wi-Fi networks", desc: "Auto-connect, priority, forget, password", keywords: "wlan wireless ssid autoconnect priority forget password known", icon: "󰖩" },
+        { page: "network", target: "wifi", label: "Join a hidden network", desc: "Connect to a Wi-Fi that doesn't broadcast its name", keywords: "wlan wireless ssid hidden invisible other network", icon: "󰖪" },
+        { page: "network", target: "vpn", label: "VPN", desc: "Tailscale, NetBird, VPN and WireGuard profiles", keywords: "vpn tailscale netbird wireguard openvpn tunnel", icon: "󰖂" },
+        { page: "network", label: "Wi-Fi off while wired", desc: "Switch Wi-Fi off while a cable or the dock is connected", keywords: "wifi wlan ethernet cable dock lan auto", icon: "󰈀" },
+        { page: "desktopWidgets", label: "Desktop widgets", desc: "Clock, calendar, media player, stats on the wallpaper", keywords: "widget desktop wallpaper background rainmeter conky clock calendar music player stats", icon: "󰕮" },
+        { page: "desktopWidgets", label: "Edit desktop widgets live", desc: "Drag, rotate, resize on the desktop", keywords: "widget move rotate resize place position live editor", icon: "󰏫" },
+        { page: "desktopWidgets", label: "Desktop widgets on all monitors", desc: "Which monitors show the widgets", keywords: "widget monitor display screen all every", icon: "󰍹" },
+        { page: "lockscreen", label: "Notifications on the lockscreen", desc: "With text, private (app and count) or off", keywords: "lock screen notification private privacy hide content messages", icon: "󰂚" },
+        { page: "lockscreen", label: "Show on the lockscreen", desc: "Media player, seconds, date, devices, batteries, power buttons, blur", keywords: "lock screen media player music controls clock seconds date bluetooth battery power shutdown reboot suspend blur avatar picture locked since hint", icon: "󰈈" },
+        { page: "lockscreen", label: "Lockscreen monitor", desc: "Show the lockscreen on one monitor, the others blurred", keywords: "lock screen monitor display dock external laptop primary", icon: "󰌾" },
         { page: "profile", label: "Profile picture", desc: "Shown on the dashboard and lockscreen", keywords: "avatar photo image face", icon: "󰀄" },
         { page: "profile", label: "Display name", keywords: "username greeting hello name", icon: "󰀄" },
         { page: "network", target: "interfaces", label: "Interfaces", desc: "State, addresses, MAC", keywords: "ethernet wifi adapter nic ip address mac eno wlan", icon: "󰈀" },
@@ -475,6 +505,7 @@ Scope {
         { page: "clipboard", label: "Pause clipboard history", keywords: "stop clipboard record private", icon: "󰏤" },
         { page: "clipboard", label: "Clear clipboard history", keywords: "wipe delete clipboard", icon: "󰃢" },
         { page: "clipboard", label: "Passwords in the clipboard", keywords: "keepassxc password secret sensitive", icon: "󰌾" },
+        { page: "diagnostics", label: "Connectivity", desc: "Online / limited / captive portal, router and internet latency, DNS", keywords: "online offline internet captive portal hotel login limited dns gateway router latency", icon: "󰖟" },
         { page: "diagnostics", label: "Ping a host", keywords: "ping latency reachable", icon: "󰛳" },
         { page: "diagnostics", label: "Traceroute", keywords: "route hops path", icon: "󰑪" },
         { page: "diagnostics", label: "Check if a port is open", keywords: "port nc netcat firewall", icon: "󰒍" },
@@ -998,6 +1029,18 @@ Scope {
                                     active: win.query === "" && win.page.custom === "autostart"
                                     visible: active
                                     sourceComponent: AutostartPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "lockscreen"
+                                    visible: active
+                                    sourceComponent: LockscreenPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "desktopWidgets"
+                                    visible: active
+                                    sourceComponent: DesktopWidgetsPage {}
                                 }
                                 Loader {
                                     Layout.fillWidth: true

@@ -77,7 +77,7 @@ Singleton {
     function notifyReboot() {
         Jobs.run(["notify-send", "-a", "Updates", "-u", "critical", "-i", "system-reboot", "-A", "reboot=Reboot now", "-A", "later=Later",
                   "Reboot needed", "The kernel was updated. Reboot to finish the update (until then, USB sticks or VPNs may not work)."],
-                 (code, out) => { if (out.trim() === "reboot") Quickshell.execDetached(["sh", "-c", "systemctl reboot || loginctl reboot"]) })
+                 (code, out) => { if (out.trim() === "reboot") Session.reboot() })
     }
 
     function loadNews() {

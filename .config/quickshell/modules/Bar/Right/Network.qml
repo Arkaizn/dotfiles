@@ -2,18 +2,15 @@ import Quickshell
 import Quickshell.Networking
 import QtQuick
 import qs.services
+import qs.services.lib
 import qs.components
 
 // Left click: control center · right click: Wi-Fi on/off
-Item {
+BarButton {
     id: root
-    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
-    implicitHeight: Properties.buttonHeight
 
-    property bool hovered: mouseArea.containsMouse
-
-    readonly property var wired: Networking.devices.values.find(d => d.type === DeviceType.Wired) ?? null
-    readonly property var wifi: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
+    readonly property var wired: Devices.pick(Networking.devices.values, DeviceType.Wired)
+    readonly property var wifi: Devices.pick(Networking.devices.values, DeviceType.Wifi)
     readonly property var wifiNetwork: wifi?.networks?.values.find(n => n.connected) ?? null
 
     readonly property string wifiIcon: {
@@ -27,33 +24,16 @@ Item {
 
     // One icon per active connection (Ethernet and/or Wi-Fi);
     // nothing connected → crossed-out globe.
-    readonly property string icon: {
+    text: {
         const parts = []
         if (wired?.connected) parts.push(Icons.get("wired"))
         if (wifiNetwork) parts.push(wifiIcon)
         return parts.length ? parts.join("  ") : Icons.get("offline")
     }
 
-    ButtonBackground {
-        id: buttonBackground
-        hovered: root.hovered
-        iconText: root.icon
-    }
-
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
-        cursorShape: Qt.PointingHandCursor
-        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
-        onExited: buttonBackground.scale = Properties.onExitedButtonScale
-        onPressed: buttonBackground.scale = Properties.onPressedButtonScale
-        onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
-        onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: mouse => {
-            if (mouse.button === Qt.RightButton) Networking.wifiEnabled = !Networking.wifiEnabled
-            else controlCenter.toggle(bar.screen)
-        }
+    buttons: Qt.LeftButton | Qt.RightButton
+    onClicked: mouse => {
+        if (mouse.button === Qt.RightButton) Networking.wifiEnabled = !Networking.wifiEnabled
+        else Panels.toggle("controlCenter", (QsWindow.window as QsWindow)?.screen)
     }
 }

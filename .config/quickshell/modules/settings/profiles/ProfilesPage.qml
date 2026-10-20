@@ -17,7 +17,8 @@ ColumnLayout {
     property var picked: SettingsProfiles.defaultGroups()
     property bool withColors: true
     property string msg: ""
-    property string confirmDelete: ""
+    ConfirmArm { id: deleteArm }
+    readonly property alias confirmDelete: deleteArm.armed     // the profile waiting for its second click
     property string iconFor: ""                // profile whose icon picker is open
     property var importList: []                 // SettingsProfiles.readImport(), waiting for Import
 
@@ -132,8 +133,7 @@ ColumnLayout {
                         textColor: page.confirmDelete === p.name ? Colors.red : Properties.color
                         tooltip: page.confirmDelete === p.name ? "Click again to delete" : "Delete"
                         onClicked: {
-                            if (page.confirmDelete === p.name) { SettingsProfiles.remove(p.name); page.confirmDelete = "" }
-                            else { page.confirmDelete = p.name; delTimer.restart() }
+                            if (deleteArm.confirm(p.name)) SettingsProfiles.remove(p.name)
                         }
                     }
                   }
@@ -157,7 +157,6 @@ ColumnLayout {
             }
         }
     }
-    Timer { id: delTimer; interval: 3000; onTriggered: page.confirmDelete = "" }
 
     NetCard {
         Layout.fillWidth: true

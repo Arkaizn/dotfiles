@@ -5,7 +5,8 @@ import qs.services
 
 // Tile for Wi-Fi / Bluetooth / tools.
 // expandable: the tile opens the detail list (expandClicked), the power
-//             button on the right switches it on/off (toggled).
+//             button on the right switches it on/off (toggled) — unless
+//             switchable is false (VPN: one switch per VPN in its list).
 // otherwise:  the whole tile is one button (toggled), e.g. the tools.
 Rectangle {
     id: root
@@ -16,6 +17,7 @@ Rectangle {
     property bool active: false       // on/off look (off = greyed out)
     property bool expanded: false     // detail list open
     property bool expandable: true
+    property bool switchable: true
 
     signal toggled()
     signal expandClicked()
@@ -80,7 +82,7 @@ Rectangle {
 
         // on/off switch
         IconButton {
-            visible: root.expandable
+            visible: root.expandable && root.switchable
             implicitWidth: 28
             implicitHeight: 28
             icon: "󰐥"

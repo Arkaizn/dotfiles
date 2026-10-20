@@ -31,9 +31,26 @@ Rectangle {
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
-        "health", "icons", "monitorsPage", "dashboard", "controlCenter"]
+        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets"]
     // group → function(value, err) for the feature groups that need more than "is an object"
     property var validators: ({
+        // enabled, monitors, instances [{ id, type, x, y, rot, scale, monitors, opts }] (services/lib/DeskWidgets.js)
+        desktopWidgets: (v, err) => DeskWidgets.validate(v, DesktopWidgets.specMap, err),
+        // monitors: "make model serial" of the monitors that show the lockscreen, in priority order;
+        // what it shows: services/lib/LockItems.js
+        lockscreen: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k === "monitors") {
+                    if (!Array.isArray(v[k]) || v[k].some(x => typeof x !== "string" || x.trim() === ""))
+                        err([k], "monitors must be a list of monitor names (\"make model serial\")")
+                }
+                else {
+                    const m = LockItems.check(k, v[k])
+                    if (m === null) err([k], "unknown setting \"" + k + "\"")
+                    else if (m !== "") err([k], m)
+                }
+            }
+        },
         wizard: (v, err) => {
             for (const k of Object.keys(v)) {
                 if (k === "done") { if (typeof v[k] !== "boolean") err([k], "done must be true or false") }
@@ -146,7 +163,7 @@ Rectangle {
     })
     // the network page's own preferences (not spec-driven)
     readonly property var networkSpecs: ({
-        hideVirtual: { type: "bool" }, safeApply: { type: "bool" },
+        hideVirtual: { type: "bool" }, safeApply: { type: "bool" }, wifiOffWhenWired: { type: "bool" },
         showDevices: { type: "list" }, hideDevices: { type: "list" },
         hosts: { type: "objects" }          // [{ id, ip, names, enabled }]
     })

@@ -144,13 +144,13 @@ ColumnLayout {
                     }
                     IconButton {
                         id: del
-                        property bool armed: false
+                        ConfirmArm { id: delArm }
+                        readonly property bool armed: delArm.armed !== ""
                         icon: "󰆴"
                         tooltip: armed ? "Click again to remove" : "Remove"
                         active: armed
                         textColor: Colors.red
-                        onClicked: { if (!armed) { armed = true; disarm.restart() } else page.remove(entry.a.id) }
-                        Timer { id: disarm; interval: 3000; onTriggered: del.armed = false }
+                        onClicked: if (delArm.confirm("remove")) page.remove(entry.a.id)
                     }
                     ToggleSwitch {
                         checked: entry.a.enabled !== false

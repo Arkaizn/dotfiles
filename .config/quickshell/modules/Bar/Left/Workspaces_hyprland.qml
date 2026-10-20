@@ -1,3 +1,4 @@
+import Quickshell
 import Quickshell.Hyprland
 import QtQuick
 import qs.services
@@ -22,7 +23,7 @@ Item {
             // this bar's monitor only (like the niri version), no special
             // workspaces (scratchpads have negative ids), in order
             model: Array.from(Hyprland.workspaces.values)
-                .filter(w => w.id > 0 && w.monitor?.name === bar.screen.name)
+                .filter(w => w.id > 0 && w.monitor?.name === ((QsWindow.window as QsWindow)?.screen?.name ?? ""))
                 .sort((a, b) => a.id - b.id)
 
             Rectangle {

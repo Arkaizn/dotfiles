@@ -6,6 +6,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import qs.components
 import qs.services
+import qs.services.lib
 
 // What one monitor shows while locked.
 //
@@ -20,8 +21,13 @@ Item {
     property var screen: null
 
     readonly property bool auth: lock.authOpen
+    // false: another monitor shows the lockscreen, this one only the background
+    // (it still takes the keyboard: the password is shared by all monitors)
+    readonly property bool main: lock.showsUi(screen?.name ?? "")
     // display name from the settings app (Profile), else the user name
     readonly property string user: Settings.profile.name || (Quickshell.env("USER") ?? "")
+    // what to show (Settings → Lockscreen; services/lib/LockItems.js)
+    readonly property var show: LockItems.resolve(Settings.lockscreen)
 
     // 0 → 1 when locking, 1 → 0 when unlocking (blur, dim, content fade)
     property real shown: 0
@@ -38,24 +44,36 @@ Item {
         target: root.lock
         function onUnlockingChanged() { if (root.lock.unlocking) { enterAnim.stop(); exitAnim.start() } }
         function onAuthOpenChanged() {
-            if (root.lock.authOpen) passwordField.forceActiveFocus()
+            if (root.lock.authOpen && root.main) passwordField.forceActiveFocus()
             else root.forceActiveFocus()
         }
     }
 
     // ── Keyboard: any key opens the password view ──
     focus: true
-    Keys.onPressed: event => {
-        if (root.lock.unlocking) return
+    Keys.onPressed: event => { if (root.handleKey(event.key, event.text)) event.accepted = true }
+    // returns whether the key was used
+    function handleKey(key, text) {
+        if (root.lock.unlocking) return false
+        if (!root.main && root.auth) {
+            // no password field on this monitor: type into the shared password
+            if (key === Qt.Key_Escape) root.lock.hideAuth()
+            else if (key === Qt.Key_Return || key === Qt.Key_Enter) root.lock.submit()
+            else if (key === Qt.Key_Backspace) root.lock.password = root.lock.password.slice(0, -1)
+            else if (text.length === 1 && text.charCodeAt(0) >= 32) root.lock.password += text
+            return true
+        }
         if (!root.auth) {
             root.lock.showAuth()
-            if (event.text.length === 1 && event.text.charCodeAt(0) >= 32)
-                root.lock.password += event.text
-            event.accepted = true
-        } else if (event.key === Qt.Key_Escape) {
-            root.lock.hideAuth()
-            event.accepted = true
+            if (text.length === 1 && text.charCodeAt(0) >= 32)
+                root.lock.password += text
+            return true
         }
+        if (key === Qt.Key_Escape) {
+            root.lock.hideAuth()
+            return true
+        }
+        return false
     }
 
     // ── Background: wallpaper that blurs + dims in ──
@@ -73,7 +91,7 @@ Item {
         anchors.fill: parent
         source: wall
         autoPaddingEnabled: false
-        blurEnabled: true
+        blurEnabled: root.show.blur
         blurMax: 64
         blur: root.shown
         brightness: -0.18 * root.shown
@@ -96,6 +114,7 @@ Item {
     Item {
         id: content
         anchors.fill: parent
+        visible: root.main
         opacity: Math.min(1, root.shown * 1.6)
 
         // ── Clock ──
@@ -135,6 +154,7 @@ Item {
                     font.family: Properties.fontFamily
                 }
                 Text {
+                    visible: root.show.seconds
                     anchors.baseline: hours.baseline
                     text: Time.format("ss")
                     color: Qt.rgba(1, 1, 1, 0.35)
@@ -143,6 +163,7 @@ Item {
                 }
             }
             Text {
+                visible: root.show.date
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Time.format("dddd, d. MMMM")
                 color: Qt.rgba(1, 1, 1, 0.8)
@@ -157,7 +178,7 @@ Item {
             anchors.bottom: media.visible ? media.top : parent.bottom
             anchors.bottomMargin: media.visible ? 28 : 70
             spacing: 6
-            opacity: root.auth ? 0 : 1
+            opacity: root.auth || !root.show.hint ? 0 : 1
             visible: opacity > 0
             Behavior on opacity { NumberAnimation { duration: 250 } }
 
@@ -210,6 +231,7 @@ Item {
 
                 // avatar
                 Item {
+                    visible: root.show.avatar
                     Layout.alignment: Qt.AlignHCenter
                     Layout.preferredWidth: 96
                     Layout.preferredHeight: 96
@@ -238,6 +260,7 @@ Item {
                 }
 
                 Text {
+                    visible: root.show.avatar
                     Layout.alignment: Qt.AlignHCenter
                     text: "Hello, " + root.user
                     color: "white"
@@ -310,6 +333,7 @@ Item {
 
         // ── Top-left: when it was locked ──
         Text {
+            visible: root.show.lockedSince
             anchors { left: parent.left; top: parent.top; margins: 32 }
             text: "󰌾  Locked since " + Qt.formatTime(new Date(root.lock.lockedAt), "HH:mm")
             color: Qt.rgba(1, 1, 1, 0.55)
@@ -324,7 +348,7 @@ Item {
 
             // headset, controller, … with its battery when it reports one
             Repeater {
-                model: BluetoothPower.connected
+                model: root.show.bluetooth ? BluetoothPower.connected : []
                 delegate: Rectangle {
                     required property var modelData
                     readonly property int level: BluetoothPower.battery(modelData)
@@ -347,11 +371,10 @@ Item {
 
             Repeater {
                 model: {
-                    const out = []
+                    if (!root.show.batteries) return []
                     const d = UPower.displayDevice
-                    if (d?.isLaptopBattery) out.push({ icon: "󰁹", level: Math.round(d.percentage * 100) })
-                    for (const b of CustomBatteries.available) out.push({ icon: b.icon, level: b.level })
-                    return out
+                    const own = d?.isLaptopBattery ? [{ icon: "󰁹", level: Math.round(d.percentage * 100) }] : []
+                    return own.concat(CustomBatteries.available.map(b => ({ icon: b.icon, level: b.level })))
                 }
                 delegate: Rectangle {
                     required property var modelData
@@ -377,28 +400,34 @@ Item {
         LockMedia {
             id: media
             anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 32 }
+            visible: root.show.media && player !== null
+            controls: root.show.mediaControls
         }
 
         // ── Right side: notifications ──
         LockNotifications {
             anchors { right: parent.right; rightMargin: 32; verticalCenter: parent.verticalCenter }
             width: 360
+            visible: root.show.notifications !== "off" && Notifs.count > 0
+            privateMode: root.show.notifications === "private"
         }
 
         // ── Bottom-right: power ──
         Row {
             id: power
+            visible: root.show.power
             anchors { right: parent.right; bottom: parent.bottom; margins: 32 }
             spacing: 8
 
-            property string armed: ""
-            Timer { id: disarm; interval: 3000; onTriggered: power.armed = "" }
+            // reboot / shut down: the first click arms, a second within 3 s runs
+            ConfirmArm { id: arm }
+            readonly property string armed: arm.armed
 
             Repeater {
                 model: [
-                    { id: "suspend",  icon: Icons.get("suspend"), tip: "Suspend",   confirm: false, cmd: "systemctl suspend || loginctl suspend" },
-                    { id: "reboot",   icon: Icons.get("powerReboot"), tip: "Reboot",    confirm: true,  cmd: "systemctl reboot || loginctl reboot" },
-                    { id: "poweroff", icon: Icons.get("poweroff"), tip: "Shut down", confirm: true,  cmd: "systemctl poweroff || loginctl poweroff" }
+                    { id: "suspend",  icon: Icons.get("suspend"), tip: "Suspend",   confirm: false, run: () => Session.suspend() },
+                    { id: "reboot",   icon: Icons.get("powerReboot"), tip: "Reboot",    confirm: true,  run: () => Session.reboot() },
+                    { id: "poweroff", icon: Icons.get("poweroff"), tip: "Shut down", confirm: true,  run: () => Session.poweroff() }
                 ]
                 IconButton {
                     required property var modelData
@@ -409,13 +438,9 @@ Item {
                     active: power.armed === modelData.id
                     textColor: power.armed === modelData.id || modelData.id === "poweroff" ? "#f38ba8" : Properties.color
                     onClicked: {
-                        if (modelData.confirm && power.armed !== modelData.id) {
-                            power.armed = modelData.id
-                            disarm.restart()
-                            return
-                        }
-                        power.armed = ""
-                        Quickshell.execDetached(["bash", "-c", modelData.cmd])
+                        if (modelData.confirm && !arm.confirm(modelData.id)) return
+                        arm.disarm()
+                        modelData.run()
                     }
                 }
             }

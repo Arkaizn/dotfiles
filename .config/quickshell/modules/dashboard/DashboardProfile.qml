@@ -93,7 +93,7 @@ ColumnLayout {
 
         ButtonBackground {
             id: usernameRect
-            hovered: root.hovered
+            hovered: usernameMouseArea.containsMouse
             iconText: Settings.profile.name || profileRoot.whoami
             iconSize: 24
             fontBold: true
@@ -123,7 +123,7 @@ ColumnLayout {
                     clip: false  // turn off clip, use layer instead
                     ButtonBackground {
                         id: kernelRect
-                        hovered: root.hovered
+                        hovered: kernelMouseArea.containsMouse
                         iconText: ""
                         iconSize: Properties.iconSize
                         fontBold: true
@@ -146,7 +146,7 @@ ColumnLayout {
                     clip: false  // turn off clip, use layer instead
                     ButtonBackground {
                         id: pkgRect
-                        hovered: root.hovered
+                        hovered: pkgMouseArea.containsMouse
                         iconText: ""
                         iconSize: Properties.iconSize
                         fontBold: true
@@ -170,7 +170,7 @@ ColumnLayout {
                 height: 50
                 ButtonBackground {
                         id: custom1Rect
-                        hovered: root.hovered
+                        hovered: custom1MouseArea.containsMouse
                         iconText: "RDP "
                         iconSize: Properties.iconSize
                         fontBold: true
@@ -195,7 +195,7 @@ ColumnLayout {
                 height: 50
                 ButtonBackground {
                         id: custom2Rect
-                        hovered: root.hovered
+                        hovered: custom2MouseArea.containsMouse
                         iconText: "RDP "
                         iconSize: Properties.iconSize
                         fontBold: true

@@ -2,6 +2,7 @@ pragma Singleton
 import Quickshell
 import Quickshell.Io
 import QtQuick
+import qs.services.lib
 import qs.services
 
 // Data side of the calendar app (modules/calendar).
@@ -56,7 +57,7 @@ Singleton {
             const d = new Date(e.start); d.setHours(0, 0, 0, 0)
             let n = 0
             do {
-                const k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")
+                const k = Format.day(d)
                 ;(m[k] = m[k] || []).push(e)
                 d.setDate(d.getDate() + 1)
             } while (d.getTime() < e.end && ++n < 60)
@@ -66,7 +67,7 @@ Singleton {
 
     function eventsOn(day) {
         const d = new Date(day)
-        const k = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")
+        const k = Format.day(d)
         return byDay[k] ?? []
     }
 
@@ -371,8 +372,6 @@ Singleton {
         onTriggered: root.checkReminders()
     }
 
-    function pad(n) { return String(n).padStart(2, "0") }
-    function hm(t) { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()) }
 
     function notify(e) {
         const mins = Math.round((e.start - Date.now()) / 60000)
@@ -382,17 +381,17 @@ Singleton {
         else if (mins >= -1) when = "Now"
         else when = "Started " + (-mins) + " min ago"
         const parts = [when]
-        if (!e.allDay) parts.push(hm(e.start) + " – " + hm(e.end))
+        if (!e.allDay) parts.push(Format.hm(e.start) + " – " + Format.hm(e.end))
         if (e.location) parts.push(e.location)
         const cal = root.calendarMap[e.calendar]
         const day = new Date(e.start)
-        const iso = day.getFullYear() + "-" + pad(day.getMonth() + 1) + "-" + pad(day.getDate())
-        // --wait: the click (default action) opens the calendar on that day
-        Quickshell.execDetached(["sh", "-c",
-            // UTF-8 forced: without a UTF-8 locale notify-send drops titles with umlauts etc.
-            'r=$(LC_ALL=C.UTF-8 notify-send --app-name="$1" --icon=x-office-calendar --expire-time=20000 '
-            + '--action=default=Open "$2" "$3" --wait) && [ "$r" = default ] && qs ipc call calendar openDate "$4"',
-            "sh", "Calendar" + (cal ? " · " + cal.name : ""), e.title, parts.join("  ·  "), iso])
+        const iso = Format.day(day)
+        // --wait: the click (default action) opens the calendar on that day.
+        // UTF-8 forced: without a UTF-8 locale notify-send drops titles with umlauts etc.
+        Jobs.run(["notify-send", "--app-name=" + "Calendar" + (cal ? " · " + cal.name : ""), "--icon=x-office-calendar",
+                  "--expire-time=20000", "--action=default=Open", e.title, parts.join("  ·  "), "--wait"],
+                 (code, out) => { if (code === 0 && out.trim() === "default") Panels.call("calendar", "openDate", iso) },
+                 { LC_ALL: "C.UTF-8" })
     }
 
     // ── Events ───────────────────────────────────────────────────────────────

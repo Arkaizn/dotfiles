@@ -330,7 +330,6 @@ Singleton {
         "Launcher.toggleKeybinds": "Keybind cheatsheet",
         "dashboard.toggle": "Dashboard",
         "controlCenter.toggle": "Control center",
-        "testing.toggle": "Testing panel",
         "Launcher.toggleConnections": "Connections",
         "notifCenter.toggle": "Notification center",
         "calendar.toggle": "Calendar",

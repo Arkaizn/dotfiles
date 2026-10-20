@@ -101,8 +101,9 @@ PanelWindow {
         function toggleClipboard(): void {
             root.toggle("clipboard")
         }
+        // old name (no view of its own): the apps view
         function toggleStartMenu(): void {
-            root.toggle("startMenu")
+            root.toggle("apps")
         }
         function toggleWallpapers(): void {
             root.toggle("wallpapers")
@@ -124,6 +125,18 @@ PanelWindow {
         function open(): void { if (!root.visible || root.mode !== "wallpapers") root.toggle("wallpapers") }
         function close(): void { if (root.visible) anim.exit() }
     }
+
+    // the same entry points for the rest of the shell: Panels.toggle("clipboard"), …
+    readonly property var _panels: ({
+        launcher: { toggle: () => root.toggle() },
+        clipboard: { toggle: () => root.toggle("clipboard") },
+        wallpapers: { toggle: () => root.toggle("wallpapers") },
+        keybinds: { toggle: () => root.toggle("keybinds") },
+        connections: { toggle: () => root.toggle("connections") }
+    })
+    // (forEach, not for…of / for…in: qmllint 6.12 skips files with those loops)
+    Component.onCompleted: Object.keys(_panels).forEach(n => Panels.register(n, _panels[n]))
+    Component.onDestruction: Object.keys(_panels).forEach(n => Panels.unregister(n, _panels[n]))
 
     // Card + the two inverted corners where it meets the screen edge
     // (each = its square minus a circle), so the corners get blurred too.
@@ -211,7 +224,8 @@ PanelWindow {
         // in place; park it off-screen so the next open slides in cleanly
         anim.hide()
         slideAnim.stop()
-        for (const v of [appSearchView, clipboardView, connectionsView, wallpaperView, keybindsView]) { v.slideX = 0; v.opacity = 1 }
+        const views = [appSearchView, clipboardView, connectionsView, wallpaperView, keybindsView]
+        views.forEach(v => { v.slideX = 0; v.opacity = 1 })
         card.skipHeightAnim = true
         card.collapsed = true
         appSearchView.showAll = false
@@ -504,7 +518,7 @@ PanelWindow {
                         visible: root.mode === "connections"
                         icon: "󰒓"
                         tooltip: "Edit connections"
-                        onClicked: { Quickshell.execDetached(["qs", "ipc", "call", "settings", "openPage", "connections"]); anim.exit() }
+                        onClicked: { Panels.call("settings", "openPage", "connections"); anim.exit() }
                     }
 
                     // Wallpaper tools, only in wallpaper mode

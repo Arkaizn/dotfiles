@@ -51,6 +51,7 @@ Singleton {
     }
 
     // `after`: shell command to run once it's done (or when nothing was found)
+    // after: called once that's done (whether a window was found or not)
     function focusAppWindow(app, title, after) {
         // windows whose app id / class and `app` contain each other; one with `title` in its title first
         const pick = '[.[] | select((%APP% // "" | ascii_downcase) as $a | $a != "" and $k != "" and (($a | contains($k)) or ($k | contains($a))))]'
@@ -60,7 +61,7 @@ Singleton {
               + '[ -n "$addr" ] && hyprctl dispatch "hl.dsp.focus({ window = \\"address:$addr\\" })"; '
             : 'id=$(niri msg -j windows | jq -r --arg k "$1" --arg t "$2" \'' + pick.replace("%APP%", ".app_id") + ' | .id // empty\'); '
               + '[ -n "$id" ] && niri msg action focus-window --id "$id"; '
-        Quickshell.execDetached(["sh", "-c", 'sleep 0.3; ' + script + (after ?? ""), "sh", app, title ?? ""])
+        Jobs.run(["sh", "-c", 'sleep 0.3; ' + script, "sh", app, title ?? ""], () => { if (after) after() })
     }
 
     // ── Focused monitor ──────────────────────────────────────────────────────
@@ -86,7 +87,7 @@ Singleton {
                 } catch (e) {}
                 const cbs = root._outputCallbacks
                 root._outputCallbacks = []
-                for (const cb of cbs) cb(name)
+                cbs.forEach(cb => cb(name))     // (forEach: qmllint 6.12 skips files with for…of)
             }
         }
     }

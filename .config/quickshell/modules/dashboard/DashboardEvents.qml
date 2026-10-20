@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 
 // Events of the day picked in DashboardCalendar (today by default), from the
 // calendar app (CalendarStore). Click one to open the calendar on that day.
@@ -46,12 +47,12 @@ Item {
     function sameDay(a, b) {
         return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
     }
-    function pad(n) { return String(n).padStart(2, "0") }
-    function hm(t) { const d = new Date(t); return pad(d.getHours()) + ":" + pad(d.getMinutes()) }
-    function iso(d) { d = new Date(d); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) }
+    function hm(t) { return Format.hm(t) }
+    function iso(d) { return Format.day(d) }
     // close the dashboard, then: openDate / newEvent <day> or showEvent <id>
     function call(fn, arg) {
-        Quickshell.execDetached(["sh", "-c", 'qs ipc call dashboard close; qs ipc call calendar "$1" "$2"', "sh", fn, arg])
+        Panels.close("dashboard")
+        Panels.call("calendar", fn, arg)
     }
     function openCalendar(d) { call("openDate", iso(d)) }
     function timeText(e) {

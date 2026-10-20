@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import qs.components
 import qs.services
+import qs.services.lib
 import QtQuick.Shapes
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -14,79 +15,43 @@ ColumnLayout {
     anchors.margins: 10
     spacing: 8
 
-    // ── Data sources ──────────────────────────────────────────────
+    // set by the dashboard: true while it's open
+    property bool active: false
 
-    Process {
-        id: cpuTempProc
-        command: ["bash", "-lc",
-            "sensors 2>/dev/null | awk '/Tctl:/{gsub(/[^0-9.]/,\" \",$2); printf \"%d\", $2; exit}'"]
-        running: true
-        stdout: SplitParser { onRead: data => { var v = parseInt(data); if (v > 0) cpuGauge.temp = v } }
+    // ── Data ──────────────────────────────────────────────────────
+    // SysStats (reads /proc and /sys) only while the dashboard is open; the
+    // gauges take its numbers every 3 s, the slow facts (uptime, OS age,
+    // disk) on open and once a minute
+    onActiveChanged: active ? SysStats.acquire(3000) : SysStats.release(3000)
+    Component.onDestruction: if (active) SysStats.release(3000)
+
+    function sample() {
+        cpuGauge.usage = Math.max(0, SysStats.cpu)
+        cpuGauge.temp = Math.max(0, SysStats.cpuTemp)
+        gpuGauge.usage = Math.max(0, SysStats.gpu)
+        gpuGauge.temp = Math.max(0, SysStats.gpuTemp)
+        if (SysStats.memTotal > 0) {
+            ramGauge.usage = Math.floor(100 * SysStats.memUsed / SysStats.memTotal)
+            ramGauge.detail = Format.freeH(SysStats.memUsed) + "/" + Format.freeH(SysStats.memTotal)
+        }
+        netGauge.rxKb = Math.floor(SysStats.rxRate / 1024)
+        netGauge.txKb = Math.floor(SysStats.txRate / 1024)
     }
-    Process {
-        id: cpuUsageProc
-        command: ["bash", "-lc",
-            "top -bn1 | grep -E '^(%Cpu|Cpu)' | awk '{for(i=1;i<=NF;i++) if($i~/id/) {idle=$(i-1); gsub(/,/,\".\",idle); printf \"%d\", 100-idle; exit}}'"]
-        running: true
-        stdout: SplitParser { onRead: data => cpuGauge.usage = parseInt(data) || 0 }
-    }
-    Process {
-        id: gpuTempProc
-        command: ["bash", "-lc",
-            "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader 2>/dev/null | head -1"]
-        running: true
-        stdout: SplitParser { onRead: data => gpuGauge.temp = parseInt(data) || 0 }
-    }
-    Process {
-        id: gpuUsageProc
-        command: ["bash", "-lc",
-            "nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | head -1"]
-        running: true
-        stdout: SplitParser { onRead: data => gpuGauge.usage = parseInt(data) || 0 }
-    }
-    Process {
-        id: ramUsageProc
-        command: ["bash", "-lc",
-            "free | awk '/Mem:/ {printf \"%d\", int($3/$2*100)}'"]
-        running: true
-        stdout: SplitParser { onRead: data => ramGauge.usage = parseInt(data) || 0 }
-    }
-    Process {
-        id: ramDetailProc
-        command: ["bash", "-lc",
-            "free -h | awk '/Mem:/ {print $3 \"/\" $2}'"]
-        running: true
-        stdout: SplitParser { onRead: data => ramGauge.detail = data.trim() }
-    }
-    Process {
-        id: netProc
-        command: ["bash", "-lc",
-            "awk 'NR>2{rx+=$2;tx+=$10}END{print rx,tx}' /proc/net/dev>/tmp/qs_n0; sleep 1; awk 'NR>2{rx+=$2;tx+=$10}END{print rx,tx}' /proc/net/dev>/tmp/qs_n1; paste /tmp/qs_n0 /tmp/qs_n1|awk '{d=$3-$1;u=$4-$2;if(d<0)d=0;if(u<0)u=0;printf \"%d %d\",d/1024,u/1024}'"]
-        running: true
-        stdout: SplitParser { onRead: data => {
-            var parts = data.trim().split(" ")
-            netGauge.rxKb = parseInt(parts[0]) || 0
-            netGauge.txKb = parseInt(parts[1]) || 0
-        }}
-    }
-    Process {
-        id: uptimeProc
-        command: ["cat", "/proc/uptime"]
-        running: true
-        stdout: SplitParser { onRead: data => info.uptimeSecs = parseFloat(data) || 0 }
+
+    FileView {
+        id: uptimeFile
+        path: "/proc/uptime"
+        blockLoading: true
+        onLoaded: info.uptimeSecs = parseFloat(text()) || 0
     }
     Process {
         id: osAgeProc
-        command: ["bash", "-lc",
-            "birth=$(stat -c %W / 2>/dev/null); now=$(date +%s); diff=$((now-birth)); echo \"$((diff/86400))d\""]
-        running: true
-        stdout: SplitParser { onRead: data => info.osAge = data.trim() }
+        command: ["stat", "-c", "%W", "/"]
+        stdout: SplitParser { onRead: data => { const b = parseInt(data); if (b > 0) info.osAge = Math.floor((Date.now() / 1000 - b) / 86400) + "d" } }
     }
-
     Process {
         id: diskProc
         command: ["df", "-B1", "--output=used,size", "/"]
-        running: true
         stdout: SplitParser { onRead: data => {
             const p = data.trim().split(/\s+/)
             if (isNaN(parseFloat(p[0]))) return // header line
@@ -95,26 +60,19 @@ ColumnLayout {
         }}
     }
 
-    // ── Refresh timers ────────────────────────────────────────────
-
+    // on open: the last numbers at once, fresh ones as soon as SysStats has
+    // read twice, then every 3 s
     Timer {
-        interval: 3000; running: true; repeat: true
-        onTriggered: {
-            cpuTempProc.running  = false; cpuTempProc.running  = true
-            cpuUsageProc.running = false; cpuUsageProc.running = true
-            gpuTempProc.running  = false; gpuTempProc.running  = true
-            gpuUsageProc.running = false; gpuUsageProc.running = true
-            ramUsageProc.running = false; ramUsageProc.running = true
-            ramDetailProc.running= false; ramDetailProc.running= true
-            netProc.running      = false; netProc.running      = true
-        }
+        interval: 3000; running: root.active; repeat: true; triggeredOnStart: true
+        onTriggered: root.sample()
     }
+    Timer { interval: 400; running: root.active; onTriggered: root.sample() }
     Timer {
-        interval: 60000; running: true; repeat: true
+        interval: 60000; running: root.active; repeat: true; triggeredOnStart: true
         onTriggered: {
-            uptimeProc.running = false; uptimeProc.running = true
-            osAgeProc.running  = false; osAgeProc.running  = true
-            diskProc.running   = false; diskProc.running   = true
+            uptimeFile.reload()
+            osAgeProc.running = true
+            diskProc.running = true
         }
     }
 

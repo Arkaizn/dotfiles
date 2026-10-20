@@ -96,7 +96,7 @@ Singleton {
             else if (what === "screen") {
                 if (screen === "all") cb([])
                 else if (screen) cb(["-o", screen])
-                else focusedOutput(name => cb(name ? ["-o", name] : [], ""))
+                else Compositor.focusedOutput(name => cb(name ? ["-o", name] : [], ""))
             }
             // window: click the one you want
             else if (Compositor.isNiri)
@@ -199,14 +199,6 @@ Singleton {
         })
     }
 
-    function focusedOutput(cb) {
-        if (Compositor.isNiri)
-            Jobs.run(["niri", "msg", "-j", "focused-output"], (c, out) => { try { cb(JSON.parse(out).name) } catch (e) { cb("") } })
-        else if (Compositor.isHyprland)
-            Jobs.run(["hyprctl", "-j", "monitors"], (c, out) => { try { cb(JSON.parse(out).find(m => m.focused)?.name ?? "") } catch (e) { cb("") } })
-        else cb("")
-    }
-
     // ── Recording ───────────────────────────────────────────────────────────
     function record(what, audio, screen) {
         if (recording) return stop()
@@ -224,7 +216,7 @@ Singleton {
                     const s = Quickshell.screens.find(x => x.name === name) ?? Quickshell.screens[0]
                     startRecording(file, audio, "outputs", [out(s)])
                 }
-                if (screen) go(screen); else focusedOutput(go)
+                if (screen) go(screen); else Compositor.focusedOutput(go)
             })
         })
     }

@@ -15,18 +15,20 @@ Rectangle {
     // the player shown: the one that last started playing or was picked with
     // the switch button. Sticks when paused/stopped so it doesn't jump to
     // another player; only changes when a player starts playing or it closes.
-    // all players except playerctld: it only mirrors the active player, so
-    // that one would show up twice (e.g. two "Mozilla zen")
-    readonly property var players: Mpris.players.values.filter(p => !(p.dbusName || "").includes("playerctld"))
+    readonly property var players: Media.players
+    property bool controls: true        // false: only what's playing (Settings → Lockscreen)
     property var selectedPlayer: null
     readonly property var player: (selectedPlayer && root.players.includes(selectedPlayer) ? selectedPlayer : null)
         ?? root.players.find(p => p.isPlaying) ?? root.players[0] ?? null
     // remember whatever is shown, so pausing it doesn't fall back to another player
-    onPlayerChanged: Qt.callLater(() => { if (player && selectedPlayer !== player) selectedPlayer = player })
+    // (later: not inside the binding's own update; a member function, so it
+    // doesn't run against a destroyed card after unlocking)
+    onPlayerChanged: Qt.callLater(root.rememberPlayer)
+    function rememberPlayer() { if (root.player && root.selectedPlayer !== root.player) root.selectedPlayer = root.player }
 
     // switch to a player when it starts playing
     Instantiator {
-        model: Mpris.players
+        model: Media.players
         delegate: Connections {
             required property var modelData
             target: modelData
@@ -148,7 +150,7 @@ Rectangle {
                     anchors.fill: parent
                     anchors.topMargin: -6
                     anchors.bottomMargin: -6
-                    enabled: root.player?.canSeek ?? false
+                    enabled: root.controls && (root.player?.canSeek ?? false)
                     cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                     onClicked: mouse => {
                         const ratio = Math.max(0, Math.min(1, mouse.x / width))
@@ -159,6 +161,7 @@ Rectangle {
             }
 
             RowLayout {
+                visible: root.controls
                 Layout.topMargin: 2
                 spacing: 6
                 IconButton {

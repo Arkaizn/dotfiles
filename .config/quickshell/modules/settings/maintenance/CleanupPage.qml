@@ -28,7 +28,8 @@ ColumnLayout {
     property real trash: -1
     property real coredumps: -1
     property var orphans: []                // [{ name, size }]
-    property string confirm: ""             // which action waits for its second click
+    // which action waits for its second click (within 4 s)
+    ConfirmArm { id: arm; timeout: 4000 }
     property bool loading: false
 
     Component.onCompleted: refresh()
@@ -64,8 +65,7 @@ ColumnLayout {
         })
     }
 
-    function ask(id) { confirm = id; confirmTimer.restart() }
-    function armed(id) { return confirm === id }
+    function armed(id) { return arm.armed === id }
 
     // a terminal for root actions; fixed scripts, arguments passed as data
     function terminal(title, script, args) {
@@ -101,7 +101,7 @@ ColumnLayout {
                     ActionButton {
                         text: page.armed(modelData.path) ? "Delete " + Format.bytes(modelData.size) : "Clear…"
                         textColor: page.armed(modelData.path) ? Colors.red : Colors.ink
-                        onClicked: page.armed(modelData.path) ? (page.clearCache(modelData.path), page.confirm = "") : page.ask(modelData.path)
+                        onClicked: { if (arm.confirm(modelData.path)) page.clearCache(modelData.path) }
                     }
                 }
             }
@@ -120,8 +120,7 @@ ColumnLayout {
             ActionButton {
                 text: page.armed("pkg") ? "Open terminal" : "Clean…"
                 interactive: page.pkgSaved !== "nothing" || page.pkgUninstalled !== "nothing"
-                onClicked: page.armed("pkg") ? (page.terminal("Clean package cache", "sudo paccache -r -k 1 && sudo paccache -r -u -k 0"), page.confirm = "")
-                                             : page.ask("pkg")
+                onClicked: { if (arm.confirm("pkg")) page.terminal("Clean package cache", "sudo paccache -r -k 1 && sudo paccache -r -u -k 0") }
             }
         }
         NetRow {
@@ -129,7 +128,7 @@ ColumnLayout {
             desc: (page.journal || "…") + " · shrink to the newest 500 MB"
             ActionButton {
                 text: page.armed("journal") ? "Open terminal" : "Shrink…"
-                onClicked: page.armed("journal") ? (page.terminal("Shrink journal", "sudo journalctl --vacuum-size=500M"), page.confirm = "") : page.ask("journal")
+                onClicked: { if (arm.confirm("journal")) page.terminal("Shrink journal", "sudo journalctl --vacuum-size=500M") }
             }
         }
         NetRow {
@@ -138,8 +137,7 @@ ColumnLayout {
             ActionButton {
                 text: page.armed("dumps") ? "Open terminal" : "Delete…"
                 interactive: page.coredumps > 0
-                onClicked: page.armed("dumps") ? (page.terminal("Delete crash dumps", "sudo find /var/lib/systemd/coredump -type f -delete && echo deleted"), page.confirm = "")
-                                               : page.ask("dumps")
+                onClicked: { if (arm.confirm("dumps")) page.terminal("Delete crash dumps", "sudo find /var/lib/systemd/coredump -type f -delete && echo deleted") }
             }
         }
         NetRow {
@@ -152,8 +150,7 @@ ColumnLayout {
             ActionButton {
                 text: page.armed("orphans") ? "Open terminal" : "Review…"
                 interactive: page.orphans.length > 0
-                onClicked: page.armed("orphans") ? (page.terminal("Remove orphan packages", 'sudo pacman -Rns -- "$@"', page.orphans.map(o => o.name)), page.confirm = "")
-                                                 : page.ask("orphans")
+                onClicked: { if (arm.confirm("orphans")) page.terminal("Remove orphan packages", 'sudo pacman -Rns -- "$@"', page.orphans.map(o => o.name)) }
             }
         }
     }
@@ -173,10 +170,9 @@ ColumnLayout {
                     text: page.armed("trash") ? "Empty for good" : "Empty…"
                     textColor: page.armed("trash") ? Colors.red : Colors.ink
                     interactive: page.trash > 0
-                    onClicked: page.armed("trash") ? (Jobs.run(["gio", "trash", "--empty"], () => page.refresh()), page.confirm = "") : page.ask("trash")
+                    onClicked: { if (arm.confirm("trash")) Jobs.run(["gio", "trash", "--empty"], () => page.refresh()) }
                 }
             }
         }
     }
-    Timer { id: confirmTimer; interval: 4000; onTriggered: page.confirm = "" }
 }

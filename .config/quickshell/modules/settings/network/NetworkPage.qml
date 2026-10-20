@@ -10,8 +10,11 @@ import "Net.js" as Net
 // Network page of the settings app (NetworkManager, services/Network.qml).
 //   Interfaces  every interface: state, addresses, DHCP ↔ static in one
 //               click, DHCP lease, connect / renew / hide
+//   Wi-Fi       saved networks (auto-connect, priority, forget), join a hidden
+//               network (WifiSection)
 //   Profiles    saved connections: new, import (VPN / WireGuard), duplicate,
 //               delete, and the full editor (ProfileEditor)
+//   VPN         Tailscale, NetBird, NetworkManager VPN / WireGuard (VpnSection)
 //   DNS         global DNS override, resolvers in use, lookup test, hostname
 //   Hosts       own /etc/hosts entries (remap a name to an IP on this computer)
 // Changes to an active connection are applied live and reverted after 20s
@@ -69,7 +72,7 @@ ColumnLayout {
 
     // tabs slide in from the side they sit on: a tab to the right comes in
     // from the right, one to the left from the left
-    readonly property var tabOrder: ["interfaces", "profiles", "dns", "hosts"]
+    readonly property var tabOrder: ["interfaces", "wifi", "profiles", "vpn", "dns", "hosts"]
     property int tabDir: 1
     function setTab(t) {
         if (t === tab) return
@@ -127,7 +130,9 @@ ColumnLayout {
         spacing: 10
         Segmented {
             options: [{ label: "Interfaces", value: "interfaces", icon: "󰈀" },
+                      { label: "Wi-Fi", value: "wifi", icon: "󰖩" },
                       { label: "Profiles", value: "profiles", icon: "󰒓" },
+                      { label: "VPN", value: "vpn", icon: "󰖂" },
                       { label: "DNS", value: "dns", icon: "󰇖" },
                       { label: "Hosts", value: "hosts", icon: "󰒋" }]
             value: netPage.tab
@@ -153,12 +158,19 @@ ColumnLayout {
                     text: !Network.networking ? "Networking off"
                         : Network.connectivity === "full" ? "Online"
                         : Network.connectivity === "limited" ? "Limited"
-                        : Network.connectivity === "portal" ? "Captive portal"
+                        : Network.connectivity === "portal" ? "Captive portal · log in"
                         : Network.connectivity === "none" ? "Offline" : "…"
                     color: Colors.ink
                     font.pixelSize: 11
                     font.family: Properties.fontFamily
                 }
+            }
+            // captive portal: open its login page
+            MouseArea {
+                anchors.fill: parent
+                visible: Network.connectivity === "portal"
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Network.openPortal()
             }
         }
         IconButton {
@@ -335,6 +347,12 @@ ColumnLayout {
                 visible: Network.wifiHardware || Network.devices.some(d => d.type === "wifi")
                 label: "Wi-Fi"
                 ToggleSwitch { checked: Network.wifiEnabled; onToggled: v => Network.setWifi(v) }
+            }
+            NetRow {
+                label: "Wi-Fi off while wired"
+                desc: WiredWifi.turnedOff ? "Wi-Fi is off now because a cable / the dock is connected; it comes back when it's unplugged"
+                    : "Turn Wi-Fi off while a cable or the dock's ethernet is connected, back on when it's unplugged (never a Wi-Fi you switched off yourself)"
+                ToggleSwitch { checked: Settings.network.wifiOffWhenWired ?? false; onToggled: v => Settings.set("network", "wifiOffWhenWired", v) }
             }
             NetRow {
                 label: "Safe apply"
@@ -555,7 +573,8 @@ ColumnLayout {
                             Layout.fillWidth: true
                             implicitHeight: 54
                             visible: c !== null
-                            property bool armed: false
+                            ConfirmArm { id: rowArm }
+                            readonly property bool armed: rowArm.armed !== ""
 
                             Rectangle {
                                 anchors.fill: parent
@@ -642,11 +661,7 @@ ColumnLayout {
                                         tooltip: prow.armed ? "Click again to delete" : "Delete"
                                         active: prow.armed
                                         textColor: Colors.red
-                                        onClicked: {
-                                            if (!prow.armed) { prow.armed = true; disarmP.restart(); return }
-                                            Network.remove(prow.key, prow.c.name)
-                                        }
-                                        Timer { id: disarmP; interval: 3000; onTriggered: prow.armed = false }
+                                        onClicked: if (rowArm.confirm("delete")) Network.remove(prow.key, prow.c.name)
                                     }
                                 }
                                 Rectangle {
@@ -722,7 +737,26 @@ ColumnLayout {
         }
     }
 
+    // ── Wi-Fi ──────────────────────────────────────────────────────────────
+    TabView {
+        key: "wifi"
+        WifiSection {
+            Layout.fillWidth: true
+            onEditProfile: uuid => netPage.openEditor(uuid)
+        }
+    }
+
+    // ── VPN ────────────────────────────────────────────────────────────────
+    TabView {
+        key: "vpn"
+        VpnSection {
+            Layout.fillWidth: true
+            onOpenProfiles: netPage.setTab("profiles")
+        }
+    }
+
     // ── DNS & host ──────────────────────────────────────────────────────────
+
     TabView {
         key: "dns"
 

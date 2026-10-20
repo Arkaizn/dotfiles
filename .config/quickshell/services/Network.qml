@@ -63,7 +63,7 @@ Singleton {
     function unescapeTerse(s) { return String(s).replace(/\\(.)/g, "$1") }
 
     readonly property string refreshScript:
-        'echo @@CONNS; nmcli -t -f NAME,UUID,TYPE,DEVICE,AUTOCONNECT,ACTIVE,STATE,TIMESTAMP connection show\n'
+        'echo @@CONNS; nmcli -t -f NAME,UUID,TYPE,DEVICE,AUTOCONNECT,ACTIVE,STATE,TIMESTAMP,AUTOCONNECT-PRIORITY connection show\n'
         + 'echo @@DEVS; nmcli -t -f GENERAL,CAPABILITIES,IP4,DHCP4,IP6 device show\n'
         + 'echo @@GENERAL; nmcli -t -f STATE,CONNECTIVITY,WIFI-HW,WIFI general status; nmcli networking; nmcli general hostname\n'
         + 'echo @@RESOLVED; resolvectl dns 2>/dev/null\n'
@@ -95,7 +95,7 @@ Singleton {
         root.connections = (sections.CONNS ?? []).filter(l => l !== "").map(l => {
             const f = splitTerse(l)
             return { name: f[0], uuid: f[1], type: f[2], device: f[3], autoconnect: f[4] === "yes",
-                     active: f[5] === "yes", state: f[6], timestamp: parseInt(f[7]) || 0 }
+                     active: f[5] === "yes", state: f[6], timestamp: parseInt(f[7]) || 0, priority: parseInt(f[8]) || 0 }
         })
 
         // devices: blocks of KEY:value separated by blank lines
@@ -341,6 +341,19 @@ Singleton {
     function remove(uuid, name) { act(["nmcli", "connection", "delete", uuid], "Deleted " + name) }
     function clone(uuid, name, cb) { act(["nmcli", "connection", "clone", uuid, name], "Duplicated as " + name, cb) }
     function setNetworking(on) { act(["nmcli", "networking", on ? "on" : "off"], "Networking " + (on ? "on" : "off")) }
+    // captive portal: open NetworkManager's check address in the browser - the
+    // portal answers it with its login page
+    function openPortal() {
+        run(["busctl", "get-property", "org.freedesktop.NetworkManager", "/org/freedesktop/NetworkManager",
+             "org.freedesktop.NetworkManager", "ConnectivityCheckUri"], (code, out) => {
+            const m = /"(.+)"/.exec(out)
+            Quickshell.execDetached(["xdg-open", m ? m[1] : "http://neverssl.com"])
+        })
+    }
+    // ask NetworkManager to check the connectivity now
+    function recheck(cb) {
+        run(["nmcli", "networking", "connectivity", "check"], () => { refresh(); if (cb) cb() })
+    }
     function setWifi(on) { act(["nmcli", "radio", "wifi", on ? "on" : "off"], "Wi-Fi " + (on ? "on" : "off")) }
     // asks for the password (polkit)
     function setHostname(h) { act(["nmcli", "general", "hostname", h], "Hostname set to " + h) }
@@ -352,6 +365,35 @@ Singleton {
         act(cmd, "Added " + name, (ok, out) => {
             const m = /\(([0-9a-f-]{36})\)/.exec(out)
             if (cb) cb(ok && m ? m[1] : "")
+        })
+    }
+
+    // Hidden Wi-Fi network: a new profile, its password set through nmcli's
+    // editor on stdin (never on a command line), then connect; on failure the
+    // profile is removed again. Auto-connect only once it worked.
+    //   security: "open" | "wpa-psk" (WPA / WPA2) | "sae" (WPA3)
+    readonly property string hiddenScript:
+        'ssid=$1; sec=$2\n'
+        + 'set -- nmcli -t connection add type wifi con-name "$ssid" ssid "$ssid" autoconnect no 802-11-wireless.hidden yes\n'
+        + '[ "$sec" = open ] || set -- "$@" wifi-sec.key-mgmt "$sec"\n'
+        + 'out=$("$@" 2>&1) || { printf "%s\\n" "$out" >&2; exit 1; }\n'
+        + 'uuid=$(printf "%s" "$out" | grep -oE "[0-9a-f-]{36}" | tail -n 1)\n'
+        + 'if [ "$sec" != open ]; then\n'
+        + '  IFS= read -r pw\n'
+        + '  printf "set 802-11-wireless-security.psk %s\\nsave\\nquit\\n" "$pw" | nmcli connection edit "$uuid" >/dev/null 2>&1'
+        + ' || { nmcli connection delete "$uuid" >/dev/null 2>&1; echo "Could not store the password" >&2; exit 1; }\n'
+        + 'fi\n'
+        + 'out=$(nmcli --wait 40 connection up "$uuid" 2>&1) || { nmcli connection delete "$uuid" >/dev/null 2>&1; printf "%s\\n" "$out" >&2; exit 2; }\n'
+        + 'nmcli connection modify "$uuid" connection.autoconnect yes\n'
+
+    function joinHidden(ssid, security, password, cb) {
+        root.busy = true
+        Jobs.runInput(["sh", "-c", hiddenScript, "sh", ssid, security], security === "open" ? "" : password + "\n", (code, out, err) => {
+            root.busy = false
+            refreshTimer.restart()
+            if (code === 0) say("Connected to " + ssid)
+            else say(errorText(err), true)
+            if (cb) cb(code === 0)
         })
     }
 

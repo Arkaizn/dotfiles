@@ -57,8 +57,8 @@ ColumnLayout {
         IconButton {
             implicitWidth: 26; implicitHeight: 26
             icon: "󰒓"
-            tooltip: "Network settings"
-            onClicked: Quickshell.execDetached(["nm-connection-editor"])
+            tooltip: "Saved networks, hidden network"
+            onClicked: Panels.call("settings", "openPage", "wifi")
         }
     }
 

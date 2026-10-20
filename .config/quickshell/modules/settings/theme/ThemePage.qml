@@ -215,12 +215,12 @@ ColumnLayout {
                     IconButton { icon: "󰄬"; tooltip: "Apply"; interactive: !Theme.applying; onClicked: Theme.apply(modelData.file) }
                     IconButton {
                         id: del
-                        property bool armed: false
+                        ConfirmArm { id: delArm }
+                        readonly property bool armed: delArm.armed !== ""
                         icon: armed ? "󰄬" : "󰆴"
                         tooltip: armed ? "Click again to delete" : "Delete"
                         textColor: armed ? Colors.red : Properties.color
-                        onClicked: { if (armed) Theme.remove(modelData.name); else { armed = true; disarm.restart() } }
-                        Timer { id: disarm; interval: 3000; onTriggered: del.armed = false }
+                        onClicked: if (delArm.confirm("delete")) Theme.remove(modelData.name)
                     }
                 }
             }

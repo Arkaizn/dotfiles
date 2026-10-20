@@ -31,6 +31,9 @@ Scope {
         target: "wizard"
         function open(): void { root.show() }
     }
+    readonly property var api: ({ open: () => root.show() })     // Panels.open("wizard")
+    Component.onCompleted: Panels.register("wizard", api)
+    Component.onDestruction: Panels.unregister("wizard", api)
 
     // bar presets (BarLayout zones)
     readonly property var presets: [
@@ -130,7 +133,7 @@ Scope {
                             NetRow {
                                 label: "Picture"
                                 desc: "shown next to the greeting"
-                                ActionButton { icon: "󰀄"; text: "Choose…"; onClicked: Quickshell.execDetached(["qs", "ipc", "call", "settings", "openPage", "profile"]) }
+                                ActionButton { icon: "󰀄"; text: "Choose…"; onClicked: Panels.call("settings", "openPage", "profile") }
                             }
                             NetRow {
                                 label: "Compositor"
@@ -219,7 +222,7 @@ Scope {
                                 first: true
                                 label: "Wallpaper and colors"
                                 desc: "pick a wallpaper; the colors of the whole shell follow it (pywal)"
-                                ActionButton { icon: "󰸉"; text: "Pick a wallpaper"; onClicked: Quickshell.execDetached(["qs", "ipc", "call", "Launcher", "toggleWallpapers"]) }
+                                ActionButton { icon: "󰸉"; text: "Pick a wallpaper"; onClicked: Panels.toggle("wallpapers") }
                             }
                             NetRow {
                                 label: "Light or dark, saved themes"
@@ -228,7 +231,7 @@ Scope {
                             NetRow {
                                 label: "All keybinds"
                                 desc: "the launcher's keyboard tab lists them; record and change them in Settings → Keybinds"
-                                ActionButton { icon: "󰌌"; text: "Show keybinds"; onClicked: Quickshell.execDetached(["qs", "ipc", "call", "Launcher", "toggleKeybinds"]) }
+                                ActionButton { icon: "󰌌"; text: "Show keybinds"; onClicked: Panels.toggle("keybinds") }
                             }
                             NetRow {
                                 label: "Screenshots"
@@ -247,7 +250,7 @@ Scope {
                             text: "Everything else lives in the settings app: network, audio, Bluetooth, default apps, connections, profiles and more. This setup can be run again from Settings → Maintenance → Health."
                             color: Colors.fade(0.7); font.pixelSize: 13; font.family: Properties.fontFamily
                         }
-                        ActionButton { icon: "󰒓"; text: "Open the settings app"; onClicked: { root.finish(); Quickshell.execDetached(["qs", "ipc", "call", "settings", "open"]) } }
+                        ActionButton { icon: "󰒓"; text: "Open the settings app"; onClicked: { root.finish(); Panels.open("settings") } }
                         Item { Layout.fillHeight: true }
                     }
                 }

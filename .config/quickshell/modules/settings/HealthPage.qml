@@ -84,7 +84,7 @@ ColumnLayout {
             first: true
             label: "First-run setup"
             desc: "name, bar preset, notifications, keys: the welcome steps of a new install"
-            ActionButton { icon: "󰐊"; text: "Run again"; onClicked: Quickshell.execDetached(["qs", "ipc", "call", "wizard", "open"]) }
+            ActionButton { icon: "󰐊"; text: "Run again"; onClicked: Panels.open("wizard") }
         }
         NetRow {
             label: "Check at startup"

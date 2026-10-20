@@ -276,16 +276,12 @@ ColumnLayout {
             ActionButton {
                 id: delBtn
                 visible: srcCard.src.found
-                property bool armed: false
+                ConfirmArm { id: delArm; timeout: 4000 }
+                readonly property bool armed: delArm.armed !== ""
                 icon: "󰆴"
                 text: armed ? "Click again: delete file + include" : "Delete file"
                 textColor: Colors.red
-                onClicked: {
-                    if (!armed) { armed = true; disarm.restart(); return }
-                    armed = false
-                    page.deleteCustom(srcCard.wm)
-                }
-                Timer { id: disarm; interval: 4000; onTriggered: delBtn.armed = false }
+                onClicked: if (delArm.confirm("delete")) page.deleteCustom(srcCard.wm)
             },
             ActionButton {
                 icon: "󰋺"

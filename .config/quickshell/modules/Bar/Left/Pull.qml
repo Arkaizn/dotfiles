@@ -1,34 +1,10 @@
-import Quickshell
 import QtQuick
-import QtQuick.Controls
 import qs.services
 import qs.components
 
-Item {
-    id:root
-    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
-    implicitHeight: Properties.buttonHeight
-    anchors.margins: 1
-
-    property bool hovered: mouseArea.containsMouse
-    
-    ButtonBackground {
-        id: buttonBackground
-        hovered: root.hovered
-        iconText: Icons.get("pull")
-    }
-
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
-        cursorShape: Qt.PointingHandCursor
-        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
-        onExited: buttonBackground.scale = Properties.onExitedButtonScale
-        onPressed: buttonBackground.scale = Properties.onPressedButtonScale
-        onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
-        onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        onClicked: Quickshell.execDetached(["bash","-lc","kitty -e bash ~/git/dotfiles/scripts/config/pull.sh"])
-    }
+// pull.sh in a terminal: git pull, then the repo over ~/.config (Dotfiles service:
+// repo and profile from Settings → Dotfiles)
+BarButton {
+    text: Icons.get("pull")
+    onClicked: Dotfiles.pullUpdate(Settings.dotfiles.profile ?? "default")
 }

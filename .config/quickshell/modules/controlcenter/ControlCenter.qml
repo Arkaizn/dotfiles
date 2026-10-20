@@ -9,6 +9,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import "../notifications"
 
 // Control center (right side of the bar): clock + power, Wi-Fi, Bluetooth,
@@ -54,7 +55,7 @@ BarPopup {
     readonly property bool editing: editCards || editButtons
     onPopupClosed: {
         expanded = ""
-        armed = ""
+        arm.disarm()
         Notifs.collapseAll()
         if (editing) EditMode.stop()
     }
@@ -67,8 +68,8 @@ BarPopup {
     }
 
     // ── Network / Bluetooth state ──
-    readonly property var wifiDevice: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
-    readonly property var wiredDevice: Networking.devices.values.find(d => d.type === DeviceType.Wired) ?? null
+    readonly property var wifiDevice: Devices.pick(Networking.devices.values, DeviceType.Wifi)
+    readonly property var wiredDevice: Devices.pick(Networking.devices.values, DeviceType.Wired)
     readonly property var wifiNetwork: wifiDevice?.networks?.values.find(n => n.connected) ?? null
     readonly property var btAdapter: Bluetooth.defaultAdapter
     readonly property var btConnected: (btAdapter?.devices?.values ?? []).filter(d => d.connected)
@@ -87,14 +88,14 @@ BarPopup {
         return out
     }
 
-    // Close first, so the panel isn't in the screenshot / color pick
-    // instant capture actions: run once the control center is out of the way
-    function runCapture(fn) {
+    // Close first, so the panel isn't in the screenshot / color pick:
+    // capture and session actions run once the control center is out of the way
+    function runClosed(fn) {
         root.close()
-        captureTimer.fn = fn
-        captureTimer.restart()
+        closedTimer.fn = fn
+        closedTimer.restart()
     }
-    Timer { id: captureTimer; property var fn; interval: 350; onTriggered: fn() }
+    Timer { id: closedTimer; property var fn; interval: 350; onTriggered: fn() }
 
     function runTool(cmd) {
         root.close()
@@ -102,14 +103,9 @@ BarPopup {
     }
 
     // log out / reboot / shut down: the first click arms, a second within 3s runs
-    property string armed: ""
-    function confirm(id) {
-        if (armed === id) { armed = ""; return true }
-        armed = id
-        disarmTimer.restart()
-        return false
-    }
-    Timer { id: disarmTimer; interval: 3000; onTriggered: root.armed = "" }
+    ConfirmArm { id: arm }
+    readonly property alias armed: arm.armed
+    function confirm(id) { return arm.confirm(id) }
 
     // ── live editing ──────────────────────────────────────────────
     // cards that hold buttons (CCHeader / CCTileCard) register here
@@ -298,7 +294,7 @@ BarPopup {
                         IconButton {
                             icon: "󰒓"
                             tooltip: "Control center layout settings"
-                            onClicked: { EditMode.stop(); root.close(); Quickshell.execDetached(["qs", "ipc", "call", "settings", "openPage", "cclayout"]) }
+                            onClicked: { EditMode.stop(); root.close(); Panels.call("settings", "openPage", "cclayout") }
                         }
                         IconButton {
                             icon: "󰑓"

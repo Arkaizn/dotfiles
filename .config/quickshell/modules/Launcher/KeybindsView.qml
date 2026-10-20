@@ -26,7 +26,7 @@ Item {
     // the pencil on a row: Settings → Keybinds with that bind's editor
     function edit(item) {
         if (!item) return
-        Quickshell.execDetached(["qs", "ipc", "call", "settings", "editKeybind", Keybinds.normKeys(item.keys)])
+        Panels.call("settings", "editKeybind", Keybinds.normKeys(item.keys))
         root.closeRequested()
     }
 

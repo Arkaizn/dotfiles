@@ -40,7 +40,8 @@ ColumnLayout {
     property bool cliToo: false             // also command-line tools (no launcher)
     readonly property var keep: Settings.updates.keepPackages ?? []
     property var selected: ({})             // name → true
-    property string confirm: ""
+    ConfirmArm { id: arm }
+    readonly property alias confirm: arm.armed                // which action waits for its second click
 
     readonly property var shown: {
         const q = query.trim().toLowerCase()
@@ -153,8 +154,6 @@ ColumnLayout {
         if (s[name]) delete s[name]; else s[name] = true
         selected = s
     }
-    function ask(id) { confirm = id; confirmTimer.restart() }
-    Timer { id: confirmTimer; interval: 3000; onTriggered: page.confirm = "" }
 
     NetCard {
         Layout.fillWidth: true
@@ -262,9 +261,10 @@ ColumnLayout {
                     icon: "󰆴"
                     text: page.confirm === "remove" ? "Open terminal" : "Remove…"
                     textColor: page.confirm === "remove" ? Colors.red : Colors.ink
-                    onClicked: page.confirm === "remove"
-                        ? (Quickshell.execDetached(["kitty", "--title", "Remove packages", Quickshell.shellDir + "/scripts/remove-packages.sh"].concat(page.picked.map(p => p.name))), page.confirm = "")
-                        : page.ask("remove")
+                    onClicked: {
+                        if (arm.confirm("remove"))
+                            Quickshell.execDetached(["kitty", "--title", "Remove packages", Quickshell.shellDir + "/scripts/remove-packages.sh"].concat(page.picked.map(p => p.name)))
+                    }
                 }
             }
         }

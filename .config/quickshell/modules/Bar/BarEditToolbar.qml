@@ -63,7 +63,7 @@ Rectangle {
             IconButton {
                 icon: "󰒓"
                 tooltip: "Bar layout settings"
-                onClicked: { EditMode.stop(); Quickshell.execDetached(["qs", "ipc", "call", "settings", "openPage", "barlayout"]) }
+                onClicked: { EditMode.stop(); Panels.call("settings", "openPage", "barlayout") }
             }
             IconButton {
                 icon: "󰑓"

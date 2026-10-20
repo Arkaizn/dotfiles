@@ -23,7 +23,6 @@ binds {
     // Mod+V { spawn-sh "cliphist list | wofi -S dmenu -n | cliphist decode | wl-copy"; }
     Mod+R {spawn-sh "qs ipc call Launcher toggleAppSearch";}
     Mod+V {spawn-sh "qs ipc call Launcher toggleClipboard";}
-    Mod+T {spawn-sh "qs ipc call testing toggle";}
     Mod+W {spawn-sh "qs ipc call Launcher toggleWallpapers";}
 
 

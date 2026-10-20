@@ -22,7 +22,8 @@ ColumnLayout {
     property var bigFiles: []              // [{ path, size }]
     property string error: ""
     property string pathInput: home
-    property string confirmTrash: ""
+    ConfirmArm { id: trashArm }
+    readonly property alias confirmTrash: trashArm.armed       // the path waiting for its second click
     readonly property bool scanning: Jobs.isRunning("du-scan")
     readonly property bool findingFiles: Jobs.isRunning("du-files")
     readonly property real total: items.reduce((a, i) => a + i.size, 0)
@@ -156,8 +157,7 @@ ColumnLayout {
                             textColor: page.confirmTrash === row.full ? Colors.red : Properties.color
                             tooltip: page.confirmTrash === row.full ? "Click again: move to the trash" : "Move to the trash"
                             onClicked: {
-                                if (page.confirmTrash === row.full) { page.trash(row.full); page.confirmTrash = "" }
-                                else { page.confirmTrash = row.full; trashTimer.restart() }
+                                if (trashArm.confirm(row.full)) page.trash(row.full)
                             }
                         }
                     }
@@ -169,7 +169,6 @@ ColumnLayout {
             label: "… and " + (page.items.length - 60) + " smaller items"
         }
     }
-    Timer { id: trashTimer; interval: 3000; onTriggered: page.confirmTrash = "" }
 
     NetCard {
         Layout.fillWidth: true

@@ -93,6 +93,18 @@ BarPopup {
         id: opener
         menu: root.currentMenu
     }
+    // Keep the app's menu and every submenu on the way open while inside one:
+    // with only the opener above, switching it to a submenu released the menu
+    // that submenu belongs to, and DBus menus (Tailscale's "Exit Nodes", …)
+    // then showed the submenu empty.
+    QsMenuOpener { menu: root.trayItem?.menu ?? null }
+    Instantiator {
+        model: root.stack
+        delegate: QsMenuOpener {
+            required property var modelData
+            menu: modelData
+        }
+    }
 
     ParallelAnimation {
         id: slideAnim

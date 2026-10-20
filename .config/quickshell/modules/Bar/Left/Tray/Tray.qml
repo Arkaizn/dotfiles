@@ -1,3 +1,4 @@
+import Quickshell
 import Quickshell.Widgets
 import Quickshell.Services.SystemTray
 import QtQuick
@@ -74,7 +75,7 @@ Item {
                         // right click, or left click on menu-only apps → our menu
                         if (mouse.button === Qt.RightButton || modelData.onlyMenu) {
                             if (modelData.hasMenu)
-                                customTrayMenu.toggleFor(modelData, bar.screen, centerX)
+                                customTrayMenu.toggleFor(modelData, (QsWindow.window as QsWindow)?.screen, centerX)
                             return
                         }
                         modelData.activate()

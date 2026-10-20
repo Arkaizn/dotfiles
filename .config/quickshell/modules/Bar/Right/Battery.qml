@@ -1,23 +1,17 @@
 import Quickshell
-import Quickshell.Io
 import QtQuick
-import QtQuick.Controls
 import Quickshell.Services.UPower
 import qs.services
 import qs.components
 
-Item {
+BarButton {
     id: root
-    implicitWidth: buttonBackground.implicitWidth + Properties.buttonWidth
-    implicitHeight: Properties.buttonHeight
-    anchors.margins: 1
 
-    property bool hovered: mouseArea.containsMouse
     property bool hasBattery: UPower.displayDevice !== null
 
     // Hide if no battery devices
-    visible: UPower.displayDevice.isLaptopBattery !== false
-    
+    visible: UPower.displayDevice?.isLaptopBattery !== false
+
     readonly property var battery: UPower.displayDevice //define battery
     readonly property real percentage: UPower.displayDevice?.percentage ?? 0 // define battery percentage
     readonly property int batteryLevel: Math.round(percentage * 100) // set battery level
@@ -40,24 +34,7 @@ Item {
         return Icons.get("batFull") + " "
     }
 
-
-    ButtonBackground {
-        id: buttonBackground
-        hovered: root.hovered
-        textColor: root.batteryColor
-        iconText: hasBattery ? batteryIcon + batteryLevel + "%" : ""
-    }
-
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        onEntered: buttonBackground.scale = Properties.onEnteredButtonScale
-        onExited: buttonBackground.scale = Properties.onExitedButtonScale
-        onPressed: buttonBackground.scale = Properties.onPressedButtonScale
-        onReleased: buttonBackground.scale = containsMouse ? Properties.onEnteredButtonScale : Properties.onExitedButtonScale
-        onCanceled: buttonBackground.scale = Properties.onExitedButtonScale
-        cursorShape: Qt.PointingHandCursor
-        onClicked: controlCenter.toggle(bar.screen)
-    }
+    textColor: root.batteryColor
+    text: hasBattery ? batteryIcon + batteryLevel + "%" : ""
+    onClicked: Panels.toggle("controlCenter", (QsWindow.window as QsWindow)?.screen)
 }

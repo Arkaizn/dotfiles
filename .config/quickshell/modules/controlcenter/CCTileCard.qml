@@ -19,7 +19,7 @@ Rectangle {
     readonly property string title: own ? (PanelLayout.ccCustom[cardId]?.title ?? "") : ""
     // the list of the expanded Wi-Fi / Bluetooth tile, if that tile is in here
     readonly property string list: host.expanded !== "" && ids.includes(host.expanded) ? host.expanded : ""
-    readonly property int columns: Math.max(1, Math.min(3, ids.length))
+    readonly property int columns: Math.max(1, Math.min(ids.some(id => PanelLayout.item(id).wide) ? 2 : 3, ids.length))
     readonly property Item area: card      // where buttons can be dropped
     Component.onCompleted: host.registerHolder(card)
     Component.onDestruction: host.unregisterHolder(card)
@@ -122,7 +122,8 @@ Rectangle {
             id: detailCard
             Layout.fillWidth: true
             readonly property real target: card.list === "wifi" ? wifiList.implicitHeight + 24
-                                         : card.list === "bluetooth" ? btList.implicitHeight + 24 : 0
+                                         : card.list === "bluetooth" ? btList.implicitHeight + 24
+                                         : card.list === "vpn" ? vpnList.implicitHeight + 24 : 0
             implicitHeight: target
             visible: implicitHeight > 0.5
             clip: true
@@ -135,6 +136,14 @@ Rectangle {
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
                 visible: card.list === "wifi"
                 device: card.host.wifiDevice
+                active: visible && card.host.shown
+            }
+            VpnList {
+                id: vpnList
+                property real slideX: 0
+                transform: Translate { x: vpnList.slideX }
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                visible: card.list === "vpn"
                 active: visible && card.host.shown
             }
             BluetoothList {

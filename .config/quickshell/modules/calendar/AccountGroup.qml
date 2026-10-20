@@ -10,13 +10,13 @@ ColumnLayout {
     id: root
 
     required property var account
-    property bool armed: false
+    ConfirmArm { id: arm }
+    readonly property bool armed: arm.armed !== ""
 
     readonly property var errorFor: CalendarStore.errors.filter(e => e.calendar.startsWith(account.id + "|"))
 
     spacing: 2
 
-    Timer { id: disarm; interval: 3000; onTriggered: root.armed = false }
 
     Item {
         Layout.fillWidth: true
@@ -60,10 +60,7 @@ ColumnLayout {
                 icon: "󰆴"
                 tooltip: "Remove account"
                 textColor: root.armed ? Colors.red : Properties.color
-                onClicked: {
-                    if (root.armed) CalendarStore.removeAccount(root.account.id)
-                    else { root.armed = true; disarm.restart() }
-                }
+                onClicked: if (arm.confirm("remove")) CalendarStore.removeAccount(root.account.id)
             }
         }
     }

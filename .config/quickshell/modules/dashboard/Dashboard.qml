@@ -148,7 +148,7 @@ BarPopup {
                     IconButton {
                         icon: "󰒓"
                         tooltip: "Dashboard layout settings"
-                        onClicked: { EditMode.stop(); root.close(); Quickshell.execDetached(["qs", "ipc", "call", "settings", "openPage", "dashlayout"]) }
+                        onClicked: { EditMode.stop(); root.close(); Panels.call("settings", "openPage", "dashlayout") }
                     }
                     IconButton {
                         icon: "󰑓"
@@ -282,7 +282,7 @@ BarPopup {
         id: musicCard
         Item {
             property real radius: parent ? parent.radius : 12
-            DashboardMusic {}
+            DashboardMusic { active: root.shown }
             // The album-art background fills this card and would cover its
             // border, so draw the outline again on top.
             Rectangle {
@@ -327,6 +327,6 @@ BarPopup {
 
     Component {
         id: statsCard
-        Item { DashboardStats {} }
+        Item { DashboardStats { active: root.shown } }
     }
 }

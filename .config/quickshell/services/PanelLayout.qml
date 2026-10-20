@@ -106,15 +106,17 @@ Singleton {
     readonly property var ccBuiltinHolders: ["header", "connectivity", "tools"]
     readonly property var defaultCcItems: ({
         header: ["lock", "suspend", "logout", "reboot", "poweroff", "calendar", "perfmon", "keybinds", "settings"],
-        connectivity: ["wifi", "bluetooth"],
+        connectivity: ["wifi", "bluetooth", "vpn"],
         tools: ["screenshot", "ocr", "record", "color", "capture"]
     })
 
     // every button (behaviour: modules/controlcenter/CCItem.qml); the clock card
     // shows them as small icon buttons, the other cards as tiles
     readonly property var items: [
-        { id: "wifi",         name: "Wi-Fi",            icon: "󰤨", desc: "On / off; the tile opens the network list" },
-        { id: "bluetooth",    name: "Bluetooth",        icon: "󰂯", desc: "On / off; the tile opens the device list" },
+        // wide: name + state + buttons in the tile — a card holding one uses at most 2 columns
+        { id: "wifi",         name: "Wi-Fi",            icon: "󰤨", desc: "On / off; the tile opens the network list", wide: true },
+        { id: "bluetooth",    name: "Bluetooth",        icon: "󰂯", desc: "On / off; the tile opens the device list", wide: true },
+        { id: "vpn",          name: "VPN",              icon: "󰖂", desc: "Tailscale / NetBird / VPN profiles; the tile opens the list", wide: true },
         { id: "dnd",          name: "Do not disturb",   icon: "󰂛", desc: "Hold notifications back" },
         { id: "powerprofile", name: "Power profile",    icon: "󰗑", desc: "Cycle saver / balanced / performance" },
         { id: "screenshot",   name: "Screenshot",       icon: "󰩭", desc: "Region" },

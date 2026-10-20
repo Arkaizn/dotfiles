@@ -252,17 +252,17 @@ ColumnLayout {
             }
             IconButton {
                 id: delBtn
-                property bool armed: false
+                ConfirmArm { id: delArm }
+                readonly property bool armed: delArm.armed !== ""
                 icon: "󰆴"
                 tooltip: armed ? "Click again to delete" : "Delete"
                 active: armed
                 textColor: Colors.red
                 onClicked: {
-                    if (!armed) { armed = true; disarm.restart(); return }
+                    if (!delArm.confirm("delete")) return
                     Network.remove(ed.uuid, ed.raw("connection.id"))
                     ed.back()
                 }
-                Timer { id: disarm; interval: 3000; onTriggered: delBtn.armed = false }
             }
         }
     }

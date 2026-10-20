@@ -58,15 +58,12 @@ ColumnLayout {
                 }
                 ActionButton {
                     id: rebootBtn
-                    property bool armed: false
+                    ConfirmArm { id: rebootArm }
+                    readonly property bool armed: rebootArm.armed !== ""
                     icon: "󰜉"
                     text: armed ? "Click again" : "Reboot"
                     textColor: armed ? Colors.red : Colors.ink
-                    onClicked: {
-                        if (armed) Quickshell.execDetached(["sh", "-c", "systemctl reboot || loginctl reboot"])
-                        else { armed = true; disarm.restart() }
-                    }
-                    Timer { id: disarm; interval: 3000; onTriggered: rebootBtn.armed = false }
+                    onClicked: if (rebootArm.confirm("reboot")) Session.reboot()
                 }
             }
         }

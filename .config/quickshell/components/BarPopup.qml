@@ -196,6 +196,11 @@ PanelWindow {
         function close(): void { root.close() }
     }
 
+    // the same functions for the rest of the shell: Panels.toggle(ipcName, screen)
+    readonly property var _panel: ({ toggle: scr => root.toggle(scr), open: scr => root.open(scr), close: () => root.close() })
+    Component.onCompleted: if (ipcName !== "") Panels.register(ipcName, _panel)
+    Component.onDestruction: Panels.unregister(ipcName, _panel)
+
     // ── Regions ───────────────────────────────────────────────
     mask: Region { item: frame }
 

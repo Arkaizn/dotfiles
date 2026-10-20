@@ -17,7 +17,8 @@ ColumnLayout {
     readonly property var paired: (adapter?.devices.values ?? []).filter(d => d.paired || d.bonded)
                                     .sort((a, b) => (b.connected - a.connected) || a.name.localeCompare(b.name))
     property string renaming: ""           // device address being renamed
-    property string confirmForget: ""
+    ConfirmArm { id: forgetArm }
+    readonly property alias confirmForget: forgetArm.armed     // the device waiting for its second click
 
     NetCard {
         Layout.fillWidth: true
@@ -138,13 +139,11 @@ ColumnLayout {
                         textColor: page.confirmForget === dev.address ? Colors.red : Properties.color
                         tooltip: page.confirmForget === dev.address ? "Click again to forget it" : "Forget (unpair)"
                         onClicked: {
-                            if (page.confirmForget === dev.address) { dev.forget(); page.confirmForget = "" }
-                            else { page.confirmForget = dev.address; forgetTimer.restart() }
+                            if (forgetArm.confirm(dev.address)) dev.forget()
                         }
                     }
                 }
             }
         }
     }
-    Timer { id: forgetTimer; interval: 3000; onTriggered: page.confirmForget = "" }
 }

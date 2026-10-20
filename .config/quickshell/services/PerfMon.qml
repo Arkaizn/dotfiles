@@ -16,7 +16,6 @@ Singleton {
     id: root
 
     property bool active: false
-    signal toggleRequested()
     readonly property int interval: Math.max(500, Math.min(5000, Settings.perfmon.interval ?? 1000))
     readonly property int procInterval: Math.max(1000, Math.min(10000, Settings.perfmon.procInterval ?? 2000))
     // 15 minutes of samples (the longest chart range), whatever the interval
@@ -291,6 +290,6 @@ Singleton {
 
     IpcHandler {
         target: "perfmon"
-        function toggle(): void { root.toggleRequested() }
+        function toggle(): void { Panels.toggle("perfmon") }
     }
 }
