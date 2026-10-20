@@ -11,6 +11,9 @@ plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
+# Path to user specific tools
+export PATH="$HOME/.local/bin:$PATH"
+
 # User configuration
 export LANG=de_CH.UTF-8
 export EDITOR='vim'
