@@ -67,6 +67,13 @@ window-rule {
     open-maximized true
 }
 
+window-rule {
+    match app-id="onlyoffice-desktopeditors"
+    match app-id="RemoteDesktopManager"
+    clip-to-geometry true
+    draw-border-with-background false
+}
+
 // window-rule {
 //     match app-id="zen"
 
