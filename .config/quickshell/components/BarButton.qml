@@ -60,6 +60,9 @@ Item {
         acceptedButtons: root.buttons
         cursorShape: root.cursorShape
         onClicked: m => root.clicked(m)
+        // a quick second click arrives as a double click (and no `clicked`):
+        // it's a click too, e.g. closing a popup that's still opening
+        onDoubleClicked: m => root.clicked(m)
         onWheel: w => { if (root.wheelEnabled) root.wheel(w); else w.accepted = false }
     }
 }

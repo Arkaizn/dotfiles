@@ -114,9 +114,15 @@ BarPopup {
             // ── edit bar (only while editing) ───────────────────────────────
             Rectangle {
                 id: editBar
-                visible: root.editing
+                // unrolls / rolls up instead of popping (the spacing below grows with it)
+                property real amount: root.editing ? 1 : 0
+                Behavior on amount { NumberAnimation { duration: Anim.popupIn; easing.type: Anim.easingIn } }
+                visible: amount > 0
+                opacity: amount
+                clip: true
                 Layout.fillWidth: true
-                height: 40
+                Layout.preferredHeight: 40 * amount
+                Layout.bottomMargin: -10 * (1 - amount)
                 radius: root.radius / 2
                 color: Colors.shade(0.27)
                 border.width: Properties.panelBorderWidth

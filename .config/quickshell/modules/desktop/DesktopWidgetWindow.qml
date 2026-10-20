@@ -29,6 +29,17 @@ PanelWindow {
     margins.left: Math.round(DeskWidgets.clamp((inst?.x ?? 0.5) * screen.width - box.w / 2, 0, Math.max(0, screen.width - box.w)))
     margins.top: Math.round(DeskWidgets.clamp((inst?.y ?? 0.5) * screen.height - box.h / 2, 0, Math.max(0, screen.height - box.h)))
 
+    // card / glass backgrounds blur what's behind them, like the bar. Not when
+    // turned: a blur region can't rotate, it would stick out past the corners
+    readonly property bool blurred: frame.bg !== "none" && Math.abs(inst?.rot ?? 0) < 0.5
+    BackgroundEffect.blurRegion: Region {
+        x: Math.round((win.width - frame.width * win.s) / 2)
+        y: Math.round((win.height - frame.height * win.s) / 2)
+        width: win.blurred ? Math.round(frame.width * win.s) : 0
+        height: win.blurred ? Math.round(frame.height * win.s) : 0
+        radius: 22 * win.s
+    }
+
     MouseArea {
         anchors.fill: parent
         pressAndHoldInterval: 600

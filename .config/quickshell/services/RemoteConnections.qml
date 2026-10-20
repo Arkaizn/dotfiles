@@ -285,13 +285,17 @@ Singleton {
         return out
     }
 
-    // add the chosen import candidates; passwords found in scripts go to the keyring
-    function importAll(cands, cb) {
+    // add the chosen import candidates; passwords found in scripts (or in an
+    // export file) go to the keyring. replace: a candidate that's already saved
+    // (same name and type) takes that entry's place instead of being added next to it
+    function importAll(cands, cb, replace) {
         const l = list.slice()
         let pending = 0, problems = []
         for (const r of cands) {
             if (Object.keys(validate(r.conn)).length > 0) continue
-            l.push(normalize(r.conn))
+            const at = replace ? l.findIndex(c => c.name === r.conn.name && c.type === r.conn.type) : -1
+            if (at >= 0) { r.conn.id = l[at].id; l[at] = normalize(r.conn) }
+            else l.push(normalize(r.conn))
             if (r.password) {
                 pending++
                 setPassword(r.conn.id, r.conn.name, r.password, (ok, err) => {
@@ -302,6 +306,53 @@ Singleton {
         }
         save(l)
         if (pending === 0) cb(problems)
+    }
+
+    // ── Export / import files ───────────────────────────────────────────────
+    // { quickshellConnections: 1, exported, connections: [{ name, type, host, port,
+    //   user, password, clipboard, dynres, shareHome, ignoreCert, extra, secret? }] }
+    // `secret` (the keyring password, plain text) only with withPasswords. The
+    // file is written through stdin with umask 077: passwords never show up in
+    // a command line, and only you can read the file.
+    readonly property var fileFields: ["name", "type", "host", "port", "user", "password", "clipboard", "dynres", "shareHome", "ignoreCert", "extra"]
+
+    function exportTo(path, ids, withPasswords, cb) {
+        const conns = list.filter(c => ids.includes(c.id))
+        const out = conns.map(c => { const o = {}; for (const f of fileFields) o[f] = c[f]; return o })
+        const write = () => Jobs.runInput(["sh", "-c", 'umask 077; cat > "$1"', "sh", path],
+            JSON.stringify({ quickshellConnections: 1, exported: new Date().toISOString(), connections: out }, null, 2) + "\n",
+            (code, o, err) => cb(code === 0, code === 0 ? "" : (err.trim() || "couldn't write " + path)))
+        const secret = withPasswords ? conns.map((c, i) => [c, i]).filter(([c]) => c.password === "keyring") : []
+        let pending = secret.length
+        if (pending === 0) return write()
+        for (const [c, i] of secret)
+            Jobs.run(["secret-tool", "lookup", "service", secretService, "id", c.id], (code, pw) => {
+                if (code === 0 && pw !== "") out[i].secret = pw.replace(/\n$/, "")
+                if (--pending === 0) write()
+            })
+    }
+
+    // an export file → { error, cands } (cands like scanImports: { source, password, conn, exists, errors })
+    function parseFile(text, name) {
+        let v
+        try { v = JsonCheck.parse(text).value }
+        catch (e) {
+            if (e.line === undefined) throw e
+            return { error: name + " isn't valid JSON (line " + e.line + ": " + e.message + ")", cands: [] }
+        }
+        if (!v || typeof v !== "object" || !Array.isArray(v.connections))
+            return { error: name + " isn't a connections export (no \"connections\" list)", cands: [] }
+        const cands = []
+        for (const e of v.connections) {
+            if (!e || typeof e !== "object") continue
+            const c = { id: newId() }
+            for (const f of fileFields) if (e[f] !== undefined) c[f] = e[f]
+            const pw = typeof e.secret === "string" && c.password === "keyring" ? e.secret : ""
+            cands.push({ source: name, password: pw, conn: c, noSecret: c.password === "keyring" && pw === "",
+                         exists: list.some(x => x.name === String(c.name ?? "").trim() && x.type === c.type),
+                         errors: validate(c) })
+        }
+        return { error: cands.length === 0 ? name + " has no connections in it" : "", cands: cands }
     }
 
     IpcHandler {

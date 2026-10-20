@@ -53,12 +53,17 @@ ColumnLayout {
             onClicked: Notifs.setDnd(!Notifs.dndManual)
         }
 
+        // collapses when empty, so "Do not disturb" moves to the right edge
         NotifActionButton {
             label: "Clear all"
             Layout.preferredHeight: 30
+            Layout.preferredWidth: root.empty ? 0 : implicitWidth
+            visible: Layout.preferredWidth > 0
+            clip: true
             enabled: !root.empty
             opacity: root.empty ? 0 : 1
             Behavior on opacity { NumberAnimation { duration: Anim.hover } }
+            Behavior on Layout.preferredWidth { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
             onClicked: Notifs.clearAll()
         }
     }

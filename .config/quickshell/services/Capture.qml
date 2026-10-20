@@ -225,7 +225,22 @@ Singleton {
     function startRecording(file, audio, mode, targets) {
         Jobs.detached([Quickshell.shellDir + "/scripts/record.sh", stateFile, file, audio, mode].concat(targets))
         later(400, refresh)
-        if (mode === "window") later(3000, refresh)    // after the share dialog
+        // a window recording starts once one is picked in the share dialog
+        if (mode === "window") later(400, () => { windowWait.tries = 0; windowWait.start() })
+    }
+    // while record.sh waits for the share dialog ($stateFile.pending exists)
+    Timer {
+        id: windowWait
+        property int tries: 0
+        interval: 500
+        repeat: true
+        onTriggered: {
+            root.refresh()
+            ++tries
+            // the pending file can take a moment to appear (the script starts first)
+            const waiting = Files.read(root.stateFile + ".pending").trim() !== ""
+            if (root.recording || (!waiting && tries > 6) || tries > 600) stop()
+        }
     }
 
     function stop() {

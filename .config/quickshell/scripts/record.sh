@@ -32,6 +32,12 @@ if [ "$mode" = window ]; then
     esac
     gpu-screen-recorder -w portal -f 60 ${ga:+-a "$ga"} -o "$f" >/dev/null 2>>"$log" &
     pids=$!
+    # it records only once a window is picked in the share dialog, and writes
+    # the file from then on: wait for that, so the bar's timer starts with the
+    # recording (and doesn't show at all when the dialog is cancelled)
+    echo 1 > "$st.pending"
+    while kill -0 "$pids" 2>/dev/null && [ ! -s "$f" ]; do sleep 0.2; done
+    rm -f "$st.pending"
 else
     wfa=""
     case $audio in
@@ -106,6 +112,8 @@ fi
 if [ -s "$f" ]; then
     a=$(notify-send -a Recording -i video-x-generic -A default=Open -A folder="Open folder" "Recording saved" "$f")
     case $a in default) xdg-open "$f" ;; folder) xdg-open "${f%/*}" ;; esac
+elif [ "$mode" = window ] && [ ! -e "$f" ]; then
+    notify-send -a Recording -i video-x-generic "Recording cancelled" "No window was picked$(tail -n 1 "$log" | sed "s/^/ — /")"
 elif [ -z "$parts" ]; then
     notify-send -a Recording -i dialog-error "Recording failed" "$(tail -n 3 "$log") (exit $code)"
 fi

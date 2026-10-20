@@ -246,8 +246,15 @@ BarPopup {
             // ── edit bar (only while editing; dropping on it hides) ──
             CCCard {
                 id: tray
-                visible: root.editing
+                // unrolls / rolls up instead of popping (the spacing below grows with it)
+                property real amount: root.editing ? 1 : 0
+                Behavior on amount { NumberAnimation { duration: Anim.popupIn; easing.type: Anim.easingIn } }
+                visible: amount > 0
+                opacity: amount
+                clip: true
                 Layout.fillWidth: true
+                Layout.preferredHeight: implicitHeight * amount
+                Layout.bottomMargin: -mainCol.spacing * (1 - amount)
                 implicitHeight: editCol.implicitHeight + 20
                 ColumnLayout {
                     id: editCol

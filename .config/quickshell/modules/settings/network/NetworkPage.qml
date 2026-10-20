@@ -124,6 +124,12 @@ ColumnLayout {
     onDeviceOrderChanged: sync(deviceModel, deviceOrder, "name")
     onProfileOrderChanged: sync(profileModel, profileOrder, "uuid")
 
+    NativeAppCard {
+        app: "nm-connection-editor"
+        label: "NetworkManager connection editor"
+        desc: "Every connection setting, also the ones this page doesn't show"
+    }
+
     // ── Top bar ─────────────────────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true

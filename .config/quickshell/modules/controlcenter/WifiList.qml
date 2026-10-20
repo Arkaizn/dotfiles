@@ -58,7 +58,7 @@ ColumnLayout {
             implicitWidth: 26; implicitHeight: 26
             icon: "󰒓"
             tooltip: "Saved networks, hidden network"
-            onClicked: Panels.call("settings", "openPage", "wifi")
+            onClicked: { Panels.close("controlCenter"); Panels.call("settings", "openPage", "wifi") }
         }
     }
 

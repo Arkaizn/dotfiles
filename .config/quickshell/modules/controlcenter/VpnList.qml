@@ -44,7 +44,7 @@ ColumnLayout {
             iconSize: 12
             icon: "󰒓"
             tooltip: "VPN settings"
-            onClicked: Panels.call("settings", "openPage", "vpn")
+            onClicked: { Panels.close("controlCenter"); Panels.call("settings", "openPage", "vpn") }
         }
     }
 

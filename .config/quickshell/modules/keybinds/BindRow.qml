@@ -1,3 +1,4 @@
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import qs.services
@@ -5,7 +6,7 @@ import qs.services
 // One shortcut: what it does on the left, its key combo(s) on the right
 // (alternatives stacked). `bind` is a row from Keybinds.binds.
 // Compact (narrow columns): several or long combos go below the text.
-// `editable`: a pencil shows on hover → editRequested(the first raw bind).
+// `editable`: a pencil per combo shows on hover → editRequested(that raw bind).
 Rectangle {
     id: row
     property var bind
@@ -41,34 +42,36 @@ Rectangle {
             Layout.alignment: Qt.AlignRight
             spacing: 4
 
-            Text {
-                visible: row.editable
-                text: "󰏫"
-                color: editMouse.containsMouse ? Colors.color6 : Colors.fade(0.6)
-                opacity: rowHover.hovered ? 1 : 0
-                Behavior on opacity { NumberAnimation { duration: 120 } }
-                font.pixelSize: 13
-                font.family: Properties.fontFamily
-                MouseArea {
-                    id: editMouse
-                    anchors.fill: parent
-                    anchors.margins: -4
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: row.editRequested(row.bind.items?.[0] ?? null)
-                }
-            }
-
             ColumnLayout {
                 spacing: 4
                 Repeater {
                     model: row.bind.combos
                     RowLayout {
+                        id: comboRow
                         required property var modelData
+                        required property int index
                         Layout.alignment: Qt.AlignRight
                         spacing: row.compact ? 3 : 4
+                        // one pencil per combo: edits exactly that bind
+                        Text {
+                            visible: row.editable
+                            text: "󰏫"
+                            color: editMouse.containsMouse ? Colors.color6 : Colors.fade(0.6)
+                            opacity: rowHover.hovered ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: 120 } }
+                            font.pixelSize: 13
+                            font.family: Properties.fontFamily
+                            MouseArea {
+                                id: editMouse
+                                anchors.fill: parent
+                                anchors.margins: -4
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: row.editRequested(row.bind.items?.[comboRow.index] ?? null)
+                            }
+                        }
                         Repeater {
-                            model: modelData
+                            model: comboRow.modelData
                             Keycap {
                                 required property string modelData
                                 key: modelData

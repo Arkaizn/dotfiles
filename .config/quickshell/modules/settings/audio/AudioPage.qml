@@ -23,6 +23,12 @@ ColumnLayout {
     // volume / mute only update for tracked nodes
     PwObjectTracker { objects: Audio.sinks.concat(Audio.sources).concat(page.streams) }
 
+    NativeAppCard {
+        app: "pavucontrol"
+        label: "PipeWire volume control"
+        desc: "Every device, stream and port in detail"
+    }
+
     NetCard {
         Layout.fillWidth: true
         title: "Volume"

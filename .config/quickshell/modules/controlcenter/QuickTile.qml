@@ -22,6 +22,9 @@ Rectangle {
     signal toggled()
     signal expandClicked()
 
+    // a third of the control center: no chevron (the tile itself opens the list)
+    readonly property bool narrow: width < 160
+
     implicitHeight: 56
     radius: 12
     border.width: 1.5
@@ -41,9 +44,9 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 12
-        anchors.rightMargin: 8
-        spacing: 10
+        anchors.leftMargin: root.narrow ? 10 : 12
+        anchors.rightMargin: root.narrow ? 6 : 8
+        spacing: root.narrow ? 6 : 10
 
         Text {
             text: root.icon
@@ -61,7 +64,7 @@ Rectangle {
                 text: root.title
                 color: root.active || !root.expandable ? Colors.ink : Colors.fade(0.4)
                 Behavior on color { ColorAnimation { duration: 150 } }
-                font.pixelSize: 13
+                font.pixelSize: root.narrow ? 12 : 13
                 font.bold: true
                 elide: Text.ElideRight
             }
@@ -76,15 +79,15 @@ Rectangle {
         }
 
         Chevron {
-            visible: root.expandable
+            visible: root.expandable && !root.narrow
             open: root.expanded
         }
 
         // on/off switch
         IconButton {
             visible: root.expandable && root.switchable
-            implicitWidth: 28
-            implicitHeight: 28
+            implicitWidth: root.narrow ? 24 : 28
+            implicitHeight: root.narrow ? 24 : 28
             icon: "󰐥"
             active: root.active
             textColor: root.active ? Colors.ink : Colors.fade(0.4)

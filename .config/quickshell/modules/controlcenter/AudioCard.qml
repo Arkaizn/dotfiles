@@ -179,8 +179,8 @@ CCCard {
                 IconButton {
                     implicitWidth: 26; implicitHeight: 26
                     icon: "󰒓"
-                    tooltip: "Open pavucontrol"
-                    onClicked: Quickshell.execDetached(["pavucontrol"])
+                    tooltip: "Audio settings"
+                    onClicked: { Panels.close("controlCenter"); Panels.call("settings", "openPage", "audio") }
                 }
             }
         }

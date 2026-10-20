@@ -11,7 +11,8 @@ import "../settings/network"
 
 // Live editor for the desktop widgets on one monitor (overlay above windows
 // while it's open; the real widgets hide meanwhile).
-//   drag            move (hold Ctrl: snaps to an invisible 16 px grid)
+//   drag            move (hold Ctrl: edges snap to other widgets / the screen,
+//                   with a line, or else to an invisible 16 px grid)
 //   top handle      rotate (sticks to right angles; Ctrl: 15° steps)
 //   corner handle   resize (Ctrl: steps of 10 %)
 //   click           select → options on the right; empty spot: deselect
@@ -73,8 +74,12 @@ PanelWindow {
         }
     }
 
+    // Ctrl-drag: lines where the dragged widget lines up with another one or the screen
+    property var guides: []
+
     // ── the widgets ─────────────────────────────────────────────────────────
     Repeater {
+        id: widgetRep
         model: ed.ids
         Item {
             id: it
@@ -93,6 +98,8 @@ PanelWindow {
             readonly property real cy: manip ? liveY : (inst?.y ?? 0.5) * ed.height
             readonly property real rot: manip ? liveRot : (inst?.rot ?? 0)
             readonly property real sc: manip ? liveScale : (inst?.scale ?? 1)
+            // centre and size of the box around it (rotated, scaled): what others snap to
+            readonly property var box: { const b = DeskWidgets.bounds(body.width * sc, body.height * sc, rot); return { x: cx, y: cy, w: b.w, h: b.h } }
 
             function begin() {
                 liveX = cx; liveY = cy; liveRot = rot; liveScale = sc
@@ -147,10 +154,17 @@ PanelWindow {
                         if (!pressed) return
                         const p = it.at(drag, m)
                         let x = p.x - off.x, y = p.y - off.y
-                        if (m.modifiers & Qt.ControlModifier) { x = DeskWidgets.snap(x); y = DeskWidgets.snap(y) }
+                        if (m.modifiers & Qt.ControlModifier) {
+                            // (no loop: qmllint 6.12 stops checking a file with one in a handler)
+                            const others = Array.from({ length: widgetRep.count }, (_, i) => widgetRep.itemAt(i))
+                                .filter(o => o && o !== it).map(o => o.box)
+                            const r = DeskWidgets.snapBox(x, y, it.box.w, it.box.h, others, ed.width, ed.height)
+                            x = r.x; y = r.y
+                            ed.guides = r.guides
+                        } else ed.guides = []
                         it.liveX = x; it.liveY = y
                     }
-                    onReleased: it.commit()
+                    onReleased: { ed.guides = []; it.commit() }
                     onDoubleClicked: DesktopWidgets.raise(it.modelData)
                 }
 
@@ -224,6 +238,21 @@ PanelWindow {
                     font.family: Properties.fontFamily
                 }
             }
+        }
+    }
+
+
+    Repeater {
+        model: ed.guides
+        Rectangle {
+            required property var modelData
+            z: 5
+            x: modelData.axis === "x" ? Math.round(modelData.pos) - 0.5 : 0
+            y: modelData.axis === "y" ? Math.round(modelData.pos) - 0.5 : 0
+            width: modelData.axis === "x" ? 1 : ed.width
+            height: modelData.axis === "y" ? 1 : ed.height
+            color: Colors.color6
+            opacity: 0.85
         }
     }
 

@@ -178,6 +178,27 @@ test("DeskWidgets snapping", () => {
     assert.equal(Math.round(DW.angleOf(0, 0, 0, -10)), 0)
     assert.equal(Math.round(DW.angleOf(0, 0, -10, 0)), -90)
 })
+test("DeskWidgets edge snapping", () => {
+    const other = [{ x: 500, y: 300, w: 200, h: 100 }]      // left 400, right 600, top 250, bottom 350
+    // 105 px wide box whose left edge is 5 px right of the other's right edge → touches it
+    let r = DW.snapBox(605 + 52.5, 700, 105, 40, other, 1920, 1080)
+    assert.equal(r.x - 52.5, 600)
+    assert.equal(JSON.stringify(r.guides.map(g => g.axis + g.pos)), JSON.stringify(["x600"]))
+    // top edge 3 px below the other's top → aligned tops
+    r = DW.snapBox(1000, 253 + 20, 80, 40, other, 1920, 1080)
+    assert.equal(r.y - 20, 250)
+    // centres line up
+    r = DW.snapBox(506, 900, 50, 50, other, 1920, 1080)
+    assert.equal(r.x, 500)
+    // screen edge
+    r = DW.snapBox(1920 - 30 - 4, 600, 60, 60, [], 1920, 1080)
+    assert.equal(r.x + 30, 1920)
+    // nothing near: the left / top edge goes on the 16 px grid, no guide
+    r = DW.snapBox(1000.5 + 25, 640.5 + 25, 50, 50, other, 1920, 1080)
+    assert.equal(r.x - 25, 1008)       // 1000.5 / 16 = 62.53 → 63 × 16
+    assert.equal(r.y - 25, 640)
+    assert.equal(r.guides.length, 0)
+})
 test("DeskWidgets geometry", () => {
     assert.deepEqual({ ...DW.bounds(100, 50, 0) }, { w: 100, h: 50 })
     assert.deepEqual({ ...DW.bounds(100, 50, 90) }, { w: 50, h: 100 })

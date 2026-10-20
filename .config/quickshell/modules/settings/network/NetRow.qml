@@ -13,6 +13,7 @@ Item {
     property bool changed: false
     property bool wide: false
     property bool sub: false              // option of the row above (indented)
+    property bool descError: false        // desc is an error message (red)
     default property alias content: slot.data
 
     Layout.fillWidth: true
@@ -63,7 +64,7 @@ Item {
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: root.desc
-                color: Colors.fade(0.5)
+                color: root.descError ? Colors.red : Colors.fade(0.5)
                 font.pixelSize: 11
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap

@@ -52,6 +52,7 @@ Item {
     ButtonBackground {
         id: buttonBackground
         iconText: ""
+        hovered: music.hovered
     }
 
     Item {

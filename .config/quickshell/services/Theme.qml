@@ -177,6 +177,7 @@ Singleton {
     readonly property string modeScript: home + "/.config/quickshell/scripts/color-mode.sh"
     readonly property string mode: Settings.theme.mode ?? (Colors.light ? "light" : "dark")
     readonly property bool switching: Jobs.isRunning("color-mode")
+    property string modeError: ""          // what didn't switch last time (shown on the Theme page)
     property var detected: ({})            // { gtk, icons, kvantum, qtColors } as set now
     property var themes: ({ gtk: [], icons: [], kvantum: [] })   // installed, for the pickers
 
@@ -242,7 +243,15 @@ Singleton {
             for (const mm of ["Light", "Dark"])
                 if (!Settings.theme[k + mm] && pair(k, mm.toLowerCase())) Settings.set("theme", k + mm, pair(k, mm.toLowerCase()))
         Settings.set("theme", "mode", m)
-        Jobs.start("color-mode", args, { timeout: 120000, onExit: () => { refresh(); detect() } })
+        modeError = ""
+        Jobs.start("color-mode", args, { timeout: 120000, onExit: code => {
+            refresh(); detect()
+            if (code === 0) return
+            // the script prints "ERROR <what>: <why>" for a part that failed (the others still switched)
+            const why = Jobs.state("color-mode").lines.filter(l => l.text.startsWith("ERROR ")).map(l => l.text.slice(6))
+            modeError = why.length > 0 ? why.join("\n") : "switching to " + m + " failed (exit " + code + ")"
+            Jobs.run(["notify-send", "-a", "Theme", "Light / dark: not everything switched", modeError])
+        } })
     }
 
     IpcHandler {

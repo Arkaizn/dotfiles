@@ -64,6 +64,8 @@ Item {
     Popup {
         id: list
         y: root.height + 4
+        // stays inside the window (moved up / left when there's no room below / right)
+        margins: 8
         width: Math.max(root.width, 160)
         height: Math.min(view.contentHeight + 12, 260)
         padding: 6

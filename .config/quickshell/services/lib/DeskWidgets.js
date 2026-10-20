@@ -8,7 +8,8 @@
 //     monitors,              null = like all widgets; [] = every monitor; ["make model serial" | output name, …]
 //     opts }                 the type's options (DesktopWidgets.types)
 
-const GRID = 16              // px: Ctrl-drag snaps the centre to this grid (not drawn)
+const GRID = 16              // px: Ctrl-drag snaps the edges to this grid (not drawn)
+const SNAP_DIST = 8          // px: Ctrl-drag snaps to another widget's / the screen's edge within this
 const ROT_STEP = 15          // degrees: Ctrl-rotate steps
 const ROT_STICK = 4          // degrees: rotation sticks to 0 / 90 / … within this, without Ctrl
 const SCALE_MIN = 0.4, SCALE_MAX = 3
@@ -16,6 +17,30 @@ const SCALE_MIN = 0.4, SCALE_MAX = 3
 function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)) }
 
 function snap(v, grid) { return Math.round(v / (grid || GRID)) * (grid || GRID) }
+
+// Ctrl-drag: the widget's box (centre x, y; size w, h) snaps with its edges or
+// centre to the edges / centres of `others` ([{ x, y, w, h }]) and of the screen
+// (sw × sh) when one is within SNAP_DIST; otherwise its left / top edge goes on
+// the grid. → { x, y, guides: [{ axis: "x" | "y", pos }] } (guides: widget /
+// screen snaps only, the grid isn't drawn)
+function snapBox(x, y, w, h, others, sw, sh) {
+    const out = { x: x, y: y, guides: [] }
+    const axis = (c, size, key, len, screen) => {
+        const mine = [c - size / 2, c, c + size / 2]
+        const targets = [0, screen / 2, screen]
+        for (const o of others) targets.push(o[key] - o[len] / 2, o[key], o[key] + o[len] / 2)
+        let best = null
+        for (const t of targets)
+            for (const m of mine)
+                if (Math.abs(t - m) <= SNAP_DIST && (best === null || Math.abs(t - m) < Math.abs(best.d))) best = { d: t - m, pos: t }
+        if (best) { out.guides.push({ axis: key, pos: best.pos }); return c + best.d }
+        const edge = c - size / 2
+        return c + snap(edge) - edge
+    }
+    out.x = axis(x, w, "x", "w", sw)
+    out.y = axis(y, h, "y", "h", sh)
+    return out
+}
 
 // degrees, normalised to -180..180; ctrl: 15° steps, else sticks to right angles
 function snapAngle(deg, ctrl) {

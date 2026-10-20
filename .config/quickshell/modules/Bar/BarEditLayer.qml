@@ -139,11 +139,14 @@ Item {
         return last ? leftOf(last) + last.width + Properties.spacing / 2 : (b.x0 + b.x1) / 2
     }
 
-    // tap on an empty spot ends editing (like tapping the home screen background)
+    // tap on an empty spot ends editing (like tapping the home screen background);
+    // only a real tap — a press that moves (a drag that just missed a module) doesn't
     MouseArea {
         anchors.fill: parent
         enabled: editor.dragId === ""
-        onClicked: EditMode.stop()
+        property point press: Qt.point(0, 0)
+        onPressed: m => press = Qt.point(m.x, m.y)
+        onClicked: m => { if (Math.hypot(m.x - press.x, m.y - press.y) <= 4) EditMode.stop() }
     }
 
     // ── drop zones (only while dragging) ────────────────────────────────────
@@ -197,8 +200,14 @@ Item {
                     height: mod?.height ?? 0
                     rotation: mod?.rotation ?? 0       // the badge wiggles along
 
+                    // grabs a bit more than the module: half the gap to each
+                    // neighbour and the bar's full height, so a press next to a
+                    // (wiggling) module still drags it instead of hitting the bar
                     MouseArea {
-                        anchors.fill: parent
+                        x: -Properties.spacing / 2 - 2
+                        y: -h.y
+                        width: parent.width + Properties.spacing + 4
+                        height: editor.height
                         hoverEnabled: true
                         preventStealing: true
                         cursorShape: h.dragged ? Qt.ClosedHandCursor : Qt.OpenHandCursor
@@ -207,7 +216,7 @@ Item {
                         onPositionChanged: m => {
                             if (!pressed) return
                             if (editor.dragId === "" && Math.hypot(m.x - press.x, m.y - press.y) > 4)
-                                editor.begin(h.modelData, h.mod, press.x, press.y)
+                                editor.begin(h.modelData, h.mod, press.x + x, press.y + y)   // grab point on the module
                             if (h.dragged) editor.track(mapToItem(editor.overlay, m.x, m.y))
                         }
                         onReleased: editor.finish()

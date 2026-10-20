@@ -45,6 +45,12 @@ ColumnLayout {
             tooltip: root.adapter?.discovering ? "Stop searching" : "Search for devices"
             onClicked: root.adapter.discovering = !root.adapter.discovering
         }
+        IconButton {
+            implicitWidth: 26; implicitHeight: 26
+            icon: "󰒓"
+            tooltip: "Bluetooth settings"
+            onClicked: { Panels.close("controlCenter"); Panels.call("settings", "openPage", "bluetooth") }
+        }
     }
 
     Flickable {

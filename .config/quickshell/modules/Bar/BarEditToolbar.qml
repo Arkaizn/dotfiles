@@ -15,7 +15,12 @@ Rectangle {
     readonly property var unused: BarLayout.unused(BarLayout.layoutFor(editor.screenName))
     readonly property bool target: editor.dropZone === "hide"
 
-    visible: editor.editing
+    // fades in and drops down a little instead of popping
+    property real amount: editor.editing ? 1 : 0
+    Behavior on amount { NumberAnimation { duration: Anim.popupIn; easing.type: Anim.easingIn } }
+    visible: amount > 0
+    opacity: amount
+    transform: Translate { y: -10 * (1 - root.amount) }
     width: Math.min(920, col.implicitWidth + 28)
     height: col.implicitHeight + 24
     radius: Properties.panelRadius

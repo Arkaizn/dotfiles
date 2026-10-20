@@ -51,7 +51,10 @@ Scope {
     // changes (not a Binding: Quickshell outlives each config generation, and
     // an old generation's Binding restores its old value when destroyed; and
     // WlSessionLock doesn't always signal `locked` going false).
-    onLockedChanged: if (!locked) Quickshell.watchFiles = true      // e.g. the compositor ended the lock
+    onLockedChanged: {
+        if (locked) startDone = true                                // the rest of the shell can load now
+        else Quickshell.watchFiles = true                           // e.g. the compositor ended the lock
+    }
     function reloadIfChanged() {
         Jobs.run(["find", Quickshell.shellDir, "-newermt", "@" + Math.floor(lockedAt / 1000),
                   "(", "-name", "*.qml", "-o", "-name", "*.js", ")", "-print", "-quit"],
@@ -88,7 +91,32 @@ Scope {
     }
     // Session.lock() → Panels.open("lockscreen")
     readonly property var api: ({ open: () => root.lock() })
-    Component.onCompleted: { yubikeyProc.running = true; Panels.register("lockscreen", api); Quickshell.watchFiles = !locked; Monitors.refresh() }
+    Component.onCompleted: {
+        yubikeyProc.running = true; Panels.register("lockscreen", api); Quickshell.watchFiles = !locked; Monitors.refresh()
+        if (startPending) lock()
+    }
+
+    // Login: niri starts the shell with QS_LOCK_AT_START=1, so it locks from its
+    // own start (before: lock.sh polled `qs ipc call lockscreen lock` until the
+    // shell answered, showing the desktop meanwhile). shell.qml loads the rest
+    // of the shell only once this is locked (startPending), so the lockscreen
+    // doesn't wait for it. Only in the first seconds of the shell process: the
+    // variable stays set all session, and a later config reload must neither
+    // lock nor change how the shell loads.
+    readonly property bool startPending: Quickshell.env("QS_LOCK_AT_START") === "1" && processAge() < 5 && !startDone
+    property bool startDone: false
+    function processAge() {
+        const up = parseFloat(Files.read("/proc/uptime"))
+        const ticks = Number(Files.read("/proc/self/stat").replace(/^.*\) /, "").split(" ")[19])    // starttime, field 22
+        return up > 0 && ticks > 0 ? up - ticks / 100 : 1e9
+    }
+    Timer {
+        // don't hold the rest of the shell back if locking doesn't happen
+        running: root.startPending
+        interval: 3000
+        onTriggered: root.startDone = true
+    }
+
     Component.onDestruction: Panels.unregister("lockscreen", api)
 
     function lock() {

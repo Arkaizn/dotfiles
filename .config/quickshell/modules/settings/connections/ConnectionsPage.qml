@@ -15,6 +15,7 @@ ColumnLayout {
 
     property string editing: ""            // connection id, "new" or ""
     property bool importing: false
+    property var exporting: null            // null = closed, [] = all, [id] = that one
     ConfirmArm { id: deleteArm }
     readonly property alias confirmDelete: deleteArm.armed     // the connection waiting for its second click
     property var have: ({})
@@ -52,7 +53,8 @@ ColumnLayout {
         Layout.fillWidth: true
         title: "Saved connections"
         header: [
-            ActionButton { icon: "󰋺"; text: "Import"; onClicked: { page.importing = true; page.editing = "" } },
+            ActionButton { icon: "󰋺"; text: "Import"; onClicked: { page.importing = true; page.editing = ""; page.exporting = null } },
+            ActionButton { icon: "󰈝"; text: "Export"; interactive: RemoteConnections.list.length > 0; onClicked: { page.exporting = []; page.importing = false } },
             ActionButton { icon: "󰐕"; text: "New"; primary: true; onClicked: { page.editing = "new"; page.importing = false } }
         ]
 
@@ -98,6 +100,10 @@ ColumnLayout {
                         }
                         IconButton { icon: "󰐊"; tooltip: "Connect"; onClicked: RemoteConnections.connect(entry.c.id) }
                         IconButton {
+                            icon: "󰈝"; tooltip: "Export this one"
+                            onClicked: { page.exporting = [entry.c.id]; page.importing = false }
+                        }
+                        IconButton {
                             icon: "󰏫"; tooltip: "Edit"
                             active: page.editing === entry.c.id
                             onClicked: page.editing = page.editing === entry.c.id ? "" : entry.c.id
@@ -121,6 +127,28 @@ ColumnLayout {
                     }
                 }
             }
+        }
+    }
+
+    NetCard {
+        Layout.fillWidth: true
+        visible: page.exporting !== null
+        title: "Export"
+        Loader {
+            Layout.fillWidth: true
+            active: page.exporting !== null
+            sourceComponent: ConnectionExport { preselect: page.exporting ?? []; onDone: page.exporting = null }
+        }
+    }
+
+    NetCard {
+        Layout.fillWidth: true
+        visible: page.importing
+        title: "Import"
+        Loader {
+            Layout.fillWidth: true
+            active: page.importing
+            sourceComponent: ConnectionImport { onDone: page.importing = false }
         }
     }
 
@@ -203,17 +231,6 @@ ColumnLayout {
                                              [VncServer.lanNet, String(VncServer.port)])
                 }
             }
-        }
-    }
-
-    NetCard {
-        Layout.fillWidth: true
-        visible: page.importing
-        title: "Import"
-        Loader {
-            Layout.fillWidth: true
-            active: page.importing
-            sourceComponent: ConnectionImport { onDone: page.importing = false }
         }
     }
 

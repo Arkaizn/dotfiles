@@ -19,7 +19,18 @@ Rectangle {
     readonly property string title: own ? (PanelLayout.ccCustom[cardId]?.title ?? "") : ""
     // the list of the expanded Wi-Fi / Bluetooth tile, if that tile is in here
     readonly property string list: host.expanded !== "" && ids.includes(host.expanded) ? host.expanded : ""
-    readonly property int columns: Math.max(1, Math.min(ids.some(id => PanelLayout.item(id).wide) ? 2 : 3, ids.length))
+    // rows of at most 3 tiles, as even as possible: 2 → halves, 3 → thirds,
+    // 4 → 2 × 2, 5 → 3 + 2, 7 → 3 + 2 + 2; the tiles of a row share it equally
+    readonly property var rows: {
+        const out = []
+        let at = 0
+        for (let n = Math.ceil(ids.length / 3); n > 0; n--) {
+            const k = Math.ceil((ids.length - at) / n)
+            out.push(ids.slice(at, at + k))
+            at += k
+        }
+        return out
+    }
     readonly property Item area: card      // where buttons can be dropped
     Component.onCompleted: host.registerHolder(card)
     Component.onDestruction: host.unregisterHolder(card)
@@ -77,25 +88,23 @@ Rectangle {
         }
 
         // ── tiles ──
-        GridLayout {
-            Layout.fillWidth: true
-            visible: card.ids.length > 0
-            columns: card.columns
-            rowSpacing: 8
-            columnSpacing: 8
-
-            Repeater {
-                model: card.ids
-                CCItem {
-                    required property string modelData
-                    required property int index
-                    itemId: modelData
-                    host: card.host
-                    // the last tile takes what's left of its row
-                    readonly property int span: index === card.ids.length - 1 ? card.columns - index % card.columns : 1
-                    Layout.columnSpan: span
-                    Layout.fillWidth: true
-                    Layout.preferredWidth: span
+        Repeater {
+            model: card.rows
+            RowLayout {
+                id: tileRow
+                required property var modelData
+                Layout.fillWidth: true
+                spacing: 8
+                Repeater {
+                    model: tileRow.modelData
+                    CCItem {
+                        required property string modelData
+                        itemId: modelData
+                        host: card.host
+                        Layout.fillWidth: true
+                        Layout.preferredWidth: 1     // equal shares, not the tiles' own widths
+                        Layout.minimumWidth: 0
+                    }
                 }
             }
         }

@@ -58,7 +58,20 @@ while [ $# -gt 0 ]; do
         --wal)
             wp=$(jq -r '.wallpaper // empty' "$HOME/.cache/wal/colors.json" 2>/dev/null)
             [ -n "$wp" ] && [ -f "$wp" ] || wp="$HOME/.local/share/backgrounds/pywallpaper.png"
-            if [ "$mode" = light ]; then wal -q -n -i "$wp" -l; else wal -q -n -i "$wp"; fi
+            # checked: a failed wal used to go unnoticed (apps switched, the shell stayed as it was)
+            if ! command -v wal >/dev/null; then
+                echo "ERROR shell colors: wal isn't installed" >&2; failed=1
+            elif ! out=$(if [ "$mode" = light ]; then wal -q -n -i "$wp" -l; else wal -q -n -i "$wp"; fi 2>&1); then
+                echo "ERROR shell colors: wal failed on $wp: $(printf '%s\n' "$out" | grep -v -e 'convert command is deprecated' -e '^$' | tail -n 2 | tr '\n' ' ')" >&2; failed=1
+            else
+                # the new background must match the mode (light = bright)
+                bg=$(jq -r '.special.background // empty' "$HOME/.cache/wal/colors.json" 2>/dev/null)
+                if [[ $bg =~ ^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$ ]]; then
+                    l=$(( (2126 * 16#${BASH_REMATCH[1]} + 7152 * 16#${BASH_REMATCH[2]} + 722 * 16#${BASH_REMATCH[3]}) / 10000 ))
+                    is=dark; [ "$l" -gt 127 ] && is=light
+                    [ "$is" = "$mode" ] || { echo "ERROR shell colors: wal ran, but ~/.cache/wal/colors.json is still $is (background $bg)" >&2; failed=1; }
+                fi
+            fi
             ;;
         --niri)
             [ -x "$cfg/niri/niri-colors.sh" ] && { backup "$cfg/niri/config/layout.kdl"; bash "$cfg/niri/niri-colors.sh"; }
@@ -106,3 +119,5 @@ while [ $# -gt 0 ]; do
     shift
 done
 echo "now $mode"
+[ "${failed:-0}" = 1 ] && exit 3
+exit 0

@@ -20,6 +20,12 @@ ColumnLayout {
     ConfirmArm { id: forgetArm }
     readonly property alias confirmForget: forgetArm.armed     // the device waiting for its second click
 
+    NativeAppCard {
+        app: "blueman-manager"
+        label: "Blueman"
+        desc: "Bluetooth manager: pairing, file transfer, device services"
+    }
+
     NetCard {
         Layout.fillWidth: true
         visible: !page.adapter

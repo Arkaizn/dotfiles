@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import ".."
 import "../network"
 
@@ -18,6 +19,9 @@ ColumnLayout {
     property string themeQuery: ""
     property string newName: ""
     property string saveMsg: ""
+    property bool saveFailed: false
+    // checked while typing, so a name that can't be saved shows red right away
+    readonly property string nameError: newName.trim() === "" ? "" : Valid.name(newName)
 
     Component.onCompleted: { Theme.refresh(); Theme.loadBuiltins() }
 
@@ -34,7 +38,9 @@ ColumnLayout {
         NetRow {
             first: true
             label: Theme.switching ? "Switching…" : Theme.mode === "light" ? "Light mode" : "Dark mode"
-            desc: "new pywal colors from your wallpaper, and the apps you pick below. Also: qs ipc call theme mode toggle"
+            desc: Theme.modeError !== "" ? "󰀦 " + Theme.modeError
+                  : "new pywal colors from your wallpaper, and the apps you pick below. Also: qs ipc call theme mode toggle"
+            descError: Theme.modeError !== ""
             Segmented {
                 small: true
                 options: [{ label: "󰖔  Dark", value: "dark" }, { label: "󰖨  Light", value: "light" }]
@@ -180,7 +186,8 @@ ColumnLayout {
         NetRow {
             first: true
             label: "Save the current colors"
-            desc: page.saveMsg !== "" ? page.saveMsg : Theme.savedDir.replace(Theme.home, "~")
+            desc: page.nameError !== "" ? page.nameError : page.saveMsg !== "" ? page.saveMsg : Theme.savedDir.replace(Theme.home, "~")
+            descError: page.nameError !== "" || page.saveFailed
             RowLayout {
                 spacing: 8
                 SearchField {
@@ -188,7 +195,8 @@ ColumnLayout {
                     icon: ""; clearable: false
                     placeholderText: "name"
                     text: page.newName
-                    onTextEdited: page.newName = text
+                    error: page.nameError !== "" || page.saveFailed
+                    onTextEdited: { page.newName = text; page.saveFailed = false }
                     onAccepted: saveBtn.clicked()
                 }
                 ActionButton {
@@ -198,7 +206,7 @@ ColumnLayout {
                     onClicked: {
                         const exists = Theme.saved.some(t => t.name === page.newName.trim())
                         if (exists && page.saveMsg !== "overwrite? press Save again") { page.saveMsg = "overwrite? press Save again"; return }
-                        Theme.save(page.newName, (ok, msg) => { page.saveMsg = ok ? "saved" : msg; if (ok) page.newName = "" })
+                        Theme.save(page.newName, (ok, msg) => { page.saveMsg = ok ? "saved" : msg; page.saveFailed = !ok; if (ok) page.newName = "" })
                     }
                 }
             }

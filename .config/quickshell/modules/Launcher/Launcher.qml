@@ -179,6 +179,10 @@ PanelWindow {
         id: anim
         target: rect
         direction: "top"
+        // slide by the (collapsed) card, not the whole fixed-height surface:
+        // from a surface-height offset the card spent the first half of the
+        // slide still below the screen edge, which felt like a slow open
+        distance: card.collapsedHeight + root.flare
         enterDuration: 280
         exitDuration: 180
         onExitFinished: root.visible = false
