@@ -261,7 +261,7 @@ Item {
                 Text {
                     Layout.fillWidth: true
                     text: root.player ? (root.player.trackTitle || "Unknown title") : ""
-                    color: Colors.foreground
+                    color: Properties.color
                     font.pixelSize: 15
                     font.bold: true
                     elide: Text.ElideRight
@@ -328,7 +328,7 @@ Item {
                     Text {
                         text: root.player?.remote ? Icons.get("mediaRemote") : "󰝚"
                         font.pixelSize: 12
-                        color: root.player?.remote ? Colors.color6 : Colors.foreground
+                        color: root.player?.remote ? Colors.color6 : Properties.color
                         visible: appIcon.status !== Image.Ready
                     }
 
@@ -338,7 +338,7 @@ Item {
                         text: !root.player ? "No player"
                             : root.player.remote ? root.player.identity + (root.player.session?.player?.device ? " · " + root.player.session.player.device : "")
                             : (root.player.identity || "Player")
-                        color: Colors.foreground
+                        color: Properties.color
                         font.pixelSize: 11
                         font.bold: true
                     }
@@ -376,7 +376,7 @@ Item {
                     anchors.centerIn: parent
                     text: "󰏌"
                     font.pixelSize: 13
-                    color: Colors.foreground
+                    color: Properties.color
                 }
                 Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                 MouseArea {
@@ -470,7 +470,7 @@ Item {
                         text: "󰒮"
                         font.pixelSize: 17
                         color: root.player && root.player.canGoPrevious
-                               ? Colors.foreground : Colors.fade(0.25)
+                               ? Properties.color : Colors.fade(0.25)
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -502,7 +502,7 @@ Item {
                         text: root.player && root.player.isPlaying ? "󰏤" : "󰐊"
                         font.pixelSize: 20
                         color: !root.player || root.player.mpris || root.player.canTogglePlaying
-                               ? Colors.foreground : Colors.fade(0.25)
+                               ? Properties.color : Colors.fade(0.25)
                         // a remote command waits for the phone to confirm (up to a few seconds)
                         opacity: root.player?.busy ? 0.5 : 1
                         Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -541,7 +541,7 @@ Item {
                         text: "󰒭"
                         font.pixelSize: 17
                         color: root.player && root.player.canGoNext
-                               ? Colors.foreground : Colors.fade(0.25)
+                               ? Properties.color : Colors.fade(0.25)
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -635,7 +635,7 @@ Item {
                     }
                     height: parent.height
                     radius: 3
-                    color: Colors.foreground
+                    color: Properties.color
 
                     Behavior on width {
                         enabled: root.player !== null && root.player.isPlaying

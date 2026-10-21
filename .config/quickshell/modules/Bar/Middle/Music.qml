@@ -24,8 +24,9 @@ Item {
     property bool expanded: false
     property int currentPlayerIndex: 0
     readonly property bool isPlaying: player?.isPlaying ?? false
-    // cava hears this computer only: a remote session gets still bars
-    readonly property bool hearsIt: isPlaying && !(player?.remote ?? false)
+    // cava hears this computer only: real levels while it hears something,
+    // else (remote session, muted player) the bars play their own animation
+    readonly property bool hearsIt: isPlaying && !(player?.remote ?? false) && Media.visualizerLive
 
     Component.onCompleted: Media.acquireVisualizer()
     Component.onDestruction: Media.releaseVisualizer()
@@ -100,7 +101,7 @@ Item {
             visible: albumArt.status === Image.Error || albumArt.status === Image.Null
             text: Icons.get("music")
             font.pixelSize: music.height * 0.5
-            color: Colors.ink
+            color: Properties.color
         }
 
         // remote session (e.g. the phone): a small marker on the cover
@@ -132,12 +133,25 @@ Item {
                     required property int index
                     width: 3
                     anchors.verticalCenter: parent.verticalCenter  // parent is the Row
-                    height: music.hearsIt ? (Media.visualizer[index] ?? 3) : music.isPlaying ? [6, 10, 6][index] : 3
+                    height: music.hearsIt ? (Media.visualizer[index] ?? 3) : music.isPlaying ? bounce : 3
                     radius: width / 2
-                    color: Colors.ink
+                    color: Properties.color
                     opacity: music.isPlaying ? 1.0 : 0.6
 
+                    // the "playing" animation: each bar its own speed and height
+                    property real bounce: 4
+                    SequentialAnimation on bounce {
+                        id: bounceAnim
+                        running: music.visible && music.isPlaying && !music.hearsIt
+                        loops: Animation.Infinite
+                        NumberAnimation { to: [13, 17, 11][index]; duration: [540, 430, 650][index]; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: [5, 7, 4][index]; duration: [480, 580, 450][index]; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: [9, 12, 15][index]; duration: [420, 500, 560][index]; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: 4; duration: [510, 390, 480][index]; easing.type: Easing.InOutSine }
+                    }
+
                     Behavior on height {
+                        enabled: !bounceAnim.running      // the bounce is smooth already
                         NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
                     }
                     Behavior on opacity {
@@ -166,7 +180,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Icons.get("previous")
                 font.pixelSize: Properties.pixelSize +7 //music.height * 0.38
-                color: Colors.ink
+                color: Properties.color
                 opacity: !(music.player?.canGoPrevious ?? false) ? 0.25 : prevHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }
@@ -185,7 +199,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: music.isPlaying ? Icons.get("pause") : Icons.get("play")
                 font.pixelSize: Properties.pixelSize + 3
-                color: Colors.ink
+                color: Properties.color
                 opacity: music.player?.remote && !music.player.canTogglePlaying ? 0.25 : playHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }
@@ -208,7 +222,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: Icons.get("next")
                 font.pixelSize: Properties.pixelSize +7
-                color: Colors.ink
+                color: Properties.color
                 opacity: !(music.player?.canGoNext ?? false) ? 0.25 : nextHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }

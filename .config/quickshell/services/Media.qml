@@ -11,6 +11,8 @@ import QtQuick
 //   players                MPRIS players, without playerctld (it only mirrors
 //                          the active player, so that one would show up twice)
 //   visualizer             [3 heights] while cava runs, else [3, 3, 3]
+//   visualizerLive         cava hears sound right now (else the bar plays its
+//                          own animation for a playing source)
 //   acquireVisualizer() / releaseVisualizer()   cava runs while someone uses
 //                          it and a player is playing (one cava for all bars)
 //
@@ -95,6 +97,9 @@ Singleton {
     function releaseVisualizer() { _visualizerUsers = Math.max(0, _visualizerUsers - 1) }
 
     property var visualizer: [3, 3, 3]
+    property bool visualizerLive: false
+    // no sound for a second (remote source, muted player): not live
+    Timer { id: visualizerQuiet; interval: 1000; onTriggered: root.visualizerLive = false }
 
     Process {
         command: ["cava", "-p", Quickshell.env("HOME") + "/.config/cava/quickshell.ini"]
@@ -104,8 +109,9 @@ Singleton {
                 const parts = line.trim().split(" ")
                 if (parts.length !== 3) return
                 root.visualizer = parts.map(v => { const n = parseInt(v); return isNaN(n) ? 3 : Math.max(3, n) })
+                if (root.visualizer.some(n => n > 3)) { root.visualizerLive = true; visualizerQuiet.restart() }
             }
         }
-        onRunningChanged: if (!running) root.visualizer = [3, 3, 3]
+        onRunningChanged: if (!running) { root.visualizer = [3, 3, 3]; root.visualizerLive = false }
     }
 }
