@@ -12,6 +12,7 @@ import "dotfiles"
 import "notifications"
 import "theme"
 import "audio"
+import "media"
 import "bluetooth"
 import "power"
 import "defaultapps"
@@ -225,6 +226,9 @@ Scope {
         { id: "audio", group: "System", icon: "󰕾", title: "Audio", custom: "audio",
           keywords: "sound volume speaker headphones microphone mic input output pipewire default device profile hdmi surround mute pavucontrol",
           desc: "Devices, volume limits and sound card profiles" },
+        { id: "media", group: "System", icon: "󰝚", title: "Media sources", custom: "media",
+          keywords: "media music player mpris feishin jellyfin phone remote session mediasync bridge discover local device sources now playing finamp server login",
+          desc: "Players on this device and remote Jellyfin sessions (mediasync)" },
         { id: "bluetooth", group: "System", icon: "󰂯", title: "Bluetooth", custom: "bluetooth",
           keywords: "bluetooth adapter paired devices trust block rename forget discoverable visible headphones controller blueman",
           desc: "Adapter and paired devices" },
@@ -498,6 +502,12 @@ Scope {
         { page: "audio", label: "Rename or hide an audio device", keywords: "alias name hide hdmi", icon: "󰏫" },
         { page: "audio", label: "Sound card profile", keywords: "hdmi surround 5.1 stereo off profile", icon: "󰓃" },
         { page: "audio", label: "Volume above 100%", keywords: "boost max volume step scroll", icon: "󰕾" },
+        { page: "media", label: "Discover media players on this device", desc: "Feishin and other MPRIS players for the bar and dashboard", keywords: "local mpris feishin player discovery music", icon: "󰌢" },
+        { page: "media", label: "Jellyfin server and login", desc: "Remote sessions, e.g. what your phone plays", keywords: "jellyfin server url login logout account token remote phone finamp", icon: "󰄜" },
+        { page: "media", label: "Local only / remote only / both", desc: "Which sessions the media panel shows", keywords: "mode local remote combined filter sources", icon: "󰕮" },
+        { page: "media", label: "Select a media session", desc: "Which player the bar and dashboard control", keywords: "select switch source session device phone player", icon: "󰐊" },
+        { page: "media", label: "Preferred media player", keywords: "prefer default player feishin", icon: "󰝚" },
+        { page: "media", label: "mediasync diagnostics", desc: "Bridge status, keyring, providers, log", keywords: "mediasync bridge daemon service status diagnostics debug log socket keyring", icon: "󰛳" },
         { page: "bluetooth", label: "Bluetooth visible to other devices", keywords: "discoverable pairable visible", icon: "󰂯" },
         { page: "bluetooth", label: "Forget a Bluetooth device", keywords: "unpair remove forget trust block rename", icon: "󰂲" },
         { page: "defaultapps", label: "Default web browser", keywords: "browser firefox zen chrome links", icon: "󰖟" },
@@ -1169,6 +1179,12 @@ Scope {
                                     active: win.query === "" && win.page.custom === "audio"
                                     visible: active
                                     sourceComponent: AudioPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "media"
+                                    visible: active
+                                    sourceComponent: MediaPage {}
                                 }
                                 Loader {
                                     Layout.fillWidth: true

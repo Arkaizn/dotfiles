@@ -23,6 +23,8 @@ import QtQuick
 //   icons      → changed icons { "<id>": "<glyph>" } (Icons.qml)
 //   monitorsPage → monitors page options { identifyAt: "top-left" | … }
 //   dashboard, controlCenter → which cards sit where (PanelLayout.qml)
+//   media      → { bridge: bool } use the mediasync bridge for the bar and
+//                dashboard (MediaSync.qml); its own settings live in the bridge
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
 //   clipboard, connections, capture, dotfiles, netTools, updates,
 //   settingsProfiles, wizard, health, perfmon
@@ -70,6 +72,7 @@ Singleton {
     property var controlCenter: ({})
     property var lockscreen: ({})
     property var desktopWidgets: ({})
+    property var media: ({})
     property bool loaded: false
 
     // every group, in the order they're written
@@ -78,7 +81,7 @@ Singleton {
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
-                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets"]
+                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media"]
     // how each group is called in the UI (export / import messages, profiles).
     // A new group needs: a property above, an entry in `groups`, a label here,
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
@@ -91,7 +94,7 @@ Singleton {
         netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
         health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
         monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout",
-        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets" })
+        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources" })
     function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────

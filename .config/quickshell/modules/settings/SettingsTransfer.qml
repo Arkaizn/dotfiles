@@ -31,7 +31,7 @@ Rectangle {
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
-        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets"]
+        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media"]
     // group → function(value, err) for the feature groups that need more than "is an object"
     property var validators: ({
         // enabled, monitors, instances [{ id, type, x, y, rot, scale, monitors, opts }] (services/lib/DeskWidgets.js)
@@ -76,6 +76,13 @@ Rectangle {
             for (const k of Object.keys(v)) {
                 if (!["lastHost", "lastPortHost", "lastPort"].includes(k)) err([k], "unknown setting \"" + k + "\"")
                 else if (typeof v[k] !== "string" || (v[k] !== "" && (k === "lastPort" ? Valid.port(v[k]) : Valid.host(v[k])) !== "")) err([k], k + " isn't a valid " + (k === "lastPort" ? "port" : "host"))
+            }
+        },
+        // bridge: use mediasync for the bar and dashboard (its own settings live in the bridge)
+        media: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (k === "bridge") { if (typeof v[k] !== "boolean") err([k], "bridge must be true or false") }
+                else err([k], "unknown setting \"" + k + "\"")
             }
         },
         power: (v, err) => {

@@ -6,6 +6,8 @@ import qs.components
 
 // Media player on the bar: album art + a 3-bar visualizer (Media's shared
 // cava). Left click: show the controls · right click: next player.
+// Sources: Media.sources (local players, and remote sessions through the
+// mediasync bridge; then the selection is the bridge's, shared with the dashboard).
 // Own button behaviour (not BarButton): its controls take clicks.
 Item {
     id: music
@@ -15,12 +17,15 @@ Item {
     implicitWidth: expanded ? Properties.buttonWidth + visualizer.width + albumArt.width + controlsRow.width + 10
                             : Properties.buttonWidth + visualizer.width + albumArt.width 
 
-    readonly property var players: Media.players
-    property var player: players.length > 0 ? players[Math.min(currentPlayerIndex, players.length - 1)] : null
+    readonly property var players: Media.sources
+    readonly property var player: Media.bridgeActive ? Media.selected
+                                : players.length > 0 ? players[Math.min(currentPlayerIndex, players.length - 1)] : null
     property bool hovered: hoverHandler.hovered   // back to real hover for gradient
     property bool expanded: false
     property int currentPlayerIndex: 0
     readonly property bool isPlaying: player?.isPlaying ?? false
+    // cava hears this computer only: a remote session gets still bars
+    readonly property bool hearsIt: isPlaying && !(player?.remote ?? false)
 
     Component.onCompleted: Media.acquireVisualizer()
     Component.onDestruction: Media.releaseVisualizer()
@@ -44,9 +49,9 @@ Item {
     }
 
     function nextPlayer() {
-        if (music.players.length > 0) {
-            music.currentPlayerIndex = (music.currentPlayerIndex + 1) % music.players.length
-        }
+        if (music.players.length === 0) return
+        if (Media.bridgeActive) Media.selectNext()
+        else music.currentPlayerIndex = (music.currentPlayerIndex + 1) % music.players.length
     }
 
     ButtonBackground {
@@ -98,6 +103,21 @@ Item {
             color: Colors.ink
         }
 
+        // remote session (e.g. the phone): a small marker on the cover
+        Rectangle {
+            visible: music.player?.remote ?? false
+            x: albumArt.x + albumArt.width - width + 3
+            y: albumArt.y + albumArt.height - height + 3
+            width: 13; height: 13; radius: 7
+            color: Colors.color6
+            Text {
+                anchors.centerIn: parent
+                text: Icons.get("mediaRemote")
+                font.pixelSize: 9
+                color: Colors.background
+            }
+        }
+
         Row {
             id: visualizer
             anchors.right: parent.right
@@ -109,9 +129,10 @@ Item {
             Repeater {
                 model: 3
                 Rectangle {
+                    required property int index
                     width: 3
                     anchors.verticalCenter: parent.verticalCenter  // parent is the Row
-                    height: music.isPlaying ? (Media.visualizer[index] ?? 3) : 3
+                    height: music.hearsIt ? (Media.visualizer[index] ?? 3) : music.isPlaying ? [6, 10, 6][index] : 3
                     radius: width / 2
                     color: Colors.ink
                     opacity: music.isPlaying ? 1.0 : 0.6
@@ -146,7 +167,7 @@ Item {
                 text: Icons.get("previous")
                 font.pixelSize: Properties.pixelSize +7 //music.height * 0.38
                 color: Colors.ink
-                opacity: prevHover.containsMouse ? 1.0 : 0.65
+                opacity: !(music.player?.canGoPrevious ?? false) ? 0.25 : prevHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }
 
@@ -155,7 +176,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: music.player?.previous()
+                    onClicked: if (music.player?.canGoPrevious) music.player.previous()
                 }
             }
 
@@ -165,7 +186,7 @@ Item {
                 text: music.isPlaying ? Icons.get("pause") : Icons.get("play")
                 font.pixelSize: Properties.pixelSize + 3
                 color: Colors.ink
-                opacity: playHover.containsMouse ? 1.0 : 0.65
+                opacity: music.player?.remote && !music.player.canTogglePlaying ? 0.25 : playHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }
 
@@ -188,7 +209,7 @@ Item {
                 text: Icons.get("next")
                 font.pixelSize: Properties.pixelSize +7
                 color: Colors.ink
-                opacity: nextHover.containsMouse ? 1.0 : 0.65
+                opacity: !(music.player?.canGoNext ?? false) ? 0.25 : nextHover.containsMouse ? 1.0 : 0.65
 
                 Behavior on opacity { NumberAnimation { duration: 120 } }
 
@@ -197,7 +218,7 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: music.player?.next()
+                    onClicked: if (music.player?.canGoNext) music.player.next()
                 }
             }
         }

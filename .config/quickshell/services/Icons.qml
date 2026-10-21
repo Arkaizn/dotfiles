@@ -33,6 +33,7 @@ Singleton {
         { group: "Media", id: "pause", label: "Pause", glyph: "" },
         { group: "Media", id: "previous", label: "Previous", glyph: "󰒮" },
         { group: "Media", id: "next", label: "Next", glyph: "󰒭" },
+        { group: "Media", id: "mediaRemote", label: "Remote session (mediasync)", glyph: "󰄜" },
 
         { group: "Volume", id: "volHigh", label: "Loud", glyph: "󰕾" },
         { group: "Volume", id: "volMid", label: "Medium", glyph: "󰖀" },

@@ -46,3 +46,6 @@ singleton NiriIpc NiriIpc.qml
 singleton WiredWifi WiredWifi.qml
 singleton Vpn Vpn.qml
 singleton DesktopWidgets DesktopWidgets.qml
+singleton MediaSync MediaSync.qml
+singleton MediaArt MediaArt.qml
+MediaSource MediaSource.qml

@@ -255,5 +255,80 @@ test("LockItems.resolve / check", () => {
     assert.equal(LockItems.check("monitors", []), null)
 })
 
+const MS = load("MediaSources.js")
+const sess = (o) => Object.assign({ id: "x", origin: "remote", kind: "remote_controllable", controllable: true,
+    capabilities: ["play", "pause", "seek"], player: { name: "Phone (Finamp)", device: "Phone", client: "Finamp" },
+    track: { title: "T", artists: ["A", "B"], duration_ms: 100000 },
+    playback: { state: "playing", position_ms: 10000, position_at: "2026-10-21T15:00:00.123456789+02:00", rate: null } }, o)
+test("MediaSources.parseTime: nanoseconds, offsets, unknown", () => {
+    assert.equal(MS.parseTime("2026-10-21T13:00:00.123456789Z"), Date.UTC(2026, 9, 21, 13, 0, 0, 123))
+    assert.equal(MS.parseTime("2026-10-21T15:00:00+02:00"), Date.UTC(2026, 9, 21, 13))
+    assert.ok(isNaN(MS.parseTime(null)))
+    assert.ok(isNaN(MS.parseTime("")))
+})
+test("MediaSources.positionMs extrapolates only while playing, clamps, unknown = -1", () => {
+    const at = MS.parseTime("2026-10-21T15:00:00.123456789+02:00")
+    assert.equal(MS.positionMs(sess(), at + 5000), 15000)
+    assert.equal(MS.positionMs(sess({ playback: { state: "paused", position_ms: 10000, position_at: "2026-10-21T15:00:00Z" } }), at + 5000), 10000)
+    assert.equal(MS.positionMs(sess(), at + 500000), 100000)                // not past the end
+    assert.equal(MS.positionMs(sess(), at - 5000), 10000)                   // clock behind: no going back
+    const rated = sess(); rated.playback.rate = 2
+    assert.equal(MS.positionMs(rated, at + 1000), 12000)
+    assert.equal(MS.positionMs(sess({ playback: { state: "playing", position_ms: null } }), at), -1)   // stale
+    assert.equal(MS.positionMs(null, at), -1)
+})
+test("MediaSources.can needs controllable + the capability", () => {
+    assert.equal(MS.can(sess(), "seek"), true)
+    assert.equal(MS.can(sess(), "next"), false)
+    assert.equal(MS.can(sess({ controllable: false }), "play"), false)
+    assert.equal(MS.can(sess({ capabilities: null }), "play"), false)
+    assert.equal(MS.can(null, "play"), false)
+})
+test("MediaSources labels: no invented metadata", () => {
+    assert.equal(MS.artists(sess()), "A, B")
+    assert.equal(MS.artists(sess({ track: { title: null, artists: null } })), "")
+    assert.equal(MS.playerName(sess()), "Phone (Finamp)")
+    assert.equal(MS.playerName(sess({ player: {} })), "Unknown player")
+    assert.equal(MS.placeLabel(sess()), "Phone · Finamp")
+    assert.equal(MS.placeLabel(sess({ origin: "local" })), "This device")
+    assert.equal(MS.kindLabel(sess({ kind: "remote_view_only" })), "remote · view only")
+    assert.equal(MS.kindLabel(sess({ kind: "something_new" })), "remote")     // unknown enum values are fine
+})
+test("MediaSources.errorText", () => {
+    assert.equal(MS.errorText({ code: "unsupported_capability" }), "This player doesn't support that")
+    assert.equal(MS.errorText({ code: "timeout", message: "after 5s" }), "The player didn't answer in time: after 5s")
+    assert.equal(MS.errorText({ code: "brand_new_code", message: "m" }), "Error: m")
+    assert.equal(MS.errorText(null), "")
+})
+test("MediaSources.modeSummary: discovery toggles × mode", () => {
+    const st = (mode, l, r) => ({ settings: { mode }, local_enabled: l, remote_enabled: r })
+    assert.equal(MS.modeSummary(st("combined", true, true)).text, "Players on this device and remote sessions")
+    assert.equal(MS.modeSummary(st("combined", true, false)).text, "Only players on this device")
+    assert.equal(MS.modeSummary(st("combined", false, true)).text, "Only remote sessions")
+    assert.equal(MS.modeSummary(st("remote_only", true, true)).text, "Only remote sessions")
+    assert.equal(MS.modeSummary(st("combined", false, false)).empty, true)
+    assert.ok(MS.modeSummary(st("local_only", false, true)).text.includes("discovery on this device is off"))
+    assert.equal(MS.modeSummary(null).text, "")
+})
+test("MediaSources.nextKey wraps, unknown → first", () => {
+    assert.equal(MS.nextKey(["a", "b", "c"], "b"), "c")
+    assert.equal(MS.nextKey(["a", "b", "c"], "c"), "a")
+    assert.equal(MS.nextKey(["a", "b"], "gone"), "a")
+    assert.equal(MS.nextKey([], "a"), "")
+})
+test("MediaSources.serverUrl / serverName like the bridge's config check", () => {
+    for (const u of ["https://jellyfin.example.org", "http://192.168.1.5:8096", "https://h/jellyfin"]) assert.equal(MS.serverUrl(u), "", u)
+    for (const u of ["", "jellyfin.example.org", "ftp://h", "https://h/?x=1", "https://h#f", "https://user:pw@h"]) assert.notEqual(MS.serverUrl(u), "", u)
+    assert.equal(MS.serverName("home"), "")
+    assert.notEqual(MS.serverName("my server"), "")
+    assert.notEqual(MS.serverName("x".repeat(33)), "")
+})
+test("MediaSources.clock", () => {
+    assert.equal(MS.clock(74000), "1:14")
+    assert.equal(MS.clock(3725000), "1:02:05")
+    assert.equal(MS.clock(-1), "")
+    assert.equal(MS.clock(null), "")
+})
+
 console.log(passed + " passed, " + failed + " failed")
 process.exit(failed ? 1 : 0)

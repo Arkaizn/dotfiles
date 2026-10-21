@@ -14,14 +14,19 @@ Item {
     property bool active: false
 
     // ── Player selection ─────────────────────────────────────────────────────
+    // Media.sources: local players, plus remote sessions through the mediasync
+    // bridge (services/MediaSource.qml). With the bridge, the source is the
+    // bridge's selection (shared with the bar); without it, this card's own pick.
     property int currentPlayerIndex: 0
-    readonly property var players: Media.players
-    property var player: players.length > 0
-                         ? players[Math.min(currentPlayerIndex, players.length - 1)]
-                         : null
+    readonly property var players: Media.sources
+    readonly property var player: Media.bridgeActive ? Media.selected
+                                : players.length > 0 ? players[Math.min(currentPlayerIndex, players.length - 1)] : null
+    // the bridge is on in settings but not reachable: local players only (MEDIASYNC.md)
+    readonly property bool bridgeOffline: MediaSync.state === "unavailable"
 
     // ── Local position tracking ───────────────────────────────────────────────
     property real localPosition: 0
+    property bool positionKnown: true       // false: a remote session that stopped reporting
 
     // Track whether the user just seeked — suppress the next poll overwrite
     property bool seekPending: false
@@ -32,9 +37,24 @@ Item {
                 seekPending = false
                 return
             }
-            localPosition = root.player.position
+            const p = root.player.positionNow()
+            root.positionKnown = p >= 0
+            localPosition = Math.max(0, p)
         }
     }
+
+    // a failed command of the shown session, for a few seconds instead of the artist
+    property string errorText: ""
+    Connections {
+        target: MediaSync
+        function onLastErrorChanged() {
+            if (MediaSync.lastError && root.player && MediaSync.lastError.sessionId === root.player.sessionId) {
+                root.errorText = MediaSync.lastError.text
+                errorClear.restart()
+            }
+        }
+    }
+    Timer { id: errorClear; interval: 4000; onTriggered: root.errorText = "" }
 
     // Bring the player to the front: MPRIS Raise first (Firefox / Zen switch to
     // the playing tab), then focus its window through the compositor — on Wayland an app
@@ -43,7 +63,7 @@ Item {
     // whose title has the track in it wins (= the playing tab).
     function jumpToPlayer() {
         const p = root.player
-        if (!p) return
+        if (!p || p.remote) return
         if (p.canRaise) p.raise()
         const key = (p.desktopEntry || p.identity || "").toLowerCase().replace(/^mozilla\s+/, "")
         // waits a moment first: the browser switches tab (its title changes)
@@ -53,10 +73,13 @@ Item {
     function nextPlayer() {
         if (root.players.length > 0) {
             root.localPosition = 0
-            currentPlayerIndex = (currentPlayerIndex + 1) % root.players.length
+            root.errorText = ""
+            if (Media.bridgeActive) Media.selectNext()
+            else currentPlayerIndex = (currentPlayerIndex + 1) % root.players.length
             playerSwitchSync.restart()
         }
     }
+    onPlayerChanged: { root.errorText = ""; playerSwitchSync.restart() }
 
 
     Timer {
@@ -69,7 +92,7 @@ Item {
     // Reset localPosition when the track changes
     Connections {
         target: root.player
-        function onTrackChanged() { root.localPosition = 0 }
+        function onTrackKeyChanged() { root.localPosition = 0; playerSwitchSync.restart() }
     }
 
     // ── Blurred album art background ─────────────────────────────────────────
@@ -146,6 +169,7 @@ Item {
 
         // Album art
         Rectangle {
+            id: artBox
             width: 130
             height: 130
             radius: 18
@@ -180,6 +204,47 @@ Item {
                 visible: !root.player || root.player.trackArtUrl === ""
                          || albumArtImage.status !== Image.Ready
             }
+
+            // volume: scroll on the cover (only players that support it); the
+            // value shows for a moment. Remote volume is sent once scrolling pauses.
+            property real pendingVolume: -1
+            readonly property real shownVolume: pendingVolume >= 0 ? pendingVolume : (root.player?.volume ?? 0)
+            WheelHandler {
+                enabled: root.player !== null && root.player.canSetVolume
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                onWheel: event => {
+                    const art = artBox
+                    const step = (event.angleDelta.y > 0 ? 1 : -1) * 0.05
+                    art.pendingVolume = Math.max(0, Math.min(1, Math.round((art.shownVolume + step) * 20) / 20))
+                    volumeSend.restart()
+                    volumeShow.restart()
+                }
+            }
+            Timer {
+                id: volumeSend
+                interval: 250
+                onTriggered: {
+                    const art = artBox
+                    if (root.player && art.pendingVolume >= 0) root.player.setVolume(art.pendingVolume)
+                }
+            }
+            Timer { id: volumeShow; interval: 1200; onTriggered: artBox.pendingVolume = -1 }
+            Rectangle {
+                anchors.centerIn: parent
+                width: volLabel.implicitWidth + 18; height: 26; radius: 8
+                color: Qt.rgba(0, 0, 0, 0.55)
+                opacity: volumeShow.running ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: 180 } }
+                Text {
+                    id: volLabel
+                    anchors.centerIn: parent
+                    text: "󰕾  " + Math.round(artBox.shownVolume * 100) + "%"
+                    color: "white"
+                    font.pixelSize: 12
+                    font.bold: true
+                }
+            }
         }
 
         // Right side
@@ -205,8 +270,8 @@ Item {
                 // buttons below don't move between tracks / players
                 Text {
                     Layout.fillWidth: true
-                    text: root.player ? (root.player.trackArtist || " ") : " "
-                    color: Colors.fade(0.55)
+                    text: root.errorText !== "" ? root.errorText : root.player ? (root.player.trackArtist || " ") : " "
+                    color: root.errorText !== "" ? Colors.red : Colors.fade(0.55)
                     font.pixelSize: 12
                     elide: Text.ElideRight
                 }
@@ -248,7 +313,7 @@ Item {
                         // and the only async image load in the config — a suspect for the
                         // reload crash in QQuickPixmap::connectFinished.)
                         source: {
-                            if (!root.player) return ""
+                            if (!root.player || root.player.remote) return ""
                             var id = (root.player.desktopEntry || root.player.identity || "").trim()
                             if (id === "") return ""
                             var icon = DesktopEntries.byId(id)?.icon ?? id.toLowerCase()
@@ -261,15 +326,18 @@ Item {
                     }
 
                     Text {
-                        text: "󰝚"
+                        text: root.player?.remote ? Icons.get("mediaRemote") : "󰝚"
                         font.pixelSize: 12
-                        color: Colors.foreground
+                        color: root.player?.remote ? Colors.color6 : Colors.foreground
                         visible: appIcon.status !== Image.Ready
                     }
 
                     Text {
                         id: sourceLabel
-                        text: root.player ? (root.player.identity || "Player") : "No player"
+                        // remote: "Finamp · Pixel 7" — where it plays matters more than the app
+                        text: !root.player ? "No player"
+                            : root.player.remote ? root.player.identity + (root.player.session?.player?.device ? " · " + root.player.session.player.device : "")
+                            : (root.player.identity || "Player")
                         color: Colors.foreground
                         font.pixelSize: 11
                         font.bold: true
@@ -294,7 +362,7 @@ Item {
             // jump to the player: its window (and in a browser the playing tab)
             Rectangle {
                 id: jumpBtn
-                visible: root.player !== null
+                visible: root.player !== null && !root.player.remote
                 implicitWidth: 26; implicitHeight: 26
                 radius: 8
                 border.color: Colors.fade(jumpHover.containsMouse ? 0.28 : 0.18)
@@ -323,6 +391,17 @@ Item {
                     onCanceled: jumpBtn.scale = 1.0
                     onClicked: root.jumpToPlayer()
                 }
+            }
+
+            // view only / not reporting / bridge offline: says why the controls are off
+            Text {
+                readonly property string note: root.player?.viewOnly ? (root.player.stale ? "not reporting" : "view only")
+                                             : root.bridgeOffline ? "mediasync offline" : ""
+                visible: note !== ""
+                text: note
+                color: Colors.fade(0.45)
+                font.pixelSize: 10
+                font.italic: true
             }
             }
 
@@ -356,6 +435,8 @@ Item {
                         // Active = Colors.color6, inactive = dim white
                         color: root.player && root.player.shuffle
                                ? Colors.color6 : Colors.fade(0.35)
+                        // remote sessions show their shuffle state but can't change it (no bridge command)
+                        opacity: root.player && root.player.remote ? 0.4 : 1
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -369,7 +450,7 @@ Item {
                         onReleased: parent.scale = containsMouse ? 1.1 : 1.0
                         onCanceled: parent.scale = 1.0
                         onClicked: {
-                            if (root.player) root.player.shuffle = !root.player.shuffle
+                            if (root.player) root.player.setShuffle(!root.player.shuffle)
                         }
                     }
                 }
@@ -420,7 +501,11 @@ Item {
                         anchors.centerIn: parent
                         text: root.player && root.player.isPlaying ? "󰏤" : "󰐊"
                         font.pixelSize: 20
-                        color: Colors.foreground
+                        color: !root.player || root.player.mpris || root.player.canTogglePlaying
+                               ? Colors.foreground : Colors.fade(0.25)
+                        // a remote command waits for the phone to confirm (up to a few seconds)
+                        opacity: root.player?.busy ? 0.5 : 1
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -500,6 +585,7 @@ Item {
                                 return Colors.fade(0.35)
                             return Colors.color6
                         }
+                        opacity: root.player && root.player.remote ? 0.4 : 1
                     }
                     Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
                     MouseArea {
@@ -516,11 +602,11 @@ Item {
                             if (!root.player) return
                             // Cycle: None → All → Track → None
                             if (root.player.loopState === MprisLoopState.None)
-                                root.player.loopState = MprisLoopState.Playlist
+                                root.player.setLoop(MprisLoopState.Playlist)
                             else if (root.player.loopState === MprisLoopState.Playlist)
-                                root.player.loopState = MprisLoopState.Track
+                                root.player.setLoop(MprisLoopState.Track)
                             else
-                                root.player.loopState = MprisLoopState.None
+                                root.player.setLoop(MprisLoopState.None)
                         }
                     }
                 }
@@ -543,7 +629,7 @@ Item {
                     id: progressFill
 
                     width: {
-                        if (!root.player || !root.player.lengthSupported || root.player.length <= 0)
+                        if (!root.player || !root.player.lengthSupported || root.player.length <= 0 || !root.positionKnown)
                             return 0
                         return parent.width * Math.min(1, root.localPosition / root.player.length)
                     }
@@ -564,7 +650,7 @@ Item {
                         if (root.player && root.player.canSeek && root.player.lengthSupported) {
                             const ratio = mouse.x / width
                             root.localPosition = ratio * root.player.length
-                            root.player.position = root.localPosition
+                            root.player.seek(root.localPosition)
                             root.seekPending = true
                         }
                     }
