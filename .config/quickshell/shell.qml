@@ -2,70 +2,29 @@
 
 import Quickshell
 import QtQuick
-import Quickshell.Wayland
-import qs.services
-import "modules/Bar"
-import "modules/notifications"
-import "modules/dashboard"
-import "modules/Launcher"
-import "modules/controlcenter"
 import "modules/lockscreen"
-import "modules/settings"
-import "modules/calendar"
-import "modules/polkit"
-import "modules/capture"
-import "modules/wizard"
-import "modules/perfmon"
-import "modules/desktop"
+// not for a type here: Quickshell only registers the directory imports of
+// files it reaches through imports, and this makes it reach ShellRest.qml's
+import "modules"
 
 ShellRoot {
     id: root
 
-    // First, so at login (locking at start) it isn't held up by the rest
+    // First, so at login (locking at start) it isn't held up by the rest.
+    // Not lazy: Quickshell 0.3.2 can't hand a locked WlSessionLock over to a
+    // new config generation (D11, LockScreen.qml).
     LockScreen { id: lockScreen }
+    readonly property int timingCreated: lockScreen.timing.mark("shell.qml objects created")   // TEMPORARY (LockTiming.qml)
 
     // The rest of the shell: right away, except at login, where it loads once
-    // the lockscreen is up (LockScreen.startPending)
+    // the lockscreen is up (LockScreen.startPending). Through `source`, so
+    // shell.qml doesn't compile all of it before the lockscreen can lock; and
+    // only set then: LazyLoader compiles its source as soon as it's set. Active
+    // follows the source (both following startPending, active could switch on
+    // first, with nothing to load, and the rest never got created).
     LazyLoader {
-        active: !lockScreen.startPending
-        component: Scope {
-            // start the niri settings service with the shell, so its override file
-            // follows settings.json even when the settings app isn't open
-            readonly property string niriConfig: NiriSettings.configDir
-            // same for the low-battery notifications
-            readonly property string batteryTier: BatteryAlerts.tier
-            // and the health check (its startup check)
-            readonly property int healthErrors: Health.errors
-            // and the dotfiles IPC target (it runs nothing until called)
-            readonly property bool dotfilesRepo: Dotfiles.isRepo
-            // and the VNC server (start with the shell, IPC target, connect notifications)
-            readonly property bool vncServer: VncServer.running
-            // and the power IPC target / power-saver-on-battery
-            readonly property string powerProfile: Power.current
-            // and the profiles IPC target
-            readonly property string settingsProfile: SettingsProfiles.active
-            // and the theme IPC target (theme apply / undo)
-            readonly property bool themeApplying: Theme.applying
-            // and "Wi-Fi off while wired" (Settings → Network)
-            readonly property bool wiredWifi: WiredWifi.turnedOff
-
-            DesktopLayer {}
-
-            Variants {
-                model: Quickshell.screens
-                Bar {}
-            }
-
-            NotifPopup {}
-            ControlCenter {}
-            Launcher {}
-            Dashboard {}
-            SettingsWindow {}
-            CalendarWindow {}
-            PolkitDialog {}
-            CaptureMenu {}
-            Wizard {}
-            PerfMonWindow {}
-        }
+        active: source !== ""
+        source: lockScreen.startPending ? "" : "modules/ShellRest.qml"
+        onLoadingChanged: if (!loading) lockScreen.timing.mark("rest of the shell loaded")   // TEMPORARY (LockTiming.qml)
     }
 }

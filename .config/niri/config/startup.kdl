@@ -4,14 +4,18 @@
 // See the binds section below for more spawn examples.
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
-// the shell first: it locks the session itself at login (QS_LOCK_AT_START, quickshell LockScreen)
-spawn-sh-at-startup "QS_LOCK_AT_START=1 QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"
+// the wallpaper first, so it (not niri's empty background) shows until the lockscreen is up
+spawn-sh-at-startup "bash ~/.config/quickshell/scripts/set_wallpaper.sh --login"
+// then the shell: it locks the session itself at login (QS_LOCK_AT_START, quickshell LockScreen)
+// QS_LOCK_TIMING=1: TEMPORARY, login lock timing in ~/.cache/lock-timing.log (modules/lockscreen/LockTiming.qml)
+spawn-sh-at-startup "QS_LOCK_AT_START=1 QS_LOCK_TIMING=1 QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"
+// fail-closed: not locked a few seconds after niri started -> fallback (TIMEOUT / ACTION at the top of the script)
+spawn-sh-at-startup "QS_LOCK_TIMING=1 bash ~/.config/quickshell/scripts/lock-watchdog.sh"
 spawn-sh-at-startup "nm-applet --indicator"
 spawn-sh-at-startup "cliphist wipe"
 spawn-sh-at-startup "wl-paste --watch cliphist store"
 spawn-sh-at-startup "tailscale systray"
 spawn-sh-at-startup "swayidle -w timeout 300 'bash ~/.config/quickshell/scripts/lock.sh' timeout 1800 'niri msg action power-off-monitors' before-sleep 'bash ~/.config/quickshell/scripts/lock.sh'"
-spawn-sh-at-startup "bash ~/.config/quickshell/scripts/set_wallpaper.sh"
 
 hotkey-overlay {
     // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.

@@ -52,8 +52,8 @@ Scope {
     // an old generation's Binding restores its old value when destroyed; and
     // WlSessionLock doesn't always signal `locked` going false).
     onLockedChanged: {
-        if (locked) startDone = true                                // the rest of the shell can load now
-        else Quickshell.watchFiles = true                           // e.g. the compositor ended the lock
+        timing.mark("sessionLock.locked -> " + locked)
+        if (!locked) Quickshell.watchFiles = true                   // e.g. the compositor ended the lock
     }
     function reloadIfChanged() {
         Jobs.run(["find", Quickshell.shellDir, "-newermt", "@" + Math.floor(lockedAt / 1000),
@@ -92,6 +92,7 @@ Scope {
     // Session.lock() → Panels.open("lockscreen")
     readonly property var api: ({ open: () => root.lock() })
     Component.onCompleted: {
+        timing.mark("LockScreen onCompleted")
         yubikeyProc.running = true; Panels.register("lockscreen", api); Quickshell.watchFiles = !locked; Monitors.refresh()
         if (startPending) lock()
     }
@@ -99,7 +100,7 @@ Scope {
     // Login: niri starts the shell with QS_LOCK_AT_START=1, so it locks from its
     // own start (before: lock.sh polled `qs ipc call lockscreen lock` until the
     // shell answered, showing the desktop meanwhile). shell.qml loads the rest
-    // of the shell only once this is locked (startPending), so the lockscreen
+    // of the shell only once this is shown (startPending), so the lockscreen
     // doesn't wait for it. Only in the first seconds of the shell process: the
     // variable stays set all session, and a later config reload must neither
     // lock nor change how the shell loads.
@@ -121,6 +122,7 @@ Scope {
 
     function lock() {
         if (sessionLock.locked) return
+        timing.mark("lock() called")
         yubikeyProc.running = true
         authOpen = false
         password = ""
@@ -131,7 +133,9 @@ Scope {
         lockedAt = Date.now()
         Compositor.focusedOutput(name => root.focusedAtLock = name)
         Quickshell.watchFiles = false
+        timing.mark("lock(): setting sessionLock.locked = true")
         sessionLock.locked = true
+        timing.mark("lock(): sessionLock.locked == " + sessionLock.locked + " (surfaces created)")
     }
 
     function showAuth() {
@@ -214,8 +218,19 @@ Scope {
         }
     }
 
+    // TEMPORARY login timing (QS_LOCK_TIMING=1), see LockTiming.qml
+    readonly property alias timing: timing
+    LockTiming { id: timing }
+    Timer { id: timingDone; interval: 2000; onTriggered: timing.finish() }   // lets the journal / rest of the shell catch up
+
     WlSessionLock {
         id: sessionLock
+        // the rest of the shell loads once the lock is shown, not just requested:
+        // loading it blocks the GUI thread, which held the first frame back ~0.5 s
+        onSecureChanged: if (secure) {
+            timing.mark("lock confirmed (sessionLock.secure, surfaces shown)"); timingDone.start()
+            root.startDone = true
+        }
 
         WlSessionLockSurface {
             id: surface
