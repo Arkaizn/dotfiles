@@ -13,6 +13,7 @@ import "capture"
 import "wizard"
 import "perfmon"
 import "desktop"
+import "paneleditor"
 
 // Everything in the shell but the lockscreen. A file of its own, loaded by
 // shell.qml's LazyLoader through `source`: inline there, all of these modules
@@ -57,4 +58,9 @@ Scope {
     CaptureMenu {}
     Wizard {}
     PerfMonWindow {}
+    // the panel editor, only while it's open (EditMode "panels")
+    LazyLoader {
+        active: EditMode.target === "panels"
+        PanelEditor {}
+    }
 }

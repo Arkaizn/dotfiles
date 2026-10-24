@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 
 // A control center card of tiles: Wi-Fi & Bluetooth, tools, and own cards
 // (PanelLayout.ccItems[cardId]). The Wi-Fi / Bluetooth tile opens its list in
@@ -19,12 +20,19 @@ Rectangle {
     readonly property string title: own ? (PanelLayout.ccCustom[cardId]?.title ?? "") : ""
     // the list of the expanded Wi-Fi / Bluetooth tile, if that tile is in here
     readonly property string list: host.expanded !== "" && ids.includes(host.expanded) ? host.expanded : ""
-    // rows of at most 3 tiles, as even as possible: 2 → halves, 3 → thirds,
-    // 4 → 2 × 2, 5 → 3 + 2, 7 → 3 + 2 + 2; the tiles of a row share it equally
+    // its size (Settings.panels.cards, resized live with the grips while the
+    // buttons are edited): tiles per row and their height
+    readonly property var size: PanelGeometry.card(cardId)
+    property int livePerRow: 0
+    property int liveTile: 0
+    readonly property int perRow: livePerRow > 0 ? livePerRow : size.perRow
+    readonly property int tileHeight: liveTile > 0 ? liveTile : size.tile
+    // rows of at most perRow tiles (default 3), as even as possible: 2 → halves,
+    // 3 → thirds, 4 → 2 × 2, 5 → 3 + 2, 7 → 3 + 2 + 2; the tiles of a row share it equally
     readonly property var rows: {
         const out = []
         let at = 0
-        for (let n = Math.ceil(ids.length / 3); n > 0; n--) {
+        for (let n = Math.ceil(ids.length / perRow); n > 0; n--) {
             const k = Math.ceil((ids.length - at) / n)
             out.push(ids.slice(at, at + k))
             at += k
@@ -101,6 +109,8 @@ Rectangle {
                         required property string modelData
                         itemId: modelData
                         host: card.host
+                        tileHeight: card.tileHeight
+                        Behavior on tileHeight { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1     // equal shares, not the tiles' own widths
                         Layout.minimumWidth: 0
@@ -192,5 +202,30 @@ Rectangle {
     Connections {
         target: card.host
         function onPopupClosed() { wifiList.passwordFor = "" }
+    }
+
+    // ── size grips (buttons edited live): right edge = tiles per row (drag
+    // left for more, narrower ones), bottom edge = tile height ──
+    ResizeHandle {
+        visible: card.editing && card.ids.length > 0 && card.host.dragId === ""
+        horizontal: true
+        anchors.right: parent.right
+        anchors.rightMargin: -4             // clear of the control center's scroll bar
+        anchors.verticalCenter: parent.verticalCenter
+        property int start: 0
+        onStarted: start = card.perRow
+        onMoved: d => card.livePerRow = Snap.clamp(start - Math.round(d / 50), 1, 6)
+        onDone: { if (card.livePerRow > 0) PanelGeometry.setCard(card.cardId, "perRow", card.livePerRow); card.livePerRow = 0 }
+    }
+    ResizeHandle {
+        visible: card.editing && card.ids.length > 0 && card.host.dragId === ""
+        horizontal: false
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: -9
+        anchors.horizontalCenter: parent.horizontalCenter
+        property int start: 0
+        onStarted: start = card.tileHeight
+        onMoved: d => card.liveTile = Snap.resize(start, d / Math.max(1, card.rows.length), 40, 120, 2)
+        onDone: { if (card.liveTile > 0) PanelGeometry.setCard(card.cardId, "tile", card.liveTile); card.liveTile = 0 }
     }
 }

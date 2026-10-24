@@ -9,8 +9,10 @@ import qs.components
 Item {
     id: trayButton
     anchors.margins: 0.5
-    implicitHeight: Properties.buttonHeight
-    implicitWidth: toggle.width + itemsClip.width + 8
+    // a row; on a left / right bar a column (arrow on top, icons below it)
+    readonly property bool vertical: PanelGeometry.barVertical
+    implicitHeight: vertical ? toggle.height + itemsClip.height + 8 : PanelGeometry.barButtonHeight
+    implicitWidth: vertical ? PanelGeometry.barButtonHeight : toggle.width + itemsClip.width + 8
 
     property bool hovered: false
     // open = the tray's icons show; closed = only the toggle (Settings.bar.trayOpen)
@@ -33,11 +35,10 @@ Item {
     // arrow: always there, opens / closes the tray
     Item {
         id: toggle
-        anchors.left: parent.left
-        anchors.leftMargin: 4
-        anchors.verticalCenter: parent.verticalCenter
-        implicitHeight: Properties.iconSize
-        implicitWidth: toggleRow.width + 8
+        x: trayButton.vertical ? (parent.width - width) / 2 : 4
+        y: trayButton.vertical ? 4 : (parent.height - height) / 2
+        implicitHeight: trayButton.vertical ? toggleRow.height + 8 : Properties.iconSize
+        implicitWidth: trayButton.vertical ? Properties.iconSize : toggleRow.width + 8
 
         Row {
             id: toggleRow
@@ -48,7 +49,8 @@ Item {
                 color: Properties.color
                 font.family: Properties.fontFamily
                 font.pixelSize: Properties.iconSize
-                rotation: trayButton.open ? 180 : 0
+                // points to where the icons go (right / down), back when open
+                rotation: (trayButton.vertical ? 90 : 0) + (trayButton.open ? 180 : 0)
                 Behavior on rotation { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
             }
         }
@@ -70,18 +72,19 @@ Item {
     // the tray's icons, slid in / out next to the toggle
     Item {
         id: itemsClip
-        anchors.left: toggle.right
-        anchors.verticalCenter: parent.verticalCenter
-        height: trayRow.height
-        width: trayButton.open ? trayRow.width : 0
+        x: trayButton.vertical ? (parent.width - width) / 2 : toggle.x + toggle.width
+        y: trayButton.vertical ? toggle.y + toggle.height : (parent.height - height) / 2
+        height: trayButton.vertical ? (trayButton.open ? trayRow.height : 0) : trayRow.height
+        width: trayButton.vertical ? trayRow.width : (trayButton.open ? trayRow.width : 0)
         clip: true
         Behavior on width { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
 
-        RowLayout {
+        GridLayout {
             id: trayRow
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 0
+            flow: trayButton.vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+            columnSpacing: 0
+            rowSpacing: 0
             opacity: trayButton.open ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: Properties.bDuration } }
 
@@ -90,8 +93,8 @@ Item {
                 model: SystemTray.items
                 delegate: Item {
                     id: delegateItem
-                    implicitHeight: Properties.iconSize
-                    implicitWidth: Properties.iconSize + 10
+                    implicitHeight: trayButton.vertical ? Properties.iconSize + 10 : Properties.iconSize
+                    implicitWidth: trayButton.vertical ? Properties.iconSize : Properties.iconSize + 10
                     
 
                     property bool hovered: ma.containsMouse
@@ -117,8 +120,9 @@ Item {
                         onCanceled: delegateItem.scale = Properties.onExitedTextScale
 
                         onClicked: function(mouse) {
-                            // centre of this icon in screen coordinates (the bar spans the screen)
-                            const centerX = delegateItem.mapToItem(null, delegateItem.width / 2, 0).x
+                            // centre of this icon along the bar, in screen coordinates (the bar spans the screen)
+                            const c = delegateItem.mapToItem(null, delegateItem.width / 2, delegateItem.height / 2)
+                            const centerX = PanelGeometry.barVertical ? c.y : c.x
 
                             if (mouse.button === Qt.MiddleButton) {
                                 modelData.secondaryActivate()

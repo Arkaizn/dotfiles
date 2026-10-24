@@ -66,6 +66,11 @@ Rectangle {
             }
             Item { Layout.preferredWidth: 20 }
             IconButton {
+                icon: "󰹑"
+                tooltip: "Panel editor: the bar's edge, panel sizes and places"
+                onClicked: EditMode.start("panels", root.editor.screenName)
+            }
+            IconButton {
                 icon: "󰒓"
                 tooltip: "Bar layout settings"
                 onClicked: { EditMode.stop(); Panels.call("settings", "openPage", "barlayout") }

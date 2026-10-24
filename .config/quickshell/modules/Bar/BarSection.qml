@@ -9,13 +9,18 @@ import "Middle"
 import "Right"
 
 // One zone of the bar: the modules BarLayout puts there for this screen.
-// DelegateChooser (not Loader) so a module's own `visible: false` still takes
-// it out of the row, spacing included.
-RowLayout {
+// A row on a top / bottom bar, a column on a left / right bar (Part 6.7; on a
+// vertical bar BarButton turns a module that's wider than the bar).
+// DelegateChooser (not Loader / a wrapper) so a module's own `visible: false`
+// still takes it out of the row, spacing included.
+GridLayout {
     id: section
     property string screenName
     property string zone
-    spacing: Properties.spacing
+    readonly property bool vertical: PanelGeometry.barVertical
+    flow: vertical ? GridLayout.TopToBottom : GridLayout.LeftToRight
+    columnSpacing: Properties.spacing
+    rowSpacing: Properties.spacing
 
     // for the live editor (BarEditLayer): the modules' ids and items
     readonly property var ids: BarLayout.layoutFor(section.screenName)[section.zone]
@@ -34,6 +39,7 @@ RowLayout {
             const seed = EditMode.seed(id)
             item.rotation = Qt.binding(() => section.editing && section.dragId !== id ? EditMode.wiggle(seed, 2.4) : 0)
             item.opacity = Qt.binding(() => section.dragId === id ? 0.25 : 1)
+            item.Layout.alignment = Qt.AlignCenter
             section.rev++
         }
         onItemRemoved: section.rev++

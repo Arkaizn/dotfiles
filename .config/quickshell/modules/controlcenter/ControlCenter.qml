@@ -28,7 +28,11 @@ BarPopup {
     id: root
     side: "right"
     ipcName: "controlCenter"
-    panelWidth: 420
+    placeId: "controlCenter"      // its place along the bar: Settings → Panel editor
+    panelWidth: liveW >= 0 ? liveW : PanelGeometry.controlCenter.width   // Settings → Panel editor
+    // while a grip is dragged (edit mode): the sizes shown, saved on release
+    property real liveW: -1
+    property real liveNotifH: -1
     // grows with the content up to the screen height, then scrolls
     maxHeight: (screen?.height ?? 1440) - 90
     panelHeight: Math.min(mainCol.implicitHeight + padding * 2, maxHeight)
@@ -462,6 +466,26 @@ BarPopup {
         source: root.dragItem
         pointer: root.pointer
         grab: root.grab
+        // magnet: next to the marker (a card below a line, a button right of a bar)
+        slot: !root.marker ? null
+            : root.marker.w > root.marker.h ? { x: root.marker.x - 10, y: root.marker.y + 5.5 }
+            : { x: root.marker.x + root.marker.w + 3, y: root.marker.y }
+    }
+
+    // width grip (edit mode): the side away from the bar's end it hangs from
+    // (its left side; on a left bar its right side)
+    readonly property var pr: panelRect()
+    ResizeHandle {
+        parent: root.frameItem
+        visible: root.editing && root.dragId === ""
+        horizontal: true
+        sign: root.edge === "left" ? 1 : -1
+        x: root.edge === "left" ? root.pr.x + root.pr.w - width - 2 : root.pr.x + 2
+        y: root.pr.y + Math.min(root.pr.h - height, 120)
+        property real start: 0
+        onStarted: start = root.panelWidth
+        onMoved: d => root.liveW = Snap.resize(start, d, PanelGeometry.limits["controlCenter.width"][0], PanelGeometry.limits["controlCenter.width"][1], 10)
+        onDone: { if (root.liveW >= 0) PanelGeometry.set("controlCenter", "width", root.liveW); root.liveW = -1 }
     }
 
     // ── card contents ─────────────────────────────────────────────
@@ -509,6 +533,20 @@ BarPopup {
             NotificationsSection {
                 id: notifs
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
+                maxListHeight: root.liveNotifH >= 0 ? root.liveNotifH : PanelGeometry.notifications.height
+                fullHeight: root.editing
+                Behavior on maxListHeight { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+            }
+            // its height (edit mode): a grip on the card's bottom edge
+            ResizeHandle {
+                visible: root.editing && root.dragId === ""
+                horizontal: false
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom
+                property real start: 0
+                onStarted: start = notifs.maxListHeight
+                onMoved: d => root.liveNotifH = Snap.resize(start, d, PanelGeometry.limits["notifications.height"][0], PanelGeometry.limits["notifications.height"][1], 10)
+                onDone: { if (root.liveNotifH >= 0) PanelGeometry.set("notifications", "height", root.liveNotifH); root.liveNotifH = -1 }
             }
         }
     }

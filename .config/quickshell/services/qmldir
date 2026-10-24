@@ -51,3 +51,4 @@ singleton MediaArt MediaArt.qml
 singleton Yubikey Yubikey.qml
 singleton GreeterSync GreeterSync.qml
 MediaSource MediaSource.qml
+singleton PanelGeometry PanelGeometry.qml

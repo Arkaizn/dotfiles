@@ -18,6 +18,8 @@ Item {
     property Item toolbar: null         // BarEditToolbar (dropping there hides)
 
     readonly property bool editing: EditMode.target === "bar" && EditMode.screen === screenName
+    // positions are along the bar: x on a top / bottom bar, y on a left / right one
+    readonly property bool vertical: PanelGeometry.barVertical
     // the layout being edited: this monitor's own one, or the shared one
     readonly property string editScreen: BarLayout.hasOwn(screenName) ? screenName : ""
 
@@ -42,7 +44,7 @@ Item {
     property Item dragItem: null
     property point grab: Qt.point(0, 0)
     property point pointer: Qt.point(0, 0)  // overlay coordinates
-    property real dragX: 0                  // editor coordinates
+    property real dragX: 0                  // along the bar, editor coordinates
     property string dropZone: ""            // "" = nowhere yet, "hide", or a zone
     property int dropIndex: 0
 
@@ -66,7 +68,9 @@ Item {
     }
 
     function sectionOf(zone) { return sections.find(s => s.zone === zone) ?? null }
-    function leftOf(item) { return item.mapToItem(editor, 0, 0).x }
+    // start / length of an item along the bar
+    function leftOf(item) { const p = item.mapToItem(editor, 0, 0); return vertical ? p.y : p.x }
+    function lenOf(item) { return vertical ? item.height : item.width }
 
     // drop boxes per zone, in editor coordinates; empty zones still get a box
     readonly property real minBox: 40
@@ -75,8 +79,8 @@ Item {
         const out = {}
         const g = {}
         for (const s of sections) {
-            s.x; s.width; editor.width            // dependencies
-            g[s.zone] = { x: leftOf(s), w: s.width }
+            s.x; s.y; s.width; s.height; editor.width; editor.height    // dependencies
+            g[s.zone] = { x: leftOf(s), w: lenOf(s) }
         }
         if (!g.left || !g.right || !g.center || !g.centerLeft || !g.centerRight) return out
         const bw = w => Math.max(w, minBox) + pad * 2
@@ -98,7 +102,8 @@ Item {
             const t = toolbar.mapFromItem(overlay, p.x, p.y)
             if (t.x >= 0 && t.y >= 0 && t.x <= toolbar.width && t.y <= toolbar.height) { dropZone = "hide"; return }
         }
-        const px = editor.mapFromItem(overlay, p.x, p.y).x
+        const ep = editor.mapFromItem(overlay, p.x, p.y)
+        const px = vertical ? ep.y : ep.x
         dragX = px
         let zone = "", best = 1e9
         for (const z of BarLayout.zones) {
@@ -113,7 +118,7 @@ Item {
         for (let i = 0; i < sec.ids.length; i++) {
             if (sec.ids[i] === dragId) continue
             const it = sec.itemAt(i)
-            if (it && it.visible && leftOf(it) + it.width / 2 < px) idx = pos + 1
+            if (it && it.visible && leftOf(it) + lenOf(it) / 2 < px) idx = pos + 1
             pos++
         }
         dropZone = zone
@@ -136,7 +141,16 @@ Item {
             }
             pos++
         }
-        return last ? leftOf(last) + last.width + Properties.spacing / 2 : (b.x0 + b.x1) / 2
+        return last ? leftOf(last) + lenOf(last) + Properties.spacing / 2 : (b.x0 + b.x1) / 2
+    }
+
+    // where the dragged module would land (its top-left, overlay coordinates):
+    // the ghost is pulled there near it (DragGhost magnet)
+    readonly property var slot: {
+        if (dragId === "" || !dragItem || dropZone === "" || dropZone === "hide" || !overlay) return null
+        const p = vertical ? editor.mapToItem(overlay, (editor.width - dragItem.width) / 2, markerX + Properties.spacing / 2)
+                           : editor.mapToItem(overlay, markerX + Properties.spacing / 2, (editor.height - dragItem.height) / 2)
+        return { x: p.x, y: p.y }
     }
 
     // tap on an empty spot ends editing (like tapping the home screen background);
@@ -155,10 +169,10 @@ Item {
         DropZone {
             required property string modelData
             readonly property var box: editor.boxes[modelData] ?? { x0: 0, x1: 0 }
-            x: box.x0
-            width: box.x1 - box.x0
-            y: 6
-            height: editor.height - 12
+            x: editor.vertical ? 6 : box.x0
+            width: editor.vertical ? editor.width - 12 : box.x1 - box.x0
+            y: editor.vertical ? box.x0 : 6
+            height: editor.vertical ? box.x1 - box.x0 : editor.height - 12
             radius: 9
             hot: editor.dropZone === modelData
             shown: editor.dragId !== ""
@@ -167,10 +181,10 @@ Item {
 
     Rectangle {
         visible: editor.dragId !== "" && editor.dropZone !== "" && editor.dropZone !== "hide"
-        x: editor.markerX - 1.5
-        y: 10
-        width: 3
-        height: editor.height - 20
+        x: editor.vertical ? 10 : editor.markerX - 1.5
+        y: editor.vertical ? editor.markerX - 1.5 : 10
+        width: editor.vertical ? editor.width - 20 : 3
+        height: editor.vertical ? 3 : editor.height - 20
         radius: 1.5
         color: Colors.color6
     }
@@ -194,20 +208,20 @@ Item {
                     readonly property bool dragged: editor.dragId === modelData
 
                     visible: mod !== null && mod.visible
-                    x: { if (!mod) return 0; secHandles.sec.x; secHandles.sec.width; mod.x; mod.width; return editor.leftOf(mod) }
-                    y: { if (!mod) return 0; mod.y; return mod.mapToItem(editor, 0, 0).y }
+                    x: { if (!mod) return 0; secHandles.sec.x; secHandles.sec.y; secHandles.sec.width; mod.x; mod.y; mod.width; return mod.mapToItem(editor, 0, 0).x }
+                    y: { if (!mod) return 0; secHandles.sec.y; mod.y; mod.height; return mod.mapToItem(editor, 0, 0).y }
                     width: mod?.width ?? 0
                     height: mod?.height ?? 0
                     rotation: mod?.rotation ?? 0       // the badge wiggles along
 
                     // grabs a bit more than the module: half the gap to each
-                    // neighbour and the bar's full height, so a press next to a
+                    // neighbour and the bar's full thickness, so a press next to a
                     // (wiggling) module still drags it instead of hitting the bar
                     MouseArea {
-                        x: -Properties.spacing / 2 - 2
-                        y: -h.y
-                        width: parent.width + Properties.spacing + 4
-                        height: editor.height
+                        x: editor.vertical ? -h.x : -Properties.spacing / 2 - 2
+                        y: editor.vertical ? -Properties.spacing / 2 - 2 : -h.y
+                        width: editor.vertical ? editor.width : parent.width + Properties.spacing + 4
+                        height: editor.vertical ? parent.height + Properties.spacing + 4 : editor.height
                         hoverEnabled: true
                         preventStealing: true
                         cursorShape: h.dragged ? Qt.ClosedHandCursor : Qt.OpenHandCursor
@@ -240,5 +254,6 @@ Item {
         source: editor.dragItem
         pointer: editor.pointer
         grab: editor.grab
+        slot: editor.slot
     }
 }

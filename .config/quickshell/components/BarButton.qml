@@ -12,7 +12,10 @@ import qs.services
 //       onClicked: mouse => …
 //   }
 //
-// Width: content + Properties.buttonWidth, height: Properties.buttonHeight.
+// Width: content + Properties.buttonWidth, height: PanelGeometry.barButtonHeight
+// (Properties.buttonHeight, growing with the bar's thickness). On a left /
+// right bar a button wider than the bar is turned by 90° (read top to bottom):
+// its own size swaps, the face inside keeps its natural size.
 Item {
     id: root
 
@@ -32,13 +35,18 @@ Item {
     signal clicked(var mouse)
     signal wheel(var wheel)
 
-    implicitWidth: contentWidth + Properties.buttonWidth
-    implicitHeight: Properties.buttonHeight
+    readonly property real naturalWidth: contentWidth + Properties.buttonWidth
+    readonly property bool turned: PanelGeometry.barVertical && naturalWidth > PanelGeometry.barButtonHeight + 6
+    implicitWidth: turned ? PanelGeometry.barButtonHeight : naturalWidth
+    implicitHeight: turned ? naturalWidth : PanelGeometry.barButtonHeight
 
-    // background + content, scaled together
+    // background + content, scaled together (and turned on a vertical bar)
     Item {
         id: face
-        anchors.fill: parent
+        width: root.naturalWidth
+        height: PanelGeometry.barButtonHeight
+        anchors.centerIn: parent
+        rotation: root.turned ? 90 : 0
         scale: mouse.pressed ? Properties.onPressedButtonScale
              : mouse.containsMouse ? Properties.onEnteredButtonScale
              : Properties.onExitedButtonScale

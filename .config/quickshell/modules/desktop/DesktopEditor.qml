@@ -127,6 +127,9 @@ PanelWindow {
                 y: it.cy - height / 2
                 scale: it.sc
                 rotation: it.rot
+                // while dragged it follows with a spring, so a Ctrl-snap glides in (Part 6)
+                Behavior on x { enabled: drag.pressed; SpringAnimation { spring: 3.2; damping: 0.42; epsilon: 0.2 } }
+                Behavior on y { enabled: drag.pressed; SpringAnimation { spring: 3.2; damping: 0.42; epsilon: 0.2 } }
 
                 WidgetFrame {
                     id: frame

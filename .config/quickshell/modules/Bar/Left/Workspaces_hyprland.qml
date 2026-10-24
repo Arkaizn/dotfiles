@@ -6,18 +6,23 @@ import qs.components
 
 Item {
     id:root
-    implicitWidth: row.implicitWidth
-    implicitHeight: Properties.buttonHeight
+    // a row; a column on a left / right bar (Part 6.7)
+    readonly property bool vertical: PanelGeometry.barVertical
+    implicitWidth: vertical ? PanelGeometry.barButtonHeight : row.implicitWidth
+    implicitHeight: vertical ? row.implicitHeight : PanelGeometry.barButtonHeight
 
     ButtonBackground {
         id: buttonBackground
     }
 
-    Row {
+    Grid {
         id: row
+        columns: root.vertical ? 1 : 999
         spacing: 0
-        leftPadding: 10
-        rightPadding: 10
+        leftPadding: root.vertical ? 0 : 10
+        rightPadding: root.vertical ? 0 : 10
+        topPadding: root.vertical ? 8 : 0
+        bottomPadding: root.vertical ? 8 : 0
 
         Repeater {
             // this bar's monitor only (like the niri version), no special
@@ -34,8 +39,8 @@ Item {
 
                 color: Qt.rgba(0, 0, 0, 0)
 
-                implicitHeight: Properties.buttonHeight
-                implicitWidth: text.implicitWidth + 10
+                implicitHeight: root.vertical ? text.implicitHeight + 10 : PanelGeometry.barButtonHeight
+                implicitWidth: root.vertical ? PanelGeometry.barButtonHeight : text.implicitWidth + 10
 
                 
 

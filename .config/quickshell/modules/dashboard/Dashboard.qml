@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import qs.components
 import qs.services
+import qs.services.lib
 import QtQuick.Shapes
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -19,11 +20,17 @@ BarPopup {
     id: root
     side: "center"
     ipcName: "dashboard"
-    panelWidth: 1070
-    // taller when a column holds more than fits (PanelLayout.dashHeight)
-    panelHeight: PanelLayout.dashHeight + padding * 2 + (editing ? editBar.height + 10 : 0)
+    placeId: "dashboard"          // its place along the bar: Settings → Panel editor
+    // size: Settings → Panels (PanelGeometry); taller when a column holds more
+    // than fits (PanelLayout.dashHeight), never smaller than the cards need
+    panelWidth: liveW >= 0 ? liveW : PanelGeometry.dashboard.width
+    readonly property real cardsHeight: Math.max(PanelLayout.dashHeight, liveH >= 0 ? liveH : PanelGeometry.dashboard.height)
+    // while a grip is dragged (edit mode): the size shown, saved on release
+    property real liveW: -1
+    property real liveH: -1
+    panelHeight: cardsHeight + padding * 2 + (editing ? editBar.height + 10 : 0)
     // room for the edit bar, so the surface doesn't resize while it slides in
-    maxHeight: Math.min(PanelLayout.dashHeight + padding * 2 + 50, (screen?.height ?? 1440) - 70)
+    maxHeight: Math.min(cardsHeight + padding * 2 + 50, (screen?.height ?? 1440) - 70)
     // inner cards: panel radius minus the padding, so the corners nest concentrically
     property int radius: Properties.panelRadius - padding
 
@@ -224,6 +231,19 @@ BarPopup {
                         }
 
                         // where the card will land
+                        readonly property real markerY: {
+                            root.dragY; root.dropIndex
+                            let pos = 0, last = null
+                            for (let i = 0; i < dashColumn.ids.length; i++) {
+                                if (dashColumn.ids[i] === root.dragId) continue
+                                const c = cardRep.itemAt(i)
+                                if (!c) continue
+                                if (pos === root.dropIndex) return Math.max(-6, c.y - 6.5)
+                                last = c
+                                pos++
+                                }
+                                return last ? Math.min(dashColumn.height + 3, last.y + last.height + 3.5) : dashColumn.height / 2
+                        }
                         Rectangle {
                             visible: root.dragId !== "" && root.dropCol === dashColumn.index
                             x: 8
@@ -231,19 +251,7 @@ BarPopup {
                             height: 3
                             radius: 1.5
                             color: Colors.color6
-                            y: {
-                                root.dragY; root.dropIndex
-                                let pos = 0, last = null
-                                for (let i = 0; i < dashColumn.ids.length; i++) {
-                                    if (dashColumn.ids[i] === root.dragId) continue
-                                    const c = cardRep.itemAt(i)
-                                    if (!c) continue
-                                    if (pos === root.dropIndex) return Math.max(-6, c.y - 6.5)
-                                    last = c
-                                    pos++
-                                }
-                                return last ? Math.min(dashColumn.height + 3, last.y + last.height + 3.5) : dashColumn.height / 2
-                            }
+                            y: dashColumn.markerY
                         }
                     }
                 }
@@ -265,12 +273,53 @@ BarPopup {
         hot: root.dropCol === -2
     }
 
+    // ── resize grips (edit mode), on the panel's real edges (any bar edge):
+    // width = its right side (the left one on a right bar), height = its bottom
+    // (top on a bottom bar); a size along the bar grows to both sides (centred).
+    // Height: never less than the cards need ──
+    readonly property var pr: panelRect()
+    ResizeHandle {
+        parent: root.frameItem
+        visible: root.editing && root.dragId === ""
+        horizontal: true
+        sign: root.edge === "right" ? -1 : 1
+        x: root.edge === "right" ? root.pr.x + 2 : root.pr.x + root.pr.w - width - 2
+        y: root.pr.y + (root.pr.h - height) / 2
+        property real start: 0
+        onStarted: start = root.panelWidth
+        onMoved: d => root.liveW = Snap.resize(start, d * (root.vertical ? 1 : 2), PanelGeometry.limits["dashboard.width"][0],
+                                                Math.min(PanelGeometry.limits["dashboard.width"][1], (root.screen?.width ?? 3000) - 2 * Properties.barInset - 2 * Properties.flareRadius), 10)
+        onDone: { if (root.liveW >= 0) PanelGeometry.set("dashboard", "width", root.liveW); root.liveW = -1 }
+    }
+    ResizeHandle {
+        parent: root.frameItem
+        visible: root.editing && root.dragId === ""
+        horizontal: false
+        sign: root.edge === "bottom" ? -1 : 1
+        x: root.pr.x + (root.pr.w - width) / 2
+        y: root.edge === "bottom" ? root.pr.y + 2 : root.pr.y + root.pr.h - height - 2
+        property real start: 0
+        onStarted: start = root.cardsHeight
+        onMoved: d => root.liveH = Snap.resize(start, d * (root.vertical ? 2 : 1), PanelLayout.dashHeight, (root.screen?.height ?? 1440) - 200, 10)
+        onDone: {
+            if (root.liveH >= 0) PanelGeometry.set("dashboard", "height", root.liveH <= PanelLayout.dashHeight ? 0 : root.liveH)
+            root.liveH = -1
+        }
+    }
+
     // the dragged card follows the pointer, anywhere on the screen
     DragGhost {
         parent: root.overlay
         source: root.dragItem
         pointer: root.pointer
         grab: root.grab
+        // magnet: the spot under the marker (DragGhost)
+        slot: {
+            const c = root.dropCol >= 0 && root.dragItem ? colRep.itemAt(root.dropCol) : null
+            if (!c) return null
+            const p = c.mapToItem(root.overlay, 0, c.markerY + 6.5)
+            return { x: p.x, y: p.y }
+        }
     }
 
     function cardComponent(id) {

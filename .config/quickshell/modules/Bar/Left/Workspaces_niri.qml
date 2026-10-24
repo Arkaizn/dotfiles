@@ -5,25 +5,30 @@ import qs.components
 
 Item {
     id: root
-    implicitWidth: row.implicitWidth
-    implicitHeight: Properties.buttonHeight
+    // a row; a column on a left / right bar (Part 6.7)
+    readonly property bool vertical: PanelGeometry.barVertical
+    implicitWidth: vertical ? PanelGeometry.barButtonHeight : row.implicitWidth
+    implicitHeight: vertical ? row.implicitHeight : PanelGeometry.barButtonHeight
 
     ButtonBackground {
         id: buttonBackground
     }
-    Row {
+    Grid {
         id: row
+        columns: root.vertical ? 1 : 999
         spacing: 0
-        leftPadding: 10
-        rightPadding: 10
+        leftPadding: root.vertical ? 0 : 10
+        rightPadding: root.vertical ? 0 : 10
+        topPadding: root.vertical ? 8 : 0
+        bottomPadding: root.vertical ? 8 : 0
         Repeater {
             model: NiriIpc.workspaces
             Rectangle {
                 // Only show workspaces that belong to this bar's monitor
                 visible: model.output === ((QsWindow.window as QsWindow)?.screen?.name ?? "")
                 color: Qt.rgba(0, 0, 0, 0)
-                implicitHeight: visible ? Properties.buttonHeight : 0
-                implicitWidth: visible ? text.implicitWidth + 10 : 0
+                implicitHeight: !visible ? 0 : root.vertical ? text.implicitHeight + 10 : PanelGeometry.barButtonHeight
+                implicitWidth: !visible ? 0 : root.vertical ? PanelGeometry.barButtonHeight : text.implicitWidth + 10
                 property bool hovered: workspaceMouse.containsMouse
                 Rectangle {
                     anchors.fill: parent

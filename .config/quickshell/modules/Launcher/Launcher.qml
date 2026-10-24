@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import Quickshell.Wayland
 import qs.components
 import qs.services
+import qs.services.lib
 import QtQuick.Effects
 import QtQuick.Shapes
 import "../../components/outline.js" as Outline
@@ -21,20 +22,31 @@ PanelWindow {
     id: root
     visible: false
 
-    // NOTE: only "bottom" is anchored (no left/right), which is what centers
-    // this horizontally in Quickshell — same trick the dashboard uses.
+    // Which screen edge it comes from (Settings → Panel editor, Part 6.6):
+    // "edge" = the one opposite the bar (bar on top → from the bottom, as it
+    // always was), "bar" = out of the bar. The outline is drawn canonically (as
+    // if it hung from the top, EdgeMap) and mapped to the real edge; the card
+    // sits on that edge, at its place along it (Settings.panels.launcher.along).
+    // The surface spans the whole edge (mask = the card), so moving the card
+    // along it is an item animation, not a surface resize.
+    readonly property string edge: PanelGeometry.launcher.attach === "bar" ? PanelGeometry.barEdge : EdgeMap.opposite(PanelGeometry.barEdge)
+    readonly property bool vertical: EdgeMap.vertical(edge)
     anchors {
-        bottom: true
+        top: edge === "top" || vertical
+        bottom: edge === "bottom" || vertical
+        left: edge === "left" || !vertical
+        right: edge === "right" || !vertical
     }
     // card width (apps / clipboard; the wallpaper grid gets a wider card),
     // surface = the widest card + room for the inverted corners on both sides.
     // The surface keeps that width all the time (see the height note below);
     // only the visible card animates between the two widths.
-    readonly property int cardWidth: 640
-    readonly property int wallpaperCardWidth: 960
-    readonly property int shownCardWidth: mode === "wallpapers" || mode === "keybinds" ? wallpaperCardWidth : cardWidth
+    // each view has its own size (Settings → Panels → Launcher, PanelGeometry)
+    function viewSize(v) { return PanelGeometry.launcherView(v) }
+    readonly property int shownCardWidth: viewSize(mode).w
     readonly property int flare: Properties.flareRadius
-    implicitWidth: Math.max(cardWidth, wallpaperCardWidth) + flare * 2
+    readonly property int widestView: Math.max(...modes.map(v => viewSize(v).w))
+    implicitWidth: vertical ? widestView : 0
 
     // ── Why the surface size is a constant, not a binding ──
     // implicitHeight here drives the *real* Wayland layer-shell surface
@@ -53,8 +65,7 @@ PanelWindow {
     // animated with a plain `Behavior on height`. That's pure GPU-side
     // compositing, not a surface reconfigure, so it can animate as smoothly
     // as any other QtQuick property — including when switching modes.
-    readonly property int maxResultsHeight: 360
-    readonly property int wallpaperMaxHeight: 520 // the wallpaper grid gets more room
+    readonly property int tallestView: Math.max(...modes.map(v => viewSize(v).h))
     readonly property int contentSpacing: 8
     readonly property int modeBarHeight: Properties.buttonHeight
     readonly property int contentMargins: 16 + 26 // matches content's anchors.margins + bottomMargin below
@@ -62,11 +73,35 @@ PanelWindow {
     // tallest results list + search bar + mode-switcher row + the two gaps
     // between them (content always has exactly 3 visible children: one of
     // the two views, the search field, and the mode bar) + outer margins.
-    implicitHeight: Math.max(maxResultsHeight, wallpaperMaxHeight) + contentSpacing * 2 + Properties.buttonHeight + modeBarHeight + contentMargins
+    readonly property int tallestCard: tallestView + contentSpacing * 2 + Properties.buttonHeight + modeBarHeight + contentMargins
+    implicitHeight: vertical ? 0 : tallestCard
+    // the surface across its edge (depth) and along it
+    readonly property real surfDepth: vertical ? width : height
+    readonly property real surfAlong: vertical ? height : width
 
     color: Colors.shade(0.0)
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
     exclusiveZone: 0
+    // out of the bar: sits right on it (the compositor doesn't move it past the
+    // bar's zone by itself), and tells the bar, which opens its border there
+    readonly property bool onBar: PanelGeometry.launcher.attach === "bar"
+    exclusionMode: onBar ? ExclusionMode.Ignore : ExclusionMode.Normal
+    readonly property int barOffset: onBar ? PanelGeometry.barGap + PanelGeometry.barThickness : 0
+    margins {
+        top: edge === "top" ? barOffset : 0
+        bottom: edge === "bottom" ? barOffset : 0
+        left: edge === "left" ? barOffset : 0
+        right: edge === "right" ? barOffset : 0
+    }
+    readonly property string _barId: "launcher"
+    function _attachBar() {
+        if (!onBar || !visible || !screen) { BarState.detach(_barId); return }
+        const a0 = cardU - flare
+        BarState.attach(_barId, screen.name, a0, a0 + cardAlong + flare * 2, "center")
+    }
+    onCardAlongChanged: _attachBar()
+    onCardUChanged: _attachBar()
+    onOnBarChanged: _attachBar()
 
     // Restricts click/hover input to the visible card instead of the whole
     // (mostly-empty, transparent) fixed-size surface. If your Quickshell
@@ -84,10 +119,8 @@ PanelWindow {
     // a search changed card's height, which is why it only happened when you
     // closed without searching. Binding to rect.x/rect.y fixes that.
     mask: Region {
-        x: rect.x + card.x
-        y: root.cardTop
-        width: card.width
-        height: root.cardBottom - root.cardTop
+        x: root._card.x; y: root._card.y
+        width: root._card.w; height: root._card.h
     }
 
     IpcHandler {
@@ -144,33 +177,45 @@ PanelWindow {
     // y and height separately while the card's height animates (typing)
     // could leave the region a pixel short of the screen edge, so the
     // lowest pixel row lost its blur; floor the top, ceil the bottom.
-    readonly property int cardTop: Math.floor(rect.y + card.y)
-    readonly property int cardBottom: Math.ceil(rect.y + card.y + card.height)
+    // the card canonically: start along the edge, length along it, depth
+    readonly property real cardU: vertical ? card.y : card.x
+    readonly property real cardAlong: vertical ? card.height : card.width
+    readonly property real cardDepth: vertical ? card.width : card.height
+    // canonical rectangle → window rectangle, following the slide (rect), whole pixels
+    function _m(u, v, w, d) {
+        const g = EdgeMap.mapRect(edge, surfDepth, u, v, w, d)
+        const x0 = Math.floor(rect.x + g.x), y0 = Math.floor(rect.y + g.y)
+        return { x: x0, y: y0, w: Math.ceil(rect.x + g.x + g.w) - x0, h: Math.ceil(rect.y + g.y + g.h) - y0 }
+    }
+    readonly property var _card: _m(cardU, 0, cardAlong, cardDepth)
+    readonly property var _cardR: EdgeMap.corners(edge, { outerStart: 0, outerEnd: 0, innerEnd: Properties.panelRadius, innerStart: Properties.panelRadius })
+    readonly property var _flL: _m(cardU - flare, 0, flare, flare)
+    readonly property var _flLc: _m(cardU - flare * 2, 0, flare * 2, flare * 2)
+    readonly property var _flR: _m(cardU + cardAlong, 0, flare, flare)
+    readonly property var _flRc: _m(cardU + cardAlong, 0, flare * 2, flare * 2)
 
     BackgroundEffect.blurRegion: Region {
-        x: rect.x + card.x
-        y: root.cardTop
-        width: card.width
-        height: root.cardBottom - root.cardTop
-        topLeftRadius: Properties.panelRadius
-        topRightRadius: Properties.panelRadius
+        x: root._card.x; y: root._card.y
+        width: root._card.w; height: root._card.h
+        topLeftRadius: root._cardR.tl; topRightRadius: root._cardR.tr
+        bottomRightRadius: root._cardR.br; bottomLeftRadius: root._cardR.bl
 
         Region {
-            x: rect.x + card.x - root.flare; y: root.cardBottom - root.flare
-            width: root.flare; height: root.flare
+            x: root._flL.x; y: root._flL.y
+            width: root._flL.w; height: root._flL.h
             Region {
                 shape: RegionShape.Ellipse; intersection: Intersection.Subtract
-                x: rect.x + card.x - root.flare * 2; y: root.cardBottom - root.flare * 2
-                width: root.flare * 2; height: root.flare * 2
+                x: root._flLc.x; y: root._flLc.y
+                width: root._flLc.w; height: root._flLc.h
             }
         }
         Region {
-            x: rect.x + card.x + card.width; y: root.cardBottom - root.flare
-            width: root.flare; height: root.flare
+            x: root._flR.x; y: root._flR.y
+            width: root._flR.w; height: root._flR.h
             Region {
                 shape: RegionShape.Ellipse; intersection: Intersection.Subtract
-                x: rect.x + card.x + card.width; y: root.cardBottom - root.flare * 2
-                width: root.flare * 2; height: root.flare * 2
+                x: root._flRc.x; y: root._flRc.y
+                width: root._flRc.w; height: root._flRc.h
             }
         }
     }
@@ -178,11 +223,12 @@ PanelWindow {
     PopupAnimation {
         id: anim
         target: rect
-        direction: "top"
+        // slides in from its edge
+        direction: ({ bottom: "top", top: "bottom", left: "right", right: "left" })[root.edge]
         // slide by the (collapsed) card, not the whole fixed-height surface:
         // from a surface-height offset the card spent the first half of the
         // slide still below the screen edge, which felt like a slow open
-        distance: card.collapsedHeight + root.flare
+        distance: (root.vertical ? card.width : card.collapsedHeight) + root.flare
         enterDuration: 280
         exitDuration: 180
         onExitFinished: root.visible = false
@@ -223,7 +269,8 @@ PanelWindow {
     // Reset to the small collapsed state whenever the launcher goes away
     // (Esc, launching an app, …), so the next open always grows up from
     // the bottom instead of starting at the last view's size.
-    onVisibleChanged: if (!visible) {
+    onVisibleChanged: { _attachBar(); if (!visible) _reset() }
+    function _reset() {
         // closing without the exit animation (launching an app) left the panel
         // in place; park it off-screen so the next open slides in cleanly
         anim.hide()
@@ -304,32 +351,37 @@ PanelWindow {
         // inside the stable `rect` above so its own height animation never
         // interacts with the open/close slide.
         // ── Card outline ──
-        // Same shape as the bar popups (components/outline.js), flipped
-        // vertically: attached edge + inverted corners at the bottom screen
-        // edge, rounded corners at the top. Follows card's animated height.
-        Shape {
-            id: outline
-            x: card.x - root.flare          // follows the card (its width animates)
-            y: card.y
-            width: card.width + root.flare * 2
-            height: card.height
-            preferredRendererType: Shape.CurveRenderer
-            transform: Scale { origin.y: outline.height / 2; yScale: -1 }
+        // Same shape as the bar popups (components/outline.js), drawn as if it
+        // hung from the top and mapped to the launcher's edge (EdgeMap):
+        // attached side + inverted corners on the screen edge, rounded corners
+        // away from it. Follows the card's animated size.
+        Item {
+            width: root.surfAlong
+            height: root.surfDepth
+            transform: Matrix4x4 { matrix: EdgeMap.qmatrix(EdgeMap.matrix(root.edge, root.surfDepth)) }
+            Shape {
+                id: outline
+                x: root.cardU - root.flare      // follows the card (its size animates)
+                y: 0
+                width: root.cardAlong + root.flare * 2
+                height: root.cardDepth
+                preferredRendererType: Shape.CurveRenderer
 
-            readonly property string path: Outline.panel(
-                root.flare, root.flare + card.width, card.height,
-                root.flare, root.flare, Properties.panelRadius, Properties.panelBorderWidth / 2)
+                readonly property string path: Outline.panel(
+                    root.flare, root.flare + root.cardAlong, root.cardDepth,
+                    root.flare, root.flare, Properties.panelRadius, Properties.panelBorderWidth / 2)
 
-            ShapePath {
-                fillColor: Properties.panelColor
-                strokeColor: "transparent"
-                PathSvg { path: outline.path + "Z" }
-            }
-            ShapePath {
-                fillColor: "transparent"
-                strokeColor: Properties.panelBorder
-                strokeWidth: Properties.panelBorderWidth
-                PathSvg { path: outline.path }
+                ShapePath {
+                    fillColor: Properties.panelColor
+                    strokeColor: "transparent"
+                    PathSvg { path: outline.path + "Z" }
+                }
+                ShapePath {
+                    fillColor: "transparent"
+                    strokeColor: Properties.panelBorder
+                    strokeWidth: Properties.panelBorderWidth
+                    PathSvg { path: outline.path }
+                }
             }
         }
 
@@ -341,11 +393,14 @@ PanelWindow {
             property bool collapsed: true
             readonly property real collapsedHeight: Properties.buttonHeight + root.modeBarHeight + root.contentSpacing + root.contentMargins
             clip: true
-            // centered; wider in wallpaper mode
-            anchors.bottom: parent.bottom
+            // on its edge, centred along it; wider in wallpaper mode
             width: root.shownCardWidth
-            x: Math.round((parent.width - width) / 2)
             height: collapsed ? collapsedHeight : content.implicitHeight + root.contentMargins
+            // along the edge: its place (inverted corners included), clear of the screen ends
+            readonly property int alongPos: EdgeMap.place(PanelGeometry.launcher.along, (root.vertical ? height : width) + root.flare * 2,
+                                                          root.vertical ? parent.height : parent.width, Properties.barInset) + root.flare
+            x: root.edge === "left" ? 0 : root.edge === "right" ? parent.width - width : alongPos
+            y: root.edge === "top" ? 0 : root.edge === "bottom" ? parent.height - height : alongPos
             // sits on the bottom screen edge → only the top corners are rounded
             // drawn by `outline` below (fill + border incl. the inverted corners)
             color: "transparent"
@@ -361,14 +416,37 @@ PanelWindow {
                 NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
             }
 
+            // one column; the search field and mode bar sit on the edge it
+            // comes from: at the bottom, or on top when it comes from the top.
+            // Fixed order (a grid with changing rows didn't re-lay out when the
+            // edge changed): two slots above the views, two below; the search
+            // field and the mode bar are moved into the ones on that edge.
             ColumnLayout {
                 id: content
+                readonly property bool fromTop: root.edge === "top"
+                spacing: root.contentSpacing
+                // placed by y, not by switching a top / bottom anchor: while both
+                // were set for a moment the anchors stretched it, and that height
+                // replaced its own for good (the content then hung out of the card)
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.margins: 16
-                anchors.bottomMargin: 26
-                spacing: root.contentSpacing
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                height: implicitHeight
+                y: fromTop ? 26 : parent.height - height - 26
+
+                Item {   // mode bar, from the top
+                    id: topOuter
+                    Layout.fillWidth: true
+                    implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
+                    visible: children.length > 0
+                }
+                Item {   // search field, from the top
+                    id: topInner
+                    Layout.fillWidth: true
+                    implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
+                    visible: children.length > 0
+                }
 
                 // ── The three views, all always instantiated ──
                 // Only the active one is visible; the others drop out of the
@@ -378,8 +456,8 @@ PanelWindow {
                 AppSearch {
                     id: appSearchView
                     Layout.fillWidth: true
-                    maxHeight: root.maxResultsHeight
-                    allAppsHeight: root.wallpaperMaxHeight
+                    maxHeight: root.viewSize("apps").h
+                    allAppsHeight: Math.max(root.viewSize("apps").h, root.viewSize("wallpapers").h)
                     query: searchField.text
                     visible: root.mode === "apps"
                     property real slideX: 0
@@ -390,7 +468,7 @@ PanelWindow {
                 ClipboardHistory {
                     id: clipboardView
                     Layout.fillWidth: true
-                    maxHeight: root.maxResultsHeight
+                    maxHeight: root.viewSize("clipboard").h
                     query: searchField.text
                     active: root.mode === "clipboard"
                     visible: root.mode === "clipboard"
@@ -402,7 +480,7 @@ PanelWindow {
                 ConnectionsView {
                     id: connectionsView
                     Layout.fillWidth: true
-                    maxHeight: root.maxResultsHeight
+                    maxHeight: root.viewSize("connections").h
                     query: searchField.text
                     active: root.mode === "connections"
                     visible: root.mode === "connections"
@@ -414,9 +492,9 @@ PanelWindow {
                 WallpaperPicker {
                     id: wallpaperView
                     Layout.fillWidth: true
-                    maxHeight: root.wallpaperMaxHeight
-                    Layout.preferredHeight: root.wallpaperMaxHeight
-                    Layout.maximumHeight: root.wallpaperMaxHeight
+                    maxHeight: root.viewSize("wallpapers").h
+                    Layout.preferredHeight: root.viewSize("wallpapers").h
+                    Layout.maximumHeight: root.viewSize("wallpapers").h
                     query: searchField.text
                     active: root.mode === "wallpapers"
                     visible: root.mode === "wallpapers"
@@ -428,9 +506,9 @@ PanelWindow {
                 KeybindsView {
                     id: keybindsView
                     Layout.fillWidth: true
-                    maxHeight: root.wallpaperMaxHeight
-                    Layout.preferredHeight: root.wallpaperMaxHeight
-                    Layout.maximumHeight: root.wallpaperMaxHeight
+                    maxHeight: root.viewSize("keybinds").h
+                    Layout.preferredHeight: root.viewSize("keybinds").h
+                    Layout.maximumHeight: root.viewSize("keybinds").h
                     query: searchField.text
                     active: root.mode === "keybinds"
                     visible: root.mode === "keybinds"
@@ -439,10 +517,25 @@ PanelWindow {
                     onCloseRequested: anim.exit()
                 }
 
+                Item {   // search field, from the bottom
+                    id: bottomInner
+                    Layout.fillWidth: true
+                    implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
+                    visible: children.length > 0
+                }
+                Item {   // mode bar, from the bottom
+                    id: bottomOuter
+                    Layout.fillWidth: true
+                    implicitHeight: children.length > 0 ? children[0].implicitHeight : 0
+                    visible: children.length > 0
+                }
+
                 SearchField {
                     id: searchField
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Properties.buttonHeight
+                    parent: content.fromTop ? topInner : bottomInner
+                    width: parent ? parent.width : 0
+                    height: Properties.buttonHeight
+                    implicitHeight: Properties.buttonHeight
                     icon: root.mode === "apps" ? "󰍉" : root.mode === "clipboard" ? "󰅍" : root.mode === "keybinds" ? "󰌌"
                         : root.mode === "connections" ? "󰢹" : "󰸉"
                     placeholderText: root.mode === "apps" ? "Search apps"
@@ -479,8 +572,10 @@ PanelWindow {
                 // ── Mode switcher + wallpaper tools ──
                 RowLayout {
                     id: modeBar
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: root.modeBarHeight
+                    parent: content.fromTop ? topOuter : bottomOuter
+                    width: parent ? parent.width : 0
+                    height: root.modeBarHeight
+                    implicitHeight: root.modeBarHeight
                     spacing: 8
 
                     Repeater {

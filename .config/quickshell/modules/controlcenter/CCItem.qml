@@ -13,6 +13,7 @@ Item {
     required property string itemId
     property var host: null
     property bool compact: false
+    property int tileHeight: 56                  // the card's (PanelGeometry.card)
 
     readonly property bool ccItem: true          // found by the control center's drop logic
     readonly property var info: PanelLayout.item(itemId)
@@ -21,7 +22,7 @@ Item {
     readonly property bool armed: host?.armed === itemId
 
     implicitWidth: compact ? Properties.buttonHeight : 120
-    implicitHeight: compact ? Properties.buttonHeight : 56
+    implicitHeight: compact ? Properties.buttonHeight : tileHeight
     rotation: editing && !dragged ? EditMode.wiggle(EditMode.seed(itemId), compact ? 3 : 1.2) : 0
     opacity: dragged ? 0.3 : 1
 

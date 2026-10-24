@@ -379,6 +379,120 @@ test("greeter: greetd mode + lock at start", () => {
     assert.equal(GL.lockAtStart("autologin", "b1", "b1"), true); assert.equal(GL.lockAtStart("unknown", "b1", "b1"), true)
 })
 
+const SN = load("Snap.js")
+test("snap: raster + guides", () => {
+    assert.equal(SN.grid(13, 8), 16); assert.equal(SN.grid(13, 0), 13)
+    assert.equal(SN.snap1(103, [100, 200], 12, 8).value, 100); assert.equal(SN.snap1(130, [100], 12, 8).value, 128)
+    const r = SN.snapRect({ x: 1225, y: 7, w: 100, h: 40 }, SN.screenGuides(2560, 1440, 10), 12, 8)
+    assert.equal(r.x, 1230); assert.equal(r.gx, 1280)            // centre on the screen centre
+    assert.equal(r.y, 10); assert.equal(r.gy, 10)                // top edge on the inset
+    const f = SN.snapRect({ x: 501, y: 603, w: 10, h: 10 }, { x: [], y: [] }, 12, 8)
+    assert.equal(f.x, 504); assert.equal(f.y, 600); assert.equal(f.gx, null)
+})
+test("snap: magnet pull", () => {
+    const s = { x: 100, y: 0 }
+    assert.deepEqual({ ...SN.pull({ x: 200, y: 0 }, s, 60) }, { x: 200, y: 0 })     // outside: free
+    assert.deepEqual({ ...SN.pull({ x: 110, y: 0 }, s, 60) }, { x: 100, y: 0 })     // core: on the slot
+    const m = SN.pull({ x: 140, y: 0 }, s, 60)
+    assert.ok(m.x > 100 && m.x < 140, "between: " + m.x)
+    assert.deepEqual({ ...SN.pull({ x: 5, y: 5 }, null, 60) }, { x: 5, y: 5 })
+})
+test("snap: edges + limits", () => {
+    assert.equal(SN.nearestEdge(1280, 20, 2560, 1440), "top"); assert.equal(SN.nearestEdge(1280, 1430, 2560, 1440), "bottom")
+    assert.equal(SN.nearestEdge(5, 700, 2560, 1440), "left"); assert.equal(SN.nearestEdge(2550, 700, 2560, 1440), "right")
+    assert.equal(SN.vertical("left"), true); assert.equal(SN.vertical("top"), false)
+    assert.equal(SN.clamp(5, 10, 20), 10); assert.equal(SN.clamp(25, 10, 20), 20); assert.equal(SN.clamp(5, 10, 0), 10)
+    assert.equal(SN.resize(400, 13, 300, 800, 8), 416); assert.equal(SN.resize(400, -300, 300, 800, 8), 300)
+})
+
+const PG = load("PanelGeom.js")
+test("panels: defaults, clamping, store", () => {
+    const r = PG.resolve({})
+    assert.equal(r.bar.edge, "top"); assert.equal(r.dashboard.width, 1070); assert.equal(r.controlCenter.along, "end")
+    assert.equal(r.launcher.attach, "edge"); assert.equal(r.launcher.views.wallpapers.w, 960)
+    const c = PG.resolve({ bar: { edge: "left", thickness: 9 }, dashboard: { width: "x", along: 0.3 }, launcher: { attach: "bar", views: { apps: { w: 700 } } } })
+    assert.equal(c.bar.edge, "left"); assert.equal(c.bar.thickness, 36); assert.equal(c.dashboard.width, 1070); assert.equal(c.dashboard.along, 0.3)
+    assert.equal(c.launcher.views.apps.w, 700); assert.equal(c.launcher.views.apps.h, 360)
+    assert.equal(PG.resolve({ dashboard: { attach: "edge" } }).dashboard.attach, "bar")      // edge: launcher only
+    assert.deepEqual(JSON.parse(JSON.stringify(PG.store({}, "dashboard", "width", 1200))), { width: 1200 })
+    assert.equal(PG.store({ width: 1200 }, "dashboard", "width", 1070), null)
+    assert.deepEqual(JSON.parse(JSON.stringify(PG.store({}, "launcher", "views", { apps: { w: 800, h: 360 } }))), { views: { apps: { w: 800 } } })
+})
+test("panels: import check", () => {
+    assert.equal(PG.validate({ bar: { edge: "bottom" }, launcher: { views: { apps: { w: 700 } } } }), "")
+    assert.notEqual(PG.validate({ bar: { edge: "middle" } }), "")
+    assert.notEqual(PG.validate({ foo: {} }), "")
+    assert.notEqual(PG.validate({ dashboard: { colour: 1 } }), "")
+    assert.notEqual(PG.validate({ launcher: { views: { nope: { w: 1 } } } }), "")
+    assert.notEqual(PG.validate([]), "")
+    assert.equal(PG.validate({ cards: { tools: { perRow: 4, tile: 64 } } }), "")
+    assert.notEqual(PG.validate({ cards: { tools: { size: 4 } } }), "")
+    assert.notEqual(PG.validate({ cards: { "a b": { perRow: 2 } } }), "")
+})
+test("panels: button cards", () => {
+    assert.deepEqual({ ...PG.card(undefined) }, { perRow: 3, tile: 56 })
+    assert.equal(PG.resolve({ cards: { tools: { perRow: 9 } } }).cards.tools.perRow, 6)
+    assert.deepEqual(JSON.parse(JSON.stringify(PG.storeCard({}, "tools", "perRow", 4))), { tools: { perRow: 4 } })
+    assert.equal(PG.storeCard({ tools: { perRow: 4 } }, "tools", "perRow", 3), null)
+})
+
+const EM = load("EdgeMap.js")
+test("edges: map points / rects / matrices agree", () => {
+    const D = 300
+    for (const e of ["top", "bottom", "left", "right"]) {
+        const m = EM.matrix(e, D)
+        for (const [u, v] of [[0, 0], [120, 40], [500, 299]]) {
+            const p = EM.mapPoint(e, D, u, v)
+            assert.equal(m[0] * u + m[1] * v + m[3], p.x, e + " x"); assert.equal(m[4] * u + m[5] * v + m[7], p.y, e + " y")
+        }
+        // a rect's mapped corners = the mapped rect
+        const r = EM.mapRect(e, D, 100, 20, 400, 60)
+        const a = EM.mapPoint(e, D, 100, 20), b = EM.mapPoint(e, D, 500, 80)
+        assert.equal(r.x, Math.min(a.x, b.x), e); assert.equal(r.y, Math.min(a.y, b.y), e)
+        assert.equal(r.w, Math.abs(a.x - b.x), e); assert.equal(r.h, Math.abs(a.y - b.y), e)
+    }
+    assert.deepEqual({ ...EM.mapRect("left", D, 100, 0, 400, 60) }, { x: 0, y: 100, w: 60, h: 400 })
+})
+test("edges: corners follow the map", () => {
+    // each canonical corner point lands on the real corner named for it
+    const D = 50, L = 1000, c = { outerStart: 1, outerEnd: 2, innerEnd: 3, innerStart: 4 }
+    const at = { outerStart: [0, 0], outerEnd: [L, 0], innerEnd: [L, D], innerStart: [0, D] }
+    for (const e of ["top", "bottom", "left", "right"]) {
+        const k = EM.corners(e, c), r = EM.mapRect(e, D, 0, 0, L, D)
+        for (const name in at) {
+            const p = EM.mapPoint(e, D, at[name][0], at[name][1])
+            const real = (p.y === r.y ? "t" : "b") + (p.x === r.x ? "l" : "r")
+            assert.equal(k[real], c[name], e + " " + name)
+        }
+    }
+})
+test("edges: anchors, sizes, placing", () => {
+    assert.deepEqual({ ...EM.anchors("bottom") }, { top: false, bottom: true, left: true, right: true })
+    assert.deepEqual({ ...EM.anchors("left") }, { top: true, bottom: true, left: true, right: false })
+    assert.equal(EM.opposite("top"), "bottom"); assert.equal(EM.opposite("left"), "right")
+    assert.deepEqual({ ...EM.toCanon("right", 420, 900) }, { along: 900, depth: 420 })
+    assert.equal(EM.place("start", 400, 2560, 10), 10); assert.equal(EM.place("end", 400, 2560, 10), 2150)
+    assert.equal(EM.place("center", 400, 2560, 10), 1080); assert.equal(EM.place(0.25, 400, 2560, 10), 440)
+    assert.equal(EM.place(0, 400, 2560, 10), 10); assert.equal(EM.place("end", 3000, 2560, 10), -220)
+})
+
+test("edges: the panel editor's picture", () => {
+    const s = { w: 2560, h: 1440 }, bar = { edge: "top", thickness: 50, gap: 10, inset: 10 }
+    assert.deepEqual({ ...EM.barRect(s, bar) }, { x: 10, y: 10, w: 2540, h: 50 })
+    assert.deepEqual({ ...EM.barRect(s, { ...bar, edge: "right" }) }, { x: 2500, y: 10, w: 50, h: 1420 })
+    // control center at the end of a top bar: flush right, under the bar
+    assert.deepEqual({ ...EM.panelRect(s, 420, 700, { edge: "top", offset: 60, along: "end", flare: 30, inset: 10 }) }, { x: 2130, y: 60, w: 420, h: 700 })
+    // dashboard centred on a left bar: right of it, centred vertically
+    assert.deepEqual({ ...EM.panelRect(s, 1070, 480, { edge: "left", offset: 60, along: "center", flare: 30, inset: 10 }) }, { x: 60, y: 480, w: 1070, h: 480 })
+    // launcher from the bottom screen edge
+    assert.deepEqual({ ...EM.panelRect(s, 640, 300, { edge: "bottom", offset: 0, along: "center", flare: 30, inset: 10 }) }, { x: 960, y: 1140, w: 640, h: 300 })
+    assert.deepEqual({ ...EM.panelRect(s, 400, 200, { float: true, x: 0.5, y: 0.5 }) }, { x: 1080, y: 620, w: 400, h: 200 })
+    assert.equal(EM.alongAt(s, "top", 1285, 300, 1070, 10, 30, 48, 8), "center")
+    assert.equal(EM.alongAt(s, "top", 2340, 300, 420, 10, 30, 48, 8), "end")
+    assert.equal(EM.alongAt(s, "top", 800, 300, 420, 10, 30, 48, 8), 0.313)
+    assert.equal(EM.depthOf(s, "bottom", 0, 1400), 40); assert.equal(EM.depthOf(s, "left", 300, 0), 300)
+})
+
 const LI = load("LockItems.js")
 test("greeter settings follow the lockscreen", () => {
     const g = LI.resolveGreeter({ seconds: false, monitors: ["A B C"] }, {})

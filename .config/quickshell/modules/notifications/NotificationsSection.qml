@@ -8,7 +8,8 @@ import qs.services
 ColumnLayout {
     id: root
 
-    readonly property int maxListHeight: 420
+    property int maxListHeight: PanelGeometry.notifications.height   // Settings → Panel editor
+    property bool fullHeight: false      // always maxListHeight high (resizing it live)
     readonly property bool empty: Notifs.count === 0
 
     spacing: 8
@@ -95,7 +96,7 @@ ColumnLayout {
     Flickable {
         id: flick
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.min(groupsCol.height, root.maxListHeight)
+        Layout.preferredHeight: root.fullHeight ? root.maxListHeight : Math.min(groupsCol.height, root.maxListHeight)
         contentHeight: groupsCol.height
         clip: true
         boundsBehavior: Flickable.StopAtBounds

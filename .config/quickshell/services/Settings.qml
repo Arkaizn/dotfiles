@@ -78,6 +78,7 @@ Singleton {
     property var desktopWidgets: ({})
     property var media: ({})
     property var greeter: ({})
+    property var panels: ({})
     property bool loaded: false
 
     // every group, in the order they're written
@@ -86,7 +87,7 @@ Singleton {
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
-                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter"]
+                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels"]
     // how each group is called in the UI (export / import messages, profiles).
     // A new group needs: a property above, an entry in `groups`, a label here,
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
@@ -99,7 +100,7 @@ Singleton {
         netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
         health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
         monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout",
-        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen" })
+        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)" })
     function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────

@@ -8,13 +8,16 @@ import QtQuick
 // Changes go straight to BarLayout / PanelLayout (settings.json), so the
 // settings app shows them too and its Reset buttons bring the defaults back.
 //
+// "panels" = the panel editor (modules/paneleditor: the bar's edge, panel
+// sizes and places), on one monitor.
+//
 // Start: long-press an empty spot of the bar / dashboard / control center,
 // the "Edit live" buttons in the settings app, or
-//   qs ipc call edit bar | dashboard | controlCenter | controlCenterButtons | stop
+//   qs ipc call edit bar | dashboard | controlCenter | controlCenterButtons | panels | stop
 Singleton {
     id: root
 
-    // "" | "bar" | "dashboard" | "controlCenter" (its cards) | "controlCenterButtons" (the buttons in them)
+    // "" | "bar" | "dashboard" | "controlCenter" (its cards) | "controlCenterButtons" (the buttons in them) | "panels"
     property string target: ""
     property string screen: ""        // bar: the monitor being edited
     property bool dragging: false     // something is being dragged (drop zones show)
@@ -22,8 +25,8 @@ Singleton {
     readonly property bool controlCenter: target === "controlCenter" || target === "controlCenterButtons"
 
     function start(what, screenName) {
-        if (what === "bar" && !screenName && (Compositor.isNiri || Compositor.isHyprland)) {
-            Compositor.focusedOutput(name => root.start("bar", name || (Quickshell.screens[0]?.name ?? "")))
+        if ((what === "bar" || what === "panels") && !screenName && (Compositor.isNiri || Compositor.isHyprland)) {
+            Compositor.focusedOutput(name => root.start(what, name || (Quickshell.screens[0]?.name ?? "")))
             return
         }
         dragging = false
@@ -58,6 +61,7 @@ Singleton {
         function dashboard(): void { root.start("dashboard") }
         function controlCenter(): void { root.start("controlCenter") }
         function controlCenterButtons(): void { root.start("controlCenterButtons") }
+        function panels(): void { root.start("panels") }
         function stop(): void { root.stop() }
         function get(): string { return root.target || "off" }
     }

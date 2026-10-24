@@ -52,3 +52,14 @@ function bar(w, h, tl, tr, br, bl, gaps, i) {
     p += `L ${i} ${i + tl} `
     return p
 }
+
+// A free-standing panel (floating, Part 6.8): a rectangle with all corners
+// rounded, closed. w / h its size, r the corner radius, i the inset.
+function rounded(w, h, r, i) {
+    const x0 = i, y0 = i, x1 = w - i, y1 = h - i
+    const rr = Math.max(0, Math.min(r, (x1 - x0) / 2, (y1 - y0) / 2))
+    return `M ${x0 + rr} ${y0} L ${x1 - rr} ${y0} A ${rr} ${rr} 0 0 1 ${x1} ${y0 + rr} `
+         + `L ${x1} ${y1 - rr} A ${rr} ${rr} 0 0 1 ${x1 - rr} ${y1} `
+         + `L ${x0 + rr} ${y1} A ${rr} ${rr} 0 0 1 ${x0} ${y1 - rr} `
+         + `L ${x0} ${y0 + rr} A ${rr} ${rr} 0 0 1 ${x0 + rr} ${y0} Z`
+}

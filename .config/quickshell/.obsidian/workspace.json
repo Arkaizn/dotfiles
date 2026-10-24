@@ -183,6 +183,17 @@
   },
   "active": "66c4fd4a0d610f49",
   "lastOpenFiles": [
+    "modules/settings/PanelPlaceRow.qml",
+    "modules/paneleditor/PanelEditor.qml",
+    "modules/paneleditor/PanelEditor.qml.tmp.5108.8126d7c9f45e",
+    "modules/paneleditor",
+    "modules/Bar/Middle/MusicBody.qml",
+    "modules/Bar/BarSection.qml.tmp.5108.2d4987090c56",
+    "components/BarPopup.qml.tmp.5108.83a0390458a1",
+    "modules/Bar/Bar.qml.tmp.5108.93feffac5903",
+    "services/lib/EdgeMap.js",
+    "services/lib/EdgeMap.js.tmp.5108.ca9ec551f34c",
+    "components/ResizeHandle.qml",
     "MANUAL_TESTING.md"
   ]
 }

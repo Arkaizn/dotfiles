@@ -2,7 +2,7 @@ import QtQuick
 import qs.services
 
 // Middle of the bar: "center" stays centred, centerLeft / centerRight grow
-// outwards from its sides (modules: BarLayout).
+// outwards from its sides — above / below it on a vertical bar (modules: BarLayout).
 Item {
     id: middle
     property string screenName
@@ -27,9 +27,12 @@ Item {
         editing: middle.editing
         dragId: middle.dragId
         zone: "centerLeft"
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.right: center.left
+        anchors.verticalCenter: vertical ? undefined : parent.verticalCenter
+        anchors.horizontalCenter: vertical ? parent.horizontalCenter : undefined
+        anchors.right: vertical ? undefined : center.left
+        anchors.bottom: vertical ? center.top : undefined
         anchors.rightMargin: center.implicitWidth > 0 ? Properties.spacing : 0
+        anchors.bottomMargin: center.implicitHeight > 0 ? Properties.spacing : 0
     }
     BarSection {
         id: centerRight
@@ -37,8 +40,11 @@ Item {
         editing: middle.editing
         dragId: middle.dragId
         zone: "centerRight"
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: center.right
+        anchors.verticalCenter: vertical ? undefined : parent.verticalCenter
+        anchors.horizontalCenter: vertical ? parent.horizontalCenter : undefined
+        anchors.left: vertical ? undefined : center.right
+        anchors.top: vertical ? center.bottom : undefined
         anchors.leftMargin: center.implicitWidth > 0 ? Properties.spacing : 0
+        anchors.topMargin: center.implicitHeight > 0 ? Properties.spacing : 0
     }
 }

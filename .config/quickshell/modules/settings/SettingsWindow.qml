@@ -167,6 +167,10 @@ Scope {
                 { key: "flareRadius", type: "int", min: 0, max: 48, label: "Bar flares",
                   desc: "Inverted corners where a popup meets the bar" } ] } ] },
 
+        { id: "panelEditor", group: "Shell", icon: "󰹑", title: "Panel editor", custom: "panelEditor",
+          keywords: "size resize width height dashboard control center notification center launcher bigger smaller panel editor",
+          desc: "Size of the dashboard, control center, notification center and each launcher view" },
+
         { id: "buttons", group: "Shell", icon: "󰆽", title: "Buttons", store: "properties",
           desc: "Size and shape of buttons",
           sections: [
@@ -504,6 +508,12 @@ Scope {
         { page: "notifications", label: "Mute an app's notifications", keywords: "rule silent hide block app", icon: "󰂭" },
         { page: "notifications", label: "Send a test notification", keywords: "test try notify-send", icon: "󰂚" },
         { page: "theme", label: "Light mode", desc: "pywal light scheme from the wallpaper", keywords: "light dark mode bright", icon: "󰖨" },
+        { page: "panelEditor", label: "Bar position (top, bottom, left, right)", desc: "Which screen edge the bar is on; popups come out of it", keywords: "bar position edge bottom top left right side vertical move dock", icon: "󰍜" },
+        { page: "panelEditor", label: "Bar thickness", desc: "Its buttons grow with it", keywords: "bar height thickness size bigger smaller", icon: "󰍜" },
+        { page: "panelEditor", label: "Launcher from the bar or the screen edge", keywords: "launcher position from bar edge top bottom attach", icon: "󰀻" },
+        { page: "panelEditor", label: "Dashboard size", desc: "Width and height of the dashboard", keywords: "dashboard resize width height bigger smaller", icon: "󰕮" },
+        { page: "panelEditor", label: "Control center width", desc: "And the notification center's height", keywords: "control center notification center resize width height", icon: "󰒓" },
+        { page: "panelEditor", label: "Launcher size per view", desc: "Apps, clipboard, connections, wallpapers, keybinds", keywords: "launcher resize width height apps clipboard wallpapers keybinds connections", icon: "󰀻" },
         { page: "theme", label: "Light / dark from the wallpaper", desc: "Bright wallpaper → light mode, dark wallpaper → dark mode", keywords: "auto automatic light dark mode wallpaper brightness follow switch", icon: "󰸉" },
         { page: "theme", label: "Save the current colors", keywords: "save theme scheme palette", icon: "󰆓" },
         { page: "theme", label: "pywal built-in themes", keywords: "base16 gruvbox nord dracula solarized monokai", icon: "󰏘" },
@@ -1062,6 +1072,12 @@ Scope {
                                     active: win.query === "" && win.page.custom === "greeter"
                                     visible: active
                                     sourceComponent: GreeterPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "panelEditor"
+                                    visible: active
+                                    sourceComponent: PanelEditorPage {}
                                 }
                                 Loader {
                                     Layout.fillWidth: true
