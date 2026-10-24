@@ -10,9 +10,11 @@ Item {
     id: trayButton
     anchors.margins: 0.5
     implicitHeight: Properties.buttonHeight
-    implicitWidth: trayRow.width + 8
+    implicitWidth: toggle.width + itemsClip.width + 8
 
     property bool hovered: false
+    // open = the tray's icons show; closed = only the toggle (Settings.bar.trayOpen)
+    readonly property bool open: Settings.bar.trayOpen ?? true
 
     ButtonBackground {
         id: buttonBackground
@@ -28,70 +30,121 @@ Item {
         id: trayHoverHandler
     }
 
-    RowLayout {
-        id: trayRow
-        anchors.centerIn: parent
-        spacing: 0
+    // arrow: always there, opens / closes the tray
+    Item {
+        id: toggle
+        anchors.left: parent.left
+        anchors.leftMargin: 4
+        anchors.verticalCenter: parent.verticalCenter
+        implicitHeight: Properties.iconSize
+        implicitWidth: toggleRow.width + 8
 
-        Repeater {
-            id:repeater
-            model: SystemTray.items
-            delegate: Item {
-                id: delegateItem
-                implicitHeight: Properties.iconSize
-                implicitWidth: Properties.iconSize + 10
-                
+        Row {
+            id: toggleRow
+            anchors.centerIn: parent
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: "󰅂"
+                color: Properties.color
+                font.family: Properties.fontFamily
+                font.pixelSize: Properties.iconSize
+                rotation: trayButton.open ? 180 : 0
+                Behavior on rotation { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+            }
+        }
 
-                property bool hovered: ma.containsMouse
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onEntered: toggle.scale = Properties.onEnteredTextScale
+            onExited: toggle.scale = Properties.onExitedTextScale
+            onPressed: toggle.scale = Properties.onPressedButtonScale
+            onReleased: toggle.scale = containsMouse ? Properties.onEnteredTextScale : Properties.onExitedTextScale
+            onCanceled: toggle.scale = Properties.onExitedTextScale
+            onClicked: trayButton.open ? Settings.set("bar", "trayOpen", false) : Settings.reset("bar", "trayOpen")
+        }
+        Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+    }
 
-                IconImage {
-                    anchors.centerIn: parent
-                    width: Properties.iconSize
-                    height: Properties.iconSize
-                    source: modelData.icon
-                }
+    // the tray's icons, slid in / out next to the toggle
+    Item {
+        id: itemsClip
+        anchors.left: toggle.right
+        anchors.verticalCenter: parent.verticalCenter
+        height: trayRow.height
+        width: trayButton.open ? trayRow.width : 0
+        clip: true
+        Behavior on width { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
 
-                MouseArea {
-                    id: ma
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+        RowLayout {
+            id: trayRow
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 0
+            opacity: trayButton.open ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: Properties.bDuration } }
 
-                    onEntered: delegateItem.scale = Properties.onEnteredTextScale
-                    onExited: delegateItem.scale = Properties.onExitedTextScale
-                    onPressed: delegateItem.scale = Properties.onPressedButtonScale
-                    onReleased: delegateItem.scale = containsMouse ? Properties.onEnteredTextScale : Properties.onExitedTextScale
-                    onCanceled: delegateItem.scale = Properties.onExitedTextScale
+            Repeater {
+                id:repeater
+                model: SystemTray.items
+                delegate: Item {
+                    id: delegateItem
+                    implicitHeight: Properties.iconSize
+                    implicitWidth: Properties.iconSize + 10
+                    
 
-                    onClicked: function(mouse) {
-                        // centre of this icon in screen coordinates (the bar spans the screen)
-                        const centerX = delegateItem.mapToItem(null, delegateItem.width / 2, 0).x
+                    property bool hovered: ma.containsMouse
 
-                        if (mouse.button === Qt.MiddleButton) {
-                            modelData.secondaryActivate()
-                            return
-                        }
-                        // right click, or left click on menu-only apps → our menu
-                        if (mouse.button === Qt.RightButton || modelData.onlyMenu) {
-                            if (modelData.hasMenu)
-                                customTrayMenu.toggleFor(modelData, (QsWindow.window as QsWindow)?.screen, centerX)
-                            return
-                        }
-                        modelData.activate()
+                    IconImage {
+                        anchors.centerIn: parent
+                        width: Properties.iconSize
+                        height: Properties.iconSize
+                        source: modelData.icon
                     }
 
-                    onWheel: function(wheel) {
-                        if (modelData.scroll)
-                            modelData.scroll(wheel.angleDelta.y, false)
-                    }
-                }
+                    MouseArea {
+                        id: ma
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-                // needs to be here for the individial tray icon
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: Properties.bDuration
-                        easing.type: Easing.OutCubic
+                        onEntered: delegateItem.scale = Properties.onEnteredTextScale
+                        onExited: delegateItem.scale = Properties.onExitedTextScale
+                        onPressed: delegateItem.scale = Properties.onPressedButtonScale
+                        onReleased: delegateItem.scale = containsMouse ? Properties.onEnteredTextScale : Properties.onExitedTextScale
+                        onCanceled: delegateItem.scale = Properties.onExitedTextScale
+
+                        onClicked: function(mouse) {
+                            // centre of this icon in screen coordinates (the bar spans the screen)
+                            const centerX = delegateItem.mapToItem(null, delegateItem.width / 2, 0).x
+
+                            if (mouse.button === Qt.MiddleButton) {
+                                modelData.secondaryActivate()
+                                return
+                            }
+                            // right click, or left click on menu-only apps → our menu
+                            if (mouse.button === Qt.RightButton || modelData.onlyMenu) {
+                                if (modelData.hasMenu)
+                                    customTrayMenu.toggleFor(modelData, (QsWindow.window as QsWindow)?.screen, centerX)
+                                return
+                            }
+                            modelData.activate()
+                        }
+
+                        onWheel: function(wheel) {
+                            if (modelData.scroll)
+                                modelData.scroll(wheel.angleDelta.y, false)
+                        }
+                    }
+
+                    // needs to be here for the individial tray icon
+                    Behavior on scale {
+                        NumberAnimation {
+                            duration: Properties.bDuration
+                            easing.type: Easing.OutCubic
+                        }
                     }
                 }
             }
