@@ -65,7 +65,8 @@ ColumnLayout {
         if (applyProc.running) return
         applyProc.pickedPath = path
         root.setStatus("Applying…", "#89dceb", false)
-        applyProc.running = true
+        // light / dark from the wallpaper (Settings → Theme): decided before wal runs
+        Theme.prepareMode(path, m => { applyProc.newMode = m; applyProc.running = true })
         // close right away; the command keeps running in the background
         root.closeRequested()
     }
@@ -181,6 +182,7 @@ ColumnLayout {
     Process {
         id: applyProc
         property string pickedPath: ""
+        property string newMode: ""        // Theme.prepareMode: the apps switch after the wallpaper is set
         property bool stopped: false
         running: false
         // setsid → own process group, so stop() can kill all of it at once
@@ -188,10 +190,13 @@ ColumnLayout {
         onStarted: stopped = false
         onExited: function(code) {
             forceKillTimer.stop()
+            if (code !== 0 || stopped) { if (applyProc.newMode !== "") Theme.writeModeFile(Theme.mode) }
             if (stopped)
                 root.setStatus("■  stopped", Colors.yellow, true)
-            else if (code === 0)
+            else if (code === 0) {
                 root.setStatus("✔  " + applyProc.pickedPath.split("/").pop(), Colors.green, true)
+                if (applyProc.newMode !== "") Theme.setMode(applyProc.newMode, { noWal: true })
+            }
             else
                 root.setStatus("✖  failed (code " + code + ")", Colors.red, true)
         }

@@ -49,8 +49,22 @@ ColumnLayout {
             }
         }
         NetRow {
+            label: "Follow the wallpaper"
+            desc: (Theme.autoMode ? "Picking a wallpaper switches: light for a bright one, dark for a dark one"
+                                  : "Off: new wallpapers keep the mode. On: light for a bright wallpaper, dark for a dark one")
+                  + (Theme.brightness >= 0 ? " (last wallpaper: " + Math.round(Theme.brightness * 100) + "% bright)" : "")
+            changed: Theme.autoMode
+            ToggleSwitch {
+                checked: Theme.autoMode
+                onToggled: v => {
+                    v ? Settings.set("theme", "auto", true) : Settings.reset("theme", "auto")
+                    if (v) Theme.followWallpaper()
+                }
+            }
+        }
+        NetRow {
             label: "The shell's colors (pywal)"
-            desc: "regenerated from the current wallpaper (wal -l for light); new wallpapers keep the mode"
+            desc: "regenerated from the current wallpaper (wal -l for light)"
             ToggleSwitch { checked: Theme.part("wal"); onToggled: v => Settings.set("theme", "wal", v) }
         }
         NetRow {

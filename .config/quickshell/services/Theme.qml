@@ -223,11 +223,44 @@ Singleton {
 
     function validTheme(n) { return /^[A-Za-z0-9 ._+-]{1,80}$/.test(n) }
 
-    // m: "light" | "dark"
-    function setMode(m) {
+    // ── Light / dark from the wallpaper (Settings.theme.auto) ──────────────
+    // A bright wallpaper (mean gray > 0.5) → light, else dark. The wallpaper
+    // picker asks before it runs set_wallpaper.sh (prepareMode), so wal makes
+    // the new colors in the right mode at once; the apps follow afterwards
+    // (setMode with noWal).
+    readonly property bool autoMode: Settings.theme.auto === true
+    readonly property string stateDir: home + "/.local/state/quickshell"
+    property real brightness: -1           // of the last wallpaper measured (0–1)
+    function wallpaperMode(img, cb) {
+        Jobs.run(["magick", img, "-resize", "64x64!", "-colorspace", "Gray", "-format", "%[fx:mean]", "info:"], (code, out) => {
+            const b = parseFloat(out)
+            if (code !== 0 || isNaN(b)) return cb("")
+            brightness = b
+            cb(b > 0.5 ? "light" : "dark")
+        })
+    }
+    // before set_wallpaper.sh: the mode `img` needs ("" = keep), written for its wal run
+    function prepareMode(img, cb) {
+        if (!autoMode) return cb("")
+        wallpaperMode(img, m => {
+            if (m === "" || m === mode) return cb("")
+            writeModeFile(m, () => cb(m))
+        })
+    }
+    // what set_wallpaper.sh reads (color-mode.sh writes it too); back to `mode` when the wallpaper failed
+    function writeModeFile(m, cb) {
+        Jobs.run(["sh", "-c", 'mkdir -p "$1" && echo "$2" > "$1/color-mode"', "sh", stateDir, m], () => { if (cb) cb() })
+    }
+    // the current wallpaper decides now (turning the setting on)
+    function followWallpaper() {
+        if (autoMode) wallpaperMode(wallpaper, m => { if (m !== "" && m !== mode) setMode(m) })
+    }
+
+    // m: "light" | "dark"; opts.noWal: the colors are made already (set_wallpaper.sh)
+    function setMode(m, opts) {
         if (m !== "light" && m !== "dark" || switching) return
         const args = ["bash", modeScript, m]
-        if (part("wal")) args.push("--wal")
+        if (part("wal") && !opts?.noWal) args.push("--wal")
         if (part("niri")) args.push("--niri")
         if (part("portal")) args.push("--portal")
         const add = (flag, kind) => { const n = pair(kind, m); if (n && validTheme(n)) args.push(flag, n) }

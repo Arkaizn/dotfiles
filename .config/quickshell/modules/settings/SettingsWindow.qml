@@ -504,6 +504,7 @@ Scope {
         { page: "notifications", label: "Mute an app's notifications", keywords: "rule silent hide block app", icon: "󰂭" },
         { page: "notifications", label: "Send a test notification", keywords: "test try notify-send", icon: "󰂚" },
         { page: "theme", label: "Light mode", desc: "pywal light scheme from the wallpaper", keywords: "light dark mode bright", icon: "󰖨" },
+        { page: "theme", label: "Light / dark from the wallpaper", desc: "Bright wallpaper → light mode, dark wallpaper → dark mode", keywords: "auto automatic light dark mode wallpaper brightness follow switch", icon: "󰸉" },
         { page: "theme", label: "Save the current colors", keywords: "save theme scheme palette", icon: "󰆓" },
         { page: "theme", label: "pywal built-in themes", keywords: "base16 gruvbox nord dracula solarized monokai", icon: "󰏘" },
         { page: "audio", label: "Default audio output", keywords: "speaker headphones sink default device", icon: "󰓃" },
