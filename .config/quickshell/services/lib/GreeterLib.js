@@ -77,3 +77,35 @@ function pick(list, key, wanted) {
     }
     return list[0] ?? null
 }
+
+// /etc/greetd/config.toml → how you get logged in:
+//   "greeter"         the login screen at boot and after logout (install.sh --switch greeter)
+//   "autologin-boot"  autologin once per boot, the login screen after logout
+//   "autologin"       greetd logs you in without the login screen (the setup before it)
+//   "unknown"         unreadable / something else
+function greetdMode(text) {
+    const s = {}
+    let cur = ""
+    for (const raw of String(text ?? "").split("\n")) {
+        const line = raw.replace(/#.*$/, "").trim()
+        const sec = /^\[([a-z_]+)\]$/.exec(line)
+        if (sec) { cur = sec[1]; s[cur] = s[cur] ?? {}; continue }
+        const kv = /^([a-z_]+)\s*=\s*"(.*)"$/.exec(line)
+        if (kv && cur) s[cur][kv[1]] = kv[2]
+    }
+    const def = s.default_session
+    if (!def || !def.command) return "unknown"
+    if (def.user !== "greeter") return "autologin"
+    if (!def.command.includes("quickshell-greeter")) return "unknown"
+    return s.initial_session && s.initial_session.command ? "autologin-boot" : "greeter"
+}
+
+// Lock the session at its start (QS_LOCK_AT_START)? Only when greetd logged
+// you in without a password: always with "autologin", in the first session of
+// a boot with "autologin-boot" (lastBoot = boot id the shell saw last). Fail
+// closed: anything unknown locks.
+function lockAtStart(mode, bootId, lastBoot) {
+    if (mode === "greeter") return false
+    if (mode === "autologin-boot") return !bootId || bootId !== lastBoot
+    return true
+}

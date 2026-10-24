@@ -455,6 +455,8 @@ Scope {
         { page: "greeter", label: "Login screen follows the lockscreen", desc: "Same clock, hint, picture, power buttons, blur and monitor", keywords: "greeter login same lockscreen look clock seconds date blur power buttons monitor", icon: "󰍂" },
         { page: "greeter", label: "Session at login", desc: "Default session and the session picker (niri, Hyprland)", keywords: "greeter login session niri hyprland wayland desktop default picker", icon: "󰍹" },
         { page: "greeter", label: "Default user at login", desc: "Who's picked on the login screen, user picker", keywords: "greeter login user account default picker", icon: "󰀄" },
+        { page: "greeter", label: "Logging in: login screen or autologin", desc: "Password on the login screen, or greetd autologin at boot + lockscreen", keywords: "greeter greetd login autologin auto-login lockscreen boot password switch mode vnc", icon: "󰍂" },
+        { page: "greeter", label: "Install / update the login screen", desc: "Run greeter/install.sh (pkexec) or copy the command", keywords: "greeter greetd login install update sudo pkexec command copy older version", icon: "󰚰" },
         { page: "greeter", label: "Update the login screen's theme", desc: "Copy colors, wallpaper and fonts to /var/lib/quickshell-greeter", keywords: "greeter login theme wallpaper colors sync copy update", icon: "󰑐" },
         { page: "lockscreen", label: "Lockscreen monitor", desc: "Show the lockscreen on one monitor, the others blurred", keywords: "lock screen monitor display dock external laptop primary", icon: "󰌾" },
         { page: "profile", label: "Profile picture", desc: "Shown on the dashboard and lockscreen", keywords: "avatar photo image face", icon: "󰀄" },

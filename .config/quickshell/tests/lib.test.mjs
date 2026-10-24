@@ -366,6 +366,19 @@ test("greeter: env + users + pick", () => {
     assert.equal(GL.pick(l, "id", ["", "b"]).id, "b"); assert.equal(GL.pick(l, "id", ["z"]).id, "a"); assert.equal(GL.pick([], "id", ["a"]), null)
 })
 
+test("greeter: greetd mode + lock at start", () => {
+    const greeter = '[terminal]\nvt = 1\n\n# login screen\n[default_session]\ncommand = "/usr/local/share/quickshell-greeter/greeter-session || agreety --cmd niri-session"\nuser = "greeter"\n'
+    assert.equal(GL.greetdMode(greeter), "greeter")
+    assert.equal(GL.greetdMode(greeter + '\n[initial_session]\ncommand = "niri-session"\nuser = "me"\n'), "autologin-boot")
+    assert.equal(GL.greetdMode('[initial_session]\ncommand = "niri-session"\nuser = "me"\n[default_session]\ncommand = "niri-session"\nuser = "me"\n'), "autologin")
+    assert.equal(GL.greetdMode('[default_session]\ncommand = "tuigreet"\nuser = "greeter"\n'), "unknown")
+    assert.equal(GL.greetdMode(""), "unknown")
+    assert.equal(GL.lockAtStart("greeter", "b1", ""), false)
+    assert.equal(GL.lockAtStart("autologin-boot", "b1", "b0"), true); assert.equal(GL.lockAtStart("autologin-boot", "b1", "b1"), false)
+    assert.equal(GL.lockAtStart("autologin-boot", "", ""), true)
+    assert.equal(GL.lockAtStart("autologin", "b1", "b1"), true); assert.equal(GL.lockAtStart("unknown", "b1", "b1"), true)
+})
+
 const LI = load("LockItems.js")
 test("greeter settings follow the lockscreen", () => {
     const g = LI.resolveGreeter({ seconds: false, monitors: ["A B C"] }, {})

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Installs / updates the Quickshell login screen (greetd greeter). Run it with
-# sudo from your own account (it reads the code from your config):
+# sudo (or pkexec, as Settings → Login screen does) from your own account (it
+# reads the code from your config):
 #
 #   sudo ~/.config/quickshell/greeter/install.sh [options]
 #
@@ -48,8 +49,10 @@ case "$switch" in ""|greeter|autologin-boot) ;; *) echo "--switch is greeter or 
 run() { if [ -n "$dry" ]; then printf '  would run: %s\n' "$*"; else "$@"; fi; }
 say() { printf '%s\n' "$*"; }
 
-[ -n "$dry" ] || [ "$(id -u)" = 0 ] || { echo "run with sudo" >&2; exit 1; }
+[ -n "$dry" ] || [ "$(id -u)" = 0 ] || { echo "run with sudo or pkexec" >&2; exit 1; }
 owner=${SUDO_USER:-}
+# pkexec (Settings → Login screen) passes the caller as PKEXEC_UID instead
+[ -z "$owner" ] && [ -n "${PKEXEC_UID:-}" ] && owner=$(id -nu "$PKEXEC_UID" 2>/dev/null || true)
 [ -n "$dry" ] && [ -z "$owner" ] && owner=$USER
 [ -n "$owner" ] && [ "$owner" != root ] || { echo "run with sudo from your account (SUDO_USER is the theme folder's owner)" >&2; exit 1; }
 getent passwd greeter >/dev/null || { echo "no 'greeter' user: install greetd first" >&2; exit 1; }

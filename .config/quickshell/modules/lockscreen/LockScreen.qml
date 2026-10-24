@@ -74,6 +74,7 @@ Scope {
     Component.onCompleted: {
         timing.mark("LockScreen onCompleted")
         Panels.register("lockscreen", api); Quickshell.watchFiles = !locked; Monitors.refresh()
+        if (atStart) noteStart()
         if (startPending) lock()
     }
 
@@ -84,8 +85,22 @@ Scope {
     // doesn't wait for it. Only in the first seconds of the shell process: the
     // variable stays set all session, and a later config reload must neither
     // lock nor change how the shell loads.
-    readonly property bool startPending: Quickshell.env("QS_LOCK_AT_START") === "1" && processAge() < 5 && !startDone
+    // Not after a login on the login screen (greeter/): there you typed the
+    // password already. greetd's config says how this session was started
+    // (GreeterLib.lockAtStart); lastBoot tells the first session of a boot.
+    readonly property bool startPending: atStart && loginLock && !startDone
     property bool startDone: false
+    readonly property bool atStart: Quickshell.env("QS_LOCK_AT_START") === "1" && processAge() < 5
+    readonly property string bootId: Files.read("/proc/sys/kernel/random/boot_id").trim()
+    readonly property string bootFile: (Quickshell.env("XDG_STATE_HOME") || Quickshell.env("HOME") + "/.local/state") + "/quickshell/login-boot"
+    readonly property bool loginLock: GreeterLib.lockAtStart(GreeterLib.greetdMode(Files.read("/etc/greetd/config.toml")),
+                                                             bootId, Files.read(bootFile).trim())
+    function noteStart() {
+        // the boot this login was in; and for lock-watchdog.sh, whether to expect a lock (per niri instance)
+        Jobs.run(["sh", "-c", 'mkdir -p "${1%/*}" && printf "%s\\n" "$2" > "$1"; ' +
+                  'printf "%s %s\\n" "$3" "$NIRI_SOCKET" > "${XDG_RUNTIME_DIR:-/tmp}/quickshell-login-lock"',
+                  "sh", bootFile, bootId, loginLock ? "lock" : "none"])
+    }
     function processAge() {
         const up = parseFloat(Files.read("/proc/uptime"))
         const ticks = Number(Files.read("/proc/self/stat").replace(/^.*\) /, "").split(" ")[19])    // starttime, field 22

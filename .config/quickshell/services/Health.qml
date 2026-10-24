@@ -211,7 +211,7 @@ Singleton {
                 if (GreeterSync.status !== "up to date" && GreeterSync.status !== "off") probs.push("theme copy: " + GreeterSync.status)
                 if (Number(sysFonts) === 0) probs.push("the font \"" + Properties.fontFamily + "\" isn't installed system-wide (the login screen falls back to another one)")
                 probs.length === 0 ? done("ok", "code " + installed + ", theme copy up to date")
-                                   : done("warn", probs.join("; "), "sudo ~/.config/quickshell/greeter/install.sh, then Settings → Login screen → Update now")
+                                   : done("warn", probs.join("; ") + " (Settings → Login screen → Install / update, or the command)", "sudo ~/.config/quickshell/greeter/install.sh")
             })
             break
         }

@@ -31,6 +31,31 @@ ColumnLayout {
         GreeterSync.readVersion()
     }
 
+    // how greetd logs you in (GreeterLib.greetdMode); switched with install.sh
+    // through pkexec (the shell's polkit dialog asks for the password)
+    property string mode: ""
+    function readMode() { mode = GreeterLib.greetdMode(Files.read("/etc/greetd/config.toml")) }
+    readonly property string installCmd: "sudo ~/.config/quickshell/greeter/install.sh"
+    property bool busy: false
+    property string result: ""
+    property bool resultError: false
+    function runInstall(args) {
+        busy = true
+        result = "Waiting for the password…"
+        resultError = false
+        Jobs.run(["pkexec", "/usr/bin/bash", Quickshell.shellDir + "/greeter/install.sh"].concat(args), (code, out, err) => {
+            page.busy = false
+            page.resultError = code !== 0
+            const lines = (code === 0 ? out : err || out).trim().split("\n").filter(l => l.trim() !== "")
+            page.result = code === 126 || code === 127 ? "Cancelled (no password given)"
+                : code === 0 ? "Done" + (args.length ? ": takes effect at the next boot (or logout)" : "")
+                : "Failed (" + code + "): " + (lines.slice(-3).join("\n") || "no output")
+            page.readMode()
+            page.checkVersion()
+            if (code === 0) GreeterSync.sync()
+        })
+    }
+
     // users and sessions for the defaults
     readonly property var users: GreeterLib.users(Files.read("/etc/passwd"))
     property var sessions: []
@@ -41,7 +66,7 @@ ColumnLayout {
         })
     }
 
-    Component.onCompleted: { checkVersion(); loadSessions(); Monitors.refresh() }
+    Component.onCompleted: { checkVersion(); readMode(); loadSessions(); Monitors.refresh() }
 
     NetCard {
         Layout.fillWidth: true
@@ -54,14 +79,54 @@ ColumnLayout {
             desc: GreeterSync.installed
                 ? (page.installedVersion === "" ? "Theme folder there, no greeter code installed"
                    : page.builtVersion !== "" && page.builtVersion !== page.installedVersion
-                     ? "Older than this config (" + page.installedVersion + " → " + page.builtVersion + "): run the install command below again"
+                     ? "Older than this config (" + page.installedVersion + " → " + page.builtVersion + "): Install / update below"
                      : "Up to date (" + page.installedVersion + ")")
                 : "Not yet. greetd still logs you in straight away"
             descError: GreeterSync.installed && page.builtVersion !== "" && page.installedVersion !== "" && page.builtVersion !== page.installedVersion
         }
         NetRow {
+            label: "Logging in"
+            desc: page.mode === "greeter" ? "The login screen at boot and after logging out; no lockscreen after it"
+                : page.mode === "autologin-boot" ? "At boot greetd logs you in and the lockscreen comes up (e.g. for VNC after a reboot); the login screen after logging out"
+                : page.mode === "autologin" ? "greetd logs you in, then the lockscreen comes up (not switched to the login screen yet)"
+                : "Own greetd setup (/etc/greetd/config.toml): the lockscreen comes up at login"
+            changed: page.mode !== "greeter"
+            DropdownControl {
+                implicitWidth: 260
+                enabled: !page.busy
+                options: [{ label: "Login screen", value: "greeter" },
+                          { label: "Autologin at boot + lockscreen", value: "autologin-boot" }]
+                    .concat(page.mode === "autologin" ? [{ label: "greetd autologin + lockscreen", value: "autologin" }]
+                          : page.mode === "unknown" ? [{ label: "Own setup", value: "unknown" }] : [])
+                value: page.mode
+                onEdited: v => { if (v !== page.mode && (v === "greeter" || v === "autologin-boot")) page.runInstall(["--switch", v]) }
+            }
+        }
+        NetRow {
             label: "Install / update"
-            desc: "In a terminal (sudo): sudo ~/.config/quickshell/greeter/install.sh — see greeter/RECOVERY.md for how to get back from a TTY"
+            desc: "Copies the login screen's code from this config (asks for your password). In a terminal: " + page.installCmd
+                  + " (from a TTY: greeter/RECOVERY.md)"
+            IconButton {
+                id: copyBtn
+                property bool copied: false
+                icon: copied ? "󰄬" : "󰆏"
+                tooltip: "Copy the command"
+                onClicked: { Quickshell.execDetached(["wl-copy", "--", page.installCmd]); copied = true; copiedTimer.restart() }
+                Timer { id: copiedTimer; interval: 1200; onTriggered: copyBtn.copied = false }
+            }
+            ActionButton {
+                icon: "󰚰"
+                text: page.busy ? "Running…" : "Install / update"
+                interactive: !page.busy
+                onClicked: page.runInstall([])
+            }
+        }
+        NetRow {
+            visible: page.result !== ""
+            sub: true
+            label: "Result"
+            desc: page.result
+            descError: page.resultError
         }
         NetRow {
             label: "Theme copy"

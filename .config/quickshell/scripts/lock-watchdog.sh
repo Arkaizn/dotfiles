@@ -35,6 +35,15 @@ locked() {
     [ "$(timeout 1 qs ipc call lockscreen isLocked 2>/dev/null)" = true ]
 }
 
+# the shell decided not to lock (logged in on the login screen, greeter/): it
+# writes "none <NIRI_SOCKET>" at its start (LockScreen.noteStart). Missing or
+# from another niri instance → still expect the lock (fail-closed).
+read -r want sock < "${XDG_RUNTIME_DIR:-/tmp}/quickshell-login-lock" 2>/dev/null
+if [ "${want:-}" = none ] && [ -n "${NIRI_SOCKET:-}" ] && [ "${sock:-}" = "$NIRI_SOCKET" ]; then
+    log "ok: no lock needed (logged in on the login screen)"
+    exit 0
+fi
+
 if locked; then
     log "ok: locked within ${TIMEOUT}s of niri start ($start)"
     exit 0
