@@ -3,7 +3,9 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 
-// pywal colors, read live from ~/.cache/wal/colors.json (which `wal` writes).
+// pywal colors, read live from ~/.cache/wal/colors.json (which `wal` writes);
+// QS_COLORS_FILE replaces that path (the login screen reads its copy in
+// /var/lib/quickshell-greeter/theme, tests a light scheme).
 // A JSON file instead of a generated QML file: a new wallpaper doesn't change
 // any QML, so the shell isn't reloaded (open windows stay) and the colors
 // just fade over. The values below are only used until the file is read.
@@ -74,7 +76,7 @@ Singleton {
 
     FileView {
         id: file
-        path: Quickshell.env("HOME") + "/.cache/wal/colors.json"
+        path: Quickshell.env("QS_COLORS_FILE") || Quickshell.env("HOME") + "/.cache/wal/colors.json"
         watchChanges: true
         blockLoading: true          // colors are there before the first frame
         printErrors: false

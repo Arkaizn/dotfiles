@@ -38,3 +38,57 @@ function check(key, v) {
     if (it.kind === "bool") return typeof v === "boolean" ? "" : key + " must be true or false"
     return it.choices.some(c => c.value === v) ? "" : key + " is one of " + it.choices.map(c => c.value).join(", ")
 }
+
+// ── Login screen (greeter/, Settings.greeter) ──
+// By default it follows the lockscreen: the items in `greeterShared` and the
+// monitors come from Settings.lockscreen. With follow off it has its own.
+// Media, notifications, "locked since" and Bluetooth make no sense before
+// login and aren't offered.
+var greeterShared = ["seconds", "date", "hint", "avatar", "batteries", "power", "blur"]
+var greeterItems = [
+    { key: "follow", label: "Same as the lockscreen", desc: "Clock, hint, picture, batteries, power buttons, blur and monitor as set for the lockscreen",
+      kind: "bool", def: true },
+    { key: "sessionPicker", label: "Session picker", desc: "Choose niri, Hyprland, … on the password card (else the last one used)", kind: "bool", def: true },
+    { key: "userPicker", label: "User picker", desc: "Auto: only when there's more than one user",
+      kind: "choice", def: "auto",
+      choices: [{ label: "Auto", value: "auto" }, { label: "Always", value: "on" }, { label: "Never", value: "off" }] },
+    { key: "sync", label: "Keep the login screen's theme up to date", desc: "Colors, wallpaper, fonts and these settings, copied to /var/lib/quickshell-greeter when they change",
+      kind: "bool", def: true }
+]
+
+// Settings.lockscreen + Settings.greeter → what the login screen does:
+// { follow, seconds, date, hint, avatar, batteries, power, blur, monitors: [],
+//   sessionPicker, userPicker, sync, defaultUser, defaultSession }
+function resolveGreeter(lockCfg, cfg) {
+    cfg = cfg || {}
+    const own = {}
+    for (const it of greeterItems) {
+        const v = cfg[it.key]
+        own[it.key] = it.kind === "bool" ? (typeof v === "boolean" ? v : it.def)
+                    : it.choices.some(c => c.value === v) ? v : it.def
+    }
+    const shared = resolve(own.follow ? lockCfg : cfg)
+    for (const k of greeterShared) own[k] = shared[k]
+    const mons = own.follow ? (lockCfg || {}).monitors : cfg.monitors
+    own.monitors = Array.isArray(mons) ? mons.filter(m => typeof m === "string" && m !== "") : []
+    own.defaultUser = typeof cfg.defaultUser === "string" ? cfg.defaultUser : ""
+    own.defaultSession = typeof cfg.defaultSession === "string" ? cfg.defaultSession : ""
+    return own
+}
+
+// a Settings.greeter key: "" when fine, else the message; null = unknown key
+function checkGreeter(key, v) {
+    if (greeterShared.includes(key)) return check(key, v)
+    const it = greeterItems.find(i => i.key === key)
+    if (it) {
+        if (it.kind === "bool") return typeof v === "boolean" ? "" : key + " must be true or false"
+        return it.choices.some(c => c.value === v) ? "" : key + " is one of " + it.choices.map(c => c.value).join(", ")
+    }
+    if (key === "monitors")
+        return Array.isArray(v) && v.every(x => typeof x === "string" && x.trim() !== "") ? "" : "monitors must be a list of monitor names (\"make model serial\")"
+    if (key === "defaultUser")
+        return typeof v === "string" && /^([a-z_][a-z0-9_-]{0,31})?$/.test(v) ? "" : "defaultUser is a user name (or empty: you)"
+    if (key === "defaultSession")
+        return typeof v === "string" && /^[A-Za-z0-9._-]{0,64}$/.test(v) ? "" : "defaultSession is a session file name (or empty: the last one)"
+    return null
+}

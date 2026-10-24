@@ -1,0 +1,57 @@
+#!/bin/bash
+# greetd's default_session command, run as the `greeter` user:
+#   command = "/usr/local/share/quickshell-greeter/greeter-session || agreety --cmd niri-session"
+#
+# Starts a niri that runs nothing but the Quickshell login screen (niri.kdl
+# made by niri-config: no binds but Ctrl+Alt+Backspace = quit). Exits 0 once
+# a session was launched; anything else exits non-zero, so greetd's command
+# falls back to agreety (text login on this VT) — never a black screen:
+#   - niri config can't be made or isn't valid
+#   - the login screen isn't shown within READY_TIMEOUT s (QML error, no GPU, …)
+#   - Ctrl+Alt+Backspace (niri quits while qs still runs)
+#   - qs exits without logging in twice within 5 min (once: started again)
+# Log: $XDG_RUNTIME_DIR/quickshell-greeter/greeter.log (+ journal, tag quickshell-greeter)
+set -u
+SHARE=${QS_GREETER_SHARE:-/usr/local/share/quickshell-greeter}
+export QS_GREETER_SHARE=$SHARE
+export QS_GREETER_DATA=${QS_GREETER_DATA:-/var/lib/quickshell-greeter/theme}
+export QS_GREETER_STATE=${QS_GREETER_STATE:-/var/lib/quickshell-greeter/state}
+export QS_GREETER_RUN=${QS_GREETER_RUN:-${XDG_RUNTIME_DIR:-/tmp}/quickshell-greeter}
+READY_TIMEOUT=${QS_GREETER_READY_TIMEOUT:-15}
+
+mkdir -p -m 700 "$QS_GREETER_RUN" && cd "$QS_GREETER_RUN" || exit 1
+log() {
+    printf '%s greeter-session: %s\n' "$(date +%T)" "$*" >> greeter.log
+    logger -t quickshell-greeter -- "$*" 2>/dev/null || true
+}
+# qs writes its cache / state under these (the greeter's home is /)
+export XDG_CACHE_HOME=$QS_GREETER_RUN/cache XDG_STATE_HOME=$QS_GREETER_RUN/state
+export QS_COLORS_FILE=$QS_GREETER_DATA/colors.json QS_SETTINGS_FILE=$QS_GREETER_DATA/settings.json
+export QS_NO_RELOAD_POPUP=1
+
+"$SHARE/niri-config" "$QS_GREETER_DATA" "$SHARE/runner" > niri.kdl 2>> greeter.log || { log "can't make the niri config"; exit 1; }
+niri validate -c niri.kdl >> greeter.log 2>&1 || { log "niri config isn't valid"; exit 1; }
+
+while :; do
+    rm -f ready launched qs-exit
+    niri -c niri.kdl >> greeter.log 2>&1 &
+    pid=$!
+    t=0
+    while [ ! -e ready ] && kill -0 "$pid" 2>/dev/null && [ "$t" -lt $((READY_TIMEOUT * 4)) ]; do
+        sleep 0.25; t=$((t + 1))
+    done
+    if [ ! -e ready ]; then
+        log "login screen not shown within ${READY_TIMEOUT}s"
+        kill "$pid" 2>/dev/null; wait "$pid"
+        exit 1
+    fi
+    wait "$pid"
+    # "launched" holds the session command; emptied again if greetd refused it
+    if grep -q '[^[:space:]]' launched 2>/dev/null; then log "session launched: $(head -1 launched)"; exit 0; fi
+    if [ ! -e qs-exit ]; then log "niri quit while the login screen ran (Ctrl+Alt+Backspace)"; exit 1; fi
+    now=$(date +%s)
+    recent=$(awk -v n="$now" '$1 > n - 300' crashes 2>/dev/null | wc -l)
+    echo "$now" >> crashes
+    log "qs exited ($(cat qs-exit)) without a login; $((recent + 1)) in 5 min"
+    [ "$recent" -ge 1 ] && exit 1
+done

@@ -1,0 +1,26 @@
+# Files of the shell the login screen uses, copied as they are (paths from
+# the config root). greeter/build.sh adds this folder's QML on top and writes
+# qmldir files that list only what's here. A missing file shows up as an
+# "is not a type" error in `qsr greeter-start`.
+modules/lockscreen/parts/LockStage.qml
+modules/lockscreen/parts/LockClock.qml
+modules/lockscreen/parts/AnyKeyHint.qml
+modules/lockscreen/parts/AuthCard.qml
+modules/lockscreen/parts/PowerRow.qml
+modules/lockscreen/parts/LockChip.qml
+modules/lockscreen/parts/CapsLock.qml
+components/SearchField.qml
+components/IconButton.qml
+components/ButtonBackground.qml
+components/ButtonGradient.qml
+components/ConfirmArm.qml
+services/Colors.qml
+services/Properties.qml
+services/Settings.qml
+services/Anim.qml
+services/Time.qml
+services/Files.qml
+services/Icons.qml
+services/lib/LockItems.js
+services/lib/AuthText.js
+services/lib/GreeterLib.js

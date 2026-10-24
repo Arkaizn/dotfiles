@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Gets you back in when the login screen doesn't work. From a TTY
+# (Ctrl+Alt+F2, log in), as root:
+#
+#   sudo /usr/local/share/quickshell-greeter/recover agreety     text login (agreety) instead of the login screen
+#   sudo /usr/local/share/quickshell-greeter/recover before      greetd's config from before the login screen
+#                                                                (config.toml.before-greeter: autologin)
+#   sudo /usr/local/share/quickshell-greeter/recover greeter     the login screen again
+#   sudo /usr/local/share/quickshell-greeter/recover log         what went wrong (last boot)
+#
+# Then it offers to restart greetd: that ends whatever runs on tty1.
+set -euo pipefail
+cfg=/etc/greetd/config.toml
+share=/usr/local/share/quickshell-greeter
+session=${SESSION:-niri-session}
+
+write() { printf '%s' "$1" > "$cfg.new" && chmod 644 "$cfg.new" && mv "$cfg.new" "$cfg"; echo "wrote $cfg"; }
+
+case "${1:-}" in
+    agreety)
+        write "[terminal]
+vt = 1
+
+[default_session]
+command = \"agreety --cmd $session\"
+user = \"greeter\"
+" ;;
+    before)
+        [ -f "$cfg.before-greeter" ] || { echo "no $cfg.before-greeter" >&2; exit 1; }
+        cp "$cfg.before-greeter" "$cfg"; echo "restored $cfg from $cfg.before-greeter" ;;
+    greeter)
+        write "[terminal]
+vt = 1
+
+[default_session]
+command = \"$share/greeter-session || agreety --cmd $session\"
+user = \"greeter\"
+" ;;
+    log)
+        journalctl -b -t quickshell-greeter -u greetd --no-pager | tail -50
+        f=$(ls -d /run/user/"$(id -u greeter)"/quickshell-greeter 2>/dev/null || true)
+        [ -n "$f" ] && { echo "== $f/greeter.log"; tail -40 "$f/greeter.log"; }
+        exit 0 ;;
+    *) sed -n '2,12p' "$0"; exit 2 ;;
+esac
+
+read -rp "Restart greetd now? This ends what runs on tty1. [y/N] " a
+[ "$a" = y ] && systemctl restart greetd || echo "not restarted: reboot, or: sudo systemctl restart greetd"

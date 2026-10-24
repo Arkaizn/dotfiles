@@ -31,7 +31,7 @@ Rectangle {
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
-        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media"]
+        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter"]
     // group → function(value, err) for the feature groups that need more than "is an object"
     property var validators: ({
         // enabled, monitors, instances [{ id, type, x, y, rot, scale, monitors, opts }] (services/lib/DeskWidgets.js)
@@ -49,6 +49,14 @@ Rectangle {
                     if (m === null) err([k], "unknown setting \"" + k + "\"")
                     else if (m !== "") err([k], m)
                 }
+            }
+        },
+        // login screen: follow, its own items / monitors, defaultUser, defaultSession (LockItems.checkGreeter)
+        greeter: (v, err) => {
+            for (const k of Object.keys(v)) {
+                const m = LockItems.checkGreeter(k, v[k])
+                if (m === null) err([k], "unknown setting \"" + k + "\"")
+                else if (m !== "") err([k], m)
             }
         },
         wizard: (v, err) => {

@@ -4,6 +4,8 @@ import Quickshell.Wayland
 import Quickshell.Services.Pam
 import QtQuick
 import qs.services
+import qs.services.lib
+import "parts"
 
 // Lockscreen (ext-session-lock): one LockSurface per monitor, all sharing
 // the state below (typed password, auth view, errors).
@@ -61,39 +63,17 @@ Scope {
                  (code, out) => { if (out.trim() !== "") Quickshell.reload(false) })
     }
 
-    // Caps Lock from the keyboard LEDs (any keyboard), polled while locked
-    property bool capsLock: false
-    Process {
-        id: capsProc
-        command: ["sh", "-c", "cat /sys/class/leds/*::capslock/brightness 2>/dev/null"]
-        stdout: StdioCollector {
-            onStreamFinished: root.capsLock = text.split("\n").some(l => parseInt(l) > 0)
-        }
-    }
-    Timer {
-        interval: 250
-        repeat: true
-        running: sessionLock.locked
-        triggeredOnStart: true
-        onTriggered: if (!capsProc.running) capsProc.running = true
-    }
+    // Caps Lock from the keyboard LEDs, polled while locked
+    readonly property bool capsLock: caps.on
+    CapsLock { id: caps; active: sessionLock.locked }
 
-    // YubiKey OTP login is set up: pam_yubico is active in system-auth and the
-    // current user has a key in its authfile. Re-checked on every lock.
-    property bool yubikey: false
-    Process {
-        id: yubikeyProc
-        command: ["sh", "-c",
-            "line=$(grep -E '^[[:space:]]*-?auth[[:space:]].*pam_yubico\\.so' /etc/pam.d/system-auth) || exit 1; " +
-            "file=$(printf '%s' \"$line\" | grep -oE 'authfile=[^[:space:]]+' | cut -d= -f2); " +
-            "grep -q \"^$USER:\" \"${file:-$HOME/.yubico/authorized_yubikeys}\" 2>/dev/null"]
-        onExited: code => root.yubikey = code === 0
-    }
+    // YubiKey OTP login is set up (services/Yubikey.qml, re-checked on every lock)
+    readonly property bool yubikey: Yubikey.present
     // Session.lock() → Panels.open("lockscreen")
     readonly property var api: ({ open: () => root.lock() })
     Component.onCompleted: {
         timing.mark("LockScreen onCompleted")
-        yubikeyProc.running = true; Panels.register("lockscreen", api); Quickshell.watchFiles = !locked; Monitors.refresh()
+        Panels.register("lockscreen", api); Quickshell.watchFiles = !locked; Monitors.refresh()
         if (startPending) lock()
     }
 
@@ -123,7 +103,7 @@ Scope {
     function lock() {
         if (sessionLock.locked) return
         timing.mark("lock() called")
-        yubikeyProc.running = true
+        Yubikey.refresh()
         authOpen = false
         password = ""
         checking = false
@@ -187,13 +167,12 @@ Scope {
                 root.unlocking = true
                 unlockTimer.restart()
             } else {
-                const locked = /lock/i.test(lastMessage)
-                root.fail(result === PamResult.MaxTries || locked ? "Too many attempts, wait a moment" : "Wrong password")
+                root.fail(AuthText.failure(lastMessage, result === PamResult.MaxTries))
             }
         }
         onError: error => {
             root.checking = false
-            root.fail("Authentication error")
+            root.fail(AuthText.error())
         }
     }
 

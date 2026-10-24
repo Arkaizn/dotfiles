@@ -330,5 +330,59 @@ test("MediaSources.clock", () => {
     assert.equal(MS.clock(null), "")
 })
 
+const AT = load("AuthText.js")
+test("auth text: wrong password", () => {
+    assert.equal(AT.failure("", false), "Wrong password")
+    assert.equal(AT.failure("pam_authenticate: AUTH_ERR", false), "Wrong password")
+})
+test("auth text: faillock / max tries", () => {
+    assert.equal(AT.failure("", true), "Too many attempts, wait a moment")
+    assert.equal(AT.failure("The account is locked due to 3 failed logins.", false), "Too many attempts, wait a moment")
+    assert.equal(AT.failure("pam_authenticate: MAXTRIES", false), "Too many attempts, wait a moment")
+    assert.equal(AT.failure("The account is locked due to 3 failed logins.\n(1 minute left to unlock)", false), "Too many attempts, try again in 1 minute")
+    assert.equal(AT.failure("(10 minutes left to unlock)", false), "Too many attempts, try again in 10 minutes")
+    assert.equal(AT.locked("Password: ", false), "")
+})
+
+const GL = load("GreeterLib.js")
+test("greeter: desktop entries", () => {
+    const n = GL.parseDesktop("niri", "[Desktop Entry]\nName=Niri\nExec=niri-session\nType=Application\nDesktopNames=niri\n")
+    assert.equal(n.name, "Niri"); assert.equal(n.exec, "niri-session"); assert.deepEqual([...n.desktopNames], ["niri"])
+    const h = GL.parseDesktop("h", "[Desktop Entry]\nName=Hyprland (uwsm-managed)\nName[de]=X\nExec=uwsm start -e -D Hyprland hyprland.desktop\nTryExec=uwsm\n[Desktop Action x]\nExec=evil\n")
+    assert.equal(h.exec, "uwsm start -e -D Hyprland hyprland.desktop"); assert.equal(h.tryExec, "uwsm")
+    assert.equal(GL.parseDesktop("x", "[Desktop Entry]\nName=X\nExec=x\nHidden=true\n"), null)
+    assert.equal(GL.parseDesktop("x", "[Desktop Entry]\nName=X\n"), null)
+})
+test("greeter: exec split", () => {
+    assert.deepEqual([...GL.splitExec("uwsm start -e -D Hyprland hyprland.desktop")], ["uwsm", "start", "-e", "-D", "Hyprland", "hyprland.desktop"])
+    assert.deepEqual([...GL.splitExec('a "b c" %U d\\e')], ["a", "b c", "d\\e"])
+    assert.deepEqual([...GL.splitExec('x ""')], ["x", ""])
+})
+test("greeter: env + users + pick", () => {
+    assert.deepEqual([...GL.sessionEnv({ name: "Hyprland", desktopNames: [] })], ["XDG_SESSION_TYPE=wayland", "XDG_CURRENT_DESKTOP=Hyprland", "XDG_SESSION_DESKTOP=hyprland"])
+    const u = GL.users("root:x:0:0::/root:/bin/bash\nme:x:1000:1000:Me Myself,,,:/home/me:/usr/bin/zsh\ngreeter:x:964:964::/:/bin/bash\nsvc:x:1001:1001::/:/usr/bin/nologin\nnobody:x:65534:65534::/:/usr/bin/nologin\n")
+    assert.deepEqual([...u.map(x => x.name)], ["me"]); assert.equal(u[0].gecos, "Me Myself")
+    const l = [{ id: "a" }, { id: "b" }]
+    assert.equal(GL.pick(l, "id", ["", "b"]).id, "b"); assert.equal(GL.pick(l, "id", ["z"]).id, "a"); assert.equal(GL.pick([], "id", ["a"]), null)
+})
+
+const LI = load("LockItems.js")
+test("greeter settings follow the lockscreen", () => {
+    const g = LI.resolveGreeter({ seconds: false, monitors: ["A B C"] }, {})
+    assert.equal(g.follow, true); assert.equal(g.seconds, false); assert.equal(g.date, true)
+    assert.deepEqual([...g.monitors], ["A B C"]); assert.equal(g.userPicker, "auto"); assert.equal(g.sync, true)
+    const o = LI.resolveGreeter({ seconds: false, monitors: ["A B C"] }, { follow: false, blur: false, monitors: ["X"], defaultUser: "me" })
+    assert.equal(o.seconds, true); assert.equal(o.blur, false); assert.deepEqual([...o.monitors], ["X"]); assert.equal(o.defaultUser, "me")
+    assert.equal(LI.resolveGreeter(undefined, undefined).power, true)
+})
+test("greeter settings check", () => {
+    assert.equal(LI.checkGreeter("follow", true), ""); assert.notEqual(LI.checkGreeter("follow", 1), "")
+    assert.equal(LI.checkGreeter("userPicker", "on"), ""); assert.notEqual(LI.checkGreeter("userPicker", "x"), "")
+    assert.equal(LI.checkGreeter("blur", false), ""); assert.equal(LI.checkGreeter("media", true), null)
+    assert.equal(LI.checkGreeter("defaultUser", "arkaizn"), ""); assert.notEqual(LI.checkGreeter("defaultUser", "a b"), "")
+    assert.equal(LI.checkGreeter("defaultSession", "niri"), ""); assert.notEqual(LI.checkGreeter("defaultSession", "../x"), "")
+    assert.notEqual(LI.checkGreeter("monitors", "x"), "")
+})
+
 console.log(passed + " passed, " + failed + " failed")
 process.exit(failed ? 1 : 0)

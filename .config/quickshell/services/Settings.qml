@@ -23,6 +23,9 @@ import QtQuick
 //   icons      → changed icons { "<id>": "<glyph>" } (Icons.qml)
 //   monitorsPage → monitors page options { identifyAt: "top-left" | … }
 //   dashboard, controlCenter → which cards sit where (PanelLayout.qml)
+//   greeter    → the login screen (greeter/): follows the lockscreen or has
+//                its own items, default user / session (LockItems.resolveGreeter);
+//                copied to /var/lib/quickshell-greeter by GreeterSync.qml
 //   media      → { bridge: bool } use the mediasync bridge for the bar and
 //                dashboard (MediaSync.qml); its own settings live in the bridge
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
@@ -30,13 +33,14 @@ import QtQuick
 //   settingsProfiles, wizard, health, perfmon
 //              → one group per feature (see PLAN.md); readers always have a
 //                default, so an empty / old file never breaks anything
+// QS_SETTINGS_FILE replaces the path (the login screen reads its copy).
 // "version" is the file format; migrate() brings older files up to date.
 // (both compositors' override files are generated from niri / hyprland /
 //  autostart / keybinds / syntax)
 Singleton {
     id: root
 
-    readonly property string path: Quickshell.shellDir + "/settings.json"
+    readonly property string path: Quickshell.env("QS_SETTINGS_FILE") || Quickshell.shellDir + "/settings.json"
     property var properties: ({})
     property var niri: ({})
     property var hyprland: ({})
@@ -73,6 +77,7 @@ Singleton {
     property var lockscreen: ({})
     property var desktopWidgets: ({})
     property var media: ({})
+    property var greeter: ({})
     property bool loaded: false
 
     // every group, in the order they're written
@@ -81,7 +86,7 @@ Singleton {
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
-                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media"]
+                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter"]
     // how each group is called in the UI (export / import messages, profiles).
     // A new group needs: a property above, an entry in `groups`, a label here,
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
@@ -94,7 +99,7 @@ Singleton {
         netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
         health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
         monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout",
-        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources" })
+        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen" })
     function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────

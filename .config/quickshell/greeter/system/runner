@@ -1,0 +1,12 @@
+#!/bin/sh
+# Started by the greeter's niri (its only spawn-at-startup): runs the login
+# screen, then quits niri when qs exits (logged in or crashed), so
+# greeter-session sees the result. Environment from greeter-session.
+cd "$QS_GREETER_RUN" || exit 1
+# VNC on the login screen (optional, per device: install.sh --vnc)
+if [ -r /etc/quickshell-greeter/wayvnc.conf ] && command -v wayvnc >/dev/null; then
+    wayvnc -C /etc/quickshell-greeter/wayvnc.conf >> greeter.log 2>&1 &
+fi
+qs -p "$QS_GREETER_SHARE/shell" >> greeter.log 2>&1
+echo $? > qs-exit
+niri msg action quit --skip-confirmation

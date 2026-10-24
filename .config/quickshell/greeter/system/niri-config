@@ -1,0 +1,89 @@
+#!/bin/bash
+# Prints the niri config of the login screen:
+#   niri-config DATA_DIR RUNNER > niri.kdl
+# Only values from DATA_DIR/outputs.txt and input.txt (written by your shell,
+# services/GreeterSync.qml) go in, each checked against a strict pattern —
+# a line that doesn't match is skipped, so nothing in those files can add a
+# bind or a command. One bind: Ctrl+Alt+Backspace (quit → agreety).
+set -euo pipefail
+data=$1 runner=$2
+
+q() { printf '"%s"' "$1"; }    # values are checked before: no quotes / backslashes in them
+
+declare -A in=([layout]=us [variant]= [options]= [numlock]=no [tap]=yes [naturalScroll]=no)
+if [ -r "$data/input.txt" ]; then
+    while IFS='=' read -r k v; do
+        case "$k" in
+            layout)  [[ $v =~ ^[a-z]{1,8}(,[a-z]{1,8}){0,3}$ ]] && in[$k]=$v ;;
+            variant) [[ $v =~ ^[a-z0-9_,-]{0,60}$ ]] && in[$k]=$v ;;
+            options) [[ $v =~ ^[a-z0-9_:,-]{0,200}$ ]] && in[$k]=$v ;;
+            numlock|tap|naturalScroll) [[ $v =~ ^(yes|no)$ ]] && in[$k]=$v ;;
+        esac
+    done < "$data/input.txt"
+fi
+
+cat <<EOF
+// Login screen niri config, made by niri-config at every greeter start.
+// Don't edit: see ~/.config/quickshell/greeter/system/niri-config.
+input {
+    keyboard {
+        xkb {
+            layout $(q "${in[layout]}")
+            variant $(q "${in[variant]}")
+            options $(q "${in[options]}")
+        }
+$([ "${in[numlock]}" = yes ] && echo "        numlock")
+    }
+    touchpad {
+$([ "${in[tap]}" = yes ] && echo "        tap")
+$([ "${in[naturalScroll]}" = yes ] && echo "        natural-scroll")
+    }
+}
+EOF
+
+# ident \t mode \t scale \t transform \t x \t y \t on|off
+if [ -r "$data/outputs.txt" ]; then
+    while IFS=$'\t' read -r id mode scale tf x y on; do
+        [[ $id =~ ^[A-Za-z0-9][A-Za-z0-9\ ._()+/-]{0,119}$ ]] || continue
+        [[ $mode =~ ^[0-9]{3,5}x[0-9]{3,5}(@[0-9]{1,3}(\.[0-9]{1,3})?)?$ ]] || continue
+        [[ $scale =~ ^[0-9](\.[0-9]{1,4})?$ ]] || continue
+        [[ $tf =~ ^(normal|90|180|270|flipped|flipped-90|flipped-180|flipped-270)$ ]] || continue
+        [[ $x =~ ^-?[0-9]{1,5}$ && $y =~ ^-?[0-9]{1,5}$ ]] || continue
+        if [ "$on" = off ]; then
+            printf 'output %s {\n    off\n}\n' "$(q "$id")"
+        else
+            printf 'output %s {\n    mode %s\n    scale %s\n    transform %s\n    position x=%s y=%s\n}\n' \
+                "$(q "$id")" "$(q "$mode")" "$scale" "$(q "$tf")" "$x" "$y"
+        fi
+    done < "$data/outputs.txt"
+fi
+
+[[ $runner =~ ^/[A-Za-z0-9/._-]+$ ]] || { echo "niri-config: bad runner path" >&2; exit 1; }
+cat <<EOF
+layout {
+    background-color "#000000"
+}
+gestures {
+    hot-corners {
+        off
+    }
+}
+hotkey-overlay {
+    skip-at-startup
+}
+config-notification {
+    disable-failed
+}
+xwayland-satellite {
+    off
+}
+prefer-no-csd
+screenshot-path null
+binds {
+    // the way out when the login screen hangs: quit → greetd starts agreety.
+    // A spawn bind (the only kind niri allows while the screen is locked) of
+    // one fixed command; nothing else can be started from here.
+    Ctrl+Alt+BackSpace allow-when-locked=true { spawn "niri" "msg" "action" "quit" "--skip-confirmation"; }
+}
+spawn-at-startup $(q "$runner")
+EOF

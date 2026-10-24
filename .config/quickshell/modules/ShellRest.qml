@@ -37,6 +37,8 @@ Scope {
     readonly property bool themeApplying: Theme.applying
     // and "Wi-Fi off while wired" (Settings → Network)
     readonly property bool wiredWifi: WiredWifi.turnedOff
+    // and the login screen's theme copy (/var/lib/quickshell-greeter)
+    readonly property string greeterSync: GreeterSync.status
 
     DesktopLayer {}
 

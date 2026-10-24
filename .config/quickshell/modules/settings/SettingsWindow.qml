@@ -107,6 +107,8 @@ Scope {
           desc: "Your picture and name on the dashboard and lockscreen" },
         { id: "lockscreen", group: "Shell", icon: "󰌾", title: "Lockscreen", custom: "lockscreen",
           desc: "What the lockscreen shows, and on which monitor" },
+        { id: "greeter", group: "Shell", icon: "󰍂", title: "Login screen", custom: "greeter",
+          desc: "The greeter before you log in: follows the lockscreen, user and session" },
         { id: "desktopWidgets", group: "Shell", icon: "󰕮", title: "Desktop widgets", custom: "desktopWidgets",
           desc: "Clock, calendar, media player, stats … on the wallpaper" },
 
@@ -449,6 +451,11 @@ Scope {
         { page: "desktopWidgets", label: "Desktop widgets on all monitors", desc: "Which monitors show the widgets", keywords: "widget monitor display screen all every", icon: "󰍹" },
         { page: "lockscreen", label: "Notifications on the lockscreen", desc: "With text, private (app and count) or off", keywords: "lock screen notification private privacy hide content messages", icon: "󰂚" },
         { page: "lockscreen", label: "Show on the lockscreen", desc: "Media player, seconds, date, devices, batteries, power buttons, blur", keywords: "lock screen media player music controls clock seconds date bluetooth battery power shutdown reboot suspend blur avatar picture locked since hint", icon: "󰈈" },
+        { page: "greeter", label: "Login screen", desc: "Greeter before login (greetd): installed, theme copy up to date", keywords: "greeter greetd login logon display manager sddm gdm boot sign in", icon: "󰍂" },
+        { page: "greeter", label: "Login screen follows the lockscreen", desc: "Same clock, hint, picture, power buttons, blur and monitor", keywords: "greeter login same lockscreen look clock seconds date blur power buttons monitor", icon: "󰍂" },
+        { page: "greeter", label: "Session at login", desc: "Default session and the session picker (niri, Hyprland)", keywords: "greeter login session niri hyprland wayland desktop default picker", icon: "󰍹" },
+        { page: "greeter", label: "Default user at login", desc: "Who's picked on the login screen, user picker", keywords: "greeter login user account default picker", icon: "󰀄" },
+        { page: "greeter", label: "Update the login screen's theme", desc: "Copy colors, wallpaper and fonts to /var/lib/quickshell-greeter", keywords: "greeter login theme wallpaper colors sync copy update", icon: "󰑐" },
         { page: "lockscreen", label: "Lockscreen monitor", desc: "Show the lockscreen on one monitor, the others blurred", keywords: "lock screen monitor display dock external laptop primary", icon: "󰌾" },
         { page: "profile", label: "Profile picture", desc: "Shown on the dashboard and lockscreen", keywords: "avatar photo image face", icon: "󰀄" },
         { page: "profile", label: "Display name", keywords: "username greeting hello name", icon: "󰀄" },
@@ -1046,6 +1053,12 @@ Scope {
                                     active: win.query === "" && win.page.custom === "lockscreen"
                                     visible: active
                                     sourceComponent: LockscreenPage {}
+                                }
+                                Loader {
+                                    Layout.fillWidth: true
+                                    active: win.query === "" && win.page.custom === "greeter"
+                                    visible: active
+                                    sourceComponent: GreeterPage {}
                                 }
                                 Loader {
                                     Layout.fillWidth: true

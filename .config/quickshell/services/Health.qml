@@ -78,6 +78,9 @@ Singleton {
             c.push({ id: "includes", group: "Compositor", title: "niri includes" })
         }
         if (HyprSettings.available) c.push({ id: "hypr", group: "Compositor", title: "Hyprland config (--verify-config)" })
+        // only where the login screen is installed (greeter/install.sh)
+        if (Files.read("/usr/local/share/quickshell-greeter/shell/VERSION") !== "")
+            c.push({ id: "greeter", group: "Config", title: "Login screen (greeter)" })
         return c
     }
 
@@ -197,6 +200,21 @@ Singleton {
                      "fix " + HyprSettings.mainConfig.replace(home, "~"))
             }, { HYPRLAND_NO_SD_VARS: "1", HYPRLAND_NO_SD_NOTIFY: "1" })
             break
+        case "greeter": {
+            // its code = this config's greeter/, its theme copy written, the font readable for the greeter user
+            const installed = Files.read("/usr/local/share/quickshell-greeter/shell/VERSION").trim()
+            Jobs.run(["sh", "-c", 'bash "$1/greeter/build.sh" "${XDG_RUNTIME_DIR:-/tmp}/quickshell-greeter-check"; ' +
+                      'fc-list -f "%{file}\\n" "$2" | grep -c "^/usr/" || true', "sh", Quickshell.shellDir, Properties.fontFamily], (code, out) => {
+                const [built, sysFonts] = out.trim().split("\n")
+                const probs = []
+                if (built && built !== installed) probs.push("the installed login screen (" + installed + ") is older than greeter/ (" + built + ")")
+                if (GreeterSync.status !== "up to date" && GreeterSync.status !== "off") probs.push("theme copy: " + GreeterSync.status)
+                if (Number(sysFonts) === 0) probs.push("the font \"" + Properties.fontFamily + "\" isn't installed system-wide (the login screen falls back to another one)")
+                probs.length === 0 ? done("ok", "code " + installed + ", theme copy up to date")
+                                   : done("warn", probs.join("; "), "sudo ~/.config/quickshell/greeter/install.sh, then Settings → Login screen → Update now")
+            })
+            break
+        }
         default:
             done("warn", "unknown check")
         }
