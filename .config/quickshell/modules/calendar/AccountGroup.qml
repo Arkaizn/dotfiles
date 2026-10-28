@@ -4,14 +4,18 @@ import QtQuick.Layouts
 import qs.components
 import qs.services
 
-// Sidebar block of one account: header (remove with a second click) and its
-// calendars — click to show/hide, click the color square to recolor.
+// Sidebar block of one account: header (switch the whole account off / on,
+// look for new calendars, remove with a second click) and its calendars —
+// click to show/hide, click the color square to recolor.
 ColumnLayout {
     id: root
 
     required property var account
     ConfirmArm { id: arm }
     readonly property bool armed: arm.armed !== ""
+    readonly property bool on: account.enabled !== false
+    readonly property bool canList: account.type === "caldav" || account.type === "graph"
+    property bool listing: false
 
     readonly property var errorFor: CalendarStore.errors.filter(e => e.calendar.startsWith(account.id + "|"))
 
@@ -30,14 +34,14 @@ ColumnLayout {
                 text: root.account.type === "ics" ? "󰑫" : root.account.type === "local" ? "󰋜"
                     : root.account.type === "graph" ? "󰴢"
                     : /icloud/i.test(root.account.url) ? "󰀵" : "󰒍"
-                color: Colors.fade(0.45)
+                color: Colors.fade(root.on ? 0.45 : 0.25)
                 font.pixelSize: 12
                 font.family: Properties.fontFamily
             }
             Text {
                 Layout.fillWidth: true
                 text: root.armed ? "Click again to remove" : root.account.name
-                color: root.armed ? Colors.red : Colors.fade(0.7)
+                color: root.armed ? Colors.red : Colors.fade(root.on ? 0.7 : 0.35)
                 font.pixelSize: 11
                 font.bold: true
                 font.family: Properties.fontFamily
@@ -53,6 +57,34 @@ ColumnLayout {
                 ToolTip.visible: errHover.hovered
                 ToolTip.text: root.errorFor.map(e => e.message).join("\n")
             }
+            // calendars made on another device show up by themselves (hourly); this checks now
+            IconButton {
+                visible: root.canList && root.on && (headHover.hovered || root.listing) && !root.armed
+                implicitWidth: 22; implicitHeight: 22
+                iconSize: 11
+                icon: "󰑓"
+                tooltip: "Look for new calendars"
+                interactive: !root.listing
+                RotationAnimation on rotation {
+                    running: root.listing
+                    loops: Animation.Infinite
+                    from: 0; to: 360; duration: 900
+                    onStopped: parent.rotation = 0
+                }
+                onClicked: {
+                    root.listing = true
+                    CalendarStore.refreshCalendars(root.account.id, () => root.listing = false)
+                }
+            }
+            IconButton {
+                visible: (headHover.hovered || !root.on) && !root.armed
+                implicitWidth: 22; implicitHeight: 22
+                iconSize: 11
+                icon: "󰐥"
+                tooltip: root.on ? "Switch this account off (stops syncing, keeps the login)" : "Switch this account on"
+                textColor: root.on ? Properties.color : Colors.fade(0.35)
+                onClicked: CalendarStore.setAccount(root.account.id, { enabled: !root.on })
+            }
             IconButton {
                 visible: headHover.hovered || root.armed
                 implicitWidth: 22; implicitHeight: 22
@@ -65,8 +97,20 @@ ColumnLayout {
         }
     }
 
+    Text {
+        visible: !root.on
+        Layout.fillWidth: true
+        Layout.leftMargin: 24
+        Layout.bottomMargin: 2
+        text: "Off — not syncing · " + root.account.calendars.length + (root.account.calendars.length === 1 ? " calendar" : " calendars")
+        color: Colors.fade(0.3)
+        font.pixelSize: 10
+        font.family: Properties.fontFamily
+        elide: Text.ElideRight
+    }
+
     Repeater {
-        model: root.account.calendars
+        model: root.on ? root.account.calendars : []
         Rectangle {
             id: row
             required property var modelData

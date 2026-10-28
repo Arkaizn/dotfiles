@@ -21,6 +21,7 @@ Singleton {
     readonly property string script: Quickshell.shellDir + "/scripts/calendar/calsync.py"
 
     // [{ id, type: caldav|ics|local|graph, name, url, username, (graph: tenant, clientId)
+    //    enabled (false = the whole account switched off: not synced, nothing shown),
     //    calendars: [{ id, href, name, color, readOnly, enabled, notify }] }]
     //    (notify: false = no reminders from that calendar)
     property var accounts: []
@@ -39,6 +40,7 @@ Singleton {
         for (const a of accounts)
             for (const c of a.calendars)
                 out.push(Object.assign({}, c, { accountId: a.id, accountName: a.name, accountType: a.type,
+                                                accountOn: a.enabled !== false,
                                                 readOnly: c.readOnly || a.type === "ics" }))
         return out
     }
@@ -47,8 +49,9 @@ Singleton {
         for (const c of calendars) m[c.id] = c
         return m
     }
-    readonly property var writableCalendars: calendars.filter(c => !c.readOnly)
-    readonly property var visibleEvents: events.filter(e => calendarMap[e.calendar]?.enabled)
+    readonly property var writableCalendars: calendars.filter(c => !c.readOnly && c.accountOn)
+    readonly property var visibleEvents: events.filter(e => calendarMap[e.calendar]?.enabled && calendarMap[e.calendar]?.accountOn)
+    readonly property var activeAccounts: accounts.filter(a => a.enabled !== false)
 
     // dayKey → events touching that day (multi-day events on every day)
     readonly property var byDay: {
@@ -138,15 +141,20 @@ Singleton {
 
     // ── Syncing ──────────────────────────────────────────────────────────────
     property bool syncAgain: false
+    property double lastListCheck: 0      // calendars added / removed on other devices, checked hourly
 
-    function sync() {
+    // lists: also look for calendars made / deleted elsewhere (window opened, "Sync now")
+    function sync(lists) {
         if (root.syncing) { root.syncAgain = true; return }
-        if (root.accounts.length === 0) { root.events = []; root.errors = []; return }
+        if (root.activeAccounts.length === 0) { root.events = []; root.errors = []; return }
         if (root.rangeEnd <= root.rangeStart) setRange(new Date())
         root.syncing = true
+        const checkLists = lists === true || Date.now() - root.lastListCheck > 3600000
+        if (checkLists) root.lastListCheck = Date.now()
         const req = {
             start: root.rangeStart, end: root.rangeEnd,
-            accounts: root.accounts.map(a => Object.assign({}, a, { calendars: a.calendars.filter(c => c.enabled) }))
+            accounts: root.activeAccounts.map(a => Object.assign({}, a, { calendars: a.calendars.filter(c => c.enabled) })),
+            discover: checkLists ? root.activeAccounts.map(a => a.id) : []
         }
         run("sync", req, res => {
             root.syncing = false
@@ -156,6 +164,7 @@ Singleton {
                 root.lastSync = Date.now()
                 saveCache()
                 applyServerColors(res.colors ?? {})
+                applyCalendarLists(res.calendarLists ?? {})
             } else {
                 root.errors = [{ calendar: "", account: "", message: res.error }]
             }
@@ -191,8 +200,19 @@ Singleton {
 
     function newAccountId() { return "acc-" + Date.now().toString(36) }
 
+    // the same login added again (e.g. to get a calendar made on the iPhone): it
+    // goes into the account that's there instead of becoming a second one
+    function sameAccount(form) {
+        const norm = u => String(u || "").trim().toLowerCase().replace(/^webcal:/, "https:").replace(/\/+$/, "")
+        return root.accounts.find(a => a.type === form.type && form.type !== "local" && form.type !== "ics"
+                                       && norm(a.url) === norm(form.url)
+                                       && String(a.username).toLowerCase() === String(form.username || "").trim().toLowerCase())
+    }
+
     // form.id: given when the keyring entry already exists (Microsoft 365 sign-in)
     function addAccount(form, calendars) {
+        const same = sameAccount(form)
+        if (same) { mergeAccount(same, form, calendars); return }
         const id = form.id || newAccountId()
         const used = root.calendars.length
         const acc = {
@@ -256,6 +276,81 @@ Singleton {
 
     function forgetSecret(id) { run("forget-secret", { id: id }, () => {}) }
 
+    function mergeAccount(acc, form, calendars) {
+        const chosen = {}
+        for (const c of calendars) chosen[c.href] = c
+        let used = root.calendars.length
+        const cals = acc.calendars.map(c => chosen[c.href] ? Object.assign({}, c, { enabled: true }) : c)
+        for (const c of calendars)
+            if (!acc.calendars.some(x => x.href === c.href))
+                cals.push({ id: acc.id + "|" + c.href, href: c.href, name: c.name,
+                            color: c.color || root.palette[used++ % root.palette.length],
+                            readOnly: !!c.readOnly, enabled: true })
+        const update = () => {
+            root.accounts = root.accounts.map(a => a.id === acc.id ? Object.assign({}, a, { calendars: cals, enabled: true }) : a)
+            saveAccounts()
+            sync()
+        }
+        // a new password replaces the old one; Microsoft's new tokens aren't needed
+        if (form.type === "graph" && form.id) forgetSecret(form.id)
+        if (form.password)
+            run("store-secret", { id: acc.id, label: "Quickshell calendar: " + acc.name, password: form.password }, res => {
+                if (res.ok) update()
+                else root.lastError = res.error
+            })
+        else update()
+    }
+
+    // calendars made / deleted on another device: the new ones show up, gone ones go
+    function applyCalendarLists(lists) {
+        let changed = false
+        let used = root.calendars.length
+        const accs = root.accounts.map(a => {
+            const list = lists[a.id]
+            if (!list || list.length === 0) return a
+            const hrefs = list.map(c => c.href)
+            const kept = a.calendars.filter(c => hrefs.includes(c.href)).map(c => {
+                const s = list.find(x => x.href === c.href)
+                if (s.name === c.name && !!s.readOnly === !!c.readOnly) return c
+                changed = true
+                return Object.assign({}, c, { name: s.name, readOnly: !!s.readOnly })
+            })
+            const added = list.filter(s => !a.calendars.some(c => c.href === s.href)).map(s => ({
+                id: a.id + "|" + s.href, href: s.href, name: s.name,
+                color: s.color || root.palette[used++ % root.palette.length],
+                readOnly: !!s.readOnly, enabled: a.autoAdd !== false
+            }))
+            if (added.length === 0 && kept.length === a.calendars.length) return a
+            changed = true
+            return Object.assign({}, a, { calendars: kept.concat(added) })
+        })
+        if (!changed) return
+        root.accounts = accs
+        root.events = root.events.filter(e => root.calendarMap[e.calendar])
+        saveAccounts()
+        saveCache()
+        sync()
+    }
+
+    // look for new calendars on that account right now (sidebar menu)
+    function refreshCalendars(id, done) {
+        const acc = root.accounts.find(a => a.id === id)
+        if (!acc) return
+        run("rediscover", { account: acc }, res => {
+            if (res.ok) { const l = {}; l[id] = res.calendars; applyCalendarLists(l) }
+            else root.lastError = acc.name + ": " + res.error
+            if (done) done(res)
+        })
+    }
+
+    // the whole account on / off; its setup (and keyring login) stays
+    function setAccount(id, patch) {
+        root.accounts = root.accounts.map(a => a.id === id ? Object.assign({}, a, patch) : a)
+        saveAccounts()
+        if (patch.enabled === true) sync(true)
+        else if (patch.enabled === false) root.errors = root.errors.filter(e => !e.calendar.startsWith(id + "|"))
+    }
+
     function removeAccount(id) {
         run("forget-secret", { id: id }, () => {})
         root.accounts = root.accounts.filter(a => a.id !== id)
@@ -310,13 +405,13 @@ Singleton {
     Timer {
         interval: root.syncMinutes * 60000
         repeat: true
-        running: root.accounts.length > 0
+        running: root.activeAccounts.length > 0
         onTriggered: { root.ensureRange(new Date()); root.sync() }
     }
     // first sync a little after startup
     Timer {
         interval: 8000
-        running: root.accounts.length > 0
+        running: root.activeAccounts.length > 0
         onTriggered: { root.ensureRange(new Date()); root.sync() }
     }
 
@@ -368,7 +463,7 @@ Singleton {
     Timer {
         interval: 20000
         repeat: true
-        running: root.accounts.length > 0
+        running: root.activeAccounts.length > 0
         onTriggered: root.checkReminders()
     }
 
@@ -417,6 +512,57 @@ Singleton {
         const moved = Object.assign({}, ev, { start: start, end: end, scope: scope || "all" })
         root.events = root.events.map(e => e.id === ev.id ? moved : e)
         saveEvent(moved, ev.calendar, res => { if (!res.ok) sync() })
+    }
+
+    // ── Importing .ics files ─────────────────────────────────────────────────
+    // readImport(paths, done) → done({ ok, sources, total, upcoming, recurring, first, last, preview, errors })
+    function readImport(paths, done) {
+        root.working = true
+        run("import-read", { paths: paths }, res => { root.working = false; done(res) })
+    }
+
+    // opts: { paths, calendar (id) | newCalendars: true, names, duplicates, upcomingOnly, alarms }
+    // onProgress(done, total); done({ ok, imported, replaced, skipped, failed, created, newCalendars })
+    // Beside the queue (big imports take a while), like the Microsoft sign-in.
+    function importFiles(opts, onProgress, done) {
+        const target = opts.newCalendars ? { new: true, names: opts.names ?? {} }
+                                         : { account: accountOf(opts.calendar), calendar: calendarOf(opts.calendar) }
+        let answered = false
+        Jobs.start("calendar-import", ["python3", root.script, "import"], {
+            env: { CAL_REQUEST: JSON.stringify({ paths: opts.paths, target: target, duplicates: opts.duplicates,
+                                                 upcomingOnly: opts.upcomingOnly, alarms: opts.alarms }) },
+            store: false, timeout: 30 * 60000,
+            onLine: (line, isErr) => {
+                if (isErr) return
+                let msg
+                try { msg = JSON.parse(line) } catch (e) { return }
+                if (msg.step === "progress") { onProgress(msg.done, msg.total); return }
+                answered = true
+                if (msg.ok) {
+                    // new local calendars: one account each, like a local calendar added by hand
+                    for (const c of msg.newCalendars ?? [])
+                        addAccount({ type: "local", name: c.name, url: c.href }, [c])
+                    if (!(msg.newCalendars ?? []).length) sync()
+                }
+                done(msg)
+            },
+            onExit: code => {
+                if (!answered) done({ ok: false, error: Jobs.state("calendar-import").cancelled ? "Stopped"
+                                                       : "calendar helper failed (exit " + code + ")" })
+            }
+        })
+    }
+
+    function cancelImport() { Jobs.cancel("calendar-import") }
+
+    // takes the imported events out again (only ones that were new, not replaced)
+    function undoImport(calId, created, done) {
+        root.working = true
+        run("import-undo", { account: accountOf(calId), calendar: calendarOf(calId), created: created }, res => {
+            root.working = false
+            if (res.ok) sync()
+            done(res)
+        })
     }
 
     function deleteEvent(ev, onlyThis, done) {

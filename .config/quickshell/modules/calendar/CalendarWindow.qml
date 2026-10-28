@@ -14,7 +14,8 @@ import "CalUtil.js" as U
 // scripts/calendar/calsync.py.
 //
 // Open it with:  qs ipc call calendar toggle   (or the "Calendar" launcher entry)
-// Keys: ←/→ previous/next · T today · N new event · 1-4 day/week/month/agenda
+// Keys: ←/→ previous/next · T today · N new event · I import · 1-4 day/week/month/agenda
+// .ics files: drop them on the window, or  qs ipc call calendar importFile <path>
 Scope {
     id: root
 
@@ -52,6 +53,12 @@ Scope {
         if (!root.open) root.resetView()
         root.show()
     }
+    // import dialog for that .ics file (file managers: the .desktop entry's MimeType)
+    function importPath(path) {
+        if (path) root.pendingImport = [path]
+        if (!root.open) root.resetView()
+        root.show()
+    }
     function switchView(view) {
         if (["day", "week", "month", "agenda"].includes(view)) root.view = view
         root.show()
@@ -64,7 +71,8 @@ Scope {
         openDate: date => root.goToDate(date),
         newEvent: date => root.newEventOn(date),
         showEvent: id => root.showEventId(id),
-        setView: view => root.switchView(view)
+        setView: view => root.switchView(view),
+        importFile: path => root.importPath(path)
     })
     Component.onCompleted: Panels.register("calendar", api)
     Component.onDestruction: Panels.unregister("calendar", api)
@@ -80,6 +88,7 @@ Scope {
         function newEvent(date: string): void { root.newEventOn(date) }
         function showEvent(id: string): void { root.showEventId(id) }
         function setView(view: string): void { root.switchView(view) }
+        function importFile(path: string): void { root.importPath(path) }
     }
 
     readonly property string windowTitle: "Quickshell Calendar"
@@ -99,6 +108,7 @@ Scope {
     property var jumpTo: null
     property bool pendingNew: false        // then open the editor there
     property string pendingEvent: ""       // then show that event
+    property var pendingImport: []         // then open the import dialog for these files
 
     function parseDay(s) {
         const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
@@ -127,6 +137,7 @@ Scope {
                 function onJumpToChanged() { Qt.callLater(win.takePending) }
                 function onPendingNewChanged() { Qt.callLater(win.takePending) }
                 function onPendingEventChanged() { Qt.callLater(win.takePending) }
+                function onPendingImportChanged() { Qt.callLater(win.takePending) }
             }
 
             function takePending() {
@@ -137,6 +148,12 @@ Scope {
                     root.pendingEvent = ""
                     eventDialog.shake()
                     return
+                }
+                if (root.pendingImport.length > 0) {
+                    const p = root.pendingImport
+                    root.pendingImport = []
+                    if (eventDialog.shown && eventDialog.editing) eventDialog.shake()
+                    else { eventDialog.close(); accountDialog.close(); importDialog.openFiles(p) }
                 }
                 if (root.jumpTo) { cursor = root.jumpTo; root.jumpTo = null }
                 if (root.pendingNew) { root.pendingNew = false; newEvent() }
@@ -150,7 +167,7 @@ Scope {
             Component.onCompleted: {
                 Qt.callLater(takePending)       // once the dialogs exist
                 CalendarStore.ensureRange(cursor)
-                if (Date.now() - CalendarStore.lastSync > 60000) CalendarStore.sync()
+                if (Date.now() - CalendarStore.lastSync > 60000) CalendarStore.sync(true)
                 keys.forceActiveFocus()
             }
 
@@ -271,12 +288,13 @@ Scope {
                     id: keys
                     focus: true
                     Keys.onPressed: event => {
-                        if (eventDialog.shown || accountDialog.shown || calSettings.shown || scopeDialog.shown) return
+                        if (eventDialog.shown || accountDialog.shown || calSettings.shown || scopeDialog.shown || importDialog.shown) return
                         switch (event.key) {
                         case Qt.Key_Left: win.step(-1); break
                         case Qt.Key_Right: win.step(1); break
                         case Qt.Key_T: win.goToday(); break
                         case Qt.Key_N: win.newEvent(); break
+                        case Qt.Key_I: importDialog.pick(); break
                         case Qt.Key_1: win.backTo = ""; root.view = "day"; break
                         case Qt.Key_2: win.backTo = ""; root.view = "week"; break
                         case Qt.Key_3: win.backTo = ""; root.view = "month"; break
@@ -386,6 +404,13 @@ Scope {
                                 IconButton {
                                     implicitWidth: 24; implicitHeight: 24
                                     iconSize: 12
+                                    icon: "󰋺"
+                                    tooltip: "Import .ics file  (I)"
+                                    onClicked: importDialog.pick()
+                                }
+                                IconButton {
+                                    implicitWidth: 24; implicitHeight: 24
+                                    iconSize: 12
                                     icon: "󰐕"
                                     tooltip: "Add account"
                                     onClicked: accountDialog.start()
@@ -418,16 +443,24 @@ Scope {
                                         Text {
                                             Layout.fillWidth: true
                                             Layout.leftMargin: 4
-                                            text: "No calendars yet. Add iCloud, a CalDAV server, a Google / Outlook link or a local calendar."
+                                            text: "No calendars yet. Add iCloud, a CalDAV server, a Google / Outlook link or a local calendar — or import an .ics export."
                                             color: Colors.fade(0.45)
                                             font.pixelSize: 11
                                             font.family: Properties.fontFamily
                                             wrapMode: Text.WordWrap
                                         }
-                                        ActionButton {
-                                            icon: "󰐕"
-                                            text: "Add account"
-                                            onClicked: accountDialog.start()
+                                        RowLayout {
+                                            spacing: 6
+                                            ActionButton {
+                                                icon: "󰐕"
+                                                text: "Add account"
+                                                onClicked: accountDialog.start()
+                                            }
+                                            ActionButton {
+                                                icon: "󰋺"
+                                                text: "Import"
+                                                onClicked: importDialog.pick()
+                                            }
                                         }
                                     }
 
@@ -466,14 +499,14 @@ Scope {
                                     iconSize: 12
                                     icon: "󰑐"
                                     tooltip: "Sync now"
-                                    interactive: !CalendarStore.syncing && CalendarStore.accounts.length > 0
+                                    interactive: !CalendarStore.syncing && CalendarStore.activeAccounts.length > 0
                                     rotation: CalendarStore.syncing ? 360 : 0
                                     RotationAnimation on rotation {
                                         running: CalendarStore.syncing
                                         loops: Animation.Infinite
                                         from: 0; to: 360; duration: 900
                                     }
-                                    onClicked: CalendarStore.sync()
+                                    onClicked: CalendarStore.sync(true)
                                 }
                             }
                         }
@@ -596,11 +629,62 @@ Scope {
                 AccountDialog { id: accountDialog; onClosed: keys.forceActiveFocus() }
                 CalendarSettings { id: calSettings; onClosed: keys.forceActiveFocus() }
                 ScopeDialog { id: scopeDialog; onClosed: keys.forceActiveFocus() }
+                ImportDialog {
+                    id: importDialog
+                    onClosed: keys.forceActiveFocus()
+                    onShowDate: d => { win.cursor = d; if (root.view === "month") viewLoader.item.showMonth(d, false) }
+                }
+
+                // drop .ics files (Apple / Google / Outlook exports, invites) anywhere on the window
+                DropArea {
+                    id: drop
+                    anchors.fill: parent
+                    keys: ["text/uri-list"]
+                    onEntered: drag => drag.accepted = drag.hasUrls
+                    onDropped: drop => {
+                        const p = drop.urls.map(u => String(u)).filter(u => u.startsWith("file://"))
+                        if (p.length > 0) { root.pendingImport = p; drop.accept() }
+                    }
+                }
+                DropZone {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    radius: Math.max(6, Compositor.appRadius - 4)
+                    shown: drop.containsDrag
+                    hot: true
+                    z: 200
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 6
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: "󰋺"
+                            color: Colors.color6
+                            font.pixelSize: 40
+                            font.family: Properties.fontFamily
+                        }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: "Drop to import"
+                            color: Colors.ink
+                            font.pixelSize: 16
+                            font.bold: true
+                            font.family: Properties.fontFamily
+                        }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: ".ics exports from Apple Calendar, Google, Outlook, … or a single invite"
+                            color: Colors.fade(0.55)
+                            font.pixelSize: 11
+                            font.family: Properties.fontFamily
+                        }
+                    }
+                }
 
                 // writing errors that happen outside a dialog (e.g. keyring)
                 Rectangle {
                     anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
-                    visible: CalendarStore.lastError !== "" && !eventDialog.shown && !accountDialog.shown && !calSettings.shown
+                    visible: CalendarStore.lastError !== "" && !eventDialog.shown && !accountDialog.shown && !calSettings.shown && !importDialog.shown
                     width: Math.min(errText.implicitWidth + 50, parent.width - 80)
                     height: 40
                     radius: 20
