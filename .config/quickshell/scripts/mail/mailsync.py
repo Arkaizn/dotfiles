@@ -957,7 +957,15 @@ class Imap:
             out.append({"path": path, "name": path.split(f["delim"])[-1] if f["delim"] else path,
                         "delim": f["delim"], "role": role_of(path, f["flags"]),
                         "depth": path.count(f["delim"]) if f["delim"] else 0})
-        out.sort(key=lambda f: (ROLE_ORDER.index(f["role"]) if f["role"] in ROLE_ORDER else 99, f["path"].lower()))
+        # special folders first, then by name; a subfolder right under its parent
+        rank = {f["path"]: ROLE_ORDER.index(f["role"]) if f["role"] in ROLE_ORDER else 99 for f in out}
+
+        def key(f):
+            if not f["delim"]:
+                return [(rank[f["path"]], f["path"].lower())]
+            parts = f["path"].split(f["delim"])
+            return [(rank.get(p, 99), p.lower()) for p in (f["delim"].join(parts[:i + 1]) for i in range(len(parts)))]
+        out.sort(key=key)
         return out
 
     def status(self, path):
@@ -1148,6 +1156,38 @@ def folders(req):
         for f in fl:
             f["total"], f["unread"] = im.status(f["path"])
         return {"folders": fl}
+
+
+def create_folder(req):
+    """A new folder: name (one level), inside parent ("" = top level). Answers the new
+    path and the account's folder list as it is now on the server."""
+    name = str(req.get("name") or "").strip()
+    parent = str(req.get("parent") or "")
+    if not name:
+        raise MailError("The folder needs a name")
+    if len(name) > 200 or any(ord(ch) < 32 or ord(ch) == 127 for ch in name):
+        raise MailError("That name can't be used for a folder")
+    with Imap(req["account"], req) as im:
+        fl = im.folders()
+        delim = next((f["delim"] for f in fl if f["path"] == parent), "") if parent else ""
+        delim = delim or next((f["delim"] for f in fl if f["delim"]), "/")
+        if delim in name:
+            raise MailError(f"A folder name can't contain {delim!r}")
+        if parent and not any(f["path"] == parent for f in fl):
+            raise MailError("The folder to put it in is gone")
+        path = parent + delim + name if parent else name
+        # Gmail etc. keep top-level folders next to INBOX, some servers only inside it
+        if any(f["path"].lower() == path.lower() for f in fl):
+            raise MailError(f"There is already a folder {name!r}")
+        im.ok(*im.c.create(quote_box(path)), "CREATE")
+        try:
+            im.c.subscribe(quote_box(path))
+        except Exception:
+            pass             # not every server keeps subscriptions; the folder is there anyway
+        fl = im.folders()
+        for f in fl:
+            f["total"], f["unread"] = im.status(f["path"])
+        return {"path": path, "folders": fl}
 
 
 def test_login(req):
@@ -1923,7 +1963,7 @@ def invite(req):
 COMMANDS = {
     "autoconfig": autoconfig, "test": test_login, "folders": folders, "sync": sync, "body": body,
     "attachment": attachment, "view": view, "export": export_accounts, "import-read": import_read,
-    "import": import_accounts, "invite": invite, "flags": flags, "move": move, "delete": delete, "search": search, "send": send,
+    "import": import_accounts, "invite": invite, "flags": flags, "move": move, "create-folder": create_folder, "delete": delete, "search": search, "send": send,
     "store-secret": lambda r: (secret_store(r["id"], r.get("label") or "Quickshell mail", r["password"]), {})[1],
     "forget-secret": lambda r: (secret_clear(r["id"]), {})[1],
 }

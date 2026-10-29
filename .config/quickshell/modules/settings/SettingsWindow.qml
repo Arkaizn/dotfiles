@@ -402,7 +402,9 @@ Scope {
                   desc: "Under the message; PDFs, images and text open in the built-in viewer" },
                 { key: "saveDir", type: "string", def: "~/Downloads", label: "Save attachments to" },
                 { key: "listWidth", type: "int", def: 380, min: 260, max: 720, label: "Message list width (px)",
-                  desc: "Or drag the line between the list and the message in the app; a double-click there resets it" } ] },
+                  desc: "Or drag the line between the list and the message in the app; a double-click there resets it" },
+                { key: "sidebarWidth", type: "int", def: 230, min: 180, max: 400, label: "Folder list width (px)",
+                  desc: "The sidebar with the accounts and folders; or drag the line right of it in the app" } ] },
             { title: "Favorites", items: [
                 { key: "favInbox", type: "bool", def: true, label: "All inboxes", desc: "At the top of the mail app's sidebar" },
                 { key: "favUnread", type: "bool", def: true, label: "Unread", desc: "Unread messages of all inboxes" },

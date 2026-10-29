@@ -13,16 +13,18 @@ Flickable {
     property string view: "unified:inbox"
     signal picked(string view)
     signal accountMenu(string id)
+    signal newFolder(string account, string parent)     // ＋ on an account, right-click on a folder
 
     contentHeight: col.implicitHeight
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-    ScrollBar.vertical: CalScrollBar {}
+    ScrollBar.vertical: CalScrollBar { id: bar }
     SmoothWheel { flick: root; step: 100 }       // like the settings app's page list
 
     ColumnLayout {
         id: col
-        width: root.width
+        // room for the scrollbar when there is one: it would cover the counts and the pin
+        width: root.width - (bar.visible ? bar.width - 2 : 0)
         spacing: 1
 
         Label { text: "FAVORITES" }
@@ -108,6 +110,16 @@ Flickable {
                             ToolTip.visible: errHover.hovered
                             ToolTip.text: acc.error
                         }
+                        // a new folder in this account
+                        IconButton {
+                            implicitWidth: 20; implicitHeight: 20; iconSize: 11
+                            visible: acc.on
+                            opacity: accHover.hovered ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: 120 } }
+                            icon: I.plus
+                            tooltip: "New folder"
+                            onClicked: root.newFolder(acc.modelData.id, "")
+                        }
                         Text {
                             text: acc.collapsed ? I.right : I.down
                             color: Colors.fade(accHover.hovered ? 0.5 : 0)
@@ -116,6 +128,7 @@ Flickable {
                         }
                     }
                     MouseArea {
+                        z: -1                         // under the ＋ button
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -146,6 +159,7 @@ Flickable {
                         pinnable: true
                         pinned: MailStore.isPinned(acc.modelData.id, modelData.path)
                         onPinToggled: MailStore.togglePin(acc.modelData.id, modelData.path)
+                        onContext: root.newFolder(acc.modelData.id, modelData.path)
                     }
                 }
             }
@@ -177,12 +191,15 @@ Flickable {
         property bool pinned: false
         signal activated()
         signal pinToggled()
+        signal context()                      // right-click (a folder: a new folder inside it)
         Layout.fillWidth: true
         implicitHeight: 30
         radius: 8
         color: current ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16)
-             : eHover.hovered ? Colors.fade(0.06) : "transparent"
+             : e.hovered ? Colors.fade(0.06) : "transparent"
         HoverHandler { id: eHover }
+        // the row, its pin and the area right of the pin all count as hovering the row
+        readonly property bool hovered: eHover.hovered || eMouse.containsMouse || pinHover.containsMouse
         Behavior on color { ColorAnimation { duration: 100 } }
         RowLayout {
             anchors.fill: parent
@@ -215,7 +232,7 @@ Flickable {
             }
             // pin to the favorites / unpin (on hover)
             Text {
-                visible: e.pinnable && eHover.hovered
+                visible: e.pinnable && e.hovered
                 text: e.pinned ? "󰤰" : "󰐃"
                 color: pinHover.containsMouse ? Colors.color6 : Colors.fade(0.5)
                 font.pixelSize: 12
@@ -225,6 +242,7 @@ Flickable {
                     id: pinHover
                     anchors.fill: parent
                     anchors.margins: -4
+                    anchors.rightMargin: -8              // up to the row's edge
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: e.pinToggled()
@@ -234,7 +252,8 @@ Flickable {
                 ToolTip.delay: 400
             }
             Text {
-                visible: e.count > 0 && !(e.pinnable && eHover.hovered)
+                visible: e.count > 0 && !(e.pinnable && e.hovered)
+                Layout.leftMargin: 4
                 text: e.count > 999 ? "999+" : e.count
                 color: e.muted ? Colors.fade(0.45) : Colors.color6
                 font.pixelSize: 11
@@ -248,7 +267,8 @@ Flickable {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: e.activated()
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: m => m.button === Qt.RightButton ? e.context() : e.activated()
         }
     }
 }

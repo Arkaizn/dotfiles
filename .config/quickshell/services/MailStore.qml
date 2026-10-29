@@ -190,7 +190,8 @@ Singleton {
     // same request asked twice (a message opened again while loading) runs once.
     readonly property var timeouts: ({ "sync": 240, "body": 60, "view": 150, "attachment": 120, "send": 150, "invite": 90,
                                        "search": 90, "flags": 45, "move": 60, "delete": 60, "autoconfig": 40, "test": 60,
-                                       "store-secret": 40, "forget-secret": 30, "export": 90, "import-read": 60, "import": 90 })
+                                       "store-secret": 40, "forget-secret": 30, "export": 90, "import-read": 60, "import": 90,
+                                       "create-folder": 45 })
     component Lane: QtObject {
         id: lane
         property var queue: []
@@ -290,6 +291,17 @@ Singleton {
         root.accounts = root.accounts.map(a => a.id === id ? Object.assign({}, a, patch) : a)
         saveAccounts()
         if (patch.enabled === true) check()
+    }
+
+    // a new folder on the server: name (one level) inside parent ("" = top level);
+    // done({ ok, path, error }) — the account's folder list is the server's one after it
+    function createFolder(accId, name, parent, done) {
+        const acc = root.accountMap[accId]
+        if (!acc) return done({ ok: false, error: "No such account" })
+        actLane.run("create-folder", { account: wire(acc), name: name, parent: parent }, res => {
+            if (res.ok) setAccount(accId, { folders: res.folders })
+            done(res)
+        })
     }
 
     function removeAccount(id) {
@@ -606,7 +618,7 @@ Singleton {
     // ── Undo (archive / delete / move) ───────────────────────────────────────
     // The messages go away at once; the server only gets the change after a few
     // seconds (Settings: mail → undo), so "Undo" just puts them back.
-    property var undoable: null              // { label, ids, commits: [fn] }
+    property var undoable: null              // { label, ids, commits: [fn], restore: fn (optional) }
     Timer { id: undoTimer; onTriggered: root.flushUndo() }
     function later(label, ids, commits) {
         patchLocal(ids, { gone: true })
@@ -626,7 +638,7 @@ Singleton {
         undoTimer.stop()
         const u = root.undoable
         root.undoable = null
-        if (u) settle(u.ids, false)
+        if (u) { settle(u.ids, false); if (u.restore) u.restore() }
     }
 
     function count(n) { return n + (n === 1 ? " message" : " messages") }
@@ -809,6 +821,19 @@ Singleton {
         const i = root.drafts.findIndex(x => x.id === d.id)
         root.drafts = i >= 0 ? root.drafts.map(x => x.id === d.id ? d : x) : root.drafts.concat([d])
         saveDrafts()
+    }
+    // several unsent drafts at once (the mail list's selection), with Undo
+    function dropDrafts(ids) {
+        const gone = root.drafts.filter(x => ids.includes(x.id))
+        if (gone.length === 0) return
+        root.drafts = root.drafts.filter(x => !ids.includes(x.id))
+        saveDrafts()
+        if (root.undoSeconds <= 0) return
+        flushUndo()
+        root.undoable = { label: "Deleted " + gone.length + (gone.length === 1 ? " draft" : " drafts"), ids: [], commits: [],
+                          restore: () => { root.drafts = root.drafts.concat(gone); saveDrafts() } }
+        undoTimer.interval = root.undoSeconds * 1000
+        undoTimer.restart()
     }
     function dropDraft(id) {
         root.drafts = root.drafts.filter(x => x.id !== id)

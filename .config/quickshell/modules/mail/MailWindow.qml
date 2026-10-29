@@ -155,17 +155,24 @@ Scope {
                     id: keys
                     focus: true
                     Keys.onPressed: event => {
-                        if (composer.shown || accountDialog.shown || settingsDialog.shown || viewer.shown || transfer.shown) return
+                        if (composer.shown || accountDialog.shown || folderDialog.shown || settingsDialog.shown || viewer.shown || transfer.shown) return
                         const ctrl = event.modifiers & Qt.ControlModifier, shift = event.modifiers & Qt.ShiftModifier
                         if (ctrl) {
                             if (event.key === Qt.Key_Z) MailStore.undo()
                             else if (event.key === Qt.Key_N) composer.compose("")
                             else if (event.key === Qt.Key_F) list.focusSearch()
+                            else if (event.key === Qt.Key_A) list.pickAll()
                             else if (event.key === Qt.Key_R && shift) { if (win.latest()) composer.reply(win.latest(), true) }
                             else if (event.key === Qt.Key_R) { if (win.latest()) composer.reply(win.latest(), false) }
                             else return
                             event.accepted = true
                             return
+                        }
+                        // several rows picked: the keys act on all of them
+                        if (list.pickedRows.length > 0) {
+                            const a = ({ [Qt.Key_A]: "archive", [Qt.Key_J]: "junk", [Qt.Key_Delete]: "delete", [Qt.Key_M]: "read", [Qt.Key_S]: "star" })[event.key]
+                            if (a) { list.batch(a); event.accepted = true; return }
+                            if (event.key === Qt.Key_Escape) { list.clearPicks(); event.accepted = true; return }
                         }
                         switch (event.key) {
                         case Qt.Key_Down: list.step(1); break
@@ -193,8 +200,12 @@ Scope {
                     spacing: 14
 
                     // ── Sidebar ──
+                    // its width: dragged on the line between it and the list (Settings.mail.sidebarWidth)
                     Rectangle {
-                        Layout.preferredWidth: bg.width < 1150 ? 210 : 250
+                        id: side
+                        property real dragWidth: -1
+                        readonly property real savedWidth: Settings.mail.sidebarWidth ?? 230
+                        Layout.preferredWidth: Math.max(180, Math.min(dragWidth >= 0 ? dragWidth : savedWidth, 400))
                         Layout.fillHeight: true
                         radius: Math.max(6, Compositor.appRadius - 2)
                         color: Colors.card
@@ -245,6 +256,7 @@ Scope {
                                 view: root.view
                                 onPicked: v => root.view = v
                                 onAccountMenu: id => accountDialog.edit(MailStore.accountMap[id])
+                                onNewFolder: (acc, parent) => folderDialog.start(acc, parent)
                             }
 
                             RowLayout {
@@ -291,6 +303,40 @@ Scope {
                         }
                     }
 
+                    // the line between sidebar and list: drag it to resize, double-click resets
+                    Item {
+                        Layout.fillHeight: true
+                        Layout.preferredWidth: 6
+                        Layout.leftMargin: -10
+                        Layout.rightMargin: -10
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 3
+                            height: 48
+                            radius: 1.5
+                            color: Colors.fade(sideSplit.pressed ? 0.7 : sideSplit.containsMouse ? 0.45 : 0)
+                            Behavior on color { ColorAnimation { duration: 140 } }
+                        }
+                        MouseArea {
+                            id: sideSplit
+                            anchors.fill: parent
+                            anchors.leftMargin: -4
+                            anchors.rightMargin: -4
+                            hoverEnabled: true
+                            preventStealing: true
+                            cursorShape: Qt.SizeHorCursor
+                            property real startX: 0
+                            property real startW: 0
+                            onPressed: m => { startX = mapToItem(null, m.x, 0).x; startW = side.width }
+                            onPositionChanged: m => { if (pressed) side.dragWidth = Math.max(180, Math.min(400, startW + mapToItem(null, m.x, 0).x - startX)) }
+                            onReleased: {
+                                if (side.dragWidth >= 0) Settings.set("mail", "sidebarWidth", Math.round(side.dragWidth))
+                                side.dragWidth = -1
+                            }
+                            onDoubleClicked: { side.dragWidth = -1; Settings.set("mail", "sidebarWidth", 230) }
+                        }
+                    }
+
                     // ── Messages ──
                     // the list's width: dragged on the line between it and the message (Settings.mail.listWidth)
                     MessageList {
@@ -306,6 +352,7 @@ Scope {
                         selected: win.row?.key ?? ""
                         onOpened: r => { win.row = r; keys.forceActiveFocus() }
                         onDraftOpened: d => composer.openDraft(d)
+                        onPickedGone: ks => { if (win.row && ks.includes(win.row.key)) { win.row = null; list.selected = "" } }
                     }
 
                     // the line between list and message: drag it to resize, double-click resets
@@ -412,6 +459,7 @@ Scope {
                 Viewer { id: viewer; onShownChanged: if (!shown) keys.forceActiveFocus() }
                 AccountTransfer { id: transfer; onClosed: keys.forceActiveFocus() }
                 AccountDialog { id: accountDialog; onClosed: keys.forceActiveFocus() }
+                FolderDialog { id: folderDialog; onClosed: keys.forceActiveFocus(); onCreated: v => root.view = v }
                 MailSettings {
                     id: settingsDialog
                     onClosed: keys.forceActiveFocus()

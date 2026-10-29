@@ -31,25 +31,64 @@ RowLayout {
     readonly property var sizes: ({ small: 12, normal: 14, large: 18, huge: 24 })
     readonly property var families: ({ sans: "Noto Sans", serif: "Noto Serif", mono: "Noto Sans Mono" })
 
+    // with nothing selected a change is kept for what's typed next ("pending"; Qt
+    // drops a format set on a bare cursor) and put on those letters once they're in
+    property var pending: null              // { pos, len, changes: [f => …], color }
     function refresh() {
         if (!editor) return
         const f = editor.cursorSelection.font
+        if (pending) pending.changes.forEach(c => c(f))
         bold = f.bold; italic = f.italic; underline = f.underline; strikeout = f.strikeout
         const px = f.pixelSize > 0 ? f.pixelSize : Math.round(f.pointSize * 4 / 3)
         size = Object.keys(sizes).reduce((best, k) => Math.abs(sizes[k] - px) < Math.abs(sizes[best] - px) ? k : best, "normal")
         family = Object.keys(families).find(k => families[k] === f.family) ?? "sans"
     }
+    function hasSelection() { return editor.selectionStart !== editor.selectionEnd }
+    function queue(change, color) {
+        if (!pending) pending = { pos: editor.cursorPosition, len: editor.length, changes: [], color: "" }
+        if (change) pending.changes.push(change)
+        if (color) pending.color = color
+        editor.forceActiveFocus()
+        refresh()
+    }
+    function applyPending() {
+        const p = pending
+        pending = null
+        if (!p) return
+        const a = p.pos, b = editor.cursorPosition
+        if (b > a) {
+            editor.select(a, b)
+            const f = editor.cursorSelection.font
+            p.changes.forEach(c => c(f))
+            editor.cursorSelection.font = f
+            if (p.color) editor.cursorSelection.color = p.color
+            editor.cursorPosition = b
+        }
+        refresh()
+    }
+    Connections {
+        target: root.editor
+        // typed: the new letters get the kept format; moved away without typing: dropped
+        function onLengthChanged() { if (root.pending && root.editor.length > root.pending.len) Qt.callLater(root.applyPending) }
+        function onCursorPositionChanged() {
+            if (root.pending && root.editor.length === root.pending.len && root.editor.cursorPosition !== root.pending.pos) { root.pending = null; root.refresh() }
+        }
+    }
     function setFont(change) {
+        if (!hasSelection()) return queue(change, "")
         const f = editor.cursorSelection.font
         change(f)
         editor.cursorSelection.font = f
         editor.forceActiveFocus()
         refresh()
     }
-    function toggle(p) { setFont(f => f[p] = !f[p]) }
+    function toggle(p) { const v = !root[p]; setFont(f => f[p] = v) }
     function setSize(k) { setFont(f => f.pixelSize = sizes[k]) }
     function setFamily(k) { setFont(f => f.family = families[k]) }
-    function setColor(c) { editor.cursorSelection.color = c; editor.forceActiveFocus() }
+    function setColor(c) {
+        if (!hasSelection()) return queue(null, c)
+        editor.cursorSelection.color = c; editor.forceActiveFocus()
+    }
 
     // ── whole lines: lists, quote ──
     function plain() { return editor.getText(0, editor.length).replace(/[\u2028\u2029]/g, "\n") }

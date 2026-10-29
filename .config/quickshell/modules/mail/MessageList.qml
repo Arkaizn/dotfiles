@@ -9,7 +9,8 @@ import "MailIcons.js" as I
 
 // The middle column: folder title, quick filter bar (search + unread / starred /
 // attachments), and the messages: as conversations or one by one, under day headers.
-// Hovering a row shows archive / delete / read / star.
+// Hovering a row shows archive / delete / read / star. Ctrl+click picks several
+// rows (Shift+click: a range, Ctrl+A: all): a bar at the bottom acts on all of them.
 ColumnLayout {
     id: root
 
@@ -18,6 +19,7 @@ ColumnLayout {
     property string selected: ""            // row key (conversation or message id)
     signal opened(var row)                  // { key, msgs, … } or a draft { draft }
     signal draftOpened(var draft)
+    signal pickedGone(var keys)             // picked rows moved / deleted (the window closes the open one)
 
     property alias query: search.text
     property bool fUnread: false
@@ -29,7 +31,7 @@ ColumnLayout {
 
     function focusSearch() { search.forceActiveFocus(); search.selectAll() }
     function clearFilter() { search.text = ""; fUnread = false; fFlagged = false; fAttachments = false; serverNote = "" }
-    onViewChanged: { clearFilter(); list.positionViewAtBeginning(); Qt.callLater(enter) }
+    onViewChanged: { clearFilter(); clearPicks(); list.positionViewAtBeginning(); Qt.callLater(enter) }
     // another folder: its first rows come in one after another (like a settings page)
     function enter() {
         for (const c of list.contentItem.children)
@@ -77,6 +79,57 @@ ColumnLayout {
             if (r.unread > 0) { open(r); return }
         }
     }
+    // ── several rows picked (row key → true) ──
+    property var picked: ({})
+    property string anchorKey: ""           // where a Shift+click range starts
+    readonly property var pickedRows: rows.filter(r => picked[r.key])
+    readonly property var pickedDrafts: pickedRows.filter(r => r.draft).map(r => r.draft.id)
+    readonly property var pickedMsgs: pickedRows.filter(r => !r.draft).reduce((a, r) => a.concat(r.msgs.map(m => MailStore.byId[m.id] ?? m)), [])
+    readonly property var pickedAccounts: [...new Set(pickedMsgs.map(m => m.account))]
+    function clearPicks() { picked = ({}); anchorKey = "" }
+    function pickToggle(r) {
+        const p = Object.assign({}, picked)
+        // the first Ctrl+click also takes the open row along
+        if (Object.keys(p).length === 0 && selected && selected !== r.key && keys.includes(selected)) p[selected] = true
+        if (p[r.key]) delete p[r.key]
+        else p[r.key] = true
+        picked = p
+        anchorKey = r.key
+    }
+    function pickRange(r) {
+        const a = keys.indexOf(anchorKey || selected), b = keys.indexOf(r.key)
+        if (a < 0) return pickToggle(r)
+        const p = Object.assign({}, picked)
+        for (let i = Math.min(a, b); i <= Math.max(a, b); i++) p[keys[i]] = true
+        picked = p
+    }
+    function pickAll() {
+        const p = {}
+        for (const r of rows) p[r.key] = true
+        picked = p
+    }
+    // action: read | star | archive | junk | inbox | delete | move (arg: the folder path)
+    // unsent drafts (on this computer) can only be deleted
+    function batch(action, arg) {
+        const l = pickedMsgs
+        if (action === "delete" && pickedDrafts.length > 0) {
+            const ks = pickedRows.map(r => r.key)
+            MailStore.dropDrafts(pickedDrafts)
+            if (l.length > 0) MailStore.remove(l)
+            clearPicks()
+            pickedGone(ks)
+            return
+        }
+        if (l.length === 0) return
+        if (action === "read") { MailStore.markRead(l, l.some(m => !m.seen)); return }
+        if (action === "star") { MailStore.star(l, !l.some(m => m.flagged)); return }
+        const ks = pickedRows.map(r => r.key)
+        if (action === "delete") MailStore.remove(l)
+        else MailStore.moveTo(l, action === "move" ? arg : action)
+        clearPicks()
+        pickedGone(ks)
+    }
+
     function open(r) {
         if (r.draft) { root.draftOpened(r.draft); return }
         root.opened(r)
@@ -197,6 +250,7 @@ ColumnLayout {
                 readonly property var r: modelData
                 readonly property var m: r.draft ? null : r.last
                 readonly property bool sel: root.selected === r.key
+                readonly property bool picked: !!root.picked[r.key]
                 width: ListView.view.width - 8
                 x: 2
                 transformOrigin: Item.Top
@@ -233,7 +287,8 @@ ColumnLayout {
                     width: parent.width
                     height: 74
                     radius: 10
-                    color: row.sel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16)
+                    color: row.picked ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.24)
+                         : row.sel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16)
                          : rowHover.hovered ? Colors.fade(0.05) : "transparent"
                     Behavior on color { ColorAnimation { duration: 90 } }
 
@@ -261,6 +316,18 @@ ColumnLayout {
                             Layout.topMargin: 10
                             size: 34
                             person: row.r.draft ? { name: "Draft", email: "" } : row.m.from
+                            // picked: a check over the picture
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: width / 2
+                                color: Colors.color6
+                                opacity: row.picked ? 1 : 0
+                                scale: row.picked ? 1 : 0.6
+                                visible: opacity > 0
+                                Behavior on opacity { NumberAnimation { duration: 140 } }
+                                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+                                Text { anchors.centerIn: parent; text: I.check; color: Colors.background; font.pixelSize: 16; font.family: Properties.fontFamily }
+                            }
                         }
 
                         ColumnLayout {
@@ -354,7 +421,12 @@ ColumnLayout {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.open(row.r)
+                        // Ctrl: pick / unpick, Shift: pick a range, else open (and drop the picks)
+                        onClicked: m => {
+                            if (m.modifiers & Qt.ShiftModifier) root.pickRange(row.r)
+                            else if (m.modifiers & Qt.ControlModifier) root.pickToggle(row.r)
+                            else { root.clearPicks(); root.open(row.r) }
+                        }
                     }
 
                     // hover actions
@@ -393,6 +465,112 @@ ColumnLayout {
                         }
                     }
                 }
+            }
+        }
+
+        // ── the picked rows: what to do with all of them ──
+        Rectangle {
+            id: pickBar
+            readonly property int n: root.pickedRows.length
+            readonly property bool shown: n > 0
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: shown ? 10 : -height
+            Behavior on anchors.bottomMargin { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            opacity: shown ? 1 : 0
+            visible: opacity > 0
+            Behavior on opacity { NumberAnimation { duration: 180 } }
+            z: 5
+            width: Math.min(parent.width - 16, pickRow.implicitWidth + 16)
+            height: 40
+            radius: 20
+            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+            border.width: Properties.panelBorderWidth
+            border.color: Colors.color6
+            // the bar takes clicks / hover / the wheel (the rows under it don't react)
+            MouseArea { anchors.fill: parent; hoverEnabled: true; onWheel: w => w.accepted = true }
+            readonly property bool mails: root.pickedMsgs.length > 0      // only drafts: just Delete
+            readonly property bool anyUnread: root.pickedMsgs.some(m => !m.seen)
+            readonly property bool anyFlagged: root.pickedMsgs.some(m => m.flagged)
+            RowLayout {
+                id: pickRow
+                anchors.centerIn: parent
+                spacing: 0
+                Text {
+                    Layout.leftMargin: 6
+                    Layout.rightMargin: 4
+                    text: pickBar.n + (root.width > 340 ? " selected" : "")
+                    color: Colors.ink
+                    font.pixelSize: 12
+                    font.bold: true
+                    font.family: Properties.fontFamily
+                }
+                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; visible: pickBar.mails; icon: pickBar.anyUnread ? I.mailOpen : I.mail
+                             tooltip: pickBar.anyUnread ? "Mark as read  (M)" : "Mark as unread  (M)"; onClicked: root.batch("read") }
+                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; visible: pickBar.mails; icon: pickBar.anyFlagged ? I.starOutline : I.star
+                             tooltip: pickBar.anyFlagged ? "Remove star  (S)" : "Star  (S)"; onClicked: root.batch("star") }
+                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; visible: pickBar.mails; icon: I.archive; tooltip: "Archive  (A)"; onClicked: root.batch("archive") }
+                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; visible: pickBar.mails; icon: I.junk; tooltip: "Junk  (J)"; onClicked: root.batch("junk") }
+                IconButton {
+                    id: pickMove
+                    visible: pickBar.mails
+                    implicitWidth: 28; implicitHeight: 28; iconSize: 12
+                    icon: I.folder
+                    // a folder of one account: only when all picked mails are in the same one
+                    interactive: root.pickedAccounts.length === 1
+                    tooltip: interactive ? "Move to…" : "Move to…  (only mails of one account)"
+                    onClicked: pickMenu.open()
+                    Popup {
+                        id: pickMenu
+                        // the folder picked: moved once the menu is closed (closing changes the
+                        // picks' rows, which rebuilds this list: no work in a row being destroyed)
+                        property string chosen: ""
+                        onClosed: if (chosen) { const p = chosen; chosen = ""; root.batch("move", p) }
+                        y: -height - 6
+                        padding: 6
+                        closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
+                        background: Rectangle {
+                            radius: Properties.popupRadius
+                            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
+                            border.width: Properties.panelBorderWidth
+                            border.color: Properties.panelBorder
+                        }
+                        contentItem: Column {
+                            spacing: 1
+                            Repeater {
+                                // not the folder they're all in already
+                                model: (MailStore.accountMap[root.pickedAccounts[0]]?.folders ?? [])
+                                       .filter(f => !root.pickedMsgs.every(m => m.folder === f.path))
+                                Rectangle {
+                                    required property var modelData
+                                    width: Math.max(200, pfRow.implicitWidth + 20)
+                                    height: 28
+                                    radius: 7
+                                    color: pfMouse.containsMouse ? Colors.fade(0.08) : "transparent"
+                                    Row {
+                                        id: pfRow
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        x: 10
+                                        spacing: 8
+                                        Text { text: I.role(modelData.role); color: Colors.fade(0.55); font.pixelSize: 13; font.family: Properties.fontFamily }
+                                        Text { text: modelData.role === "inbox" ? "Inbox" : modelData.path; color: Colors.fade(0.85)
+                                               font.pixelSize: 12; font.family: Properties.fontFamily }
+                                    }
+                                    MouseArea {
+                                        id: pfMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: { pickMenu.chosen = modelData.path; pickMenu.close() }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; icon: I.trash; textColor: Colors.red; tooltip: "Delete  (Del)"; onClicked: root.batch("delete") }
+                Rectangle { implicitWidth: 1; implicitHeight: 18; color: Colors.fade(0.12); Layout.leftMargin: 3; Layout.rightMargin: 3 }
+                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; icon: I.close; tooltip: "Clear the selection  (Esc)"; onClicked: root.clearPicks() }
             }
         }
 

@@ -240,6 +240,14 @@ class ImapHandler(socketserver.StreamRequestHandler):
             for b in srv.boxes.values():
                 fl = " ".join(["\\HasNoChildren"] + b.flags)
                 self.send(f'* LIST ({fl}) "/" {q(mutf7(b.path))}')
+        elif cmd == "CREATE":
+            path = unmutf7(self.arg(toks[0], lits))
+            if path in srv.boxes:
+                self.send(f"{tag} NO [ALREADYEXISTS] mailbox exists")
+                return
+            srv.boxes[path] = Box(path)
+        elif cmd == "SUBSCRIBE":
+            pass
         elif cmd in ("SELECT", "EXAMINE"):
             b = srv.boxes.get(unmutf7(self.arg(toks[0], lits)))
             if not b:

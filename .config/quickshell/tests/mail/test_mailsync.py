@@ -237,6 +237,23 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual((inbox["total"], inbox["unread"]), (7, 4))
         self.assertEqual(r["folders"][0]["path"], "INBOX")          # inbox first
 
+    def test_99_create_folder(self):
+        r = self.ok("create-folder", {"account": self.acc, "name": "Rechnungen 2026 ä", "parent": "Projekte/Entwürfe & Ideen"})
+        self.assertEqual(r["path"], "Projekte/Entwürfe & Ideen/Rechnungen 2026 ä")
+        new = next(f for f in r["folders"] if f["path"] == r["path"])
+        self.assertEqual((new["name"], new["depth"], new["total"]), ("Rechnungen 2026 ä", 2, 0))
+        under = self.ok("create-folder", {"account": self.acc, "name": "Steuer", "parent": "Sent"})
+        paths = [f["path"] for f in under["folders"]]
+        self.assertEqual(paths[paths.index("Sent") + 1], "Sent/Steuer")      # right under its parent
+        top = self.ok("create-folder", {"account": self.acc, "name": "Belege", "parent": ""})
+        self.assertEqual(top["path"], "Belege")
+        for bad, why in [({"name": "", "parent": ""}, "needs a name"), ({"name": "a/b", "parent": ""}, "can't contain"),
+                         ({"name": "belege", "parent": ""}, "already"), ({"name": "x", "parent": "Nope"}, "gone"),
+                         ({"name": "x\ny", "parent": ""}, "can't be used")]:
+            res = self.run_cmd("create-folder", dict(bad, account=self.acc))
+            self.assertFalse(res["ok"])
+            self.assertIn(why, res["error"])
+
     def test_03_sync(self):
         f = self.inbox()
         self.assertEqual(len(f["new"]), 7)
