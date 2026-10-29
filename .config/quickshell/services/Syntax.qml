@@ -30,7 +30,7 @@ Singleton {
             mod: "Mod", on: "on", off: "off", true: "true", false: "false", null: "null",
             binds: "binds", hotkeyOverlayTitle: "hotkey-overlay-title", spawn: "spawn", spawnSh: "spawn-sh",
             autostart: "spawn-sh-at-startup", include: "include",
-            windowRule: "window-rule", match: "match", title: "title", openFloating: "open-floating",
+            windowRule: "window-rule", match: "match", title: "title", openFloating: "open-floating", openMaximized: "open-maximized",
             defaultColumnWidth: "default-column-width", defaultWindowHeight: "default-window-height", fixed: "fixed",
             geometryCornerRadius: "geometry-corner-radius", clipToGeometry: "clip-to-geometry",
             drawBorderWithBackground: "draw-border-with-background", backgroundEffect: "background-effect", blur: "blur",
@@ -72,6 +72,15 @@ Singleton {
             + "    {@clipToGeometry} {@true}\n"
             + "    {@drawBorderWithBackground} {@false}\n"
             + "{blur}}",
+        // niri: the mail / calendar windows (in the layout and maximized, like a browser)
+        "niri.windowRuleMaximized": "{@windowRule} {\n"
+            + "    {@match} {@title}={title}\n"
+            + "    {@openFloating} {@false}\n"
+            + "    {@openMaximized} {@true}\n"
+            + "    {@geometryCornerRadius} {radius}\n"
+            + "    {@clipToGeometry} {@true}\n"
+            + "    {@drawBorderWithBackground} {@false}\n"
+            + "{blur}}",
         "niri.windowBlur": "    {@backgroundEffect} { {@blur} {@true}; }\n",
         // niri: monitors (quickshell-outputs.kdl)
         "niri.output": "{@output} {name} {\n{body}}",
@@ -93,7 +102,8 @@ Singleton {
         "hypr.keyJoin": " + ",
         "hypr.monitor": "{@monitor}({ output = {output}, mode = {mode}, position = {position}, scale = {scale}, transform = {transform}, vrr = {vrr} })",
         "hypr.monitorOff": "{@monitor}({ output = {output}, disabled = true })",
-        "hypr.windowRule": "{@windowRule}({\n    name = {name},\n    match = { title = {title} },\n    float = true,\n    center = true,\n    size = { {width}, {height} },\n})"
+        "hypr.windowRule": "{@windowRule}({\n    name = {name},\n    match = { title = {title} },\n    float = true,\n    center = true,\n    size = { {width}, {height} },\n})",
+        "hypr.windowRuleMaximized": "{@windowRule}({\n    name = {name},\n    match = { title = {title} },\n    maximize = true,\n})"
     })
 
     // what each template is for (Syntax page)
@@ -111,7 +121,8 @@ Singleton {
         "niri.disable": "Disables a bind from your config (a later bind with the same keys wins)",
         "niri.keyJoin": "Between keys of a combo",
         "niri.autostart": "Start a command at login. {cmd} the command",
-        "niri.windowRule": "Window rule for the settings / calendar windows. {title}, {width}, {height}, {radius}, {blur} (line below)",
+        "niri.windowRule": "Window rule for the settings window (floating). {title}, {width}, {height}, {radius}, {blur} (line below)",
+        "niri.windowRuleMaximized": "Window rule for the mail / calendar windows (tiled, maximized). {title}, {radius}, {blur}",
         "niri.windowBlur": "The blur line of that window rule (when \"Blur behind Quickshell windows\" is on)",
         "niri.output": "A monitor. {name} \"make model serial\", {body} its lines",
         "niri.outputOff": "Monitor turned off",
@@ -129,7 +140,8 @@ Singleton {
         "hypr.keyJoin": "Between keys of a combo",
         "hypr.monitor": "A monitor (Monitors page)",
         "hypr.monitorOff": "A monitor turned off",
-        "hypr.windowRule": "Window rule for the settings / calendar windows"
+        "hypr.windowRule": "Window rule for the settings window (floating)",
+        "hypr.windowRuleMaximized": "Window rule for the mail / calendar windows (maximized)"
     })
 
     readonly property var templates: Settings.syntax.templates ?? ({})

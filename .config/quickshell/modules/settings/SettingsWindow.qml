@@ -226,6 +226,9 @@ Scope {
         { id: "clipboard", group: "Apps", icon: "󰅍", title: "Clipboard", custom: "clipboard",
           keywords: "clipboard history cliphist copy paste pause clear wipe password keepassxc secret",
           desc: "Clipboard history and passwords" },
+        { id: "accounts", group: "Apps", icon: "󰀓", title: "Accounts", custom: "accounts",
+          keywords: "account accounts mail email calendar caldav icloud microsoft 365 exchange google login add new export import move transfer another device backup passphrase",
+          desc: "Mail and calendar accounts: add, export, import" },
         { id: "connections", group: "Apps", icon: "󰢹", title: "Connections", custom: "connections",
           keywords: "ssh rdp vnc remote desktop xfreerdp vncviewer server saved hosts export import backup file",
           desc: "Saved SSH, RDP and VNC connections for the launcher" },
@@ -301,6 +304,17 @@ Scope {
                   desc: "g <words> web search · > <program> run in a terminal (no shell) · ssh <name or user@host>" },
                 { key: "searchUrl", type: "string", def: "https://duckduckgo.com/?q=%s", label: "Web search address",
                   desc: "%s = what you type, e.g. https://www.google.com/search?q=%s" } ] } ] },
+        { id: "zoom", group: "Apps", icon: "󰍉", title: "App zoom", store: "zoom",
+          keywords: "zoom scale scaling size bigger smaller larger text size ui ctrl plus minus wheel magnify",
+          desc: "Size of everything in each app · in the app: Ctrl + / − / 0, or Ctrl + wheel",
+          sections: [
+            { title: "Zoom per app, %", items: [
+                { key: "mail", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Mail" },
+                { key: "calendar", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Calendar",
+                  desc: "The hours of the day / week view zoom on their own: Ctrl Alt +/−, or Ctrl + wheel over them" },
+                { key: "settings", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Settings" },
+                { key: "perfmon", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Performance monitor" },
+                { key: "wizard", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Welcome (first run)" } ] } ] },
         { id: "perfmon", group: "Apps", icon: "󰓅", title: "Performance monitor", store: "perfmon",
           keywords: "performance monitor cpu gpu temperature fan cooler kraken nzxt cam system monitor process processes task manager top sort memory chart history",
           desc: "CPU, GPU, memory, liquid cooler, sensors, processes (launcher: Performance Monitor)",
@@ -632,7 +646,7 @@ Scope {
         { page: "autostart", label: "Start a program at login", keywords: "autostart startup boot exec launch", icon: "󰐊" },
         { page: "syntax", label: "Config syntax templates", keywords: "words templates kdl lua option paths rename", icon: "󰅩" },
         { page: "import", label: "Import custom config", keywords: "custom.kdl custom.lua per-device", icon: "󰋺" },
-        { action: "export", label: "Export settings", desc: "Save all settings to a file", keywords: "backup save json transfer", icon: "󰈝" },
+        { action: "export", label: "Export settings", desc: "Save settings (and, if picked, the monitors and accounts) to a file", keywords: "backup save json transfer accounts monitors", icon: "󰈝" },
         { action: "import", label: "Import settings", desc: "Load settings from a file", keywords: "restore load json transfer", icon: "󰋺" }
     ]
 
@@ -771,7 +785,7 @@ Scope {
             function openEntry(e) {
                 if (!e) return
                 if (e.kind === "action") {
-                    if (e.action === "export") transfer.exportSettings()
+                    if (e.action === "export") exportDialog.start()
                     else transfer.importSettings()
                     searchField.text = ""
                     return
@@ -792,644 +806,657 @@ Scope {
 
             Component.onCompleted: { Compositor.settings.refresh(); Network.refresh(); Qt.callLater(animatePage) }
 
-            Rectangle {
-                id: bg
+            // Ctrl +/−/0, Ctrl + wheel: the whole window bigger or smaller (AppZoom)
+            ZoomArea {
+                id: zoomArea
+                app: "settings"
                 anchors.fill: parent
-                radius: Compositor.appRadius          // same corners as the compositor's windows
-                color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
-                // no own border: the compositor draws the window's border (one inside got clipped at the corners)
-
-                RowLayout {
+                Rectangle {
+                    id: bg
                     anchors.fill: parent
-                    anchors.margins: 14
-                    spacing: 14
+                    radius: Compositor.appRadius / zoomArea.zoom          // same corners as the compositor's windows
+                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
+                    // no own border: the compositor draws the window's border (one inside got clipped at the corners)
 
-                    // ── Sidebar ───────────────────────────────────────────────
-                    Rectangle {
-                        Layout.preferredWidth: 230
-                        Layout.fillHeight: true
-                        radius: Math.max(6, Compositor.appRadius - 2)
-                        color: Colors.card
-                        border.width: Properties.panelBorderWidth
-                        border.color: Properties.cardBorder
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: 14
 
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 6
+                        // ── Sidebar ───────────────────────────────────────────────
+                        Rectangle {
+                            Layout.preferredWidth: 230
+                            Layout.fillHeight: true
+                            radius: Math.max(6, Compositor.appRadius - 2)
+                            color: Colors.card
+                            border.width: Properties.panelBorderWidth
+                            border.color: Properties.cardBorder
 
-                            // title, also the drag handle for the window
-                            Item {
-                                Layout.fillWidth: true
-                                implicitHeight: 44
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 4
-                                    spacing: 10
-                                    Text {
-                                        text: "󰒓"
-                                        color: Colors.color6
-                                        font.pixelSize: 22
-                                        font.family: Properties.fontFamily
-                                    }
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: "Settings"
-                                        color: Colors.ink
-                                        font.pixelSize: 18
-                                        font.bold: true
-                                        font.family: Properties.fontFamily
-                                    }
-                                    IconButton {
-                                        icon: "󰈝"
-                                        tooltip: "Export all settings to a file"
-                                        interactive: transfer.mode !== "busy"
-                                        onClicked: transfer.exportSettings()
-                                    }
-                                    IconButton {
-                                        icon: "󰋺"
-                                        tooltip: "Import settings from a file"
-                                        interactive: transfer.mode !== "busy"
-                                        onClicked: transfer.importSettings()
-                                    }
-                                }
-                                DragHandler {
-                                    target: null
-                                    onActiveChanged: if (active) bg.Window.window.startSystemMove()
-                                }
-                            }
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 6
 
-                            SearchField {
-                                id: searchField
-                                Layout.fillWidth: true
-                                Layout.bottomMargin: 6
-                                implicitHeight: Properties.buttonHeight + 2
-                                placeholderText: "Search  (Ctrl+F)"
-                                onTextChanged: win.query = text
-                                Keys.onEscapePressed: { text = ""; focus = false }
-                                Keys.onDownPressed: win.selected = Math.min(win.results.length - 1, win.selected + 1)
-                                Keys.onUpPressed: win.selected = Math.max(0, win.selected - 1)
-                                Keys.onReturnPressed: win.openEntry(win.results[win.selected]?.entry)
-                                Keys.onEnterPressed: win.openEntry(win.results[win.selected]?.entry)
-                            }
-
-                            // the tabs scroll when the window is too short for all of them
-                            Flickable {
-                                id: navFlick
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                // reach into the sidebar padding so the hover scale isn't clipped
-                                Layout.leftMargin: -4
-                                Layout.rightMargin: -4
-                                contentHeight: nav.implicitHeight
-                                clip: true
-                                boundsBehavior: Flickable.StopAtBounds
-                                SmoothWheel { flick: navFlick; step: 100 }
-
-                                ColumnLayout {
-                                    id: nav
-                                    x: 4
-                                    width: navFlick.width - 8
-                                    spacing: 6
-
-                                    Repeater {
-                                        // Maintenance tools sit under the Maintenance overview (System), profiles at the bottom
-                                        model: ["Shell", "System", "Apps", root.wmGroup, "Developer"]   // Developer: config syntax / import, last
-                                        ColumnLayout {
-                                            id: group
-                                            required property string modelData
+                                // title, also the drag handle for the window
+                                Item {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 44
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 4
+                                        spacing: 10
+                                        Text {
+                                            text: "󰒓"
+                                            color: Colors.color6
+                                            font.pixelSize: 22
+                                            font.family: Properties.fontFamily
+                                        }
+                                        Text {
                                             Layout.fillWidth: true
-                                            spacing: 3
+                                            text: "Settings"
+                                            color: Colors.ink
+                                            font.pixelSize: 18
+                                            font.bold: true
+                                            font.family: Properties.fontFamily
+                                        }
+                                        IconButton {
+                                            icon: "󰈝"
+                                            tooltip: "Export settings to a file (pick what goes in: settings, monitors, accounts)"
+                                            interactive: transfer.mode !== "busy"
+                                            onClicked: exportDialog.start()
+                                        }
+                                        IconButton {
+                                            icon: "󰋺"
+                                            tooltip: "Import settings from a file"
+                                            interactive: transfer.mode !== "busy"
+                                            onClicked: transfer.importSettings()
+                                        }
+                                    }
+                                    DragHandler {
+                                        target: null
+                                        onActiveChanged: if (active) bg.Window.window.startSystemMove()
+                                    }
+                                }
 
-                                            Text {
-                                                Layout.topMargin: 6
-                                                Layout.leftMargin: 8
-                                                Layout.bottomMargin: 2
-                                                text: group.modelData.toUpperCase()
-                                                color: Colors.fade(0.4)
-                                                font.pixelSize: 10
-                                                font.bold: true
-                                                font.letterSpacing: 1.2
-                                                font.family: Properties.fontFamily
-                                            }
+                                SearchField {
+                                    id: searchField
+                                    Layout.fillWidth: true
+                                    Layout.bottomMargin: 6
+                                    implicitHeight: Properties.buttonHeight + 2
+                                    placeholderText: "Search  (Ctrl+F)"
+                                    onTextChanged: win.query = text
+                                    Keys.onEscapePressed: { text = ""; focus = false }
+                                    Keys.onDownPressed: win.selected = Math.min(win.results.length - 1, win.selected + 1)
+                                    Keys.onUpPressed: win.selected = Math.max(0, win.selected - 1)
+                                    Keys.onReturnPressed: win.openEntry(win.results[win.selected]?.entry)
+                                    Keys.onEnterPressed: win.openEntry(win.results[win.selected]?.entry)
+                                }
 
-                                            Repeater {
-                                                model: root.visiblePages.filter(p => p.group === group.modelData && !p.parent && p.nav !== false)
-                                                NavItem {
-                                                    required property var modelData
-                                                    Layout.fillWidth: true
-                                                    icon: modelData.icon
-                                                    label: modelData.title
-                                                    selected: win.query === "" && (win.pageId === modelData.id || win.page.parent === modelData.id)
-                                                    changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
-                                                        .filter(k => Settings[modelData.store]?.[k] !== undefined).length
-                                                    onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
+                                // the tabs scroll when the window is too short for all of them
+                                Flickable {
+                                    id: navFlick
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    // reach into the sidebar padding so the hover scale isn't clipped
+                                    Layout.leftMargin: -4
+                                    Layout.rightMargin: -4
+                                    contentHeight: nav.implicitHeight
+                                    clip: true
+                                    boundsBehavior: Flickable.StopAtBounds
+                                    SmoothWheel { flick: navFlick; step: 100 }
+
+                                    ColumnLayout {
+                                        id: nav
+                                        x: 4
+                                        width: navFlick.width - 8
+                                        spacing: 6
+
+                                        Repeater {
+                                            // Maintenance tools sit under the Maintenance overview (System), profiles at the bottom
+                                            model: ["Shell", "System", "Apps", root.wmGroup, "Developer"]   // Developer: config syntax / import, last
+                                            ColumnLayout {
+                                                id: group
+                                                required property string modelData
+                                                Layout.fillWidth: true
+                                                spacing: 3
+
+                                                Text {
+                                                    Layout.topMargin: 6
+                                                    Layout.leftMargin: 8
+                                                    Layout.bottomMargin: 2
+                                                    text: group.modelData.toUpperCase()
+                                                    color: Colors.fade(0.4)
+                                                    font.pixelSize: 10
+                                                    font.bold: true
+                                                    font.letterSpacing: 1.2
+                                                    font.family: Properties.fontFamily
+                                                }
+
+                                                Repeater {
+                                                    model: root.visiblePages.filter(p => p.group === group.modelData && !p.parent && p.nav !== false)
+                                                    NavItem {
+                                                        required property var modelData
+                                                        Layout.fillWidth: true
+                                                        icon: modelData.icon
+                                                        label: modelData.title
+                                                        selected: win.query === "" && (win.pageId === modelData.id || win.page.parent === modelData.id)
+                                                        changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
+                                                            .filter(k => Settings[modelData.store]?.[k] !== undefined).length
+                                                        onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
 
-                            // settings profiles, like Zen's spaces
-                            ProfileSwitcher {
-                                Layout.fillWidth: true
-                                onManage: { root.pageId = "profiles"; searchField.text = ""; flick.contentY = 0 }
-                                onFailed: root.pageId = "profiles"
-                            }
-                        }
-                    }
-
-                    // ── Content ───────────────────────────────────────────────
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        spacing: 10
-
-                        // header (drag handle too)
-                        Item {
-                            Layout.fillWidth: true
-                            implicitHeight: 56
-
-                            DragHandler {
-                                target: null
-                                onActiveChanged: if (active) bg.Window.window.startSystemMove()
-                            }
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 6
-                                spacing: 8
-
-                                IconButton {
-                                    visible: win.query === "" && win.hub !== null
-                                    icon: "󰁍"
-                                    tooltip: "Back to " + (win.hub?.title ?? "")
-                                    onClicked: { root.pageId = win.hub.id; flick.contentY = 0 }
-                                }
-
-                                ColumnLayout {
+                                // settings profiles, like Zen's spaces
+                                ProfileSwitcher {
                                     Layout.fillWidth: true
-                                    spacing: 0
-                                    Text {
-                                        visible: win.query === "" && win.hub !== null
-                                        text: (win.hub?.title ?? "") + "  ›"
-                                        color: Colors.fade(0.45)
-                                        font.pixelSize: 11
-                                        font.family: Properties.fontFamily
-                                    }
-                                    Text {
-                                        text: win.query !== "" ? "Search" : win.page.title
-                                        color: Colors.ink
-                                        font.pixelSize: 24
-                                        font.bold: true
-                                        font.family: Properties.fontFamily
-                                    }
-                                    Text {
-                                        text: win.query !== ""
-                                            ? (win.results.length > 0 ? "Results for \"" + win.query.trim() + "\", best first" : "Nothing matches \"" + win.query.trim() + "\"")
-                                            : win.page.desc
-                                        color: Colors.fade(0.5)
-                                        font.pixelSize: 12
-                                        font.family: Properties.fontFamily
-                                    }
-                                }
-
-                                IconButton {
-                                    visible: win.query === "" && !win.page.custom
-                                    icon: "󰑓"
-                                    tooltip: root.isWm(win.page.store) ? "Reset page to your " + Compositor.name + " config" : "Reset page to defaults"
-                                    interactive: root.pageKeys(win.page)
-                                        .some(k => Settings[win.page.store ?? "properties"]?.[k] !== undefined)
-                                    onClicked: {
-                                        for (const k of root.pageKeys(win.page)) {
-                                            if (root.isWm(win.page.store)) root.wmFor(win.page.store).reset(k)
-                                            else Settings.reset(win.page.store, k)
-                                        }
-                                    }
-                                }
-                                IconButton {
-                                    icon: "󰅖"
-                                    tooltip: "Close"
-                                    onClicked: root.open = false
+                                    onManage: { root.pageId = "profiles"; searchField.text = ""; flick.contentY = 0 }
+                                    onFailed: root.pageId = "profiles"
                                 }
                             }
                         }
 
-                        // export / import result; an import waits here for confirmation
-                        SettingsTransfer {
-                            id: transfer
-                            Layout.fillWidth: true
-                            pages: root.pages
-                        }
-
-                        // compositor status: missing include / rejected config
-                        Rectangle {
-                            id: wmBanner
-                            readonly property var svc: root.wmFor(win.page.store)
-                            readonly property bool hypr: win.page.store === "hyprland"
-                            Layout.fillWidth: true
-                            visible: win.query === "" && root.isWm(win.page.store)
-                                     && (!svc.included || svc.error !== "" || (hypr && !svc.available))
-                            implicitHeight: banner.implicitHeight + 20
-                            radius: 14
-                            color: Qt.rgba(0.95, 0.55, 0.66, 0.12)
-                            border.width: Properties.panelBorderWidth
-                            border.color: Qt.rgba(0.95, 0.55, 0.66, 0.35)
-
-                            RowLayout {
-                                id: banner
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                anchors.leftMargin: 14
-                                spacing: 10
-                                Text {
-                                    text: "󰀦"
-                                    color: Colors.red
-                                    font.pixelSize: 18
-                                    font.family: Properties.fontFamily
-                                }
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: wmBanner.hypr && !wmBanner.svc.available
-                                        ? (wmBanner.svc.legacyConfig
-                                            ? "Only Hyprland's Lua config (hyprland.lua, Hyprland 0.55+) is supported, this one is hyprland.conf."
-                                            : "No Hyprland config found at " + wmBanner.svc.mainConfig)
-                                        : !wmBanner.svc.included
-                                        ? (wmBanner.hypr
-                                            ? "Hyprland doesn't load the settings yet: " + wmBanner.svc.mainConfig
-                                              + " needs this as its last line\n" + wmBanner.svc.includeLine
-                                            : "niri doesn't load the settings yet: " + wmBanner.svc.mainConfig
-                                              + " needs the line\n" + wmBanner.svc.includeLine)
-                                        : Compositor.name + " rejected the change, nothing was written:\n" + wmBanner.svc.error
-                                    color: Colors.ink
-                                    font.pixelSize: 11
-                                    font.family: Properties.fontFamily
-                                    wrapMode: Text.WordWrap
-                                }
-                                IconButton {
-                                    visible: wmBanner.svc.included
-                                    icon: "󰑓"
-                                    tooltip: "Undo all " + Compositor.name + " changes"
-                                    onClicked: wmBanner.svc.resetAll()
-                                }
-                            }
-                        }
-
-                        Flickable {
-                            id: flick
-                            // `pad` of room on every side: buttons grow on hover (up to
-                            // ~5px per side) and got cut off at the clip edge. The
-                            // flick reaches into the window padding by `pad` and the
-                            // content is moved back in by it, so nothing shifts.
-                            readonly property int pad: 8
+                        // ── Content ───────────────────────────────────────────────
+                        ColumnLayout {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            Layout.leftMargin: -pad
-                            Layout.rightMargin: -pad
-                            Layout.topMargin: -pad
-                            contentHeight: content.implicitHeight + pad * 2
-                            clip: true
-                            boundsBehavior: Flickable.StopAtBounds
+                            spacing: 10
 
-                            // same wheel scrolling as the calendar
-                            SmoothWheel { flick: flick; step: 140 }
+                            // header (drag handle too)
+                            Item {
+                                Layout.fillWidth: true
+                                implicitHeight: 56
 
-                            ColumnLayout {
-                                id: content
-                                x: flick.pad
-                                y: flick.pad
-                                width: flick.width - flick.pad * 2
-                                spacing: 18
-
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "monitors"
-                                    visible: active
-                                    sourceComponent: MonitorsPage {}
+                                DragHandler {
+                                    target: null
+                                    onActiveChanged: if (active) bg.Window.window.startSystemMove()
                                 }
 
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "keybinds"
-                                    visible: active
-                                    sourceComponent: KeybindsPage {
-                                        focusKeys: root.pendingKeybind
-                                        onFocusConsumed: root.pendingKeybind = ""
-                                        anchor: root.pendingAnchor
-                                        onAnchorConsumed: root.pendingAnchor = ""
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 6
+                                    spacing: 8
+
+                                    IconButton {
+                                        visible: win.query === "" && win.hub !== null
+                                        icon: "󰁍"
+                                        tooltip: "Back to " + (win.hub?.title ?? "")
+                                        onClicked: { root.pageId = win.hub.id; flick.contentY = 0 }
                                     }
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "autostart"
-                                    visible: active
-                                    sourceComponent: AutostartPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "lockscreen"
-                                    visible: active
-                                    sourceComponent: LockscreenPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "greeter"
-                                    visible: active
-                                    sourceComponent: GreeterPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "panelEditor"
-                                    visible: active
-                                    sourceComponent: PanelEditorPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "desktopWidgets"
-                                    visible: active
-                                    sourceComponent: DesktopWidgetsPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "import"
-                                    visible: active
-                                    sourceComponent: ImportPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "syntax"
-                                    visible: active
-                                    sourceComponent: SyntaxPage {}
-                                }
 
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "bluetooth"
-                                    visible: active
-                                    sourceComponent: BluetoothPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "maintenance"
-                                    visible: active
-                                    sourceComponent: MaintenancePage {
-                                        tools: root.visiblePages.filter(p => p.parent === "maintenance")
-                                        onOpenPage: id => { root.pageId = id; flick.contentY = 0 }
-                                    }
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "cleanup"
-                                    visible: active
-                                    sourceComponent: CleanupPackagesPage {
-                                        anchor: root.pendingAnchor
-                                        onAnchorConsumed: root.pendingAnchor = ""
-                                    }
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "diskusage"
-                                    visible: active
-                                    sourceComponent: DiskUsagePage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "services"
-                                    visible: active
-                                    sourceComponent: ServicesPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "errorlog"
-                                    visible: active
-                                    sourceComponent: ErrorLogPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "boottime"
-                                    visible: active
-                                    sourceComponent: BootTimePage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "diskhealth"
-                                    visible: active
-                                    sourceComponent: DiskHealthPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "mirrors"
-                                    visible: active
-                                    sourceComponent: MirrorsPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "profiles"
-                                    visible: active
-                                    sourceComponent: ProfilesPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "updates"
-                                    visible: active
-                                    sourceComponent: UpdatesPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "icons"
-                                    visible: active
-                                    sourceComponent: IconsPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "keys"
-                                    visible: active
-                                    sourceComponent: KeysPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "diagnostics"
-                                    visible: active
-                                    sourceComponent: DiagnosticsPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "clipboard"
-                                    visible: active
-                                    sourceComponent: ClipboardPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "defaultapps"
-                                    visible: active
-                                    sourceComponent: DefaultAppsPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "power"
-                                    visible: active
-                                    sourceComponent: PowerPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "audio"
-                                    visible: active
-                                    sourceComponent: AudioPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "media"
-                                    visible: active
-                                    sourceComponent: MediaPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "theme"
-                                    visible: active
-                                    sourceComponent: ThemePage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "notifications"
-                                    visible: active
-                                    sourceComponent: NotificationsPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "dotfiles"
-                                    visible: active
-                                    sourceComponent: DotfilesPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "connections"
-                                    visible: active
-                                    sourceComponent: ConnectionsPage {}
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "layouts"
-                                    visible: active
-                                    sourceComponent: LayoutsPage {
-                                        anchor: root.pendingAnchor
-                                        onAnchorConsumed: root.pendingAnchor = ""
-                                    }
-                                }
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "health"
-                                    visible: active
-                                    sourceComponent: HealthPage {}
-                                }
-
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "profile"
-                                    visible: active
-                                    sourceComponent: ProfilePage {}
-                                }
-
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query === "" && win.page.custom === "network"
-                                    visible: active
-                                    sourceComponent: NetworkPage {
-                                        footerHost: footerArea
-                                        anchor: root.pendingAnchor
-                                        onAnchorConsumed: root.pendingAnchor = ""
-                                    }
-                                }
-
-                                // search
-                                Loader {
-                                    Layout.fillWidth: true
-                                    active: win.query.trim() !== ""
-                                    visible: active
-                                    sourceComponent: SearchResults {
-                                        results: win.results
-                                        query: win.query
-                                        selected: win.selected
-                                        flick: flick
-                                        suggestion: win.suggestion
-                                        pages: root.visiblePages
-                                        onActivate: e => win.openEntry(e)
-                                        onSuggestionPicked: t => searchField.text = t
-                                    }
-                                }
-
-                                Repeater {
-                                    model: win.sections
                                     ColumnLayout {
-                                        id: section
-                                        required property var modelData
                                         Layout.fillWidth: true
-                                        spacing: 8
-
+                                        spacing: 0
                                         Text {
-                                            Layout.leftMargin: 6
-                                            text: section.modelData.title
-                                            color: Colors.fade(0.55)
-                                            font.pixelSize: 12
+                                            visible: win.query === "" && win.hub !== null
+                                            text: (win.hub?.title ?? "") + "  ›"
+                                            color: Colors.fade(0.45)
+                                            font.pixelSize: 11
+                                            font.family: Properties.fontFamily
+                                        }
+                                        Text {
+                                            text: win.query !== "" ? "Search" : win.page.title
+                                            color: Colors.ink
+                                            font.pixelSize: 24
                                             font.bold: true
                                             font.family: Properties.fontFamily
                                         }
+                                        Text {
+                                            text: win.query !== ""
+                                                ? (win.results.length > 0 ? "Results for \"" + win.query.trim() + "\", best first" : "Nothing matches \"" + win.query.trim() + "\"")
+                                                : win.page.desc
+                                            color: Colors.fade(0.5)
+                                            font.pixelSize: 12
+                                            font.family: Properties.fontFamily
+                                        }
+                                    }
 
-                                        Rectangle {
+                                    IconButton {
+                                        visible: win.query === "" && !win.page.custom
+                                        icon: "󰑓"
+                                        tooltip: root.isWm(win.page.store) ? "Reset page to your " + Compositor.name + " config" : "Reset page to defaults"
+                                        interactive: root.pageKeys(win.page)
+                                            .some(k => Settings[win.page.store ?? "properties"]?.[k] !== undefined)
+                                        onClicked: {
+                                            for (const k of root.pageKeys(win.page)) {
+                                                if (root.isWm(win.page.store)) root.wmFor(win.page.store).reset(k)
+                                                else Settings.reset(win.page.store, k)
+                                            }
+                                        }
+                                    }
+                                    IconButton {
+                                        icon: "󰅖"
+                                        tooltip: "Close"
+                                        onClicked: root.open = false
+                                    }
+                                }
+                            }
+
+                            // export / import result; an import waits here for confirmation
+                            SettingsTransfer {
+                                id: transfer
+                                Layout.fillWidth: true
+                                pages: root.pages
+                            }
+
+                            // compositor status: missing include / rejected config
+                            Rectangle {
+                                id: wmBanner
+                                readonly property var svc: root.wmFor(win.page.store)
+                                readonly property bool hypr: win.page.store === "hyprland"
+                                Layout.fillWidth: true
+                                visible: win.query === "" && root.isWm(win.page.store)
+                                         && (!svc.included || svc.error !== "" || (hypr && !svc.available))
+                                implicitHeight: banner.implicitHeight + 20
+                                radius: 14
+                                color: Qt.rgba(0.95, 0.55, 0.66, 0.12)
+                                border.width: Properties.panelBorderWidth
+                                border.color: Qt.rgba(0.95, 0.55, 0.66, 0.35)
+
+                                RowLayout {
+                                    id: banner
+                                    anchors.fill: parent
+                                    anchors.margins: 10
+                                    anchors.leftMargin: 14
+                                    spacing: 10
+                                    Text {
+                                        text: "󰀦"
+                                        color: Colors.red
+                                        font.pixelSize: 18
+                                        font.family: Properties.fontFamily
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: wmBanner.hypr && !wmBanner.svc.available
+                                            ? (wmBanner.svc.legacyConfig
+                                                ? "Only Hyprland's Lua config (hyprland.lua, Hyprland 0.55+) is supported, this one is hyprland.conf."
+                                                : "No Hyprland config found at " + wmBanner.svc.mainConfig)
+                                            : !wmBanner.svc.included
+                                            ? (wmBanner.hypr
+                                                ? "Hyprland doesn't load the settings yet: " + wmBanner.svc.mainConfig
+                                                  + " needs this as its last line\n" + wmBanner.svc.includeLine
+                                                : "niri doesn't load the settings yet: " + wmBanner.svc.mainConfig
+                                                  + " needs the line\n" + wmBanner.svc.includeLine)
+                                            : Compositor.name + " rejected the change, nothing was written:\n" + wmBanner.svc.error
+                                        color: Colors.ink
+                                        font.pixelSize: 11
+                                        font.family: Properties.fontFamily
+                                        wrapMode: Text.WordWrap
+                                    }
+                                    IconButton {
+                                        visible: wmBanner.svc.included
+                                        icon: "󰑓"
+                                        tooltip: "Undo all " + Compositor.name + " changes"
+                                        onClicked: wmBanner.svc.resetAll()
+                                    }
+                                }
+                            }
+
+                            Flickable {
+                                id: flick
+                                // `pad` of room on every side: buttons grow on hover (up to
+                                // ~5px per side) and got cut off at the clip edge. The
+                                // flick reaches into the window padding by `pad` and the
+                                // content is moved back in by it, so nothing shifts.
+                                readonly property int pad: 8
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                Layout.leftMargin: -pad
+                                Layout.rightMargin: -pad
+                                Layout.topMargin: -pad
+                                contentHeight: content.implicitHeight + pad * 2
+                                clip: true
+                                boundsBehavior: Flickable.StopAtBounds
+
+                                // same wheel scrolling as the calendar
+                                SmoothWheel { flick: flick; step: 140 }
+
+                                ColumnLayout {
+                                    id: content
+                                    x: flick.pad
+                                    y: flick.pad
+                                    width: flick.width - flick.pad * 2
+                                    spacing: 18
+
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "monitors"
+                                        visible: active
+                                        sourceComponent: MonitorsPage {}
+                                    }
+
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "accounts"
+                                        visible: active
+                                        sourceComponent: AccountsPage {}
+                                    }
+
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "keybinds"
+                                        visible: active
+                                        sourceComponent: KeybindsPage {
+                                            focusKeys: root.pendingKeybind
+                                            onFocusConsumed: root.pendingKeybind = ""
+                                            anchor: root.pendingAnchor
+                                            onAnchorConsumed: root.pendingAnchor = ""
+                                        }
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "autostart"
+                                        visible: active
+                                        sourceComponent: AutostartPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "lockscreen"
+                                        visible: active
+                                        sourceComponent: LockscreenPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "greeter"
+                                        visible: active
+                                        sourceComponent: GreeterPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "panelEditor"
+                                        visible: active
+                                        sourceComponent: PanelEditorPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "desktopWidgets"
+                                        visible: active
+                                        sourceComponent: DesktopWidgetsPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "import"
+                                        visible: active
+                                        sourceComponent: ImportPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "syntax"
+                                        visible: active
+                                        sourceComponent: SyntaxPage {}
+                                    }
+
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "bluetooth"
+                                        visible: active
+                                        sourceComponent: BluetoothPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "maintenance"
+                                        visible: active
+                                        sourceComponent: MaintenancePage {
+                                            tools: root.visiblePages.filter(p => p.parent === "maintenance")
+                                            onOpenPage: id => { root.pageId = id; flick.contentY = 0 }
+                                        }
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "cleanup"
+                                        visible: active
+                                        sourceComponent: CleanupPackagesPage {
+                                            anchor: root.pendingAnchor
+                                            onAnchorConsumed: root.pendingAnchor = ""
+                                        }
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "diskusage"
+                                        visible: active
+                                        sourceComponent: DiskUsagePage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "services"
+                                        visible: active
+                                        sourceComponent: ServicesPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "errorlog"
+                                        visible: active
+                                        sourceComponent: ErrorLogPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "boottime"
+                                        visible: active
+                                        sourceComponent: BootTimePage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "diskhealth"
+                                        visible: active
+                                        sourceComponent: DiskHealthPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "mirrors"
+                                        visible: active
+                                        sourceComponent: MirrorsPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "profiles"
+                                        visible: active
+                                        sourceComponent: ProfilesPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "updates"
+                                        visible: active
+                                        sourceComponent: UpdatesPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "icons"
+                                        visible: active
+                                        sourceComponent: IconsPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "keys"
+                                        visible: active
+                                        sourceComponent: KeysPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "diagnostics"
+                                        visible: active
+                                        sourceComponent: DiagnosticsPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "clipboard"
+                                        visible: active
+                                        sourceComponent: ClipboardPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "defaultapps"
+                                        visible: active
+                                        sourceComponent: DefaultAppsPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "power"
+                                        visible: active
+                                        sourceComponent: PowerPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "audio"
+                                        visible: active
+                                        sourceComponent: AudioPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "media"
+                                        visible: active
+                                        sourceComponent: MediaPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "theme"
+                                        visible: active
+                                        sourceComponent: ThemePage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "notifications"
+                                        visible: active
+                                        sourceComponent: NotificationsPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "dotfiles"
+                                        visible: active
+                                        sourceComponent: DotfilesPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "connections"
+                                        visible: active
+                                        sourceComponent: ConnectionsPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "layouts"
+                                        visible: active
+                                        sourceComponent: LayoutsPage {
+                                            anchor: root.pendingAnchor
+                                            onAnchorConsumed: root.pendingAnchor = ""
+                                        }
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "health"
+                                        visible: active
+                                        sourceComponent: HealthPage {}
+                                    }
+
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "profile"
+                                        visible: active
+                                        sourceComponent: ProfilePage {}
+                                    }
+
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "network"
+                                        visible: active
+                                        sourceComponent: NetworkPage {
+                                            footerHost: footerArea
+                                            anchor: root.pendingAnchor
+                                            onAnchorConsumed: root.pendingAnchor = ""
+                                        }
+                                    }
+
+                                    // search
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query.trim() !== ""
+                                        visible: active
+                                        sourceComponent: SearchResults {
+                                            results: win.results
+                                            query: win.query
+                                            selected: win.selected
+                                            flick: flick
+                                            suggestion: win.suggestion
+                                            pages: root.visiblePages
+                                            onActivate: e => win.openEntry(e)
+                                            onSuggestionPicked: t => searchField.text = t
+                                        }
+                                    }
+
+                                    Repeater {
+                                        model: win.sections
+                                        ColumnLayout {
+                                            id: section
+                                            required property var modelData
                                             Layout.fillWidth: true
-                                            implicitHeight: items.implicitHeight
-                                            radius: 14
-                                            color: Colors.card
-                                            border.width: Properties.panelBorderWidth
-                                            border.color: Properties.cardBorder
+                                            spacing: 8
 
-                                            ColumnLayout {
-                                                id: items
-                                                width: parent.width
-                                                spacing: 0
+                                            Text {
+                                                Layout.leftMargin: 6
+                                                text: section.modelData.title
+                                                color: Colors.fade(0.55)
+                                                font.pixelSize: 12
+                                                font.bold: true
+                                                font.family: Properties.fontFamily
+                                            }
 
-                                                Repeater {
-                                                    model: section.modelData.items
-                                                    ColumnLayout {
-                                                        id: entry
-                                                        required property var modelData
-                                                        required property int index
-                                                        Layout.fillWidth: true
-                                                        spacing: 0
+                                            Rectangle {
+                                                Layout.fillWidth: true
+                                                implicitHeight: items.implicitHeight
+                                                radius: 14
+                                                color: Colors.card
+                                                border.width: Properties.panelBorderWidth
+                                                border.color: Properties.cardBorder
 
-                                                        Rectangle {
-                                                            visible: entry.index > 0
+                                                ColumnLayout {
+                                                    id: items
+                                                    width: parent.width
+                                                    spacing: 0
+
+                                                    Repeater {
+                                                        model: section.modelData.items
+                                                        ColumnLayout {
+                                                            id: entry
+                                                            required property var modelData
+                                                            required property int index
                                                             Layout.fillWidth: true
-                                                            Layout.leftMargin: 16
-                                                            Layout.rightMargin: 16
-                                                            implicitHeight: 1
-                                                            color: Colors.fade(0.06)
-                                                        }
+                                                            spacing: 0
 
-                                                        // from search: scroll here and flash
-                                                        readonly property bool flashMe: root.flashKey !== ""
-                                                            && root.flashKey === section.modelData.store + "." + entry.modelData.key
-                                                        onFlashMeChanged: if (flashMe) flashTimer.restart()
-                                                        Component.onCompleted: if (flashMe) flashTimer.restart()
-                                                        Timer {
-                                                            id: flashTimer
-                                                            interval: 150          // after the page's layout settled
-                                                            onTriggered: {
-                                                                const y = entry.mapToItem(content, 0, 0).y
-                                                                flick.contentY = Math.max(0, Math.min(y - 80, flick.contentHeight - flick.height))
-                                                                item.flash()
-                                                                root.flashKey = ""
+                                                            Rectangle {
+                                                                visible: entry.index > 0
+                                                                Layout.fillWidth: true
+                                                                Layout.leftMargin: 16
+                                                                Layout.rightMargin: 16
+                                                                implicitHeight: 1
+                                                                color: Colors.fade(0.06)
                                                             }
-                                                        }
 
-                                                        SettingItem {
-                                                            id: item
-                                                            Layout.fillWidth: true
-                                                            store: section.modelData.store
-                                                            spec: root.fullSpec(section.modelData.store, entry.modelData)
-                                                            sub: entry.modelData.dependsOn !== undefined
-                                                            parentOn: entry.modelData.dependsOn === undefined
-                                                                      || !!root.valueOf(section.modelData.store, entry.modelData.dependsOn)
+                                                            // from search: scroll here and flash
+                                                            readonly property bool flashMe: root.flashKey !== ""
+                                                                && root.flashKey === section.modelData.store + "." + entry.modelData.key
+                                                            onFlashMeChanged: if (flashMe) flashTimer.restart()
+                                                            Component.onCompleted: if (flashMe) flashTimer.restart()
+                                                            Timer {
+                                                                id: flashTimer
+                                                                interval: 150          // after the page's layout settled
+                                                                onTriggered: {
+                                                                    const y = entry.mapToItem(content, 0, 0).y
+                                                                    flick.contentY = Math.max(0, Math.min(y - 80, flick.contentHeight - flick.height))
+                                                                    item.flash()
+                                                                    root.flashKey = ""
+                                                                }
+                                                            }
+
+                                                            SettingItem {
+                                                                id: item
+                                                                Layout.fillWidth: true
+                                                                store: section.modelData.store
+                                                                spec: root.fullSpec(section.modelData.store, entry.modelData)
+                                                                sub: entry.modelData.dependsOn !== undefined
+                                                                parentOn: entry.modelData.dependsOn === undefined
+                                                                          || !!root.valueOf(section.modelData.store, entry.modelData.dependsOn)
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -1437,19 +1464,22 @@ Scope {
                                         }
                                     }
                                 }
+
                             }
 
-                        }
-
-                        // pages put bars here that must stay in reach while scrolling
-                        // (network: Apply / keep-or-revert)
-                        ColumnLayout {
-                            id: footerArea
-                            Layout.fillWidth: true
-                            Layout.fillHeight: false      // layouts stretch by default; only the content should
-                            spacing: 0
+                            // pages put bars here that must stay in reach while scrolling
+                            // (network: Apply / keep-or-revert)
+                            ColumnLayout {
+                                id: footerArea
+                                Layout.fillWidth: true
+                                Layout.fillHeight: false      // layouts stretch by default; only the content should
+                                spacing: 0
+                            }
                         }
                     }
+
+                    // what goes into an export (settings, monitors, accounts)
+                    ExportDialog { id: exportDialog; settingsTransfer: transfer }
                 }
             }
         }

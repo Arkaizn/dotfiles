@@ -538,12 +538,30 @@ class _Sanitizer(HTMLParser):
         self.allow_remote, self.cids, self.adapt = allow_remote, cids, adapt
         self.out, self.skip, self.blocked = [], 0, 0
         self.hide = None          # [tag, depth]: inside an element hidden by its style (preheaders …)
-        self.width = 0            # the widest fixed width (px): what the layout was made for
+        self.bg = []              # [tag, color or None] of the open table / tr / td / th
+        self.width = 0            # the widest fixed width (px) of the layout (tables, cells, blocks):
+                                  # what it was made for. Pictures don't count: a wide one in a
+                                  # flowing message is shrunk by the app, it isn't a layout
 
     def note_width(self, v):
         m = re.fullmatch(r"\s*(\d{2,4})(\.\d+)?\s*(px)?\s*", v or "")
         if m:
             self.width = max(self.width, min(1200, int(m.group(1))))
+
+    def inherit_bg(self, tag, kept):
+        """Qt paints a cell's background only behind its first lines when tables are
+        nested in it (newsletters: a dark card with light text → light on white). The
+        cells inside get the color themselves."""
+        own = None
+        for a in kept:
+            m = re.match(r'bgcolor="([^"]*)"', a) or re.match(r'style="[^"]*background(?:-color)?\s*:\s*(#[0-9a-fA-F]{3,8}|rgb[^;"]*)', a)
+            if m:
+                own = m.group(1)
+        inherited = next((c for _, c in reversed(self.bg) if c), None)
+        if own is None and inherited and not self.adapt and tag in ("table", "td", "th"):
+            kept = kept + [f'bgcolor="{inherited}"']
+        self.bg.append([tag, own])
+        return kept
 
     def hidden(self, style):
         st = style or ""
@@ -551,17 +569,20 @@ class _Sanitizer(HTMLParser):
             return True
         return bool(re.search(r"max-height\s*:\s*0", st, re.I) and re.search(r"overflow\s*:\s*hidden", st, re.I))
 
-    def clean_style(self, style):
+    def clean_style(self, style, tag=""):
         if re.search(r"url\s*\(", style, re.I):
             if not self.allow_remote and re.search(r"url\s*\(\s*['\"]?\s*(https?:)?//", style, re.I):
                 self.blocked += 1
             style = re.sub(r"url\s*\([^)]*\)", "none", style, flags=re.I)
         style = re.sub(r"expression\s*\(|javascript:|position\s*:\s*(fixed|absolute)", "", style, flags=re.I)
-        for m in re.finditer(r"(?:^|;)\s*(?:max-|min-)?width\s*:\s*([\d.]+)px", style, re.I):
-            self.note_width(m.group(1))
+        if tag != "img":
+            for m in re.finditer(r"(?:^|;)\s*(?:max-|min-)?width\s*:\s*([\d.]+)px", style, re.I):
+                self.note_width(m.group(1))
         # Qt's rich text draws these literally, newsletters use them as tricks: lines on top of
         # each other (line-height below the font size), squeezed text, overlapping blocks
         style = re.sub(r"(^|;)\s*(letter-spacing|margin(-\w+)?)\s*:\s*-[^;]*", r"\1", style, flags=re.I)
+        # "margin: 0 auto" (centering): Qt can't center with it, it widens the layout instead
+        style = re.sub(r"(^|;)\s*margin(-left|-right)?\s*:[^;]*\bauto\b[^;]*", r"\1", style, flags=re.I)
         fs = re.search(r"font-size\s*:\s*([\d.]+)px", style, re.I)
         lh = re.search(r"line-height\s*:\s*([\d.]+)px", style, re.I)
         if lh and float(lh.group(1)) < max(12.0, float(fs.group(1)) if fs else 0):
@@ -613,12 +634,14 @@ class _Sanitizer(HTMLParser):
                 elif not re.match(r"^\s*data:image/(png|jpe?g|gif|webp|bmp)[;,]", v, re.I):
                     continue
             if k == "style":
-                v = self.clean_style(v)
-            if k == "width" and tag in ("table", "td", "th", "img", "div"):
+                v = self.clean_style(v, tag)
+            if k == "width" and tag in ("table", "td", "th", "div"):
                 self.note_width(v)
             kept.append(f'{k}="{html.escape(v, quote=True)}"')
         if tag == "img" and not any(a.startswith("src=") for a in kept):
             return
+        if tag in ("table", "tr", "td", "th") and not closed:
+            kept = self.inherit_bg(tag, kept)
         self.out.append(f"<{tag}{' ' if kept else ''}{' '.join(kept)}{' /' if closed else ''}>")
 
     def handle_startendtag(self, tag, attrs):
@@ -637,6 +660,10 @@ class _Sanitizer(HTMLParser):
             return
         if self.skip or tag in self.VOID or tag in ("html", "body"):
             return
+        if tag in ("table", "tr", "td", "th"):
+            while self.bg:
+                if self.bg.pop()[0] == tag:
+                    break
         self.out.append(f"</{tag}>")
 
     def handle_data(self, data):

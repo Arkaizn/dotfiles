@@ -22,6 +22,8 @@ import QtQuick
 //                          discovery, dedup and order), local ones backed by
 //                          the native player of the same bus name. Without
 //                          it: the native players, as before.
+//                          A server's session of a player on this device
+//                          (twins) is left out: the local one stands for it
 //   bridgeActive           sources come from the bridge
 //   selected               the bridge's selected session (or its first one);
 //                          null without the bridge (views keep their own pick)
@@ -34,10 +36,48 @@ Singleton {
     readonly property bool anyPlaying: players.some(p => p.isPlaying)
 
     readonly property bool bridgeActive: MediaSync.connected
+
+    // A player on this device that streams from a server shows up twice in the
+    // bridge: locally (MPRIS) and as the server's session of it (Feishin →
+    // Jellyfin's "Desktop Client"). That remote one is left out, the local one
+    // (with the controls) stands for it. Twin: same player and same track as a
+    // local session; once seen, that remote device stays a twin (a track change
+    // reaches the server a moment later, it mustn't pop up in between).
+    //   twins   remote session id → its local session id
+    property var _twinDevices: ({})          // "<provider instance>|<device id>" → true
+    function _norm(t) { return String(t ?? "").trim().toLowerCase() }
+    readonly property var twins: {
+        const out = {}
+        if (!root.bridgeActive) return out
+        const locals = MediaSync.sessions.filter(s => s.origin === "local")
+        for (const s of MediaSync.sessions) {
+            if (s.origin !== "remote") continue
+            const who = [root._norm(s.player?.identity), root._norm(s.player?.client)].filter(x => x !== "")
+            const same = locals.filter(l => who.includes(root._norm(l.player?.identity)))
+            if (same.length === 0) continue
+            const title = root._norm(s.track?.title)
+            const match = same.find(l => title !== "" && root._norm(l.track?.title) === title)
+            const known = root._twinDevices[s.provider_instance + "|" + (s.player?.device_id ?? "")]
+            if (match || known) out[s.id] = (match ?? same[0]).id
+        }
+        return out
+    }
+    // remembered after the binding ran (it reads _twinDevices)
+    onTwinsChanged: Qt.callLater(root._rememberTwins)
+    function _rememberTwins() {
+        let add = null
+        for (const id of Object.keys(root.twins)) {
+            const s = MediaSync.byId[id]
+            const k = s ? s.provider_instance + "|" + (s.player?.device_id ?? "") : ""
+            if (k && !root._twinDevices[k]) { add = add ?? Object.assign({}, root._twinDevices); add[k] = true }
+        }
+        if (add) root._twinDevices = add
+    }
+
     readonly property var _sourceDefs: {
         if (!root.bridgeActive)
             return root.players.map(p => ({ key: "native:" + p.dbusName, sessionId: "", mpris: p }))
-        return MediaSync.sessions.map(s => {
+        return MediaSync.sessions.filter(s => !root.twins[s.id]).map(s => {
             const bus = s.provider === "mpris" ? (s.player?.bus_name ?? "") : ""
             const native = bus !== "" ? (root.players.find(p => p.dbusName === bus) ?? null) : null
             return { key: s.id, sessionId: s.id, mpris: native }
@@ -58,8 +98,9 @@ Singleton {
     }
     on_SourceDefsChanged: Qt.callLater(root._collect)     // order changes add / remove nothing
 
+    // the bridge may pick a left-out twin: its local session then
     readonly property var selected: root.bridgeActive
-        ? (root.sources.find(s => s.sessionId === MediaSync.selectedId) ?? root.sources[0] ?? null) : null
+        ? (root.sources.find(s => s.sessionId === (root.twins[MediaSync.selectedId] ?? MediaSync.selectedId)) ?? root.sources[0] ?? null) : null
     function selectNext() {
         const ids = root.sources.map(s => s.sessionId)
         const next = MediaSources.nextKey(ids, root.selected?.sessionId ?? "")
@@ -81,6 +122,7 @@ Singleton {
         function status(): string {
             return JSON.stringify({
                 bridge: MediaSync.state, problem: MediaSync.problem, current: root.current?.key ?? null,
+                twins: root.twins,                                         // left out: remote id → local id
                 nativePlayers: root.players.map(p => p.identity),     // lockscreen / widget (never filtered by the bridge)
                 sources: root.sources.map(s => ({ key: s.key, native: s.mpris !== null, origin: s.origin, kind: s.kind,
                     player: s.identity, place: s.placeLabel, title: s.trackTitle, artist: s.trackArtist,

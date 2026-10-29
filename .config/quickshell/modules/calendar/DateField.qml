@@ -77,6 +77,9 @@ Item {
 
     Popup {
         id: pop
+        // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+        scale: AppZoom.at(parent)
+        transformOrigin: Popup.TopLeft
         y: root.height + 6
         x: Math.min(0, root.width - width)
         width: 250
@@ -88,7 +91,7 @@ Item {
             border.width: Properties.panelBorderWidth
             border.color: Properties.panelBorder
         }
-        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140 } NumberAnimation { property: "scale"; from: 0.95; to: 1; duration: 160; easing.type: Easing.OutCubic } }
+        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140 } NumberAnimation { property: "scale"; from: 0.95 * AppZoom.at(root); to: AppZoom.at(root); duration: 160; easing.type: Easing.OutCubic } }
         exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 100 } }
         contentItem: MiniMonth {
             selected: root.day

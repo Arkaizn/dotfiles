@@ -27,6 +27,7 @@ import QtQuick
 //   greeter    → the login screen (greeter/): follows the lockscreen or has
 //                its own items, default user / session (LockItems.resolveGreeter);
 //                copied to /var/lib/quickshell-greeter by GreeterSync.qml
+//   zoom       → how big each app window draws (AppZoom.qml): { mail: "125", … } in %
 //   media      → { bridge: bool } use the mediasync bridge for the bar and
 //                dashboard (MediaSync.qml); its own settings live in the bridge
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
@@ -81,6 +82,7 @@ Singleton {
     property var media: ({})
     property var greeter: ({})
     property var panels: ({})
+    property var zoom: ({})
     property bool loaded: false
 
     // every group, in the order they're written
@@ -89,7 +91,7 @@ Singleton {
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
-                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels"]
+                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "zoom"]
     // how each group is called in the UI (export / import messages, profiles).
     // A new group needs: a property above, an entry in `groups`, a label here,
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
@@ -102,7 +104,7 @@ Singleton {
         netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
         health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
         monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout",
-        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)" })
+        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)", zoom: "App zoom" })
     function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────

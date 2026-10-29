@@ -8,8 +8,8 @@ import qs.services.lib
 //
 // Magnet: `slot` is where the part would land (its top-left, in the parent's
 // coordinates, or null). Near it the ghost is pulled in (Snap.pull) while
-// still held, and it moves there with a slow spring, so it "clicks in"
-// without feeling stuck: moving on pulls it out again.
+// still held, so it "clicks in" without feeling stuck: moving on pulls it
+// out again.
 ShaderEffectSource {
     id: ghost
     property Item source: null
@@ -35,10 +35,26 @@ ShaderEffectSource {
     opacity: 0.94
     transformOrigin: Item.Center
 
-    // no spring for the first frame of a drag (it would fly in from the last spot)
-    property bool _armed: false
-    onSourceChanged: { _armed = false; if (source) Qt.callLater(() => ghost._armed = true) }
-    Behavior on x { enabled: ghost._armed; SpringAnimation { spring: 3.2; damping: 0.42; epsilon: 0.2 } }
-    Behavior on y { enabled: ghost._armed; SpringAnimation { spring: 3.2; damping: 0.42; epsilon: 0.2 } }
+    // follows the pointer 1:1 (Snap.pull already eases the magnet in); only
+    // when the slot jumps to another spot does it glide over, briefly — a
+    // spring on every move made the ghost trail and overshoot the pointer
+    property bool _glide: false
+    property real _sx: NaN
+    property real _sy: NaN
+    onSlotChanged: {
+        const sx = slot ? slot.x : NaN, sy = slot ? slot.y : NaN
+        // the slot is a new object on every pointer move: only a real move counts
+        if (sx === _sx && sy === _sy) return
+        const near = (x, y) => Math.hypot(x - free.x, y - free.y) < magnet   // NaN → false
+        if (source && !(Math.abs(sx - _sx) < 1 && Math.abs(sy - _sy) < 1) && (near(sx, sy) || near(_sx, _sy))) {
+            _glide = true
+            glideEnd.restart()
+        }
+        _sx = sx; _sy = sy
+    }
+    onSourceChanged: { _glide = false; _sx = NaN; _sy = NaN }
+    Timer { id: glideEnd; interval: 120; onTriggered: ghost._glide = false }
+    Behavior on x { enabled: ghost._glide; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
+    Behavior on y { enabled: ghost._glide; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
     Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
 }

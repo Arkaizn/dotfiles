@@ -8,7 +8,7 @@ import "SettingsSearch.js" as SI
 // and a revert button once it differs from the default.
 //
 //   spec:  { key, label, desc, type: int|real|bool|color|string|choice|font,
-//            min, max, step, options }
+//            min, max, step, options, unit (after a choice's values) }
 //   store: "properties" → Properties.qml values
 //          "niri"       → niri config (NiriSettings)
 //          "hyprland"   → Hyprland config (HyprSettings)
@@ -180,7 +180,7 @@ Item {
                 case "int":
                 case "real": return number
                 case "color": return colorPicker
-                case "choice": return choice
+                case "choice": return root.spec.options.length > 6 ? choiceList : choice
                 case "button": return button
                 case "font": return fontPicker
                 default: return textField
@@ -228,6 +228,16 @@ Item {
         id: choice
         ChoiceControl {
             options: root.spec.options
+            value: root.current
+            onEdited: v => root.set(v)
+        }
+    }
+    // a long list (App zoom's steps): a dropdown, "unit" after each value
+    Component {
+        id: choiceList
+        DropdownControl {
+            implicitWidth: 120
+            options: root.spec.options.map(x => ({ label: x + (root.spec.unit ?? ""), value: x }))
             value: root.current
             onEdited: v => root.set(v)
         }

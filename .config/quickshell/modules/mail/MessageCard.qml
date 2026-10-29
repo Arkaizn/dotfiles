@@ -67,6 +67,50 @@ Rectangle {
         }
         return '<div style="white-space:pre-wrap">' + out.join("<br>") + '</div>'
     }
+    // the sanitized HTML laid out for `room` px: fixed widths above it (attribute or
+    // style) become 100 %, pictures wider than it shrink to it (height along)
+    function fitWidths(h, room) {
+        const px = v => { const m = /^\s*(\d+(?:\.\d+)?)\s*(?:px)?\s*$/.exec(v ?? ""); return m ? parseFloat(m[1]) : NaN }
+        return h.replace(/<(img|table|td|th|div)\b([^>]*)>/gi, (all, tag, attrs) => {
+            let a = attrs
+            // style widths: a picture loses them (its attributes say it below), a box goes to 100 %
+            const st = /\bstyle="([^"]*)"/i.exec(a)
+            let styleW = NaN
+            if (st) {
+                const css = st[1].replace(/(^|;)\s*((?:min-|max-)?width)\s*:\s*([\d.]+)px\s*/gi, (m, sep, prop, n) => {
+                    if (prop.toLowerCase() === "width") styleW = parseFloat(n)
+                    if (parseFloat(n) <= room) return m
+                    return tag.toLowerCase() === "img" || prop.toLowerCase() !== "width" ? sep : sep + "width:100%"
+                })
+                a = a.replace(st[0], 'style="' + css + '"')
+            }
+            const wm = /\swidth="([^"]*)"/i.exec(a)
+            const w = wm ? px(wm[1]) : styleW
+            const img = tag.toLowerCase() === "img"
+            if (!(w > room)) return "<" + tag + a + ">"
+            if (!img)
+                return "<" + tag + (wm ? a.replace(wm[0], ' width="100%"') : a) + ">"
+            const hm = /\sheight="([^"]*)"/i.exec(a)
+            const ht = hm ? px(hm[1]) : NaN
+            a = wm ? a.replace(wm[0], ' width="' + Math.floor(room) + '"') : a + ' width="' + Math.floor(room) + '"'
+            if (ht > 0) a = a.replace(hm[0], ' height="' + Math.round(ht * room / w) + '"')
+            return "<" + tag + a + ">"
+        })
+    }
+    // a layout's table cells one below the other (like a newsletter on a phone):
+    // Qt's tables add their padding and nesting on top of a cell's width, so side
+    // by side they'd stick out of a narrow room again
+    function stackCells(h) {
+        return h.replace(/<\/?(tbody|thead|tfoot)\b[^>]*>/gi, "")
+            .replace(/<(table|tr|td|th)\b([^>]*)>/gi, (m, t, a) => {
+                const bg = /\sbgcolor="([^"]*)"/i.exec(a)
+                a = a.replace(/\s(width|height|bgcolor|cellpadding|cellspacing|border|colspan|rowspan|valign)="[^"]*"/gi, "")
+                if (bg) a = /\sstyle="/i.test(a) ? a.replace(/\sstyle="/i, ' style="background-color:' + bg[1] + ";")
+                                                : a + ' style="background-color:' + bg[1] + '"'
+                return "<div" + a + ">"
+            })
+            .replace(/<\/(table|tr|td|th)>/gi, "</div>")
+    }
     readonly property int quotedLines: String(body?.text ?? "").split("\n").filter(l => /^\s*>/.test(l)).length
 
     readonly property string unsubscribeUrl: {
@@ -256,24 +300,33 @@ Rectangle {
             ActionButton { visible: !root.loading && root.error !== ""; icon: "󰑐"; text: "Try again"; onClicked: root.load() }
         }
 
-        // HTML on paper. A layout made for a fixed width (newsletters: 600 px) that's
-        // wider than the room here is laid out at that width and scaled down to fit,
-        // like phone mail apps do, instead of being cut off on the right.
+        // HTML on paper, sized like a desktop mail app does it. A layout made for a
+        // fixed width (newsletters: ~600 px):
+        //   room enough   → at that width, in the middle (not a narrow column on the left)
+        //   a bit short   → scaled down a little (down to 85 %), the layout stays as made
+        //   much too wide → laid out again in the room: widths above it shrink to it,
+        //                   pictures with them (compact, readable text — not just smaller)
+        // A flowing message takes the room; pictures wider than it shrink to fit.
         Rectangle {
             id: paper
             Layout.fillWidth: true
             visible: root.expanded && root.body !== null && !root.asText && (root.body.html ?? "") !== ""
             readonly property real room: width - (root.dark ? 0 : 28)
             readonly property real design: root.body?.htmlWidth ?? 0
-            readonly property real fit: design > room && room > 0 ? Math.max(0.4, room / design) : 1
+            readonly property bool layout: design >= 360
+            readonly property real fit: layout && design > room && room > 0 && room / design >= 0.85 ? room / design : 1
+            // compact: the room in steps of 40 px, so resizing doesn't lay it out on every pixel
+            readonly property int reflowAt: layout && design * 0.85 > room || !layout ? Math.max(200, Math.floor(room / 40) * 40) : 0
+            readonly property real textWidth: !layout ? room : fit < 1 ? design : Math.min(design, room)
             implicitHeight: htmlView.implicitHeight * fit + (root.dark ? 4 : 28)
             radius: 10
             color: root.dark ? "transparent" : "#fbfaf8"
             clip: true
             TextEdit {
                 id: htmlView
-                x: root.dark ? 0 : 14; y: root.dark ? 2 : 14
-                width: paper.fit < 1 ? paper.room / paper.fit : paper.room
+                x: Math.max(root.dark ? 0 : 14, (paper.width - width * paper.fit) / 2)
+                y: root.dark ? 2 : 14
+                width: paper.textWidth
                 scale: paper.fit
                 transformOrigin: Item.TopLeft
                 readOnly: true
@@ -281,7 +334,10 @@ Rectangle {
                 textFormat: TextEdit.RichText
                 wrapMode: TextEdit.Wrap
                 // dark style: links in the theme's accent (Qt's default blue is hard to read on dark)
-                text: paper.visible && root.body ? (root.dark ? "<style>a { color: " + Colors.color6 + "; }</style>" : "") + root.body.html : ""
+                text: paper.visible && root.body ? (root.dark ? "<style>a { color: " + Colors.color6 + "; }</style>" : "")
+                      + (paper.reflowAt === 0 ? root.body.html
+                         : paper.layout ? root.stackCells(root.fitWidths(root.body.html, paper.reflowAt))
+                         : root.fitWidths(root.body.html, paper.reflowAt)) : ""
                 color: root.dark ? Colors.fade(0.88) : "#1d1d1f"
                 selectionColor: root.dark ? Colors.fade(0.28) : "#a8c7fa"
                 selectedTextColor: root.dark ? Colors.ink : "#1d1d1f"

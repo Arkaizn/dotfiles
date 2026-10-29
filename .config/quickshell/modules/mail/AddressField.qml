@@ -43,6 +43,9 @@ SearchField {
     Keys.onTabPressed: event => { if (!take()) event.accepted = false }
 
     Popup {
+        // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+        scale: AppZoom.at(parent)
+        transformOrigin: Popup.TopLeft
         y: root.height + 4
         width: root.width
         padding: 5

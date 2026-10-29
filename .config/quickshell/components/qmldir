@@ -12,3 +12,4 @@ DragGhost DragGhost.qml
 BarButton BarButton.qml
 ConfirmArm ConfirmArm.qml
 ResizeHandle ResizeHandle.qml
+ZoomArea ZoomArea.qml

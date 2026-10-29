@@ -27,6 +27,10 @@ RowLayout {
     property bool strikeout: false
     property string size: "normal"
     property string family: "sans"
+    property string textColor: ""           // a color picked for what's typed next
+    property bool bulleted: false
+    property bool numbered: false
+    property bool quoted: false
 
     readonly property var sizes: ({ small: 12, normal: 14, large: 18, huge: 24 })
     readonly property var families: ({ sans: "Noto Sans", serif: "Noto Serif", mono: "Noto Sans Mono" })
@@ -36,12 +40,26 @@ RowLayout {
     property var pending: null              // { pos, len, changes: [f => …], color }
     function refresh() {
         if (!editor) return
-        const f = editor.cursorSelection.font
+        // a plain copy: changes on the font Qt hands out are written back to the
+        // cursor — dropped there on a bare cursor, so the button wouldn't light up
+        const cur = editor.cursorSelection.font
+        const f = { bold: cur.bold, italic: cur.italic, underline: cur.underline, strikeout: cur.strikeout,
+                    pixelSize: cur.pixelSize, pointSize: cur.pointSize, family: cur.family }
         if (pending) pending.changes.forEach(c => c(f))
         bold = f.bold; italic = f.italic; underline = f.underline; strikeout = f.strikeout
         const px = f.pixelSize > 0 ? f.pixelSize : Math.round(f.pointSize * 4 / 3)
         size = Object.keys(sizes).reduce((best, k) => Math.abs(sizes[k] - px) < Math.abs(sizes[best] - px) ? k : best, "normal")
         family = Object.keys(families).find(k => families[k] === f.family) ?? "sans"
+        textColor = pending?.color || ""
+        // the cursor's line: list / quote
+        const t = plain()
+        const at = Math.min(editor.selectionStart, editor.selectionEnd)
+        const s = t.lastIndexOf("\n", at - 1) + 1
+        let e = t.indexOf("\n", s)
+        const p = parseLine(t.slice(s, e < 0 ? t.length : e))
+        quoted = p.quote !== ""
+        bulleted = p.list === "• "
+        numbered = /^\d/.test(p.list)
     }
     function hasSelection() { return editor.selectionStart !== editor.selectionEnd }
     function queue(change, color) {
@@ -101,26 +119,41 @@ RowLayout {
         if (e < 0) e = t.length
         return [s, e]
     }
-    // lists and quotes as line prefixes ("• ", "1. ", "> "): Qt's list blocks shift the lines
-    // after them too, and plain prefixes look the same in every mail app. Again: removed.
+    // lists and quotes as line prefixes ("> " first, then "• " or "1. "): Qt's list
+    // blocks shift the lines after them too, and plain prefixes look the same in
+    // every mail app. A bulleted and a numbered list exclude each other (the
+    // other one replaces it); a quote goes with either. Again: removed.
+    function parseLine(l) {
+        const m = /^(> )?(• |\d+\. )?/.exec(l)
+        return { quote: m[1] ?? "", list: m[2] ?? "" }
+    }
     function prefixLines(kind) {
         const [s, e] = lineRange()
         const t = plain()
         const lines = t.slice(s, e).split("\n")
-        const pattern = kind === "bullet" ? /^• / : kind === "number" ? /^\d+\. / : /^> /
-        const off = lines.every(l => pattern.test(l))
+        const parsed = lines.map(parseLine)
+        const has = p => kind === "quote" ? p.quote !== "" : kind === "bullet" ? p.list === "• " : /^\d/.test(p.list)
+        const off = parsed.every(has)
+        // in the text's own color (not the quote mark's grey before it)
+        const plainSpan = x => '<span style="color:' + editor.color + '">' + x + "</span>"
         // last line first: the positions before it stay valid
         let at = e
         for (let i = lines.length - 1; i >= 0; i--) {
             const start = at - lines[i].length
-            if (off) editor.remove(start, start + pattern.exec(lines[i])[0].length)
-            else {
-                const pre = kind === "bullet" ? "• " : kind === "number" ? (i + 1) + ". " : "&gt; "
-                editor.insert(start, kind === "quote" ? '<span style="color:#7f7f7f">' + pre + "</span>" : pre)
+            const p = parsed[i]
+            if (kind === "quote") {
+                if (off) editor.remove(start, start + p.quote.length)
+                else if (!p.quote) editor.insert(start, '<span style="color:#7f7f7f">&gt; </span>')
+            } else {
+                const ls = start + p.quote.length
+                if (p.list) editor.remove(ls, ls + p.list.length)
+                if (!off) editor.insert(ls, p.quote ? plainSpan(kind === "bullet" ? "• " : (i + 1) + ". ")
+                                                    : kind === "bullet" ? "• " : (i + 1) + ". ")
             }
             at = start - 1
         }
         editor.forceActiveFocus()
+        refresh()
     }
     function list(ordered) { prefixLines(ordered ? "number" : "bullet") }
     function quote() { prefixLines("quote") }
@@ -222,10 +255,23 @@ RowLayout {
         implicitWidth: 28; implicitHeight: 28; iconSize: 13
         id: colorButton
         icon: "󰚞"
+        active: root.textColor !== ""
         tooltip: "Text color"
         onClicked: colorPopup.open()
+        // the color for what's typed next
+        Rectangle {
+            visible: root.textColor !== ""
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 3
+            width: 14; height: 3; radius: 1.5
+            color: root.textColor || "transparent"
+        }
         Popup {
             id: colorPopup
+            // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+            scale: AppZoom.at(parent)
+            transformOrigin: Popup.TopLeft
             y: colorButton.height + 4
             padding: 8
             background: Rectangle {
@@ -258,9 +304,9 @@ RowLayout {
         }
     }
     Item { implicitWidth: 6 }
-    IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰉹"; tooltip: "Bulleted list"; onClicked: root.list(false) }
-    IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰉻"; tooltip: "Numbered list"; onClicked: root.list(true) }
-    IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰝗"; tooltip: "Quote"; onClicked: root.quote() }
+    IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰉹"; active: root.bulleted; tooltip: "Bulleted list"; onClicked: root.list(false) }
+    IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰉻"; active: root.numbered; tooltip: "Numbered list"; onClicked: root.list(true) }
+    IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰝗"; active: root.quoted; tooltip: "Quote"; onClicked: root.quote() }
     IconButton {
         implicitWidth: 28; implicitHeight: 28; iconSize: 13
         id: linkButton
@@ -269,6 +315,9 @@ RowLayout {
         onClicked: root.askLink()
         Popup {
             id: linkPopup
+            // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+            scale: AppZoom.at(parent)
+            transformOrigin: Popup.TopLeft
             y: linkButton.height + 4
             width: 320
             padding: 8

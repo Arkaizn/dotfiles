@@ -224,8 +224,9 @@ Singleton {
         return t + indent + "}"
     }
 
+    // w, h: floating at that size; none: maximized (mail, calendar)
     function windowRule(name, title, w, h) {
-        return Syntax.fmt("hypr.windowRule", { name: Compositor.luaString(name), title: Compositor.luaString("^" + title + "$"),
+        return Syntax.fmt(w ? "hypr.windowRule" : "hypr.windowRuleMaximized", { name: Compositor.luaString(name), title: Compositor.luaString("^" + title + "$"),
                                                 width: String(w), height: String(h) }) + "\n\n"
     }
 
@@ -251,8 +252,8 @@ Singleton {
             + (tree.size > 0 ? Syntax.fmt("hypr.config", { body: render(tree, "") }) + "\n\n" : "")
             + "-- the settings, calendar and mail windows\n"
             + windowRule("quickshell-settings", windowTitle, 980, 680)
-            + windowRule("quickshell-calendar", "Quickshell Calendar", 1240, 800)
-            + windowRule("quickshell-mail", "Quickshell Mail", 1320, 820)
+            + windowRule("quickshell-calendar", "Quickshell Calendar")
+            + windowRule("quickshell-mail", "Quickshell Mail")
             + Syntax.fmt("hypr.bind", { keys: Syntax.luaString(Syntax.hyprKeys(["Mod", "S"])),
                                         action: Syntax.fmt("hypr.exec", { cmd: Syntax.luaString("qs ipc call settings toggle") }),
                                         opts: Syntax.lua({ description: "Settings" }) }) + "\n\n"

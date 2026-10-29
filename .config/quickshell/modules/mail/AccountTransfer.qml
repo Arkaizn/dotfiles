@@ -39,7 +39,20 @@ Modal {
         picked = p
         open()
         if (m === "import") Qt.callLater(pickFile)
+        handedFile = ""
     }
+
+    // a file handed over (the settings import: written to a private temp folder,
+    // removed again when the dialog closes)
+    property string handedFile: ""
+    function startFile(p) {
+        start("import-file")
+        mode = "import"
+        handedFile = p
+        path = p
+        readFile()
+    }
+    onClosed: if (handedFile) { Jobs.run(["rm", "-f", "--", handedFile], () => {}); handedFile = "" }
 
     function toggle(k) { const p = Object.assign({}, picked); p[k] = !p[k]; picked = p }
     readonly property var chosen: Object.keys(picked).filter(k => picked[k])

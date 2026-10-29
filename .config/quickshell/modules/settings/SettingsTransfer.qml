@@ -8,11 +8,16 @@ import qs.services.lib
 
 // Export / import of settings.json, plus the banner that reports on it.
 //
-// Export writes every group to a file picked with zenity. Import reads a
+// Export writes the groups picked in ExportDialog (exportWith) to a file
+// picked with zenity — without the monitor layout and the "which monitor"
+// keys unless asked — and, if asked, the mail / calendar accounts (the apps'
+// own export files, embedded: "accounts": { mail, calendar }). Import reads a
 // file, checks all of it first (JSON syntax with line + column, then every
 // group, key and value against the settings app's specs), and only after a
-// clean check and a confirm replaces the groups that are in the file.
-// Groups the file leaves out are kept.
+// clean check and a confirm replaces the groups that are in the file. Groups
+// the file leaves out are kept, and so are this device's "which monitor" keys
+// when the file has none. Accounts in it open the app's import (passphrase,
+// which accounts) afterwards.
 Rectangle {
     id: root
 
@@ -192,20 +197,59 @@ Rectangle {
     function dismiss() { mode = ""; pending = null }
 
     // ── Export ───────────────────────────────────────────────────────────────
-    function exportSettings() {
+    // opts: { groups, monitors, mail, calendar, withPasswords, passphrase } (ExportDialog)
+    property var exportOpts: null
+    function exportWith(opts) {
+        exportOpts = opts
         pick.forImport = false
-        pick.command = ["zenity", "--file-selection", "--save", "--title=Export Quickshell settings",
+        pick.command = ["zenity", "--file-selection", "--save", "--confirm-overwrite", "--title=Export Quickshell settings",
                         "--filename=" + defaultPath, "--file-filter=JSON | *.json", "--file-filter=All files | *"]
         pick.running = true
     }
 
+    // where an account export is written for a moment (per user, not on disk)
+    readonly property string tmpDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/quickshell-transfer"
+
     function writeTo(path) {
+        const opts = exportOpts ?? { groups: groups.filter(g => g !== "monitors"), monitors: false }
+        exportOpts = null
         const o = { quickshellSettings: 1, exported: new Date().toISOString(), version: Settings.version }
-        for (const g of groups) o[g] = Settings[g]
-        writer.path = path
-        writer.command = ["sh", "-c", 'printf "%s" "$1" > "$2"', "sh", JSON.stringify(o, null, 2) + "\n", path]
+        for (const g of groups) {
+            if (!opts.groups.includes(g)) continue
+            let v = Settings[g]
+            // the monitors the bar / lockscreen / widgets … use: only with the monitors
+            if (!opts.monitors && v && v.monitors !== undefined) { v = Object.assign({}, v); delete v.monitors }
+            o[g] = v
+        }
         show("busy", "Exporting…")
-        writer.running = true
+        // the accounts: the apps' own export files, read back in and embedded
+        const parts = [opts.mail ? "mail" : "", opts.calendar ? "calendar" : ""].filter(x => x)
+        const next = () => {
+            const k = parts.shift()
+            if (!k) return save(path, o, opts)
+            const tmp = tmpDir + "/" + k + "-" + Date.now().toString(36)
+            const store = k === "mail" ? MailStore : CalendarStore
+            Jobs.run(["sh", "-c", 'mkdir -p "$1" && chmod 700 "$1"', "sh", tmpDir], () => {
+                store.exportAccounts(store.accounts.map(a => a.id), opts.withPasswords, opts.passphrase, tmp, res => {
+                    if (!res.ok) { show("error", "Couldn't export the " + k + " accounts", res.error); return }
+                    Jobs.run(["sh", "-c", 'cat -- "$1"; rm -f -- "$1"', "sh", tmp], (code, out) => {
+                        if (code !== 0) { show("error", "Couldn't export the " + k + " accounts", "reading " + tmp + " failed"); return }
+                        o.accounts = Object.assign({}, o.accounts, { [k]: out })
+                        next()
+                    })
+                })
+            })
+        }
+        next()
+    }
+    function save(path, o, opts) {
+        const n = Object.keys(o.accounts ?? {}).length
+        // stdin, not an argument: an embedded local calendar can be big; private when it has accounts
+        Jobs.runInput(["sh", "-c", (n ? "umask 077; " : "") + 'cat > "$1"', "sh", path], JSON.stringify(o, null, 2) + "\n", (code, out, err) => {
+            if (code === 0) show("done", "Settings exported to " + path
+                                 + (n ? " (with the " + Object.keys(o.accounts).join(" and ") + " accounts" + (opts.withPasswords ? ", encrypted)" : ", no passwords)") : ""))
+            else show("error", "Couldn't export the settings", String(err ?? "").trim())
+        })
     }
 
     // ── Import ───────────────────────────────────────────────────────────────
@@ -244,8 +288,10 @@ Rectangle {
             return
         }
         const v = parsed.value
+        const accs = Object.keys(v.accounts ?? {})
         const parts = groups.filter(g => v[g] !== undefined)
             .map(g => Object.keys(v[g]).length + " " + groupNames[g])
+            .concat(accs.map(k => k + " accounts" + (/BEGIN PGP MESSAGE/.test(v.accounts[k]) ? " (encrypted)" : "")))
         if (parts.length === 0) {
             show("error", name + " has no settings in it, nothing was imported",
                  "Expected at least one of: " + groups.map(g => "\"" + g + "\"").join(", "))
@@ -254,7 +300,8 @@ Rectangle {
         pending = v
         show("confirm", name + " is valid: " + parts.join(", "),
              "Importing replaces your current " + groups.filter(g => v[g] !== undefined).map(g => groupNames[g]).join(", ")
-             + " settings with the ones in the file.")
+             + " settings with the ones in the file."
+             + (accs.length ? " The " + accs.join(" and ") + " accounts open in their app's import afterwards (passphrase, which ones)." : ""))
     }
 
     // the line with the error and a ^ under the spot
@@ -267,9 +314,23 @@ Rectangle {
     function apply() {
         const v = pending
         dismiss()
-        for (const g of groups) if (v[g] !== undefined) Settings.setGroup(g, v[g])
+        for (const g of groups) {
+            if (v[g] === undefined) continue
+            // a file without "which monitor" keys (exported without the monitors) keeps this device's
+            const keep = g !== "monitors" && v[g].monitors === undefined && Settings[g]?.monitors !== undefined
+            Settings.setGroup(g, keep ? Object.assign({}, v[g], { monitors: Settings[g].monitors }) : v[g])
+        }
         if (v.monitors !== undefined) Monitors.write()     // niri / Hyprland settings follow Settings.niri / .hyprland by themselves
         show("done", "Settings imported")
+        // the accounts: written out for a moment, then each app's import takes it from there
+        for (const k of Object.keys(v.accounts ?? {})) {
+            const tmp = tmpDir + "/" + k + "-import-" + Date.now().toString(36) + (k === "mail" ? ".qsmail" : ".qscal")
+            Jobs.run(["sh", "-c", 'mkdir -p "$1" && chmod 700 "$1"', "sh", tmpDir], () =>
+                Jobs.runInput(["sh", "-c", 'umask 077; cat > "$1"', "sh", tmp], v.accounts[k], code => {
+                    if (code === 0) Panels.call(k, "importAccounts", tmp)
+                    else show("error", "Couldn't hand the " + k + " accounts to the app")
+                }))
+        }
     }
 
     // ── Checks ───────────────────────────────────────────────────────────────
@@ -284,6 +345,13 @@ Rectangle {
 
         for (const g of Object.keys(v)) {
             if (g === "quickshellSettings" || g === "exported" || g === "version") continue
+            if (g === "accounts") {
+                if (!isObj(v[g])) { err([g], "\"accounts\" should be an object { mail, calendar }"); continue }
+                for (const k of Object.keys(v[g]))
+                    if (!["mail", "calendar"].includes(k)) err([g, k], "accounts: unknown part \"" + k + "\" (mail, calendar)")
+                    else if (typeof v[g][k] !== "string" || v[g][k].length === 0) err([g, k], "accounts." + k + ": expected the app's export as text")
+                continue
+            }
             if (!groups.includes(g)) { err([g], "unknown group \"" + g + "\" (expected " + groups.join(", ") + ")"); continue }
             if (!isObj(v[g])) { err([g], "\"" + g + "\" should be an object { … }"); continue }
             if (g === "monitors") { checkMonitors(v[g], err); continue }
@@ -429,16 +497,6 @@ Rectangle {
                 root.show("error", "Couldn't open the file picker",
                           code === 127 ? "zenity isn't installed." : "zenity exited with code " + code + ".")
             }
-        }
-    }
-
-    Process {
-        id: writer
-        property string path: ""
-        stderr: StdioCollector { id: writeErr }
-        onExited: code => {
-            if (code === 0) root.show("done", "Settings exported to " + writer.path)
-            else root.show("error", "Couldn't export the settings", writeErr.text.trim())
         }
     }
 

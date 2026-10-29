@@ -79,6 +79,9 @@ Rectangle {
                 onClicked: moveMenu.open()
                 Popup {
                     id: moveMenu
+                    // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+                    scale: AppZoom.at(parent)
+                    transformOrigin: Popup.TopLeft
                     y: parent.height + 4
                     padding: 6
                     closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape

@@ -12,8 +12,8 @@ Flickable {
 
     property string view: "unified:inbox"
     signal picked(string view)
-    signal accountMenu(string id)
-    signal newFolder(string account, string parent)     // ＋ on an account, right-click on a folder
+    signal accountSettings(string id)                   // the account's page in the mail settings
+    signal newFolder(string account, string parent)     // from the right-click menus
 
     contentHeight: col.implicitHeight
     clip: true
@@ -58,7 +58,7 @@ Flickable {
                 onActivated: root.picked(v)
                 icon: I.role(modelData.folder.role)
                 label: modelData.folder.role === "inbox" ? "Inbox" : modelData.folder.name
-                hint: MailStore.activeAccounts.length > 1 ? (modelData.account.name || modelData.account.email) : ""
+                hint: MailStore.activeAccounts.length > 1 ? MailStore.accountLabel(modelData.account) : ""
                 dot: MailStore.activeAccounts.length > 1 ? (modelData.account.color ?? "") : ""
                 count: MailStore.unreadIn(modelData.account.id, modelData.folder.path)
                 muted: modelData.folder.role !== "inbox"
@@ -68,6 +68,7 @@ Flickable {
             }
         }
 
+        Label { text: "ACCOUNTS"; Layout.topMargin: 12; visible: MailStore.accounts.length > 0 }
         Repeater {
             model: MailStore.accounts
             ColumnLayout {
@@ -75,30 +76,59 @@ Flickable {
                 required property var modelData
                 readonly property bool on: modelData.enabled !== false
                 readonly property string error: MailStore.errors[modelData.id] ?? ""
-                property bool collapsed: false
+                readonly property bool collapsed: modelData.collapsed === true
+                readonly property int unread: on ? MailStore.unreadIn(modelData.id, MailStore.inboxOf(modelData.id)) : 0
+                readonly property string label: MailStore.accountLabel(modelData)
                 Layout.fillWidth: true
-                Layout.topMargin: 10
                 spacing: 1
 
-                Item {
+                // the account: its color, name, new mail; click folds it, right-click: its menu
+                Rectangle {
+                    id: head
                     Layout.fillWidth: true
-                    implicitHeight: 24
-                    HoverHandler { id: accHover }
+                    Layout.topMargin: 4
+                    implicitHeight: 38
+                    radius: 8
+                    color: headMouse.containsMouse ? Colors.fade(0.06) : "transparent"
+                    Behavior on color { ColorAnimation { duration: 100 } }
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 4
-                        spacing: 6
-                        Rectangle { implicitWidth: 7; implicitHeight: 7; radius: 4; color: acc.modelData.color ?? Colors.color6
-                                    opacity: acc.on ? 1 : 0.35 }
-                        Text {
+                        anchors.leftMargin: 6
+                        anchors.rightMargin: 8
+                        spacing: 8
+                        Rectangle {
+                            implicitWidth: 20; implicitHeight: 20; radius: 10
+                            color: acc.modelData.color || Colors.color6
+                            opacity: acc.on ? 1 : 0.35
+                            Text {
+                                anchors.centerIn: parent
+                                text: acc.label.charAt(0).toUpperCase()
+                                color: Colors.background
+                                font.pixelSize: 10
+                                font.bold: true
+                                font.family: Properties.fontFamily
+                            }
+                        }
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            text: (acc.modelData.name || acc.modelData.email).toUpperCase()
-                            color: Colors.fade(acc.on ? 0.45 : 0.25)
-                            font.pixelSize: 10
-                            font.bold: true
-                            font.letterSpacing: 1.1
-                            font.family: Properties.fontFamily
-                            elide: Text.ElideRight
+                            spacing: 0
+                            Text {
+                                Layout.fillWidth: true
+                                text: acc.label
+                                color: acc.on ? Colors.ink : Colors.fade(0.4)
+                                font.pixelSize: 12
+                                font.bold: true
+                                font.family: Properties.fontFamily
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: acc.on ? acc.modelData.email : "Off — not checked"
+                                color: Colors.fade(0.38)
+                                font.pixelSize: 9
+                                font.family: Properties.fontFamily
+                                elide: Text.ElideRight
+                            }
                         }
                         Text {
                             visible: acc.error !== ""
@@ -110,60 +140,129 @@ Flickable {
                             ToolTip.visible: errHover.hovered
                             ToolTip.text: acc.error
                         }
-                        // a new folder in this account
-                        IconButton {
-                            implicitWidth: 20; implicitHeight: 20; iconSize: 11
-                            visible: acc.on
-                            opacity: accHover.hovered ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: 120 } }
-                            icon: I.plus
-                            tooltip: "New folder"
-                            onClicked: root.newFolder(acc.modelData.id, "")
+                        // new mail in its inbox: also seen while it's folded
+                        Rectangle {
+                            visible: acc.unread > 0
+                            implicitWidth: Math.max(18, unreadText.implicitWidth + 10)
+                            implicitHeight: 16
+                            radius: 8
+                            color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.18)
+                            Text {
+                                id: unreadText
+                                anchors.centerIn: parent
+                                text: acc.unread > 999 ? "999+" : acc.unread
+                                color: Colors.color6
+                                font.pixelSize: 10
+                                font.bold: true
+                                font.family: Properties.fontFamily
+                            }
                         }
                         Text {
-                            text: acc.collapsed ? I.right : I.down
-                            color: Colors.fade(accHover.hovered ? 0.5 : 0)
-                            font.pixelSize: 12
+                            visible: acc.on
+                            text: I.down
+                            rotation: acc.collapsed ? -90 : 0
+                            Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                            color: Colors.fade(headMouse.containsMouse ? 0.6 : 0.3)
+                            font.pixelSize: 13
                             font.family: Properties.fontFamily
                         }
                     }
                     MouseArea {
-                        z: -1                         // under the ＋ button
+                        id: headMouse
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        onClicked: m => m.button === Qt.RightButton ? root.accountMenu(acc.modelData.id) : acc.collapsed = !acc.collapsed
+                        onClicked: m => {
+                            if (m.button === Qt.RightButton) root.accountContext(acc.modelData, head, m.x, m.y)
+                            else if (acc.on) MailStore.setAccount(acc.modelData.id, { collapsed: !acc.collapsed })
+                        }
                     }
                 }
-                Text {
-                    visible: !acc.on
-                    Layout.leftMargin: 17
-                    text: "Off — not checked"
-                    color: Colors.fade(0.3)
-                    font.pixelSize: 10
-                    font.family: Properties.fontFamily
-                }
+
                 Repeater {
-                    model: acc.on && !acc.collapsed ? (acc.modelData.folders ?? []) : []
-                    Entry {
+                    model: acc.on && !acc.collapsed ? root.ordered(acc.modelData.folders ?? []) : []
+                    ColumnLayout {
+                        id: fRow
                         required property var modelData
-                        v: acc.modelData.id + "|" + modelData.path
-                        current: root.view === v
-                        onActivated: root.picked(v)
-                        icon: I.role(modelData.role)
-                        label: modelData.role === "inbox" ? "Inbox" : modelData.name
-                        indent: Math.min(3, modelData.depth ?? 0)
-                        count: ["sent", "drafts", "trash", "junk", "all"].includes(modelData.role) ? 0
-                             : MailStore.unreadIn(acc.modelData.id, modelData.path) || (modelData.unread ?? 0)
-                        muted: modelData.role !== "inbox"
-                        pinnable: true
-                        pinned: MailStore.isPinned(acc.modelData.id, modelData.path)
-                        onPinToggled: MailStore.togglePin(acc.modelData.id, modelData.path)
-                        onContext: root.newFolder(acc.modelData.id, modelData.path)
+                        Layout.fillWidth: true
+                        spacing: 1
+                        // where the standard folders end and the own ones begin
+                        Rectangle {
+                            visible: fRow.modelData.firstOwn === true
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 12
+                            Layout.rightMargin: 12
+                            Layout.topMargin: 4
+                            Layout.bottomMargin: 4
+                            implicitHeight: 1
+                            color: Colors.fade(0.07)
+                        }
+                        Entry {
+                            id: folderEntry
+                            readonly property var f: fRow.modelData.folder
+                            v: acc.modelData.id + "|" + f.path
+                            current: root.view === v
+                            onActivated: root.picked(v)
+                            icon: I.role(f.role)
+                            label: f.role === "inbox" ? "Inbox" : f.name
+                            indent: Math.min(3, f.depth ?? 0)
+                            count: ["sent", "drafts", "trash", "junk", "all"].includes(f.role) ? 0
+                                 : MailStore.unreadIn(acc.modelData.id, f.path) || (f.unread ?? 0)
+                            muted: f.role !== "inbox"
+                            pinnable: true
+                            pinned: MailStore.isPinned(acc.modelData.id, f.path)
+                            onPinToggled: MailStore.togglePin(acc.modelData.id, f.path)
+                            onContext: (x, y) => root.folderContext(acc.modelData, f, folderEntry, x, y)
+                        }
                     }
                 }
             }
         }
+    }
+
+    // standard folders first (inbox, drafts, sent, archive, junk, trash), each with
+    // its subfolders, then the own ones in the server's order
+    // → [{ folder, firstOwn }]
+    readonly property var roleOrder: ["inbox", "drafts", "sent", "archive", "junk", "trash", "all"]
+    function ordered(folders) {
+        const blocks = []
+        for (const f of folders) {
+            if ((f.depth ?? 0) === 0 || blocks.length === 0) blocks.push([f])
+            else blocks[blocks.length - 1].push(f)
+        }
+        const rank = b => { const i = roleOrder.indexOf(b[0].role); return i < 0 ? 99 : i }
+        const sorted = blocks.map((b, i) => ({ b, i })).sort((x, y) => rank(x.b) - rank(y.b) || x.i - y.i).map(x => x.b)
+        const out = []
+        let seenOwn = false, seenRole = false
+        for (const b of sorted) {
+            const own = rank(b) === 99
+            b.forEach((f, j) => out.push({ folder: f, firstOwn: own && !seenOwn && seenRole && j === 0 }))
+            if (own) seenOwn = true; else seenRole = true
+        }
+        return out
+    }
+
+    // ── right-click menus ──
+    MailMenu { id: menu; parent: root }
+    function folderContext(a, f, item, x, y) {
+        const pinned = MailStore.isPinned(a.id, f.path)
+        menu.show(item, x, y, f.role === "inbox" ? "Inbox" : f.name, [
+            { icon: I.open, label: "Open", run: () => root.picked(a.id + "|" + f.path) },
+            { icon: pinned ? "󰤰" : "󰐃", label: pinned ? "Remove from favorites" : "Pin to favorites", run: () => MailStore.togglePin(a.id, f.path) },
+            { sep: true },
+            { icon: I.plus, label: "New folder inside…", run: () => root.newFolder(a.id, f.path) }
+        ])
+    }
+    function accountContext(a, item, x, y) {
+        const on = a.enabled !== false
+        menu.show(item, x, y, MailStore.accountLabel(a), [].concat(
+            on ? [{ icon: I.plus, label: "New folder…", run: () => root.newFolder(a.id, "") },
+                  { icon: a.collapsed ? I.down : I.right, label: a.collapsed ? "Show folders" : "Hide folders",
+                    run: () => MailStore.setAccount(a.id, { collapsed: !a.collapsed }) },
+                  { sep: true }] : [],
+            [{ icon: I.cog, label: "Account settings…", run: () => root.accountSettings(a.id) },
+             { icon: on ? "󰒲" : "󰐥", label: on ? "Turn off" : "Turn on", run: () => MailStore.setAccount(a.id, { enabled: !on }) }]))
     }
 
     component Label: Text {
@@ -191,7 +290,7 @@ Flickable {
         property bool pinned: false
         signal activated()
         signal pinToggled()
-        signal context()                      // right-click (a folder: a new folder inside it)
+        signal context(real x, real y)        // right-click (where, in the row)
         Layout.fillWidth: true
         implicitHeight: 30
         radius: 8
@@ -268,7 +367,7 @@ Flickable {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onClicked: m => m.button === Qt.RightButton ? e.context() : e.activated()
+            onClicked: m => m.button === Qt.RightButton ? e.context(m.x, m.y) : e.activated()
         }
     }
 }

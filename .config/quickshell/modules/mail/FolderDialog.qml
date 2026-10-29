@@ -11,7 +11,7 @@ import "MailIcons.js" as I
 Modal {
     id: root
 
-    cardWidth: 440
+    cardWidth: 460
 
     property string account: ""
     property string inside: ""                 // the folder it goes in; "" = top level
@@ -44,66 +44,104 @@ Modal {
         })
     }
 
+    readonly property var accObj: MailStore.accountMap[account] ?? null
+    readonly property var parentFolder: folders.find(f => f.path === inside) ?? null
+    readonly property string parentName: !parentFolder ? "" : parentFolder.role === "inbox" ? "Inbox" : parentFolder.name
+
     ColumnLayout {
         width: parent.width
-        spacing: 14
+        spacing: 16
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
-            Text { text: I.folder; color: Colors.color6; font.pixelSize: 20; font.family: Properties.fontFamily }
-            Text {
+            spacing: 12
+            Rectangle {
+                implicitWidth: 38; implicitHeight: 38; radius: 12
+                color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.14)
+                Text { anchors.centerIn: parent; text: I.folder; color: Colors.color6; font.pixelSize: 18; font.family: Properties.fontFamily }
+            }
+            ColumnLayout {
                 Layout.fillWidth: true
-                text: "New folder"
-                color: Colors.ink
-                font.pixelSize: 16
-                font.bold: true
-                font.family: Properties.fontFamily
+                spacing: 1
+                Text { text: "New folder"; color: Colors.ink; font.pixelSize: 16; font.bold: true; font.family: Properties.fontFamily }
+                // where it goes: account › parent
+                Text {
+                    Layout.fillWidth: true
+                    text: MailStore.accountLabel(root.accObj) + (root.parentName ? "  ›  " + root.parentName : "  ›  top level")
+                    color: Colors.fade(0.5)
+                    font.pixelSize: 11
+                    font.family: Properties.fontFamily
+                    elide: Text.ElideMiddle
+                }
+            }
+            IconButton { implicitWidth: 30; implicitHeight: 30; icon: I.close; onClicked: root.close() }
+        }
+
+        SearchField {
+            id: nameField
+            Layout.fillWidth: true
+            icon: I.folder
+            clearable: false
+            placeholderText: "Folder name, e.g. Bills"
+            onAccepted: root.save()
+        }
+
+        // which account (only with more than one): its colored chip
+        ColumnLayout {
+            Layout.fillWidth: true
+            visible: MailStore.activeAccounts.length > 1
+            spacing: 6
+            Text { text: "Account"; color: Colors.fade(0.5); font.pixelSize: 11; font.bold: true; font.family: Properties.fontFamily }
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: MailStore.activeAccounts
+                    Rectangle {
+                        required property var modelData
+                        readonly property bool on: root.account === modelData.id
+                        width: chipRow.implicitWidth + 20
+                        height: 30
+                        radius: 15
+                        color: on ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16) : chipMouse.containsMouse ? Colors.fade(0.07) : Colors.fade(0.04)
+                        border.width: 1
+                        border.color: on ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6) : Colors.fade(0.1)
+                        Behavior on color { ColorAnimation { duration: 100 } }
+                        Row {
+                            id: chipRow
+                            anchors.centerIn: parent
+                            spacing: 7
+                            Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: 4; color: modelData.color || Colors.color6 }
+                            Text { text: MailStore.accountLabel(modelData); color: on ? Colors.ink : Colors.fade(0.75); font.pixelSize: 12; font.family: Properties.fontFamily }
+                        }
+                        MouseArea {
+                            id: chipMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: { root.account = modelData.id; root.inside = "" }
+                        }
+                    }
+                }
             }
         }
 
-        GridLayout {
+        ColumnLayout {
             Layout.fillWidth: true
-            columns: 2
-            columnSpacing: 12
-            rowSpacing: 8
-
-            Text {
-                visible: MailStore.activeAccounts.length > 1
-                text: "Account"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily
-            }
-            DropdownControl {
-                visible: MailStore.activeAccounts.length > 1
-                Layout.fillWidth: true
-                listWidth: 320
-                options: MailStore.activeAccounts.map(a => ({ label: a.name || a.email, value: a.id, hint: a.email, color: a.color }))
-                value: root.account
-                onEdited: v => { root.account = v; root.inside = "" }
-            }
-
-            Text { text: "Inside"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
+            spacing: 6
+            Text { text: "Inside"; color: Colors.fade(0.5); font.pixelSize: 11; font.bold: true; font.family: Properties.fontFamily }
             DropdownControl {
                 Layout.fillWidth: true
-                listWidth: 320
+                listWidth: 360
                 options: [{ label: "Top level", value: "" }].concat(root.folders.map(f => ({
-                    label: (f.role === "inbox" ? "Inbox" : f.path), value: f.path })))
+                    label: "    ".repeat(Math.min(3, f.depth ?? 0)) + (f.role === "inbox" ? "Inbox" : f.name), value: f.path })))
                 value: root.inside
                 onEdited: v => root.inside = v
             }
-
-            Text { text: "Name"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
-            SearchField {
-                id: nameField
-                Layout.fillWidth: true
-                icon: ""; clearable: false
-                placeholderText: "e.g. Bills"
-                onAccepted: root.save()
-            }
         }
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 4
             spacing: 8
             Text {
                 Layout.fillWidth: true

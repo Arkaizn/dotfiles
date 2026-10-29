@@ -64,6 +64,9 @@ Item {
 
     Popup {
         id: list
+        // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+        scale: AppZoom.at(parent)
+        transformOrigin: Popup.TopLeft
         y: root.height + 4
         width: Math.max(root.width, 110)
         height: 240

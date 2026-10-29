@@ -165,6 +165,9 @@ ColumnLayout {
 
                     Popup {
                         id: colorMenu
+                        // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+                        scale: AppZoom.at(parent)
+                        transformOrigin: Popup.TopLeft
                         y: swatch.height + 6
                         padding: 10
                         closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape

@@ -56,6 +56,8 @@ Item {
     Item {
         id: catcher
         focus: root.recording
+        // every key is the bind being recorded (not the window's Ctrl +/− zoom)
+        Keys.onShortcutOverride: e => e.accepted = root.recording
         Keys.onPressed: e => {
             if (!root.recording) return
             e.accepted = true

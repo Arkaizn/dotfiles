@@ -221,6 +221,9 @@ PerfCard {
     // ── options popover ─────────────────────────────────────────────────────
     Popup {
         id: options
+        // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+        scale: AppZoom.at(parent)
+        transformOrigin: Popup.TopLeft
         parent: optionsButton
         x: optionsButton.width - width
         y: optionsButton.height + 6

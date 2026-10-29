@@ -522,6 +522,9 @@ ColumnLayout {
                     onClicked: pickMenu.open()
                     Popup {
                         id: pickMenu
+                        // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+                        scale: AppZoom.at(parent)
+                        transformOrigin: Popup.TopLeft
                         // the folder picked: moved once the menu is closed (closing changes the
                         // picks' rows, which rebuilds this list: no work in a row being destroyed)
                         property string chosen: ""

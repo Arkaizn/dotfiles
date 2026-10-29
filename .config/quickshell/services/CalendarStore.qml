@@ -364,6 +364,46 @@ Singleton {
         saveCache()
     }
 
+    // ── Moving accounts to another device (calsync export-accounts / import-accounts) ──
+    function exportAccounts(ids, withPasswords, passphrase, path, done) {
+        const list = root.accounts.filter(a => ids.includes(a.id))
+        run("export-accounts", { accounts: list, withPasswords: withPasswords, passphrase: passphrase, path: path }, done)
+    }
+    function importRead(path, passphrase, done) { run("import-accounts-read", { path: path, passphrase: passphrase }, done) }
+    // the account in the file that's already here (same login / same url): updated, keeps its id
+    function existingFor(a) {
+        const norm = u => String(u || "").trim().toLowerCase().replace(/^webcal:/, "https:").replace(/\/+$/, "")
+        return a.type === "local" || a.type === "ics" ? root.accounts.find(x => x.type === a.type && norm(x.url) === norm(a.url))
+                                                      : sameAccount(a)
+    }
+    // indexes: the accounts of the file to take (their "index" from importRead)
+    function importAccounts(path, passphrase, found, indexes, done) {
+        const pick = {}
+        indexes.forEach((i, n) => {
+            const a = found.find(x => x.index === i)
+            pick[String(i)] = existingFor(a)?.id ?? newAccountId() + "-" + n
+        })
+        run("import-accounts", { path: path, passphrase: passphrase, pick: pick }, res => {
+            if (res.ok) {
+                let accs = root.accounts
+                for (const a of res.accounts) {
+                    const used = accs.reduce((n, x) => n + x.calendars.length, 0)
+                    const acc = { id: a.id, type: a.type, name: a.name, url: a.url, username: a.username,
+                                  calendars: a.calendars.map((c, i) => ({ id: a.id + "|" + c.href, href: c.href, name: c.name,
+                                      color: c.color || root.palette[(used + i) % root.palette.length],
+                                      readOnly: c.readOnly, enabled: c.enabled, notify: c.notify })) }
+                    if (a.tenant) acc.tenant = a.tenant
+                    if (a.clientId) acc.clientId = a.clientId
+                    accs = accs.some(x => x.id === a.id) ? accs.map(x => x.id === a.id ? acc : x) : accs.concat([acc])
+                }
+                root.accounts = accs
+                saveAccounts()
+                sync(true)
+            }
+            done(res)
+        })
+    }
+
     function renameAccount(id, name) {
         root.accounts = root.accounts.map(a => a.id === id ? Object.assign({}, a, { name: name }) : a)
         saveAccounts()

@@ -54,3 +54,4 @@ MediaSource MediaSource.qml
 singleton PanelGeometry PanelGeometry.qml
 singleton SecretPrompt SecretPrompt.qml
 singleton MailStore MailStore.qml
+singleton AppZoom AppZoom.qml

@@ -36,7 +36,7 @@ Scope {
     }
 
     // what to do once the window is there
-    property var pending: null               // { compose: to } | { mailto } | { message: id }
+    property var pending: null               // { compose: to } | { mailto } | { message: id } | { settings: true | page } | { addAccount } | { transfer: mode }
 
     readonly property var api: ({
         open: () => root.show(),
@@ -45,7 +45,10 @@ Scope {
         compose: to => { root.pending = { compose: to ?? "" }; root.show() },
         mailto: url => { root.pending = { mailto: url }; root.show() },
         showMessage: id => { root.pending = { message: id }; root.show() },
-        settings: () => { root.pending = { settings: true }; root.show() },
+        settings: page => { root.pending = { settings: page || true }; root.show() },
+        addAccount: () => { root.pending = { addAccount: true }; root.show() },
+        transfer: mode => { root.pending = { transfer: mode === "import" ? "import" : "export" }; root.show() },
+        importAccounts: path => { root.pending = { importFile: path }; root.show() },
         check: () => MailStore.check(true)
     })
     Component.onCompleted: Panels.register("mail", api)
@@ -95,7 +98,10 @@ Scope {
                 const p = root.pending
                 if (!p) return
                 root.pending = null
-                if (p.settings) settingsDialog.open()
+                if (p.settings) { if (typeof p.settings === "string") settingsDialog.openPage(p.settings); else settingsDialog.open() }
+                else if (p.addAccount) accountDialog.start()
+                else if (p.transfer) transfer.start(p.transfer)
+                else if (p.importFile) transfer.startFile(p.importFile)
                 else if (p.compose !== undefined) composer.compose(p.compose)
                 else if (p.mailto !== undefined) {
                     const m = MailUtil.parseMailto(p.mailto)
@@ -144,327 +150,336 @@ Scope {
                 })
             }
 
-            Rectangle {
-                id: bg
+            // Ctrl +/−/0, Ctrl + wheel: the whole window bigger or smaller (AppZoom)
+            ZoomArea {
+                id: zoomArea
+                app: "mail"
                 anchors.fill: parent
-                radius: Compositor.appRadius
-                // settings: mail → solid background (no transparency behind the mail)
-                color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, MailStore.solid ? 1 : 0.86)
-
-                Item {
-                    id: keys
-                    focus: true
-                    Keys.onPressed: event => {
-                        if (composer.shown || accountDialog.shown || folderDialog.shown || settingsDialog.shown || viewer.shown || transfer.shown) return
-                        const ctrl = event.modifiers & Qt.ControlModifier, shift = event.modifiers & Qt.ShiftModifier
-                        if (ctrl) {
-                            if (event.key === Qt.Key_Z) MailStore.undo()
-                            else if (event.key === Qt.Key_N) composer.compose("")
-                            else if (event.key === Qt.Key_F) list.focusSearch()
-                            else if (event.key === Qt.Key_A) list.pickAll()
-                            else if (event.key === Qt.Key_R && shift) { if (win.latest()) composer.reply(win.latest(), true) }
-                            else if (event.key === Qt.Key_R) { if (win.latest()) composer.reply(win.latest(), false) }
-                            else return
-                            event.accepted = true
-                            return
-                        }
-                        // several rows picked: the keys act on all of them
-                        if (list.pickedRows.length > 0) {
-                            const a = ({ [Qt.Key_A]: "archive", [Qt.Key_J]: "junk", [Qt.Key_Delete]: "delete", [Qt.Key_M]: "read", [Qt.Key_S]: "star" })[event.key]
-                            if (a) { list.batch(a); event.accepted = true; return }
-                            if (event.key === Qt.Key_Escape) { list.clearPicks(); event.accepted = true; return }
-                        }
-                        switch (event.key) {
-                        case Qt.Key_Down: list.step(1); break
-                        case Qt.Key_Up: list.step(-1); break
-                        case Qt.Key_N: list.nextUnread(); break
-                        case Qt.Key_Slash: list.focusSearch(); break
-                        case Qt.Key_F5: MailStore.check(true); break
-                        case Qt.Key_R: if (win.latest()) composer.reply(win.latest(), shift); break
-                        case Qt.Key_F: if (win.latest()) composer.forward(win.latest()); break
-                        case Qt.Key_A: win.removeAndNext(l => MailStore.moveTo(l, "archive")); break
-                        case Qt.Key_J: win.removeAndNext(l => MailStore.moveTo(l, "junk")); break
-                        case Qt.Key_Delete: win.removeAndNext(l => MailStore.remove(l)); break
-                        case Qt.Key_M: win.act(l => MailStore.markRead(l, l.some(m => !m.seen))); break
-                        case Qt.Key_S: win.act(l => MailStore.star(l.some(m => m.flagged) ? l : [l[l.length - 1]], !l.some(m => m.flagged))); break
-                        case Qt.Key_Escape: if (!win.row) return; win.row = null; list.selected = ""; break
-                        default: return
-                        }
-                        event.accepted = true
-                    }
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.margins: 14
-                    spacing: 14
-
-                    // ── Sidebar ──
-                    // its width: dragged on the line between it and the list (Settings.mail.sidebarWidth)
-                    Rectangle {
-                        id: side
-                        property real dragWidth: -1
-                        readonly property real savedWidth: Settings.mail.sidebarWidth ?? 230
-                        Layout.preferredWidth: Math.max(180, Math.min(dragWidth >= 0 ? dragWidth : savedWidth, 400))
-                        Layout.fillHeight: true
-                        radius: Math.max(6, Compositor.appRadius - 2)
-                        color: Colors.card
-                        border.width: Properties.panelBorderWidth
-                        border.color: Properties.cardBorder
-
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 10
-
-                            Item {
-                                Layout.fillWidth: true
-                                implicitHeight: 40
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 4
-                                    spacing: 10
-                                    Text { text: I.mail; color: Colors.color6; font.pixelSize: 22; font.family: Properties.fontFamily }
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: "Mail"
-                                        color: Colors.ink
-                                        font.pixelSize: 18
-                                        font.bold: true
-                                        font.family: Properties.fontFamily
-                                    }
-                                }
-                                DragHandler {
-                                    target: null
-                                    onActiveChanged: if (active) bg.Window.window.startSystemMove()
-                                }
-                            }
-
-                            ActionButton {
-                                Layout.fillWidth: true
-                                implicitHeight: Properties.buttonHeight + 4
-                                icon: I.draft
-                                text: "New message"
-                                primary: true
-                                onClicked: composer.compose("")
-                            }
-
-                            Sidebar {
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                Layout.topMargin: 6
-                                view: root.view
-                                onPicked: v => root.view = v
-                                onAccountMenu: id => accountDialog.edit(MailStore.accountMap[id])
-                                onNewFolder: (acc, parent) => folderDialog.start(acc, parent)
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 4
-                                Text {
-                                    Layout.fillWidth: true
-                                    Layout.leftMargin: 4
-                                    text: MailStore.syncing ? "Checking…"
-                                        : Object.keys(MailStore.errors).length ? "󰀦 " + Object.values(MailStore.errors)[0]
-                                        : MailStore.lastSync ? "Checked " + Format.hm(MailStore.lastSync) : ""
-                                    color: Object.keys(MailStore.errors).length && !MailStore.syncing ? Colors.red : Colors.fade(0.4)
-                                    font.pixelSize: 10
-                                    font.family: Properties.fontFamily
-                                    elide: Text.ElideRight
-                                }
-                                IconButton {
-                                    implicitWidth: 26; implicitHeight: 26; iconSize: 12
-                                    icon: I.plus
-                                    tooltip: "Add an account"
-                                    onClicked: accountDialog.start()
-                                }
-                                IconButton {
-                                    implicitWidth: 26; implicitHeight: 26; iconSize: 12
-                                    icon: I.cog
-                                    tooltip: "Mail settings"
-                                    onClicked: settingsDialog.open()
-                                }
-                                IconButton {
-                                    id: refreshButton
-                                    implicitWidth: 26; implicitHeight: 26; iconSize: 12
-                                    icon: I.refresh
-                                    tooltip: "Check now  (F5)"
-                                    interactive: !MailStore.syncing && MailStore.activeAccounts.length > 0
-                                    RotationAnimation on rotation {
-                                        running: MailStore.syncing
-                                        loops: Animation.Infinite
-                                        from: 0; to: 360; duration: 900
-                                        onStopped: refreshButton.rotation = 0
-                                    }
-                                    onClicked: MailStore.check(true)
-                                }
-                            }
-                        }
-                    }
-
-                    // the line between sidebar and list: drag it to resize, double-click resets
-                    Item {
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 6
-                        Layout.leftMargin: -10
-                        Layout.rightMargin: -10
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 3
-                            height: 48
-                            radius: 1.5
-                            color: Colors.fade(sideSplit.pressed ? 0.7 : sideSplit.containsMouse ? 0.45 : 0)
-                            Behavior on color { ColorAnimation { duration: 140 } }
-                        }
-                        MouseArea {
-                            id: sideSplit
-                            anchors.fill: parent
-                            anchors.leftMargin: -4
-                            anchors.rightMargin: -4
-                            hoverEnabled: true
-                            preventStealing: true
-                            cursorShape: Qt.SizeHorCursor
-                            property real startX: 0
-                            property real startW: 0
-                            onPressed: m => { startX = mapToItem(null, m.x, 0).x; startW = side.width }
-                            onPositionChanged: m => { if (pressed) side.dragWidth = Math.max(180, Math.min(400, startW + mapToItem(null, m.x, 0).x - startX)) }
-                            onReleased: {
-                                if (side.dragWidth >= 0) Settings.set("mail", "sidebarWidth", Math.round(side.dragWidth))
-                                side.dragWidth = -1
-                            }
-                            onDoubleClicked: { side.dragWidth = -1; Settings.set("mail", "sidebarWidth", 230) }
-                        }
-                    }
-
-                    // ── Messages ──
-                    // the list's width: dragged on the line between it and the message (Settings.mail.listWidth)
-                    MessageList {
-                        id: list
-                        Layout.fillWidth: false            // a layout fills by default
-                        // dragging: follows the pointer; else the saved width (never so wide the message gets squeezed)
-                        property real dragWidth: -1
-                        readonly property real savedWidth: Settings.mail.listWidth ?? 380
-                        Layout.preferredWidth: Math.max(260, Math.min(dragWidth >= 0 ? dragWidth : savedWidth, bg.width - 700))
-                        Layout.fillHeight: true
-                        view: root.view
-                        title: win.viewTitle
-                        selected: win.row?.key ?? ""
-                        onOpened: r => { win.row = r; keys.forceActiveFocus() }
-                        onDraftOpened: d => composer.openDraft(d)
-                        onPickedGone: ks => { if (win.row && ks.includes(win.row.key)) { win.row = null; list.selected = "" } }
-                    }
-
-                    // the line between list and message: drag it to resize, double-click resets
-                    Item {
-                        Layout.fillHeight: true
-                        Layout.preferredWidth: 6
-                        Layout.leftMargin: -10
-                        Layout.rightMargin: -10
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 3
-                            height: 48
-                            radius: 1.5
-                            color: Colors.fade(split.pressed ? 0.7 : split.containsMouse ? 0.45 : 0)
-                            Behavior on color { ColorAnimation { duration: 140 } }
-                        }
-                        MouseArea {
-                            id: split
-                            anchors.fill: parent
-                            anchors.leftMargin: -4
-                            anchors.rightMargin: -4
-                            hoverEnabled: true
-                            preventStealing: true
-                            cursorShape: Qt.SizeHorCursor
-                            property real startX: 0
-                            property real startW: 0
-                            onPressed: m => { startX = mapToItem(null, m.x, 0).x; startW = list.width }
-                            onPositionChanged: m => { if (pressed) list.dragWidth = Math.max(260, Math.min(720, startW + mapToItem(null, m.x, 0).x - startX)) }
-                            onReleased: {
-                                if (list.dragWidth >= 0) Settings.set("mail", "listWidth", Math.round(list.dragWidth))
-                                list.dragWidth = -1
-                            }
-                            onDoubleClicked: { list.dragWidth = -1; Settings.set("mail", "listWidth", 380) }
-                        }
-                    }
-
-                    // ── Reading ──
-                    Reader {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        row: win.row
-                        onReply: (m, all) => composer.reply(m, all)
-                        onForward: m => composer.forward(m)
-                        onViewAttachment: (m, atts, i) => viewer.show(m, atts, i)
-                        onClosed: { win.row = null; keys.forceActiveFocus() }
-                    }
-                }
-
-                // a change the server refused
+                // an open attachment zooms itself (Ctrl + wheel)
+                wheelExcept: [viewer]
                 Rectangle {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 24
-                    visible: MailStore.lastError !== ""
-                    width: Math.min(parent.width - 80, errText.implicitWidth + 60)
-                    height: 40
-                    radius: 20
-                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-                    border.width: 1
-                    border.color: Colors.red
-                    z: 50
+                    id: bg
+                    anchors.fill: parent
+                    radius: Compositor.appRadius / zoomArea.zoom
+                    // settings: mail → solid background (no transparency behind the mail)
+                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, MailStore.solid ? 1 : 0.86)
+
+                    Item {
+                        id: keys
+                        focus: true
+                        Keys.onPressed: event => {
+                            if (composer.shown || accountDialog.shown || folderDialog.shown || settingsDialog.shown || viewer.shown || transfer.shown) return
+                            const ctrl = event.modifiers & Qt.ControlModifier, shift = event.modifiers & Qt.ShiftModifier
+                            if (ctrl) {
+                                if (event.key === Qt.Key_Z) MailStore.undo()
+                                else if (event.key === Qt.Key_N) composer.compose("")
+                                else if (event.key === Qt.Key_F) list.focusSearch()
+                                else if (event.key === Qt.Key_A) list.pickAll()
+                                else if (event.key === Qt.Key_R && shift) { if (win.latest()) composer.reply(win.latest(), true) }
+                                else if (event.key === Qt.Key_R) { if (win.latest()) composer.reply(win.latest(), false) }
+                                else return
+                                event.accepted = true
+                                return
+                            }
+                            // several rows picked: the keys act on all of them
+                            if (list.pickedRows.length > 0) {
+                                const a = ({ [Qt.Key_A]: "archive", [Qt.Key_J]: "junk", [Qt.Key_Delete]: "delete", [Qt.Key_M]: "read", [Qt.Key_S]: "star" })[event.key]
+                                if (a) { list.batch(a); event.accepted = true; return }
+                                if (event.key === Qt.Key_Escape) { list.clearPicks(); event.accepted = true; return }
+                            }
+                            switch (event.key) {
+                            case Qt.Key_Down: list.step(1); break
+                            case Qt.Key_Up: list.step(-1); break
+                            case Qt.Key_N: list.nextUnread(); break
+                            case Qt.Key_Slash: list.focusSearch(); break
+                            case Qt.Key_F5: MailStore.check(true); break
+                            case Qt.Key_R: if (win.latest()) composer.reply(win.latest(), shift); break
+                            case Qt.Key_F: if (win.latest()) composer.forward(win.latest()); break
+                            case Qt.Key_A: win.removeAndNext(l => MailStore.moveTo(l, "archive")); break
+                            case Qt.Key_J: win.removeAndNext(l => MailStore.moveTo(l, "junk")); break
+                            case Qt.Key_Delete: win.removeAndNext(l => MailStore.remove(l)); break
+                            case Qt.Key_M: win.act(l => MailStore.markRead(l, l.some(m => !m.seen))); break
+                            case Qt.Key_S: win.act(l => MailStore.star(l.some(m => m.flagged) ? l : [l[l.length - 1]], !l.some(m => m.flagged))); break
+                            case Qt.Key_Escape: if (!win.row) return; win.row = null; list.selected = ""; break
+                            default: return
+                            }
+                            event.accepted = true
+                        }
+                    }
+
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 16
-                        anchors.rightMargin: 6
-                        Text { id: errText; Layout.fillWidth: true; text: "󰀦  " + MailStore.lastError; color: Colors.ink
-                               font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
-                        IconButton { implicitWidth: 28; implicitHeight: 28; icon: I.close; onClicked: MailStore.lastError = "" }
-                    }
-                }
+                        anchors.margins: 14
+                        spacing: 14
 
-                // archived / deleted: undo for a few seconds
-                Rectangle {
-                    id: undoToast
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: MailStore.lastError !== "" ? 74 : 24
-                    // fades and grows in / out (the text stays while it goes)
-                    readonly property bool on: MailStore.undoable !== null
-                    property string label: ""
-                    Connections { target: MailStore; function onUndoableChanged() { if (MailStore.undoable) undoToast.label = MailStore.undoable.label } }
-                    visible: opacity > 0
-                    opacity: on ? 1 : 0
-                    scale: on ? 1 : 0.92
-                    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
-                    width: undoRow.implicitWidth + 30
-                    height: 42
-                    radius: 21
-                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-                    border.width: Properties.panelBorderWidth
-                    border.color: Properties.panelBorder
-                    z: 50
-                    RowLayout {
-                        id: undoRow
-                        anchors.centerIn: parent
-                        spacing: 10
-                        Text { text: undoToast.label; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
-                        ActionButton { icon: I.back; text: "Undo  (Ctrl+Z)"; onClicked: MailStore.undo() }
-                    }
-                }
+                        // ── Sidebar ──
+                        // its width: dragged on the line between it and the list (Settings.mail.sidebarWidth)
+                        Rectangle {
+                            id: side
+                            property real dragWidth: -1
+                            readonly property real savedWidth: Settings.mail.sidebarWidth ?? 230
+                            Layout.preferredWidth: Math.max(180, Math.min(dragWidth >= 0 ? dragWidth : savedWidth, 400))
+                            Layout.fillHeight: true
+                            radius: Math.max(6, Compositor.appRadius - 2)
+                            color: Colors.card
+                            border.width: Properties.panelBorderWidth
+                            border.color: Properties.cardBorder
 
-                Composer { id: composer; onClosed: keys.forceActiveFocus() }
-                Viewer { id: viewer; onShownChanged: if (!shown) keys.forceActiveFocus() }
-                AccountTransfer { id: transfer; onClosed: keys.forceActiveFocus() }
-                AccountDialog { id: accountDialog; onClosed: keys.forceActiveFocus() }
-                FolderDialog { id: folderDialog; onClosed: keys.forceActiveFocus(); onCreated: v => root.view = v }
-                MailSettings {
-                    id: settingsDialog
-                    onClosed: keys.forceActiveFocus()
-                    onEditAccount: a => accountDialog.edit(a)
-                    onTransfer: mode => transfer.start(mode)
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 10
+
+                                Item {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 40
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 4
+                                        spacing: 10
+                                        Text { text: I.mail; color: Colors.color6; font.pixelSize: 22; font.family: Properties.fontFamily }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: "Mail"
+                                            color: Colors.ink
+                                            font.pixelSize: 18
+                                            font.bold: true
+                                            font.family: Properties.fontFamily
+                                        }
+                                    }
+                                    DragHandler {
+                                        target: null
+                                        onActiveChanged: if (active) bg.Window.window.startSystemMove()
+                                    }
+                                }
+
+                                ActionButton {
+                                    Layout.fillWidth: true
+                                    implicitHeight: Properties.buttonHeight + 4
+                                    icon: I.draft
+                                    text: "New message"
+                                    primary: true
+                                    onClicked: composer.compose("")
+                                }
+
+                                Sidebar {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.topMargin: 6
+                                    view: root.view
+                                    onPicked: v => root.view = v
+                                    onAccountSettings: id => settingsDialog.openAccount(id)
+                                    onNewFolder: (acc, parent) => folderDialog.start(acc, parent)
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 4
+                                    Text {
+                                        Layout.fillWidth: true
+                                        Layout.leftMargin: 4
+                                        text: MailStore.syncing ? "Checking…"
+                                            : Object.keys(MailStore.errors).length ? "󰀦 " + Object.values(MailStore.errors)[0]
+                                            : MailStore.lastSync ? "Checked " + Format.hm(MailStore.lastSync) : ""
+                                        color: Object.keys(MailStore.errors).length && !MailStore.syncing ? Colors.red : Colors.fade(0.4)
+                                        font.pixelSize: 10
+                                        font.family: Properties.fontFamily
+                                        elide: Text.ElideRight
+                                    }
+                                    IconButton {
+                                        implicitWidth: 26; implicitHeight: 26; iconSize: 12
+                                        icon: I.plus
+                                        tooltip: "Add an account"
+                                        onClicked: accountDialog.start()
+                                    }
+                                    IconButton {
+                                        implicitWidth: 26; implicitHeight: 26; iconSize: 12
+                                        icon: I.cog
+                                        tooltip: "Mail settings"
+                                        onClicked: settingsDialog.open()
+                                    }
+                                    IconButton {
+                                        id: refreshButton
+                                        implicitWidth: 26; implicitHeight: 26; iconSize: 12
+                                        icon: I.refresh
+                                        tooltip: "Check now  (F5)"
+                                        interactive: !MailStore.syncing && MailStore.activeAccounts.length > 0
+                                        RotationAnimation on rotation {
+                                            running: MailStore.syncing
+                                            loops: Animation.Infinite
+                                            from: 0; to: 360; duration: 900
+                                            onStopped: refreshButton.rotation = 0
+                                        }
+                                        onClicked: MailStore.check(true)
+                                    }
+                                }
+                            }
+                        }
+
+                        // the line between sidebar and list: drag it to resize, double-click resets
+                        Item {
+                            Layout.fillHeight: true
+                            Layout.preferredWidth: 6
+                            Layout.leftMargin: -10
+                            Layout.rightMargin: -10
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 3
+                                height: 48
+                                radius: 1.5
+                                color: Colors.fade(sideSplit.pressed ? 0.7 : sideSplit.containsMouse ? 0.45 : 0)
+                                Behavior on color { ColorAnimation { duration: 140 } }
+                            }
+                            MouseArea {
+                                id: sideSplit
+                                anchors.fill: parent
+                                anchors.leftMargin: -4
+                                anchors.rightMargin: -4
+                                hoverEnabled: true
+                                preventStealing: true
+                                cursorShape: Qt.SizeHorCursor
+                                property real startX: 0
+                                property real startW: 0
+                                onPressed: m => { startX = mapToItem(null, m.x, 0).x; startW = side.width }
+                                onPositionChanged: m => { if (pressed) side.dragWidth = Math.max(180, Math.min(400, startW + mapToItem(null, m.x, 0).x - startX)) }
+                                onReleased: {
+                                    if (side.dragWidth >= 0) Settings.set("mail", "sidebarWidth", Math.round(side.dragWidth))
+                                    side.dragWidth = -1
+                                }
+                                onDoubleClicked: { side.dragWidth = -1; Settings.set("mail", "sidebarWidth", 230) }
+                            }
+                        }
+
+                        // ── Messages ──
+                        // the list's width: dragged on the line between it and the message (Settings.mail.listWidth)
+                        MessageList {
+                            id: list
+                            Layout.fillWidth: false            // a layout fills by default
+                            // dragging: follows the pointer; else the saved width (never so wide the message gets squeezed)
+                            property real dragWidth: -1
+                            readonly property real savedWidth: Settings.mail.listWidth ?? 380
+                            Layout.preferredWidth: Math.max(260, Math.min(dragWidth >= 0 ? dragWidth : savedWidth, bg.width - 700))
+                            Layout.fillHeight: true
+                            view: root.view
+                            title: win.viewTitle
+                            selected: win.row?.key ?? ""
+                            onOpened: r => { win.row = r; keys.forceActiveFocus() }
+                            onDraftOpened: d => composer.openDraft(d)
+                            onPickedGone: ks => { if (win.row && ks.includes(win.row.key)) { win.row = null; list.selected = "" } }
+                        }
+
+                        // the line between list and message: drag it to resize, double-click resets
+                        Item {
+                            Layout.fillHeight: true
+                            Layout.preferredWidth: 6
+                            Layout.leftMargin: -10
+                            Layout.rightMargin: -10
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 3
+                                height: 48
+                                radius: 1.5
+                                color: Colors.fade(split.pressed ? 0.7 : split.containsMouse ? 0.45 : 0)
+                                Behavior on color { ColorAnimation { duration: 140 } }
+                            }
+                            MouseArea {
+                                id: split
+                                anchors.fill: parent
+                                anchors.leftMargin: -4
+                                anchors.rightMargin: -4
+                                hoverEnabled: true
+                                preventStealing: true
+                                cursorShape: Qt.SizeHorCursor
+                                property real startX: 0
+                                property real startW: 0
+                                onPressed: m => { startX = mapToItem(null, m.x, 0).x; startW = list.width }
+                                onPositionChanged: m => { if (pressed) list.dragWidth = Math.max(260, Math.min(720, startW + mapToItem(null, m.x, 0).x - startX)) }
+                                onReleased: {
+                                    if (list.dragWidth >= 0) Settings.set("mail", "listWidth", Math.round(list.dragWidth))
+                                    list.dragWidth = -1
+                                }
+                                onDoubleClicked: { list.dragWidth = -1; Settings.set("mail", "listWidth", 380) }
+                            }
+                        }
+
+                        // ── Reading ──
+                        Reader {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            row: win.row
+                            onReply: (m, all) => composer.reply(m, all)
+                            onForward: m => composer.forward(m)
+                            onViewAttachment: (m, atts, i) => viewer.show(m, atts, i)
+                            onClosed: { win.row = null; keys.forceActiveFocus() }
+                        }
+                    }
+
+                    // a change the server refused
+                    Rectangle {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 24
+                        visible: MailStore.lastError !== ""
+                        width: Math.min(parent.width - 80, errText.implicitWidth + 60)
+                        height: 40
+                        radius: 20
+                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+                        border.width: 1
+                        border.color: Colors.red
+                        z: 50
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 16
+                            anchors.rightMargin: 6
+                            Text { id: errText; Layout.fillWidth: true; text: "󰀦  " + MailStore.lastError; color: Colors.ink
+                                   font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                            IconButton { implicitWidth: 28; implicitHeight: 28; icon: I.close; onClicked: MailStore.lastError = "" }
+                        }
+                    }
+
+                    // archived / deleted: undo for a few seconds
+                    Rectangle {
+                        id: undoToast
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: MailStore.lastError !== "" ? 74 : 24
+                        // fades and grows in / out (the text stays while it goes)
+                        readonly property bool on: MailStore.undoable !== null
+                        property string label: ""
+                        Connections { target: MailStore; function onUndoableChanged() { if (MailStore.undoable) undoToast.label = MailStore.undoable.label } }
+                        visible: opacity > 0
+                        opacity: on ? 1 : 0
+                        scale: on ? 1 : 0.92
+                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+                        width: undoRow.implicitWidth + 30
+                        height: 42
+                        radius: 21
+                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+                        border.width: Properties.panelBorderWidth
+                        border.color: Properties.panelBorder
+                        z: 50
+                        RowLayout {
+                            id: undoRow
+                            anchors.centerIn: parent
+                            spacing: 10
+                            Text { text: undoToast.label; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                            ActionButton { icon: I.back; text: "Undo  (Ctrl+Z)"; onClicked: MailStore.undo() }
+                        }
+                    }
+
+                    Composer { id: composer; onClosed: keys.forceActiveFocus() }
+                    Viewer { id: viewer; onShownChanged: if (!shown) keys.forceActiveFocus() }
+                    AccountTransfer { id: transfer; onClosed: keys.forceActiveFocus() }
+                    AccountDialog { id: accountDialog; onClosed: keys.forceActiveFocus() }
+                    FolderDialog { id: folderDialog; onClosed: keys.forceActiveFocus(); onCreated: v => root.view = v }
+                    MailSettings {
+                        id: settingsDialog
+                        onClosed: keys.forceActiveFocus()
+                        onEditAccount: a => accountDialog.edit(a)
+                        onTransfer: mode => transfer.start(mode)
+                        onAddAccount: accountDialog.start()
+                    }
                 }
             }
         }

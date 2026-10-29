@@ -15,7 +15,8 @@ import "CalUtil.js" as U
 //
 // Open it with:  qs ipc call calendar toggle   (or the "Calendar" launcher entry)
 // Keys: ←/→ previous/next · T today · N new event · I import · 1-4 day/week/month/agenda
-//       Ctrl +/-/0 (or Ctrl + wheel) zoom the day / week view
+//       Ctrl +/-/0 (or Ctrl + wheel) zoom the whole window (AppZoom)
+//       Ctrl Alt +/-/0 (or Ctrl + wheel over the hours) zoom the day / week view
 // .ics files: drop them on the window, or  qs ipc call calendar importFile <path>
 Scope {
     id: root
@@ -75,7 +76,11 @@ Scope {
         newEvent: date => root.newEventOn(date),
         showEvent: id => root.showEventId(id),
         setView: view => root.switchView(view),
-        importFile: path => root.importPath(path)
+        importFile: path => root.importPath(path),
+        settings: page => root.openDialog("settings" + (page ? ":" + page : "")),
+        addAccount: () => root.openDialog("addAccount"),
+        transfer: mode => root.openDialog(mode === "import" ? "import" : "export"),
+        importAccounts: path => root.openDialog("importfile:" + path)
     })
     Component.onCompleted: Panels.register("calendar", api)
     Component.onDestruction: Panels.unregister("calendar", api)
@@ -112,6 +117,12 @@ Scope {
     property bool pendingNew: false        // then open the editor there
     property string pendingEvent: ""       // then show that event
     property var pendingImport: []         // then open the import dialog for these files
+    property string pendingDialog: ""      // "settings[:page]" | "addAccount" | "export" | "import" | "importfile:<path>" (the settings app)
+    function openDialog(d) {
+        if (!root.open) root.resetView()
+        root.pendingDialog = d
+        root.show()
+    }
 
     function parseDay(s) {
         const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
@@ -141,9 +152,22 @@ Scope {
                 function onPendingNewChanged() { Qt.callLater(win.takePending) }
                 function onPendingEventChanged() { Qt.callLater(win.takePending) }
                 function onPendingImportChanged() { Qt.callLater(win.takePending) }
+                function onPendingDialogChanged() { Qt.callLater(win.takePending) }
             }
 
             function takePending() {
+                if (root.pendingDialog) {
+                    const d = root.pendingDialog
+                    root.pendingDialog = ""
+                    if (eventDialog.shown && eventDialog.editing) eventDialog.shake()
+                    else {
+                        eventDialog.close(); accountDialog.close(); calSettings.close(); transfer.close()
+                        if (d.startsWith("settings")) calSettings.openPage(d.includes(":") ? d.slice(9) : calSettings.page || "reminders")
+                        else if (d === "addAccount") accountDialog.start()
+                        else if (d.startsWith("importfile:")) transfer.startFile(d.slice(11))
+                        else transfer.start(d)
+                    }
+                }
                 // an event being written isn't thrown away for a new request
                 if (eventDialog.shown && eventDialog.editing && (root.pendingNew || root.pendingEvent)) {
                     root.jumpTo = null
@@ -327,489 +351,504 @@ Scope {
                      + (root.view === "month" ? " – " + U.weekNumber(U.addDays(U.addMonths(shownMonth, 1), -1)) + "  ·  scroll for more" : "")
             }
 
-            Rectangle {
-                id: bg
+            // Ctrl +/−/0, Ctrl + wheel: the whole window bigger or smaller (AppZoom)
+            ZoomArea {
+                id: zoomArea
+                app: "calendar"
                 anchors.fill: parent
-                radius: Compositor.appRadius          // same corners as the compositor's windows
-                color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
-                // no own border: the compositor draws the window's border, and one inside got
-                // clipped at the rounded corners (looked cut off when resizing)
-
-                // keyboard shortcuts (inactive while typing in a dialog)
-                Item {
-                    id: keys
-                    focus: true
-                    Keys.onPressed: event => {
-                        if (eventDialog.shown || accountDialog.shown || calSettings.shown || scopeDialog.shown || importDialog.shown) return
-                        if (event.modifiers & Qt.ControlModifier) {
-                            const z = event.key === Qt.Key_Plus || event.key === Qt.Key_Equal ? 1
-                                    : event.key === Qt.Key_Minus ? -1 : event.key === Qt.Key_0 ? 0 : null
-                            if (z === null || !win.timeGrid) return
-                            win.zoom(z)
-                            event.accepted = true
-                            return
-                        }
-                        switch (event.key) {
-                        case Qt.Key_Left: win.step(-1); break
-                        case Qt.Key_Right: win.step(1); break
-                        case Qt.Key_T: win.goToday(); break
-                        case Qt.Key_N: win.newEvent(); break
-                        case Qt.Key_I: importDialog.pick(); break
-                        case Qt.Key_1: win.backTo = ""; root.view = "day"; break
-                        case Qt.Key_2: win.backTo = ""; root.view = "week"; break
-                        case Qt.Key_3: win.backTo = ""; root.view = "month"; break
-                        case Qt.Key_4: win.backTo = ""; root.view = "agenda"; break
-                        case Qt.Key_Delete: if (CalendarStore.selectedCount === 0) return; selBar.confirming = true; break
-                        case Qt.Key_Escape:
-                            if (selBar.confirming) { selBar.confirming = false; break }
-                            if (CalendarStore.selectedCount > 0) { CalendarStore.clearSelection(); break }
-                            if (win.backTo === "") return; win.goBack(); break
-                        case Qt.Key_Backspace: if (win.backTo === "") return; win.goBack(); break
-                        default: return
-                        }
-                        event.accepted = true
-                    }
-                }
-
-                RowLayout {
+                // Ctrl + wheel over the hours zooms them, not the window
+                wheelExcept: [viewLoader.item?.hourGrid ?? null]
+                Rectangle {
+                    id: bg
                     anchors.fill: parent
-                    anchors.margins: 14
-                    spacing: 14
+                    radius: Compositor.appRadius / zoomArea.zoom          // same corners as the compositor's windows
+                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
+                    // no own border: the compositor draws the window's border, and one inside got
+                    // clipped at the rounded corners (looked cut off when resizing)
 
-                    // ── Sidebar ───────────────────────────────────────────────
-                    Rectangle {
-                        Layout.preferredWidth: 260
-                        Layout.fillHeight: true
-                        radius: Math.max(6, Compositor.appRadius - 2)
-                        color: Colors.card
-                        border.width: Properties.panelBorderWidth
-                        border.color: Properties.cardBorder
+                    // keyboard shortcuts (inactive while typing in a dialog)
+                    Item {
+                        id: keys
+                        focus: true
+                        Keys.onPressed: event => {
+                            if (eventDialog.shown || accountDialog.shown || calSettings.shown || scopeDialog.shown || importDialog.shown || transfer.shown) return
+                            // Ctrl +/−/0 alone zooms the whole window (ZoomArea); with Alt the hours
+                            if ((event.modifiers & Qt.ControlModifier) && (event.modifiers & Qt.AltModifier)) {
+                                const z = event.key === Qt.Key_Plus || event.key === Qt.Key_Equal ? 1
+                                        : event.key === Qt.Key_Minus ? -1 : event.key === Qt.Key_0 ? 0 : null
+                                if (z === null || !win.timeGrid) return
+                                win.zoom(z)
+                                event.accepted = true
+                                return
+                            }
+                            switch (event.key) {
+                            case Qt.Key_Left: win.step(-1); break
+                            case Qt.Key_Right: win.step(1); break
+                            case Qt.Key_T: win.goToday(); break
+                            case Qt.Key_N: win.newEvent(); break
+                            case Qt.Key_I: importDialog.pick(); break
+                            case Qt.Key_1: win.backTo = ""; root.view = "day"; break
+                            case Qt.Key_2: win.backTo = ""; root.view = "week"; break
+                            case Qt.Key_3: win.backTo = ""; root.view = "month"; break
+                            case Qt.Key_4: win.backTo = ""; root.view = "agenda"; break
+                            case Qt.Key_Delete: if (CalendarStore.selectedCount === 0) return; selBar.confirming = true; break
+                            case Qt.Key_Escape:
+                                if (selBar.confirming) { selBar.confirming = false; break }
+                                if (CalendarStore.selectedCount > 0) { CalendarStore.clearSelection(); break }
+                                if (win.backTo === "") return; win.goBack(); break
+                            case Qt.Key_Backspace: if (win.backTo === "") return; win.goBack(); break
+                            default: return
+                            }
+                            event.accepted = true
+                        }
+                    }
 
-                        ColumnLayout {
-                            anchors.fill: parent
-                            anchors.margins: 12
-                            spacing: 10
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: 14
 
-                            // title / drag handle
-                            Item {
-                                Layout.fillWidth: true
-                                implicitHeight: 40
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 4
-                                    spacing: 10
-                                    Text {
-                                        text: "󰃭"
-                                        color: Colors.color6
-                                        font.pixelSize: 22
-                                        font.family: Properties.fontFamily
+                        // ── Sidebar ───────────────────────────────────────────────
+                        Rectangle {
+                            Layout.preferredWidth: 260
+                            Layout.fillHeight: true
+                            radius: Math.max(6, Compositor.appRadius - 2)
+                            color: Colors.card
+                            border.width: Properties.panelBorderWidth
+                            border.color: Properties.cardBorder
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                anchors.margins: 12
+                                spacing: 10
+
+                                // title / drag handle
+                                Item {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 40
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 4
+                                        spacing: 10
+                                        Text {
+                                            text: "󰃭"
+                                            color: Colors.color6
+                                            font.pixelSize: 22
+                                            font.family: Properties.fontFamily
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: "Calendar"
+                                            color: Colors.ink
+                                            font.pixelSize: 18
+                                            font.bold: true
+                                            font.family: Properties.fontFamily
+                                        }
                                     }
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: "Calendar"
-                                        color: Colors.ink
-                                        font.pixelSize: 18
-                                        font.bold: true
-                                        font.family: Properties.fontFamily
+                                    DragHandler {
+                                        target: null
+                                        onActiveChanged: if (active) bg.Window.window.startSystemMove()
                                     }
                                 }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+                                    ActionButton {
+                                        Layout.fillWidth: true
+                                        implicitHeight: Properties.buttonHeight + 4
+                                        icon: "󰐕"
+                                        text: "New event"
+                                        primary: true
+                                        onClicked: win.newEvent()
+                                    }
+                                    ActionButton {
+                                        implicitHeight: Properties.buttonHeight + 4
+                                        icon: "󰃶"
+                                        text: "Today"
+                                        interactive: !win.showingToday
+                                        onClicked: win.goToday()
+                                    }
+                                }
+
+                                MiniMonth {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 4
+                                    selected: win.cursor
+                                    onPicked: d => {
+                                        const dir = d < win.cursor ? -1 : d > win.cursor ? 1 : 0
+                                        win.cursor = d
+                                        if (root.view !== "month" && dir !== 0) win.slideIn(dir)
+                                    }
+                                }
+
+                                // calendars
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Layout.topMargin: 6
+                                    Text {
+                                        Layout.fillWidth: true
+                                        Layout.leftMargin: 4
+                                        text: "CALENDARS"
+                                        color: Colors.fade(0.4)
+                                        font.pixelSize: 10
+                                        font.bold: true
+                                        font.letterSpacing: 1.2
+                                        font.family: Properties.fontFamily
+                                    }
+                                    IconButton {
+                                        implicitWidth: 24; implicitHeight: 24
+                                        iconSize: 12
+                                        icon: "󰋺"
+                                        tooltip: "Import .ics file  (I)"
+                                        onClicked: importDialog.pick()
+                                    }
+                                    IconButton {
+                                        implicitWidth: 24; implicitHeight: 24
+                                        iconSize: 12
+                                        icon: "󰐕"
+                                        tooltip: "Add account"
+                                        onClicked: accountDialog.start()
+                                    }
+                                }
+
+                                // 4 px wider than the column on each side, list inset by the same:
+                                // same look, but hover-grown buttons at the edge aren't clipped
+                                Flickable {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    Layout.leftMargin: -4
+                                    Layout.rightMargin: -4
+                                    contentHeight: accCol.implicitHeight + 8
+                                    clip: true
+                                    boundsBehavior: Flickable.StopAtBounds
+
+                                    ColumnLayout {
+                                        id: accCol
+                                        x: 4
+                                        y: 4
+                                        width: parent.width - 8
+                                        spacing: 8
+
+                                        // empty state
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            visible: CalendarStore.accounts.length === 0
+                                            spacing: 8
+                                            Text {
+                                                Layout.fillWidth: true
+                                                Layout.leftMargin: 4
+                                                text: "No calendars yet. Add iCloud, a CalDAV server, a Google / Outlook link or a local calendar — or import an .ics export."
+                                                color: Colors.fade(0.45)
+                                                font.pixelSize: 11
+                                                font.family: Properties.fontFamily
+                                                wrapMode: Text.WordWrap
+                                            }
+                                            RowLayout {
+                                                spacing: 6
+                                                ActionButton {
+                                                    icon: "󰐕"
+                                                    text: "Add account"
+                                                    onClicked: accountDialog.start()
+                                                }
+                                                ActionButton {
+                                                    icon: "󰋺"
+                                                    text: "Import"
+                                                    onClicked: importDialog.pick()
+                                                }
+                                            }
+                                        }
+
+                                        Repeater {
+                                            model: CalendarStore.accounts
+                                            AccountGroup {
+                                                required property var modelData
+                                                Layout.fillWidth: true
+                                                account: modelData
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // sync status
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 6
+                                    Text {
+                                        Layout.fillWidth: true
+                                        Layout.leftMargin: 4
+                                        readonly property int errs: CalendarStore.errors.length
+                                        text: CalendarStore.syncing ? "Syncing…"
+                                            : errs > 0 ? "󰀦  " + errs + (errs === 1 ? " calendar" : " calendars") + " couldn't sync"
+                                            : CalendarStore.lastSync > 0 ? "Synced " + Qt.formatTime(new Date(CalendarStore.lastSync), "HH:mm") : ""
+                                        color: errs > 0 && !CalendarStore.syncing ? Colors.red : Colors.fade(0.4)
+                                        font.pixelSize: 10
+                                        font.family: Properties.fontFamily
+                                        elide: Text.ElideRight
+                                        HoverHandler { id: errHover }
+                                        ToolTip.visible: errHover.hovered && errs > 0
+                                        ToolTip.text: CalendarStore.errors.map(e => (e.account ? e.account + ": " : "") + e.message).join("\n")
+                                    }
+                                    IconButton {
+                                        implicitWidth: 26; implicitHeight: 26
+                                        iconSize: 12
+                                        icon: "󰑐"
+                                        tooltip: "Sync now"
+                                        interactive: !CalendarStore.syncing && CalendarStore.activeAccounts.length > 0
+                                        rotation: CalendarStore.syncing ? 360 : 0
+                                        RotationAnimation on rotation {
+                                            running: CalendarStore.syncing
+                                            loops: Animation.Infinite
+                                            from: 0; to: 360; duration: 900
+                                        }
+                                        onClicked: CalendarStore.sync(true)
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── Content ───────────────────────────────────────────────
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            spacing: 12
+
+                            // header (drag handle too)
+                            Item {
+                                Layout.fillWidth: true
+                                implicitHeight: 56
                                 DragHandler {
                                     target: null
                                     onActiveChanged: if (active) bg.Window.window.startSystemMove()
                                 }
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 6
-                                ActionButton {
-                                    Layout.fillWidth: true
-                                    implicitHeight: Properties.buttonHeight + 4
-                                    icon: "󰐕"
-                                    text: "New event"
-                                    primary: true
-                                    onClicked: win.newEvent()
-                                }
-                                ActionButton {
-                                    implicitHeight: Properties.buttonHeight + 4
-                                    icon: "󰃶"
-                                    text: "Today"
-                                    interactive: !win.showingToday
-                                    onClicked: win.goToday()
-                                }
-                            }
-
-                            MiniMonth {
-                                Layout.fillWidth: true
-                                Layout.topMargin: 4
-                                selected: win.cursor
-                                onPicked: d => {
-                                    const dir = d < win.cursor ? -1 : d > win.cursor ? 1 : 0
-                                    win.cursor = d
-                                    if (root.view !== "month" && dir !== 0) win.slideIn(dir)
-                                }
-                            }
-
-                            // calendars
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Layout.topMargin: 6
-                                Text {
-                                    Layout.fillWidth: true
-                                    Layout.leftMargin: 4
-                                    text: "CALENDARS"
-                                    color: Colors.fade(0.4)
-                                    font.pixelSize: 10
-                                    font.bold: true
-                                    font.letterSpacing: 1.2
-                                    font.family: Properties.fontFamily
-                                }
-                                IconButton {
-                                    implicitWidth: 24; implicitHeight: 24
-                                    iconSize: 12
-                                    icon: "󰋺"
-                                    tooltip: "Import .ics file  (I)"
-                                    onClicked: importDialog.pick()
-                                }
-                                IconButton {
-                                    implicitWidth: 24; implicitHeight: 24
-                                    iconSize: 12
-                                    icon: "󰐕"
-                                    tooltip: "Add account"
-                                    onClicked: accountDialog.start()
-                                }
-                            }
-
-                            // 4 px wider than the column on each side, list inset by the same:
-                            // same look, but hover-grown buttons at the edge aren't clipped
-                            Flickable {
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                Layout.leftMargin: -4
-                                Layout.rightMargin: -4
-                                contentHeight: accCol.implicitHeight + 8
-                                clip: true
-                                boundsBehavior: Flickable.StopAtBounds
-
-                                ColumnLayout {
-                                    id: accCol
-                                    x: 4
-                                    y: 4
-                                    width: parent.width - 8
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 6
                                     spacing: 8
 
-                                    // empty state
                                     ColumnLayout {
                                         Layout.fillWidth: true
-                                        visible: CalendarStore.accounts.length === 0
-                                        spacing: 8
+                                        spacing: 0
                                         Text {
                                             Layout.fillWidth: true
-                                            Layout.leftMargin: 4
-                                            text: "No calendars yet. Add iCloud, a CalDAV server, a Google / Outlook link or a local calendar — or import an .ics export."
-                                            color: Colors.fade(0.45)
+                                            text: win.heading
+                                            color: Colors.ink
+                                            font.pixelSize: 24
+                                            font.bold: true
+                                            font.family: Properties.fontFamily
+                                            elide: Text.ElideRight
+                                        }
+                                        Text {
+                                            text: win.subtitle
+                                            color: Colors.fade(0.5)
+                                            font.pixelSize: 12
+                                            font.family: Properties.fontFamily
+                                        }
+                                    }
+
+                                    // greyed out while today is already shown (clicking would do nothing)
+                                    ActionButton {
+                                        text: "Today"
+                                        interactive: !win.showingToday
+                                        onClicked: win.goToday()
+                                    }
+                                    IconButton {
+                                        icon: "󰅁"
+                                        tooltip: "Previous  (←)"
+                                        onClicked: win.step(-1)
+                                    }
+                                    IconButton {
+                                        icon: "󰅂"
+                                        tooltip: "Next  (→)"
+                                        onClicked: win.step(1)
+                                    }
+                                    Item { Layout.preferredWidth: 6 }
+                                    // back to the view the day was opened from
+                                    ActionButton {
+                                        visible: win.backTo !== "" && root.view === "day"
+                                        icon: "󰁍"
+                                        text: "Back to " + win.backTo
+                                        onClicked: win.goBack()
+                                    }
+                                    // zoom of the day / week view
+                                    RowLayout {
+                                        visible: win.timeGrid
+                                        spacing: 0
+                                        IconButton {
+                                            implicitWidth: 26; implicitHeight: 26
+                                            iconSize: 11
+                                            icon: "󰍴"
+                                            tooltip: "Zoom out the hours  (Ctrl Alt −, Ctrl + wheel over them) · " + CalendarStore.zoom + "%"
+                                            interactive: CalendarStore.zoom > CalendarStore.zoomSteps[0]
+                                            onClicked: win.zoom(-1)
+                                        }
+                                        Text {
+                                            visible: CalendarStore.zoom !== 100
+                                            Layout.preferredWidth: 38
+                                            horizontalAlignment: Text.AlignHCenter
+                                            text: CalendarStore.zoom + "%"
+                                            color: Colors.fade(CalendarStore.zoom === 100 ? 0.4 : 0.75)
                                             font.pixelSize: 11
                                             font.family: Properties.fontFamily
-                                            wrapMode: Text.WordWrap
-                                        }
-                                        RowLayout {
-                                            spacing: 6
-                                            ActionButton {
-                                                icon: "󰐕"
-                                                text: "Add account"
-                                                onClicked: accountDialog.start()
-                                            }
-                                            ActionButton {
-                                                icon: "󰋺"
-                                                text: "Import"
-                                                onClicked: importDialog.pick()
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: win.zoom(0)
                                             }
                                         }
-                                    }
-
-                                    Repeater {
-                                        model: CalendarStore.accounts
-                                        AccountGroup {
-                                            required property var modelData
-                                            Layout.fillWidth: true
-                                            account: modelData
+                                        IconButton {
+                                            implicitWidth: 26; implicitHeight: 26
+                                            iconSize: 11
+                                            icon: "󰐕"
+                                            tooltip: "Zoom in the hours  (Ctrl Alt +) · " + CalendarStore.zoom + "%"
+                                            interactive: CalendarStore.zoom < CalendarStore.zoomSteps[CalendarStore.zoomSteps.length - 1]
+                                            onClicked: win.zoom(1)
                                         }
                                     }
-                                }
-                            }
-
-                            // sync status
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: 6
-                                Text {
-                                    Layout.fillWidth: true
-                                    Layout.leftMargin: 4
-                                    readonly property int errs: CalendarStore.errors.length
-                                    text: CalendarStore.syncing ? "Syncing…"
-                                        : errs > 0 ? "󰀦  " + errs + (errs === 1 ? " calendar" : " calendars") + " couldn't sync"
-                                        : CalendarStore.lastSync > 0 ? "Synced " + Qt.formatTime(new Date(CalendarStore.lastSync), "HH:mm") : ""
-                                    color: errs > 0 && !CalendarStore.syncing ? Colors.red : Colors.fade(0.4)
-                                    font.pixelSize: 10
-                                    font.family: Properties.fontFamily
-                                    elide: Text.ElideRight
-                                    HoverHandler { id: errHover }
-                                    ToolTip.visible: errHover.hovered && errs > 0
-                                    ToolTip.text: CalendarStore.errors.map(e => (e.account ? e.account + ": " : "") + e.message).join("\n")
-                                }
-                                IconButton {
-                                    implicitWidth: 26; implicitHeight: 26
-                                    iconSize: 12
-                                    icon: "󰑐"
-                                    tooltip: "Sync now"
-                                    interactive: !CalendarStore.syncing && CalendarStore.activeAccounts.length > 0
-                                    rotation: CalendarStore.syncing ? 360 : 0
-                                    RotationAnimation on rotation {
-                                        running: CalendarStore.syncing
-                                        loops: Animation.Infinite
-                                        from: 0; to: 360; duration: 900
+                                    ChoiceControl {
+                                        navStyle: true
+                                        options: ["day", "week", "month", "agenda"]
+                                        value: root.view
+                                        onEdited: v => { win.backTo = ""; root.view = v }
                                     }
-                                    onClicked: CalendarStore.sync(true)
-                                }
-                            }
-                        }
-                    }
-
-                    // ── Content ───────────────────────────────────────────────
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        spacing: 12
-
-                        // header (drag handle too)
-                        Item {
-                            Layout.fillWidth: true
-                            implicitHeight: 56
-                            DragHandler {
-                                target: null
-                                onActiveChanged: if (active) bg.Window.window.startSystemMove()
-                            }
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 6
-                                spacing: 8
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 0
-                                    Text {
-                                        Layout.fillWidth: true
-                                        text: win.heading
-                                        color: Colors.ink
-                                        font.pixelSize: 24
-                                        font.bold: true
-                                        font.family: Properties.fontFamily
-                                        elide: Text.ElideRight
-                                    }
-                                    Text {
-                                        text: win.subtitle
-                                        color: Colors.fade(0.5)
-                                        font.pixelSize: 12
-                                        font.family: Properties.fontFamily
-                                    }
-                                }
-
-                                // greyed out while today is already shown (clicking would do nothing)
-                                ActionButton {
-                                    text: "Today"
-                                    interactive: !win.showingToday
-                                    onClicked: win.goToday()
-                                }
-                                IconButton {
-                                    icon: "󰅁"
-                                    tooltip: "Previous  (←)"
-                                    onClicked: win.step(-1)
-                                }
-                                IconButton {
-                                    icon: "󰅂"
-                                    tooltip: "Next  (→)"
-                                    onClicked: win.step(1)
-                                }
-                                Item { Layout.preferredWidth: 6 }
-                                // back to the view the day was opened from
-                                ActionButton {
-                                    visible: win.backTo !== "" && root.view === "day"
-                                    icon: "󰁍"
-                                    text: "Back to " + win.backTo
-                                    onClicked: win.goBack()
-                                }
-                                // zoom of the day / week view
-                                RowLayout {
-                                    visible: win.timeGrid
-                                    spacing: 0
+                                    Item { Layout.preferredWidth: 6 }
                                     IconButton {
-                                        implicitWidth: 26; implicitHeight: 26
-                                        iconSize: 11
-                                        icon: "󰍴"
-                                        tooltip: "Zoom out  (Ctrl −, Ctrl + wheel) · " + CalendarStore.zoom + "%"
-                                        interactive: CalendarStore.zoom > CalendarStore.zoomSteps[0]
-                                        onClicked: win.zoom(-1)
-                                    }
-                                    Text {
-                                        visible: CalendarStore.zoom !== 100
-                                        Layout.preferredWidth: 38
-                                        horizontalAlignment: Text.AlignHCenter
-                                        text: CalendarStore.zoom + "%"
-                                        color: Colors.fade(CalendarStore.zoom === 100 ? 0.4 : 0.75)
-                                        font.pixelSize: 11
-                                        font.family: Properties.fontFamily
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: win.zoom(0)
-                                        }
+                                        icon: "󰒓"
+                                        tooltip: "Calendar settings"
+                                        onClicked: calSettings.open()
                                     }
                                     IconButton {
-                                        implicitWidth: 26; implicitHeight: 26
-                                        iconSize: 11
-                                        icon: "󰐕"
-                                        tooltip: "Zoom in  (Ctrl +) · " + CalendarStore.zoom + "%"
-                                        interactive: CalendarStore.zoom < CalendarStore.zoomSteps[CalendarStore.zoomSteps.length - 1]
-                                        onClicked: win.zoom(1)
+                                        icon: "󰅖"
+                                        tooltip: "Close"
+                                        onClicked: root.open = false
                                     }
                                 }
-                                ChoiceControl {
-                                    navStyle: true
-                                    options: ["day", "week", "month", "agenda"]
-                                    value: root.view
-                                    onEdited: v => { win.backTo = ""; root.view = v }
-                                }
-                                Item { Layout.preferredWidth: 6 }
-                                IconButton {
-                                    icon: "󰒓"
-                                    tooltip: "Calendar settings"
-                                    onClicked: calSettings.open()
-                                }
-                                IconButton {
-                                    icon: "󰅖"
-                                    tooltip: "Close"
-                                    onClicked: root.open = false
-                                }
                             }
-                        }
-
-                        Item {
-                            id: viewHost
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            clip: true
 
                             Item {
-                                id: viewShift
-                                width: parent.width
-                                height: parent.height
-                                Loader {
-                                    id: viewLoader
-                                    anchors.fill: parent
-                                    sourceComponent: root.view === "month" ? monthView
-                                                   : root.view === "agenda" ? agendaView : timeView
-                                    // only the first view when the window opens fades + settles in;
-                                    // switching views only slides (onViewChanged), never both
-                                    property bool first: true
-                                    onLoaded: if (first) { first = false; viewIn.restart() }
+                                id: viewHost
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                clip: true
+
+                                Item {
+                                    id: viewShift
+                                    width: parent.width
+                                    height: parent.height
+                                    Loader {
+                                        id: viewLoader
+                                        anchors.fill: parent
+                                        sourceComponent: root.view === "month" ? monthView
+                                                       : root.view === "agenda" ? agendaView : timeView
+                                        // only the first view when the window opens fades + settles in;
+                                        // switching views only slides (onViewChanged), never both
+                                        property bool first: true
+                                        onLoaded: if (first) { first = false; viewIn.restart() }
+                                    }
+                                }
+                                ParallelAnimation {
+                                    id: viewIn
+                                    NumberAnimation { target: viewLoader; property: "opacity"; from: 0; to: 1; duration: 220; easing.type: Easing.OutCubic }
+                                    NumberAnimation { target: viewLoader; property: "scale"; from: 0.985; to: 1; duration: 260; easing.type: Easing.OutCubic }
                                 }
                             }
-                            ParallelAnimation {
-                                id: viewIn
-                                NumberAnimation { target: viewLoader; property: "opacity"; from: 0; to: 1; duration: 220; easing.type: Easing.OutCubic }
-                                NumberAnimation { target: viewLoader; property: "scale"; from: 0.985; to: 1; duration: 260; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    EventDialog { id: eventDialog; onClosed: keys.forceActiveFocus() }
+                    AccountDialog { id: accountDialog; onClosed: keys.forceActiveFocus() }
+                    CalendarSettings {
+                        id: calSettings
+                        onClosed: keys.forceActiveFocus()
+                        onAddAccount: accountDialog.start()
+                        onTransfer: mode => transfer.start(mode)
+                    }
+                    CalendarTransfer { id: transfer; onClosed: keys.forceActiveFocus() }
+                    ScopeDialog { id: scopeDialog; onClosed: keys.forceActiveFocus() }
+                    ImportDialog {
+                        id: importDialog
+                        onClosed: keys.forceActiveFocus()
+                        onShowDate: d => { win.cursor = d; if (root.view === "month") viewLoader.item.showMonth(d, false) }
+                    }
+
+                    // drop .ics files (Apple / Google / Outlook exports, invites) anywhere on the window
+                    DropArea {
+                        id: drop
+                        anchors.fill: parent
+                        keys: ["text/uri-list"]
+                        onEntered: drag => drag.accepted = drag.hasUrls
+                        onDropped: drop => {
+                            const p = drop.urls.map(u => String(u)).filter(u => u.startsWith("file://"))
+                            if (p.length > 0) { root.pendingImport = p; drop.accept() }
+                        }
+                    }
+                    DropZone {
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        radius: Math.max(6, Compositor.appRadius - 4)
+                        shown: drop.containsDrag
+                        hot: true
+                        z: 200
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 6
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "󰋺"
+                                color: Colors.color6
+                                font.pixelSize: 40
+                                font.family: Properties.fontFamily
+                            }
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "Drop to import"
+                                color: Colors.ink
+                                font.pixelSize: 16
+                                font.bold: true
+                                font.family: Properties.fontFamily
+                            }
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: ".ics exports from Apple Calendar, Google, Outlook, … or a single invite"
+                                color: Colors.fade(0.55)
+                                font.pixelSize: 11
+                                font.family: Properties.fontFamily
                             }
                         }
                     }
-                }
 
-                EventDialog { id: eventDialog; onClosed: keys.forceActiveFocus() }
-                AccountDialog { id: accountDialog; onClosed: keys.forceActiveFocus() }
-                CalendarSettings { id: calSettings; onClosed: keys.forceActiveFocus() }
-                ScopeDialog { id: scopeDialog; onClosed: keys.forceActiveFocus() }
-                ImportDialog {
-                    id: importDialog
-                    onClosed: keys.forceActiveFocus()
-                    onShowDate: d => { win.cursor = d; if (root.view === "month") viewLoader.item.showMonth(d, false) }
-                }
-
-                // drop .ics files (Apple / Google / Outlook exports, invites) anywhere on the window
-                DropArea {
-                    id: drop
-                    anchors.fill: parent
-                    keys: ["text/uri-list"]
-                    onEntered: drag => drag.accepted = drag.hasUrls
-                    onDropped: drop => {
-                        const p = drop.urls.map(u => String(u)).filter(u => u.startsWith("file://"))
-                        if (p.length > 0) { root.pendingImport = p; drop.accept() }
+                    SelectionBar {
+                        id: selBar
+                        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
+                        z: 50
+                        onShiftDays: n => win.groupMove(0, n)
+                        onDeleteAll: onlyThis => win.deleteSelection(onlyThis)
+                        onMoveTo: calId => { const l = CalendarStore.selectedEvents; CalendarStore.clearSelection(); CalendarStore.moveManyTo(l, calId) }
+                        onDuplicate: { const l = CalendarStore.selectedEvents; CalendarStore.clearSelection(); CalendarStore.duplicateMany(l, 0) }
                     }
-                }
-                DropZone {
-                    anchors.fill: parent
-                    anchors.margins: 10
-                    radius: Math.max(6, Compositor.appRadius - 4)
-                    shown: drop.containsDrag
-                    hot: true
-                    z: 200
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 6
+
+                    // writing errors that happen outside a dialog (e.g. keyring)
+                    Rectangle {
+                        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: selBar.shown ? 84 : 20 }
+                        visible: CalendarStore.lastError !== "" && !eventDialog.shown && !accountDialog.shown && !calSettings.shown && !importDialog.shown && !transfer.shown
+                        width: Math.min(errText.implicitWidth + 50, parent.width - 80)
+                        height: 40
+                        radius: 20
+                        color: Qt.rgba(0.2, 0.05, 0.08, 0.95)
+                        border.width: 1
+                        border.color: Colors.red
                         Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: "󰋺"
-                            color: Colors.color6
-                            font.pixelSize: 40
-                            font.family: Properties.fontFamily
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: "Drop to import"
+                            id: errText
+                            anchors.centerIn: parent
+                            width: parent.width - 40
+                            text: CalendarStore.lastError
                             color: Colors.ink
-                            font.pixelSize: 16
-                            font.bold: true
-                            font.family: Properties.fontFamily
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: ".ics exports from Apple Calendar, Google, Outlook, … or a single invite"
-                            color: Colors.fade(0.55)
                             font.pixelSize: 11
                             font.family: Properties.fontFamily
+                            elide: Text.ElideRight
                         }
+                        MouseArea { anchors.fill: parent; onClicked: CalendarStore.lastError = "" }
                     }
-                }
-
-                SelectionBar {
-                    id: selBar
-                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
-                    z: 50
-                    onShiftDays: n => win.groupMove(0, n)
-                    onDeleteAll: onlyThis => win.deleteSelection(onlyThis)
-                    onMoveTo: calId => { const l = CalendarStore.selectedEvents; CalendarStore.clearSelection(); CalendarStore.moveManyTo(l, calId) }
-                    onDuplicate: { const l = CalendarStore.selectedEvents; CalendarStore.clearSelection(); CalendarStore.duplicateMany(l, 0) }
-                }
-
-                // writing errors that happen outside a dialog (e.g. keyring)
-                Rectangle {
-                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: selBar.shown ? 84 : 20 }
-                    visible: CalendarStore.lastError !== "" && !eventDialog.shown && !accountDialog.shown && !calSettings.shown && !importDialog.shown
-                    width: Math.min(errText.implicitWidth + 50, parent.width - 80)
-                    height: 40
-                    radius: 20
-                    color: Qt.rgba(0.2, 0.05, 0.08, 0.95)
-                    border.width: 1
-                    border.color: Colors.red
-                    Text {
-                        id: errText
-                        anchors.centerIn: parent
-                        width: parent.width - 40
-                        text: CalendarStore.lastError
-                        color: Colors.ink
-                        font.pixelSize: 11
-                        font.family: Properties.fontFamily
-                        elide: Text.ElideRight
-                    }
-                    MouseArea { anchors.fill: parent; onClicked: CalendarStore.lastError = "" }
                 }
             }
 

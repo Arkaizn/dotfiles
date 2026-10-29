@@ -71,6 +71,9 @@ Item {
     z: 120
     Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
+    // Ctrl +/−/0 zoom the attachment here, not the window (ZoomArea's shortcuts)
+    Keys.onShortcutOverride: event => event.accepted = shown && (event.modifiers & Qt.ControlModifier)
+        && [Qt.Key_Plus, Qt.Key_Equal, Qt.Key_Minus, Qt.Key_0].includes(event.key)
     Keys.onPressed: event => {
         const ctrl = event.modifiers & Qt.ControlModifier
         if (event.key === Qt.Key_Escape) close()
@@ -161,6 +164,9 @@ Item {
                 onClicked: { root.loadApps(); appMenu.open() }
                 Popup {
                     id: appMenu
+                    // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+                    scale: AppZoom.at(parent)
+                    transformOrigin: Popup.TopLeft
                     y: withButton.height + 4
                     x: withButton.width - width
                     width: 260

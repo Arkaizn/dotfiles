@@ -439,6 +439,11 @@ class NewsletterLayout(unittest.TestCase):
         for kept in ("Head", "Footer", "<p>After</p>", "color:#999", "font-size:28px", "data:image/png"):
             self.assertIn(kept, r["html"])
         self.assertEqual(M.sanitize("<p>plain flowing text</p>")["width"], 0)
+        r = M.sanitize('<div style="Margin: 0 auto;max-width:500px;color:red">x</div>')
+        self.assertNotIn("auto", r["html"])
+        self.assertIn("color:red", r["html"])
+        # a wide picture in a flowing message isn't a fixed layout
+        self.assertEqual(M.sanitize('<p>Hi</p><img width="900" style="width:900px" src="data:image/png;base64,iVBORw0KGgo=">')["width"], 0)
 
 
 class RichCompose(unittest.TestCase):

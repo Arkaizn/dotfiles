@@ -306,8 +306,9 @@ Singleton {
         return t
     }
 
+    // w, h: floating at that size; none: in the layout, maximized (mail, calendar)
     function windowRule(title, w, h) {
-        return Syntax.fmt("niri.windowRule", {
+        return Syntax.fmt(w ? "niri.windowRule" : "niri.windowRuleMaximized", {
             title: Syntax.kdlString("^" + title + "$"), width: String(w), height: String(h), radius: String(root.appRadius),
             blur: (Settings.niri.appBlur ?? true) ? Syntax.fmt("niri.windowBlur", {}) : ""
         }) + "\n\n"
@@ -335,8 +336,8 @@ Singleton {
             + render(tree)
             + "\n// the settings, calendar and mail windows\n"
             + windowRule(windowTitle, 980, 680)
-            + windowRule("Quickshell Calendar", 1240, 800)
-            + windowRule("Quickshell Mail", 1320, 820)
+            + windowRule("Quickshell Calendar")
+            + windowRule("Quickshell Mail")
             + Syntax.fmt("niri.bindsBlock", { body: indented(
                   Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),
                                             title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Settings") }),

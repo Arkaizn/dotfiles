@@ -271,6 +271,20 @@ Singleton {
         })
     }
 
+    // an account's short name: its own name, else the provider from the address
+    // ("iCloud", "Gmail", "Hispeed") — both accounts may be "you@…"
+    function accountLabel(a) {
+        if (!a) return ""
+        if (a.name && a.name !== a.email) return a.name
+        const d = String(a.email ?? "").split("@")[1] ?? ""
+        const known = { "icloud.com": "iCloud", "me.com": "iCloud", "mac.com": "iCloud", "gmail.com": "Gmail", "googlemail.com": "Gmail",
+                        "outlook.com": "Outlook", "hotmail.com": "Outlook", "live.com": "Outlook", "gmx.ch": "GMX", "gmx.net": "GMX", "gmx.de": "GMX",
+                        "proton.me": "Proton", "protonmail.com": "Proton", "yahoo.com": "Yahoo", "web.de": "WEB.DE" }
+        if (known[d.toLowerCase()]) return known[d.toLowerCase()]
+        const first = d.split(".")[0]
+        return first ? first.charAt(0).toUpperCase() + first.slice(1) : (a.email ?? "")
+    }
+
     // folders pinned to the sidebar's favorites (per account: folder paths)
     function isPinned(acc, path) { return (root.accountMap[acc]?.pinned ?? []).includes(path) }
     function togglePin(acc, path) {

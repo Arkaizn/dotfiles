@@ -44,7 +44,9 @@ ColumnLayout {
     }
 
     readonly property int gutter: 52
-    // zoom: Ctrl + wheel, Ctrl +/-/0, the toolbar buttons (CalendarStore.zoom, %)
+    // zoom: Ctrl + wheel over the hours, Ctrl Alt +/-/0, the toolbar buttons (CalendarStore.zoom, %)
+    // (Ctrl +/-/0 alone zooms the whole window: ZoomArea, which leaves hourGrid's wheel alone)
+    readonly property Item hourGrid: flick
     readonly property real hourHeight: Math.round(52 * CalendarStore.zoom / 100)
     // labels / lines every 30 or 15 min once there's room for them
     readonly property int labelStep: hourHeight >= 180 ? 15 : hourHeight >= 90 ? 30 : 60

@@ -96,6 +96,9 @@ RowLayout {
 
         Popup {
             id: picker
+            // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
+            scale: AppZoom.at(parent)
+            transformOrigin: Popup.TopLeft
             y: swatch.height + 6
             x: Math.min(0, -(width - swatch.width) / 2)
             padding: 12

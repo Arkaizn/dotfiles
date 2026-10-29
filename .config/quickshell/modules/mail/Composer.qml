@@ -45,7 +45,7 @@ Modal {
         const a = MailStore.activeAccounts
         return a.length ? a[0].id : ""
     }
-    function signatureText(a) { return a && (a.signature ?? "").trim() ? "\n\n-- \n" + a.signature.trim() : "" }
+    function signatureText(a) { return a && (a.signature ?? "").trim() ? "\n\n" + a.signature.trim() : "" }
     // another sender: its signature replaces the old one — or goes where one
     // would be (above the quoted / forwarded part) when the old account had none
     function switchAccount(v) {
@@ -257,9 +257,9 @@ Modal {
             }
             DropdownControl {
                 visible: MailStore.activeAccounts.length > 1
-                implicitWidth: 240
-                listWidth: 360
-                options: MailStore.activeAccounts.map(a => ({ label: a.name || a.email, value: a.id, hint: a.email }))
+                implicitWidth: 170
+                listWidth: 320
+                options: MailStore.activeAccounts.map(a => ({ label: MailStore.accountLabel(a), value: a.id, hint: a.email, color: a.color }))
                 value: root.account
                 onEdited: v => root.switchAccount(v)
             }
