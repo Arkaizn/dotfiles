@@ -5,6 +5,8 @@ import QtQuick.Layouts
 import qs.components
 import qs.services
 import "../settings"
+import "../mail"
+import qs.services.lib
 import "CalUtil.js" as U
 
 // Event details, and the editor for new / existing events.
@@ -30,6 +32,11 @@ Modal {
     property int fEndMin: 600
     property string fLocation: ""
     property string fNotes: ""
+    // guests (invited by mail, iTIP): who, and the mail account the invitation comes from
+    property string fGuests: ""
+    property string fInviteFrom: ""
+    property string guestsAtStart: ""
+    property bool inviting: false
 
     // repeat: none | daily | weekly | monthly | yearly | custom (a rule the
     // editor can't show — kept as it is unless another option is picked)
@@ -102,7 +109,7 @@ Modal {
     property string formAtStart: ""
     function formState() {
         return JSON.stringify([fTitle, fCalendar, fAllDay, fStartDay, fStartMin, fEndDay, fEndMin, fLocation, fNotes,
-                               rFreq, rInterval, rDays, rEnd, rCount, rUntil])
+                               rFreq, rInterval, rDays, rEnd, rCount, rUntil, fGuests, fInviteFrom])
     }
     readonly property bool dirty: editing && formState() !== formAtStart
     keepOpen: dirty
@@ -158,11 +165,49 @@ Modal {
         fEndMin = en.getHours() * 60 + en.getMinutes()
         fLocation = e.location ?? ""
         fNotes = e.description ?? ""
+        fGuests = (e.attendees ?? []).map(a => MailUtil.formatAddress(a)).join(", ")
+        guestsAtStart = fGuests
+        const org = (e.organizer?.email ?? "").toLowerCase()
+        fInviteFrom = (MailStore.activeAccounts.find(a => a.email.toLowerCase() === org) ?? MailStore.activeAccounts[0])?.id ?? ""
         parseRule(e.rrule ?? "")
         formAtStart = formState()
     }
 
     function at(day, mins) { const d = new Date(day); d.setHours(0, mins, 0, 0); return d.getTime() }
+
+    // ── guests ──
+    // Microsoft 365 calendars: Exchange sends the invitations; others: the mail app does (iMIP)
+    readonly property bool graphCal: (CalendarStore.calendarMap[fCalendar]?.accountType ?? "") === "graph"
+    // an invitation someone else sent you: its guests aren't yours to change
+    readonly property bool foreign: !!ev?.organizer?.email
+        && !MailStore.accounts.some(a => a.email.toLowerCase() === ev.organizer.email.toLowerCase())
+    readonly property var guests: MailUtil.parseAddresses(fGuests)
+    readonly property bool canInvite: graphCal || MailStore.activeAccounts.length > 0
+
+    // the invitation mail for the saved event: to everyone now invited (REQUEST),
+    // and a cancellation to the ones taken off
+    function sendInvitations(saved, before, done) {
+        // one occurrence of a series would need a RECURRENCE-ID update: not sent here
+        if (graphCal || foreign || (ev?.recurring && saved.scope === "this")) { done(""); return }
+        const now = guests.list
+        const gone = before.filter(b => !now.some(a => a.email.toLowerCase() === b.email.toLowerCase()))
+        const changed = !ev || formState() !== formAtStart
+        const base = { uid: saved.uid, title: saved.title, start: saved.start, end: saved.end, allDay: saved.allDay,
+                       location: saved.location, description: saved.description,
+                       sequence: ev ? (ev.sequence ?? 0) + 1 : 0, rrule: saved.setRrule ?? ev?.rrule ?? "" }
+        const jobs = []
+        if (now.length && changed) jobs.push([Object.assign({}, base, { attendees: now }), "REQUEST"])
+        if (gone.length) jobs.push([Object.assign({}, base, { attendees: gone }), "CANCEL"])
+        if (jobs.length === 0) { done(""); return }
+        inviting = true
+        let left = jobs.length
+        const errs = []
+        for (const [e, method] of jobs)
+            MailStore.sendInvite(fInviteFrom, e, method, res => {
+                if (!res.ok) errs.push(res.error)
+                if (--left === 0) { inviting = false; done(errs.join("; ")) }
+            })
+    }
 
     property bool askScope: false        // the "only this / all" question is showing
     property string scope: ""            // answer for the save in progress
@@ -179,10 +224,22 @@ Modal {
         }
         if (end <= start) { error = "The end has to be after the start"; return }
         if (!fCalendar) { error = "Pick a calendar"; return }
+        if (guests.bad.length) { error = "Not an address: " + guests.bad.join(", "); return }
+        if (guests.list.length && !graphCal && !foreign && !MailStore.accountMap[fInviteFrom]) {
+            error = "Add a mail account (Mail app) to send the invitations from"; return
+        }
         const payload = Object.assign({}, ev ?? {}, {
             title: fTitle.trim() || "(No title)", start: start, end: end, allDay: fAllDay,
             location: fLocation.trim(), description: fNotes
         })
+        const before = ev?.attendees ?? []
+        // guests only go into the event when they were changed here (and never into someone else's invitation)
+        if (!foreign && fGuests !== guestsAtStart) {
+            const acc = MailStore.accountMap[fInviteFrom]
+            payload.attendees = guests.list.map(a => Object.assign({}, a,
+                { status: before.find(b => b.email.toLowerCase() === a.email.toLowerCase())?.status ?? "" }))
+            payload.organizer = acc ? { name: acc.displayName ?? "", email: acc.email } : (ev?.organizer ?? null)
+        }
         // only touch the repeat rule when it was changed here
         const rule = buildRule()
         if (rule !== rOriginal) payload.setRrule = rule
@@ -197,8 +254,11 @@ Modal {
         scope = ""
         error = ""
         CalendarStore.saveEvent(payload, fCalendar, res => {
-            if (res.ok) root.close()
-            else root.error = res.error
+            if (!res.ok) { root.error = res.error; return }
+            root.sendInvitations(Object.assign({}, payload, { uid: res.uid || payload.uid }), before, err => {
+                if (err) root.error = "Saved — but the invitations weren't sent: " + err
+                else root.close()
+            })
         })
     }
 
@@ -274,9 +334,21 @@ Modal {
     }
 
     function remove(onlyThis) {
+        const e = ev
         CalendarStore.deleteEvent(ev, onlyThis, res => {
-            if (res.ok) root.close()
-            else root.error = res.error
+            if (!res.ok) { root.error = res.error; return }
+            // my invitation deleted: the guests get a cancellation
+            const org = (e.organizer?.email ?? "").toLowerCase()
+            const acc = MailStore.activeAccounts.find(a => a.email.toLowerCase() === org)
+            if (onlyThis || !acc || !(e.attendees ?? []).length || (CalendarStore.calendarMap[e.calendar]?.accountType === "graph")) {
+                root.close(); return
+            }
+            MailStore.sendInvite(acc.id, { uid: e.uid, title: e.title, start: e.start, end: e.end, allDay: e.allDay,
+                                           location: e.location, sequence: (e.sequence ?? 0) + 1, attendees: e.attendees,
+                                           rrule: e.rrule ?? "" }, "CANCEL", r => {
+                if (r.ok) root.close()
+                else root.error = "Deleted — but the cancellation wasn't sent: " + r.error
+            })
         })
     }
 
@@ -462,6 +534,14 @@ Modal {
                 text: root.ev?.url ?? ""
                 visible: text !== ""
                 link: true
+            }
+
+            DetailLine {
+                icon: "󰡉"
+                visible: (root.ev?.attendees ?? []).length > 0
+                text: (root.ev?.attendees ?? []).map(a => MailUtil.displayName(a)
+                        + (a.status === "ACCEPTED" ? " ✓" : a.status === "DECLINED" ? " ✗" : a.status === "TENTATIVE" ? " ?" : "")).join(", ")
+                      + (root.ev?.organizer ? "  ·  organized by " + MailUtil.displayName(root.ev.organizer) : "")
             }
 
             // notes
@@ -784,6 +864,48 @@ Modal {
                 placeholderText: "Location"
                 text: root.fLocation
                 onTextEdited: root.fLocation = text
+            }
+
+            AddressField {
+                Layout.fillWidth: true
+                visible: root.canInvite && !root.foreign
+                label: "Guests"
+                placeholderText: "they get an invitation by mail"
+                text: root.fGuests
+                onTextChanged: if (text !== root.fGuests) root.fGuests = text
+                error: root.guests.bad.length > 0
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                visible: root.canInvite && !root.foreign && root.guests.list.length > 0
+                spacing: 8
+                Text {
+                    Layout.fillWidth: true
+                    text: root.graphCal ? "Outlook sends the invitations"
+                        : root.inviting ? "Sending the invitations…"
+                        : "Invitations (and later updates) are sent from"
+                    color: Colors.fade(0.5)
+                    font.pixelSize: 11
+                    font.family: Properties.fontFamily
+                    wrapMode: Text.Wrap
+                }
+                DropdownControl {
+                    visible: !root.graphCal
+                    implicitWidth: 230
+                    options: MailStore.activeAccounts.map(a => ({ label: a.email, value: a.id }))
+                    value: root.fInviteFrom
+                    onEdited: v => root.fInviteFrom = v
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                visible: !root.canInvite || root.foreign
+                text: root.foreign ? "󰡉  Invitation from " + MailUtil.displayName(root.ev.organizer) + " — its guests are managed by them"
+                    : "󰡉  To invite people, add a mail account in the Mail app"
+                color: Colors.fade(0.4)
+                font.pixelSize: 11
+                font.family: Properties.fontFamily
+                wrapMode: Text.Wrap
             }
 
             ScrollView {

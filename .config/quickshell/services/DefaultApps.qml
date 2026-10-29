@@ -32,7 +32,7 @@ Singleton {
     property bool loading: false
     property string error: ""
 
-    function refresh() {
+    function refresh(done) {
         loading = true
         error = ""
         // desktop files and the types they open (all application dirs, user first)
@@ -66,6 +66,7 @@ Singleton {
                 candidates = c
                 current = cur
                 loading = false
+                if (typeof done === "function") done()
             })
         })
     }

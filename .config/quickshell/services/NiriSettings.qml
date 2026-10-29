@@ -333,9 +333,10 @@ Singleton {
             + "// the rest of the config. Change them in the app, or remove the include\n"
             + "// line from config.kdl to drop all of them.\n\n"
             + render(tree)
-            + "\n// the settings and calendar windows\n"
+            + "\n// the settings, calendar and mail windows\n"
             + windowRule(windowTitle, 980, 680)
             + windowRule("Quickshell Calendar", 1240, 800)
+            + windowRule("Quickshell Mail", 1320, 820)
             + Syntax.fmt("niri.bindsBlock", { body: indented(
                   Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),
                                             title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Settings") }),

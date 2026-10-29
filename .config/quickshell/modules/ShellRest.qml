@@ -8,6 +8,7 @@ import "Launcher"
 import "controlcenter"
 import "settings"
 import "calendar"
+import "mail"
 import "polkit"
 import "capture"
 import "wizard"
@@ -54,7 +55,9 @@ Scope {
     Dashboard {}
     SettingsWindow {}
     CalendarWindow {}
+    MailWindow {}
     PolkitDialog {}
+    SecretDialog {}
     CaptureMenu {}
     Wizard {}
     PerfMonWindow {}

@@ -148,6 +148,7 @@ Rectangle {
                     if (sv.output !== undefined && typeof sv.output !== "string") err(["server", "output"], "output must be a monitor name")
                     continue
                 }
+                if (k === "smartcard") { if (typeof v.smartcard !== "boolean") err(["smartcard"], "smartcard must be true / false"); continue }
                 if (k !== "list") { err([k], "unknown setting \"" + k + "\""); continue }
                 if (!Array.isArray(v.list)) { err(["list"], "list must be a list"); continue }
                 v.list.forEach((c, i) => {

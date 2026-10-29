@@ -14,6 +14,7 @@ import QtQuick
 //   hyprland   → written to Hyprland's override file by HyprSettings.qml
 //   monitors   → written to niri's / Hyprland's monitor file by Monitors.qml
 //   calendar   → reminder / sync options, read by CalendarStore.qml
+//   mail       → checking / notification / reading options, read by MailStore.qml
 //   network    → network page preferences (hidden interfaces, safe apply)
 //   battery    → low-battery notifications, read by BatteryAlerts.qml
 //   profile    → display name + picture revision (dashboard, lockscreen)
@@ -46,6 +47,7 @@ Singleton {
     property var hyprland: ({})
     property var monitors: ({})
     property var calendar: ({})
+    property var mail: ({})
     property var network: ({})
     property var battery: ({})
     property var profile: ({})
@@ -82,7 +84,7 @@ Singleton {
     property bool loaded: false
 
     // every group, in the order they're written
-    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "network",
+    readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "mail", "network",
                                    "battery", "profile", "autostart", "keybinds", "syntax",
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
@@ -93,7 +95,7 @@ Singleton {
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
     // warns when the current settings wouldn't pass the import check)
     readonly property var groupLabels: ({ properties: "Appearance / bar / panels", niri: "niri", hyprland: "Hyprland",
-        monitors: "Monitors", calendar: "Calendar", network: "Network page", battery: "Battery alerts", profile: "Profile",
+        monitors: "Monitors", calendar: "Calendar", mail: "Mail", network: "Network page", battery: "Battery alerts", profile: "Profile",
         autostart: "Autostart", keybinds: "Keybinds", syntax: "Syntax", bar: "Bar layout", notifications: "Notifications",
         theme: "Theme", audio: "Audio", bluetooth: "Bluetooth", power: "Power", defaultApps: "Default apps",
         clipboard: "Clipboard", connections: "Connections", capture: "Screenshots", dotfiles: "Dotfiles",

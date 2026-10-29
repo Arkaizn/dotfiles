@@ -20,9 +20,20 @@ ColumnLayout {
     signal createAt(date start, bool allDay)
     signal createRange(double start, double end)          // dragged over empty space
     signal eventMoved(var ev, double start, double end)   // dragged / resized
+    signal groupMoved(int dMin, int dDay)                  // a selected event dragged: all selected ones move
 
-    // y (px in a day column) → minutes since midnight, on 15 min steps
-    function snapMin(y) { return Math.max(0, Math.min(24 * 60, Math.round(y / hourHeight * 4) * 15)) }
+    // the selected events follow the one being dragged (preview only)
+    property string groupDrag: ""
+    property int groupMin: 0
+    property int groupDay: 0
+
+    // y (px in a day column) → minutes since midnight, on 15 min steps (1 with Shift held)
+    function snapMin(y, step) { const st = step || 15; return Math.max(0, Math.min(24 * 60, Math.round(y / hourHeight * 60 / st) * st)) }
+    // a drag of dy px → minutes, on 15 min steps or, with Shift held, minute by minute
+    function stepOf(mods) { return (mods & Qt.ShiftModifier) ? 1 : 15 }
+    function dragMin(dy, mods) { const st = stepOf(mods); return Math.round(dy / hourHeight * 60 / st) * st }
+    // the room (minutes) a very short event's one-line label needs
+    readonly property real labelSpan: 18 / hourHeight * 60
     // day + minutes → ms (via setHours, so daylight saving days work)
     function at(day, mins) { const d = new Date(day); d.setHours(0, mins, 0, 0); return d.getTime() }
     // ev moved by minutes / days and stretched at the end
@@ -33,16 +44,27 @@ ColumnLayout {
     }
 
     readonly property int gutter: 52
-    readonly property real hourHeight: 52
+    // zoom: Ctrl + wheel, Ctrl +/-/0, the toolbar buttons (CalendarStore.zoom, %)
+    readonly property real hourHeight: Math.round(52 * CalendarStore.zoom / 100)
+    // labels / lines every 30 or 15 min once there's room for them
+    readonly property int labelStep: hourHeight >= 180 ? 15 : hourHeight >= 90 ? 30 : 60
+
+    // zoom keeping the time at y (px in the visible grid, default its middle) in place
+    function zoom(dir, y) {
+        const at = y ?? flick.height / 2
+        const hour = (flick.contentY + at - 8) / root.hourHeight
+        if (dir === 0) CalendarStore.zoomReset()
+        else CalendarStore.zoomBy(dir)
+        flick.contentY = Math.max(0, Math.min(flick.contentHeight - flick.height, hour * root.hourHeight + 8 - at))
+    }
     readonly property var dayList: {
         const out = []
         for (let i = 0; i < days; i++) out.push(U.addDays(start, i))
         return out
     }
 
-    // minute ticker for the now-line
-    property double now: Date.now()
-    Timer { interval: 30000; running: true; repeat: true; onTriggered: root.now = Date.now() }
+    // the now-line moves on the minute (Time ticks with the system clock)
+    readonly property double now: { Time.minutes; return Date.now() }
 
     spacing: 6
 
@@ -192,7 +214,19 @@ ColumnLayout {
             boundsBehavior: Flickable.StopAtBounds
             clip: true
             ScrollBar.vertical: CalScrollBar {}
-            SmoothWheel { flick: flick; step: root.hourHeight }      // one hour per notch
+            SmoothWheel { flick: flick; step: Math.min(root.hourHeight, 120); acceptedModifiers: Qt.NoModifier }
+            WheelHandler {
+                acceptedModifiers: Qt.ControlModifier
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                property real acc: 0
+                onWheel: event => {
+                    acc += event.angleDelta.y !== 0 ? event.angleDelta.y : event.pixelDelta.y * 4
+                    if (Math.abs(acc) < 120) return
+                    const dir = acc > 0 ? 1 : -1
+                    acc = 0
+                    root.zoom(dir, point.position.y)
+                }
+            }
 
             // start at 07:30; if "now" wouldn't be on screen, center on it instead
             function scrollToStart() {
@@ -235,13 +269,31 @@ ColumnLayout {
                             height: 1
                             color: Colors.fade(parent.index > 0 ? 0.06 : 0)
                         }
-                        // half hour
-                        Rectangle {
-                            x: root.gutter
-                            y: root.hourHeight / 2
-                            width: parent.width - root.gutter - 8
-                            height: 1
-                            color: Colors.fade(0.025)
+                        // half hour (quarters when zoomed in), labelled once there's room
+                        Repeater {
+                            model: root.labelStep === 15 ? [15, 30, 45] : [30]
+                            Item {
+                                id: tick
+                                required property int modelData
+                                y: tick.modelData / 60 * root.hourHeight
+                                width: parent.width
+                                Text {
+                                    visible: tick.modelData % root.labelStep === 0
+                                    width: root.gutter - 10
+                                    y: -height / 2
+                                    horizontalAlignment: Text.AlignRight
+                                    text: U.pad(tick.parent.index) + ":" + tick.modelData
+                                    color: Colors.fade(0.22)
+                                    font.pixelSize: 9
+                                    font.family: Properties.fontFamily
+                                }
+                                Rectangle {
+                                    x: root.gutter
+                                    width: parent.width - root.gutter - 8
+                                    height: 1
+                                    color: Colors.fade(tick.modelData === 30 ? 0.035 : 0.02)
+                                }
+                            }
                         }
                     }
                 }
@@ -261,7 +313,7 @@ ColumnLayout {
                             required property int index
                             readonly property bool today: U.isToday(modelData)
                             readonly property var items: U.layoutDay(
-                                CalendarStore.eventsOn(modelData).filter(e => !U.fullDay(e, modelData)), modelData)
+                                CalendarStore.eventsOn(modelData).filter(e => !U.fullDay(e, modelData)), modelData, root.labelSpan)
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             Layout.preferredWidth: 1
@@ -299,12 +351,14 @@ ColumnLayout {
                                 property real pressY: -1
                                 property real curY: -1
                                 property bool dragging: false
-                                readonly property int fromMin: Math.min(root.snapMin(pressY), root.snapMin(curY))
-                                readonly property int toMin: Math.max(Math.max(root.snapMin(pressY), root.snapMin(curY)), fromMin + 15)
+                                property int step: 15
+                                readonly property int fromMin: Math.min(root.snapMin(pressY, step), root.snapMin(curY, step))
+                                readonly property int toMin: Math.max(Math.max(root.snapMin(pressY, step), root.snapMin(curY, step)), fromMin + step)
 
-                                onPressed: m => { pressY = m.y; curY = m.y; dragging = false }
+                                onPressed: m => { pressY = m.y; curY = m.y; dragging = false; step = root.stepOf(m.modifiers) }
                                 onPositionChanged: m => {
                                     if (!pressed) return
+                                    step = root.stepOf(m.modifiers)
                                     curY = Math.max(0, Math.min(height, m.y))
                                     if (Math.abs(curY - pressY) > 8) dragging = true
                                 }
@@ -354,34 +408,87 @@ ColumnLayout {
                                     readonly property real colW: col.width / modelData.cols
 
                                     // drag state: minutes moved, days moved (week view), minutes added at the end
-                                    property int dMin: 0
-                                    property int dDay: 0
+                                    property int ownMin: 0
+                                    property int ownDay: 0
                                     property int dEnd: 0
+                                    readonly property bool picked: CalendarStore.isSelected(ev.id)
+                                    // another selected event is being dragged: this one moves along
+                                    readonly property bool follows: picked && root.groupDrag !== "" && root.groupDrag !== ev.id
+                                    readonly property int dMin: follows ? root.groupMin : ownMin
+                                    readonly property int dDay: follows ? root.groupDay : ownDay
                                     readonly property bool dragging: dMin !== 0 || dDay !== 0 || dEnd !== 0
                                     readonly property var preview: dragging
                                         ? root.shifted(ev, dMin, dDay, dEnd) : ev
 
+                                    // exactly as long as the event (a 4 min one is 4 min tall); one
+                                    // too short for its text gets a one-line label across it instead
+                                    readonly property real span: (modelData.bottom - modelData.top + dEnd) / 60 * root.hourHeight
+                                    readonly property bool compact: span < 30
                                     x: modelData.col * colW + 1 + dDay * (col.width + 4)
-                                    y: (modelData.top + dMin) / 60 * root.hourHeight + 1
+                                    y: (modelData.top + dMin) / 60 * root.hourHeight
                                     width: dragging ? col.width - 2 : colW - 2
-                                    height: Math.max(18, (modelData.bottom - modelData.top + dEnd) / 60 * root.hourHeight - 2)
-                                    z: dragging ? 10 : 1
-                                    radius: 7
-                                    clip: true
+                                    height: Math.max(3, span > 8 ? span - 1 : span)
+                                    z: dragging ? 10 : body.containsMouse ? 3 : compact ? 2 : 1
+                                    radius: Math.min(7, height / 2)
+                                    clip: !compact
                                     color: Qt.rgba(calColor.r, calColor.g, calColor.b, dragging ? 0.55 : body.containsMouse ? 0.4 : 0.28)
-                                    border.width: dragging ? 1.5 : 1
-                                    border.color: dragging ? block.calColor : Qt.rgba(calColor.r, calColor.g, calColor.b, 0.55)
+                                    border.width: picked ? 2 : dragging ? 1.5 : 1
+                                    border.color: picked ? Colors.color6 : dragging ? block.calColor : Qt.rgba(calColor.r, calColor.g, calColor.b, 0.55)
                                     Behavior on color { ColorAnimation { duration: 100 } }
 
                                     Rectangle {
                                         width: 3
-                                        height: parent.height - 8
+                                        height: block.compact ? parent.height : parent.height - 8
                                         anchors.verticalCenter: parent.verticalCenter
-                                        x: 3
+                                        x: block.compact ? 0 : 3
                                         radius: 2
                                         color: block.calColor
                                     }
+                                    // selected (Ctrl / Shift + click)
+                                    Rectangle {
+                                        visible: block.picked
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 4
+                                        anchors.top: block.compact ? undefined : parent.top
+                                        anchors.topMargin: 4
+                                        anchors.verticalCenter: block.compact ? parent.verticalCenter : undefined
+                                        width: 14; height: 14; radius: 7
+                                        z: 2
+                                        color: Colors.color6
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "󰄬"
+                                            color: U.onColor(Colors.color6)
+                                            font.pixelSize: 10
+                                            font.family: Properties.fontFamily
+                                        }
+                                    }
+                                    // short event: title + time on one line, centered on it
+                                    Rectangle {
+                                        visible: block.compact
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        x: 6
+                                        width: Math.min(parent.width - 8, compactText.implicitWidth + 10)
+                                        height: 15
+                                        radius: 5
+                                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.85)
+                                        border.width: 1
+                                        border.color: Qt.rgba(block.calColor.r, block.calColor.g, block.calColor.b, 0.7)
+                                        Text {
+                                            id: compactText
+                                            anchors { fill: parent; leftMargin: 5; rightMargin: 5 }
+                                            verticalAlignment: Text.AlignVCenter
+                                            text: block.ev.title + "  " + (block.dragging ? U.fmtTime(block.preview.start) + " – " + U.fmtTime(block.preview.end)
+                                                                                           : U.fmtTime(block.ev.start))
+                                            color: Colors.ink
+                                            font.pixelSize: 10
+                                            font.bold: true
+                                            font.family: Properties.fontFamily
+                                            elide: Text.ElideRight
+                                        }
+                                    }
                                     Column {
+                                        visible: !block.compact
                                         anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 10; rightMargin: 5; topMargin: 3 }
                                         spacing: 0
                                         Text {
@@ -415,15 +522,23 @@ ColumnLayout {
                                         item.sy = p.y
                                         item.moved = false
                                     }
+                                    // the drag state is reset before the move is sent: the move rebuilds
+                                    // the blocks, and a new one must not still follow the old offset
                                     function finish() {
-                                        if (dragging) root.eventMoved(ev, preview.start, preview.end)
-                                        dMin = 0; dDay = 0; dEnd = 0
+                                        const group = root.groupDrag === ev.id
+                                        const m = ownMin, d = ownDay, e = ev, p = preview, was = dragging
+                                        ownMin = 0; ownDay = 0; dEnd = 0
+                                        root.groupDrag = ""; root.groupMin = 0; root.groupDay = 0
+                                        if (group && (m !== 0 || d !== 0)) root.groupMoved(m, d)
+                                        else if (!group && was) root.eventMoved(e, p.start, p.end)
                                     }
 
                                     MouseArea {
                                         id: body
+                                        // a tiny event can still be hit: at least as tall as its label
                                         anchors.fill: parent
-                                        anchors.bottomMargin: 6
+                                        anchors.topMargin: block.compact ? Math.min(0, (block.height - 16) / 2) : 0
+                                        anchors.bottomMargin: block.compact ? Math.min(0, (block.height - 16) / 2) : 6
                                         hoverEnabled: true
                                         preventStealing: true
                                         cursorShape: pressed && moved ? Qt.ClosedHandCursor : Qt.PointingHandCursor
@@ -436,20 +551,31 @@ ColumnLayout {
                                             const p = body.mapToItem(null, m.x, m.y)
                                             if (!moved && Math.hypot(p.x - sx, p.y - sy) < 6) return
                                             moved = true
-                                            block.dMin = Math.round((p.y - sy) / root.hourHeight * 4) * 15
+                                            block.ownMin = root.dragMin(p.y - sy, m.modifiers)
                                             // other days (a series asks "only this / all" when dropped)
                                             if (root.days > 1) {
                                                 const di = root.dayList.findIndex(d => U.sameDay(d, col.modelData))
                                                 const want = Math.round((p.x - sx) / (col.width + 4))
-                                                block.dDay = Math.max(-di, Math.min(root.days - 1 - di, want))
+                                                block.ownDay = Math.max(-di, Math.min(root.days - 1 - di, want))
+                                            }
+                                            if (block.picked && CalendarStore.selectedCount > 1) {
+                                                root.groupDrag = block.ev.id
+                                                root.groupMin = block.ownMin
+                                                root.groupDay = block.ownDay
                                             }
                                         }
                                         onReleased: block.finish()
-                                        onClicked: if (!moved) root.eventClicked(block.ev, block)
+                                        // Ctrl / Shift + click: select it (several events at once)
+                                        onClicked: m => {
+                                            if (moved) return
+                                            if (m.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) CalendarStore.toggleSelect(block.ev)
+                                            else root.eventClicked(block.ev, block)
+                                        }
                                     }
                                     MouseArea {
                                         id: grip
-                                        anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+                                        anchors { left: parent.left; right: parent.right; bottom: parent.bottom
+                                                  bottomMargin: block.compact ? Math.min(0, (block.height - 16) / 2) - 3 : 0 }
                                         height: 7
                                         enabled: block.writable
                                         hoverEnabled: true
@@ -463,8 +589,8 @@ ColumnLayout {
                                             if (!pressed) return
                                             const p = grip.mapToItem(null, m.x, m.y)
                                             moved = true
-                                            const minLen = 15 - (block.modelData.bottom - block.modelData.top)
-                                            block.dEnd = Math.max(minLen, Math.round((p.y - sy) / root.hourHeight * 4) * 15)
+                                            const minLen = root.stepOf(m.modifiers) - (block.modelData.bottom - block.modelData.top)
+                                            block.dEnd = Math.max(minLen, root.dragMin(p.y - sy, m.modifiers))
                                         }
                                         onReleased: block.finish()
                                     }

@@ -97,6 +97,7 @@ Item {
         case "connections": show("connections", "toggle"); break
         case "dashboard": show("dashboard", "open"); break
         case "calendar": show("calendar", "open"); break
+        case "mail": show("mail", "open"); break
         case "perfmon": show("perfmon", "toggle"); break
         case "keybinds": show("keybinds", "toggle"); break
         case "settings": show("settings", "open"); break

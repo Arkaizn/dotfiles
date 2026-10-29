@@ -60,14 +60,18 @@ function fullDay(ev, day) {
 }
 
 // Side-by-side layout for overlapping timed events of one day.
-// -> [{ ev, col, cols, top, bottom }] with top/bottom in minutes since midnight
-function layoutDay(events, day) {
+// -> [{ ev, col, cols, top, bottom, reach }] in minutes since midnight: top /
+// bottom are the event's real times (what's drawn); reach is at least minSpan
+// minutes after top — the room a very short event's label needs — and only
+// decides which events sit side by side.
+function layoutDay(events, day, minSpan) {
     const ds = dayStart(day).getTime()
-    const items = events.map(ev => ({
-        ev: ev,
-        top: Math.max(0, (ev.start - ds) / 60000),
-        bottom: Math.min(1440, Math.max((ev.end - ds) / 60000, (ev.start - ds) / 60000 + 20))
-    })).sort((a, b) => a.top - b.top || b.bottom - a.bottom)
+    const span = minSpan ?? 20
+    const items = events.map(ev => {
+        const top = Math.max(0, (ev.start - ds) / 60000)
+        const bottom = Math.min(1440, Math.max(top, (ev.end - ds) / 60000))
+        return { ev: ev, top: top, bottom: bottom, reach: Math.min(1440, Math.max(bottom, top + span)) }
+    }).sort((a, b) => a.top - b.top || b.bottom - a.bottom)
 
     // groups of transitively overlapping events share the width
     let group = [], groupEnd = -1
@@ -76,7 +80,7 @@ function layoutDay(events, day) {
         for (const it of group) {
             let c = colsEnd.findIndex(end => end <= it.top)
             if (c < 0) { c = colsEnd.length; colsEnd.push(0) }
-            colsEnd[c] = it.bottom
+            colsEnd[c] = it.reach
             it.col = c
         }
         for (const it of group) it.cols = colsEnd.length
@@ -85,7 +89,7 @@ function layoutDay(events, day) {
     for (const it of items) {
         if (group.length && it.top >= groupEnd) flush()
         group.push(it)
-        groupEnd = Math.max(groupEnd, it.bottom)
+        groupEnd = Math.max(groupEnd, it.reach)
     }
     flush()
     return items

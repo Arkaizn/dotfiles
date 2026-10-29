@@ -15,12 +15,15 @@ Rectangle {
     signal clicked(var ev, Item item)
 
     readonly property color calColor: CalendarStore.calendarMap[ev.calendar]?.color ?? Colors.color6
+    readonly property bool picked: CalendarStore.isSelected(ev.id)
 
     implicitHeight: 20
     radius: 5
     color: filled ? Qt.rgba(calColor.r, calColor.g, calColor.b, hover.hovered ? 0.95 : 0.8)
                   : Qt.rgba(calColor.r, calColor.g, calColor.b, hover.hovered ? 0.32 : 0.2)
     Behavior on color { ColorAnimation { duration: 100 } }
+    border.width: picked ? 2 : 0
+    border.color: Colors.color6
 
     RowLayout {
         anchors.fill: parent
@@ -60,6 +63,10 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.clicked(root.ev, root)
+        // Ctrl / Shift + click: select it (several events at once)
+        onClicked: m => {
+            if (m.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) CalendarStore.toggleSelect(root.ev)
+            else root.clicked(root.ev, root)
+        }
     }
 }

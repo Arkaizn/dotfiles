@@ -28,7 +28,9 @@ Item {
         anchors.fill: parent
         radius: Compositor.appRadius
         color: Colors.shade(0.4)
-        MouseArea { anchors.fill: parent; onClicked: root.tryClose() }
+        // hover and the wheel stop here too: rows behind the dialog mustn't light
+        // up, and a scroll that runs past the dialog's end mustn't scroll the view
+        MouseArea { anchors.fill: parent; hoverEnabled: true; onClicked: root.tryClose(); onWheel: w => w.accepted = true }
     }
 
     Rectangle {
@@ -43,6 +45,8 @@ Item {
         scale: root.shown ? 1 : 0.95
         clip: true
         Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+        // content that appears / goes (hints, server settings, …) grows the card smoothly
+        Behavior on height { enabled: root.opacity === 1; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
 
         Keys.onEscapePressed: root.tryClose()
 
@@ -55,7 +59,7 @@ Item {
             NumberAnimation { target: shakeX; property: "x"; to: 3; duration: 50 }
             NumberAnimation { target: shakeX; property: "x"; to: 0; duration: 40 }
         }
-        MouseArea { anchors.fill: parent }   // clicks on the card don't close it
+        MouseArea { anchors.fill: parent; hoverEnabled: true; onWheel: w => w.accepted = true }   // clicks on the card don't close it
 
         // scrolls when the content is taller than the window. The clip edge
         // sits 8 px outside the content (10 + 8 = the 18 px card padding), so

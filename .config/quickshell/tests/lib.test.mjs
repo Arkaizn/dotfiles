@@ -511,5 +511,130 @@ test("greeter settings check", () => {
     assert.notEqual(LI.checkGreeter("monitors", "x"), "")
 })
 
+const MU = load("MailUtil.js")
+// arrays from the vm context have another prototype: compare as JSON
+const same = (a, b) => assert.deepEqual(JSON.parse(JSON.stringify(a)), b)
+test("mail: base subject strips reply / forward prefixes", () => {
+    assert.equal(MU.baseSubject("Re: AW: Fwd: Hallo"), "Hallo")
+    assert.equal(MU.baseSubject("RE[2]: WG: Termin"), "Termin")
+    assert.equal(MU.baseSubject("[list] Re: Patch"), "Patch")
+    assert.equal(MU.baseSubject("Revenue report"), "Revenue report")
+    assert.equal(MU.replySubject("Re: Re: x"), "Re: x")
+    assert.equal(MU.forwardSubject("AW: x"), "Fwd: x")
+})
+test("mail: threads by references", () => {
+    const m = (id, mid, refs, date, extra) => Object.assign({ id: id, messageId: mid, refs: refs, date: date, subject: "s", from: { name: id, email: id + "@x" }, seen: true }, extra || {})
+    const t = MU.threads([
+        m("a", "<1>", [], 1), m("b", "<2>", ["<1>"], 3, { seen: false }), m("c", "<3>", ["<1>", "<2>"], 5),
+        m("d", "<4>", [], 4, { flagged: true }), m("e", "", [], 2),
+        m("f", "<6>", ["<5-missing>"], 6), m("g", "<7>", ["<5-missing>"], 7)     // siblings of a missing parent
+    ])
+    same(t.map(x => x.msgs.map(y => y.id).join("")), ["fg", "abc", "d", "e"])
+    assert.equal(t[1].unread, 1)
+    assert.equal(t[2].flagged, true)
+    same(t[1].people, ["a", "b", "c"])
+})
+test("mail: day groups and short dates", () => {
+    const now = new Date(2026, 9, 28, 15, 0).getTime()          // a Wednesday
+    const at = (d, h) => new Date(2026, 9, d, h || 10).getTime()
+    assert.equal(MU.dayGroup(at(28), now), "Today")
+    assert.equal(MU.dayGroup(at(27), now), "Yesterday")
+    assert.equal(MU.dayGroup(at(26), now), "Monday")
+    assert.equal(MU.dayGroup(at(22), now), "Last week")
+    assert.equal(MU.dayGroup(at(5), now), "October")
+    assert.equal(MU.dayGroup(new Date(2025, 2, 1).getTime(), now), "March 2025")
+    assert.equal(MU.shortDate(new Date(2026, 9, 28, 9, 5).getTime(), now), "09:05")
+    assert.equal(MU.shortDate(at(26), now), "Mon")
+    assert.equal(MU.shortDate(at(3), now), "3 Oct")
+    assert.equal(MU.shortDate(new Date(2024, 0, 9).getTime(), now), "9.1.24")
+})
+test("mail: address parsing", () => {
+    const r = MU.parseAddresses('Lea <lea@x.org>, tom@x.org; "Keller, Tom" <t@k.ch>, nope, ')
+    same(r.list, [{ name: "Lea", email: "lea@x.org" }, { name: "", email: "tom@x.org" }, { name: "Keller, Tom", email: "t@k.ch" }])
+    same(r.bad, ["nope"])
+    assert.equal(MU.formatAddress({ name: "Keller, Tom", email: "t@k.ch" }), '"Keller, Tom" <t@k.ch>')
+    assert.equal(MU.formatAddress({ name: "", email: "a@b.c" }), "a@b.c")
+})
+test("mail: reply recipients", () => {
+    const m = { from: { name: "Lea", email: "lea@x.org" }, replyTo: [], to: [{ name: "Me", email: "ME@me.org" }, { name: "Tom", email: "tom@x.org" }],
+                cc: [{ name: "Lea again", email: "lea@x.org" }, { name: "Mia", email: "mia@x.org" }] }
+    const one = MU.replyRecipients(m, ["me@me.org"], false)
+    same(one.to.map(a => a.email), ["lea@x.org"]); same(one.cc, [])
+    const all = MU.replyRecipients(m, ["me@me.org"], true)
+    same(all.cc.map(a => a.email), ["tom@x.org", "mia@x.org"])          // not me, not Lea twice
+    const list = MU.replyRecipients(Object.assign({}, m, { replyTo: [{ name: "List", email: "list@x.org" }] }), ["me@me.org"], false)
+    same(list.to.map(a => a.email), ["list@x.org"])
+    const own = MU.replyRecipients({ from: { email: "me@me.org" }, to: [{ email: "boss@x.org" }] }, ["me@me.org"], false)
+    same(own.to.map(a => a.email), ["boss@x.org"])                       // my sent mail: to its recipients
+})
+test("mail: quote and forward", () => {
+    const q = MU.quote("hi\n> old\n", { name: "Lea", email: "l@x" }, new Date(2026, 9, 28, 9, 5).getTime())
+    assert.equal(q, "On Wednesday, 28 October 2026, 09:05, Lea wrote:\n> hi\n>> old")
+    const f = MU.forwardText({ subject: "S", date: 0, from: { name: "", email: "a@b.c" }, to: [{ name: "T", email: "t@b.c" }] }, "body")
+    assert.ok(f.startsWith("-------- Forwarded message --------\nSubject: S\n"))
+    assert.ok(f.includes("From: a@b.c\nTo: T <t@b.c>\n\nbody"))
+})
+test("mail: quick filter", () => {
+    const m = { subject: "Rechnung Oktober", from: { name: "Stadtwerke", email: "r@sw.ch" }, preview: "anbei", seen: true, flagged: true, attachments: 1, to: [] }
+    assert.ok(MU.matches(m, { text: "rechnung stadt" }))
+    assert.ok(!MU.matches(m, { text: "rechnung november" }))
+    assert.ok(!MU.matches(m, { unread: true }))
+    assert.ok(MU.matches(m, { flagged: true, attachments: true, text: "" }))
+})
+test("mail: collected addresses and completion", () => {
+    let book = MU.collect([], [{ name: "Lea Fischer", email: "lea@x.org" }, { name: "", email: "tom@x.org" }, { name: "x", email: "bad" }], 1)
+    book = MU.collect(book, [{ name: "", email: "LEA@x.org" }], 2)
+    assert.equal(book.length, 2)
+    assert.equal(book[0].name, "Lea Fischer"); assert.equal(book[0].count, 2)
+    same(MU.complete(book, "tom@x.org, le").map(a => a.email), ["LEA@x.org"])
+    same(MU.complete(book, "fisch").map(a => a.email), ["LEA@x.org"])
+    assert.equal(MU.insertAddress("tom@x.org, le", { name: "Lea", email: "lea@x.org" }), "tom@x.org, Lea <lea@x.org>, ")
+    assert.equal(MU.initials({ name: "Lea Fischer", email: "" }), "LF")
+    assert.equal(MU.initials({ name: "", email: "tom@x.org" }), "T")
+})
+
+test("mail: mailto links", () => {
+    same(MU.parseMailto("mailto:lea@x.org?subject=Hallo%20Lea&cc=tom@x.org&body=Zeile%201%0AZeile%202&x-evil=1"),
+         { to: "lea@x.org", cc: "tom@x.org", bcc: "", subject: "Hallo Lea", body: "Zeile 1\nZeile 2" })
+    same(MU.parseMailto("mailto:?to=a@x.org&to=b@x.org&subject=a+b").to, "a@x.org, b@x.org")
+    assert.equal(MU.parseMailto("mailto:a@x.org?subject=x%0D%0ABcc:%20evil@x.org").subject, "x Bcc: evil@x.org")
+    assert.equal(MU.parseMailto("mailto:bad%zz@x.org").to, "bad%zz@x.org")      // broken escapes don't throw
+})
+test("mail: attachment reminder", () => {
+    assert.ok(MU.mentionsAttachment("Hallo,\nanbei die Rechnung."))
+    assert.ok(MU.mentionsAttachment("See the attached file"))
+    assert.ok(!MU.mentionsAttachment("Hi\n\n> anbei das Dokument"))           // only in the quote
+    assert.ok(!MU.mentionsAttachment("Hi\n\n-- \nSee attachment policy"))      // only in the signature
+    assert.ok(!MU.mentionsAttachment("Wir treffen uns morgen"))
+})
+
+test("mail: people you wrote to come first", () => {
+    let book = MU.collect([], [{ name: "Anna News", email: "anna@news.example" }], 100)
+    book = MU.collect(book, [{ name: "Anna News", email: "anna@news.example" }], 200)
+    book = MU.collect(book, [{ name: "Anna Keller", email: "anna.keller@example.org" }], 50, true)
+    const hits = MU.complete(book, "ann", 6)
+    assert.equal(hits[0].email, "anna.keller@example.org")
+    assert.equal(hits[0].sent, 1)
+    assert.equal(book.find(a => a.email === "anna@news.example").sent, 0)
+    assert.equal(MU.complete(book, "kel", 6)[0].email, "anna.keller@example.org")   // a later name word
+})
+
+const Cal = (() => {
+    const ctx = vm.createContext({})
+    vm.runInContext(readFileSync(join(lib, "..", "..", "modules", "calendar", "CalUtil.js"), "utf8").replace(/^\.pragma library/m, ""), ctx)
+    return ctx
+})()
+test("calendar: short events keep their real length", () => {
+    const day = new Date(2026, 9, 28)
+    const t = (h, m) => new Date(2026, 9, 28, h, m).getTime()
+    const items = Cal.layoutDay([{ start: t(14, 44), end: t(14, 48) }, { start: t(15, 0), end: t(16, 0) }], day, 20)
+    assert.equal(items[0].top, 14 * 60 + 44)
+    assert.equal(items[0].bottom, 14 * 60 + 48)            // not stretched past 15:00
+    assert.equal(items[0].reach, 14 * 60 + 64)             // its label's room …
+    assert.equal(items[1].cols, 2)                          // … puts the 15:00 one beside it
+    const apart = Cal.layoutDay([{ start: t(14, 0), end: t(14, 4) }, { start: t(15, 0), end: t(16, 0) }], day, 20)
+    assert.equal(apart[1].cols, 1)
+})
+
 console.log(passed + " passed, " + failed + " failed")
 process.exit(failed ? 1 : 0)

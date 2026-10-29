@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Mail
+GenericName=Mail
+Comment=iCloud, Gmail, Yahoo, Fastmail and other IMAP mail
+Icon=mail-client
+Exec=sh -c 'case "$1" in mailto:*) qs ipc call mail mailto "$1" ;; *) qs ipc call mail open ;; esac' sh %u
+MimeType=x-scheme-handler/mailto;
+Terminal=false
+Categories=Office;Email;Network;
+Keywords=mail;email;inbox;imap;smtp;icloud;gmail;thunderbird;
+StartupNotify=false

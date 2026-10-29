@@ -108,10 +108,15 @@ Item {
                             required property int index
                             readonly property color calColor: CalendarStore.calendarMap[modelData.calendar]?.color ?? Colors.color6
                             readonly property bool past: !modelData.allDay && modelData.end < Date.now()
+                            readonly property bool picked: CalendarStore.isSelected(modelData.id)
                             width: rows.width
                             height: 50
                             radius: 10
-                            color: rowMouse.containsMouse ? Colors.fade(0.06) : "transparent"
+                            color: picked ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.14)
+                                 : rowMouse.containsMouse ? Colors.fade(0.06) : "transparent"
+                            border.width: picked ? 1.5 : 0
+                            border.color: Colors.color6
+                            Behavior on color { ColorAnimation { duration: 120 } }
                             opacity: past ? 0.5 : 1
 
                             RowLayout {
@@ -169,7 +174,10 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.eventClicked(row.modelData, row)
+                                onClicked: m => {
+                                    if (m.modifiers & (Qt.ControlModifier | Qt.ShiftModifier)) CalendarStore.toggleSelect(row.modelData)
+                                    else root.eventClicked(row.modelData, row)
+                                }
                             }
                         }
                     }

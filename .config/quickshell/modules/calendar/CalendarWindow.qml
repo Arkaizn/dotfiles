@@ -15,6 +15,7 @@ import "CalUtil.js" as U
 //
 // Open it with:  qs ipc call calendar toggle   (or the "Calendar" launcher entry)
 // Keys: ←/→ previous/next · T today · N new event · I import · 1-4 day/week/month/agenda
+//       Ctrl +/-/0 (or Ctrl + wheel) zoom the day / week view
 // .ics files: drop them on the window, or  qs ipc call calendar importFile <path>
 Scope {
     id: root
@@ -28,6 +29,8 @@ Scope {
         property bool open: false
         property string view: "month"
     }
+    // moved events wait a few seconds before they're saved: closing doesn't wait
+    onOpenChanged: if (!open) { CalendarStore.flushMoves(); CalendarStore.clearSelection() }
 
     // what the IPC target and the rest of the shell (Panels.call("calendar", …)) can do
     function toggleWindow() { if (!root.open) root.resetView(); root.open = !root.open }
@@ -211,13 +214,20 @@ Scope {
             // switching views slides too, in the order of the buttons
             // (day · week · month · agenda): a view to the right comes in from the right
             readonly property var viewOrder: ["day", "week", "month", "agenda"]
+            readonly property bool timeGrid: root.view === "day" || root.view === "week"
+            function zoom(dir) { if (timeGrid && typeof viewLoader.item?.zoom === "function") viewLoader.item.zoom(dir) }
             property string lastView: root.view
             Connections {
                 target: root
+                // the new view starts hidden and shifted right away (no frame of it
+                // standing still first); the slide runs once it's built (the
+                // Loader builds it synchronously, callLater comes after that)
                 function onViewChanged() {
                     const dir = Math.sign(win.viewOrder.indexOf(root.view) - win.viewOrder.indexOf(win.lastView))
                     win.lastView = root.view
-                    if (dir !== 0) Qt.callLater(win.slideIn, dir)     // once the new view is built
+                    if (dir === 0) return
+                    win.prepareSlide(dir)
+                    Qt.callLater(win.runSlide)
                 }
             }
 
@@ -230,18 +240,60 @@ Scope {
             }
 
             // content slides in from the side we're going to
-            function slideIn(dir) {
+            function prepareSlide(dir, fromOpacity) {
                 viewIn.stop()                    // no fade/zoom mixed into the slide
+                slide.stop()
                 viewLoader.opacity = 1
                 viewLoader.scale = 1
-                slide.stop()
-                slideX.from = dir * 46
-                slide.start()
+                viewShift.x = dir * 40
+                viewHost.opacity = fromOpacity ?? 0
             }
+            function runSlide() {
+                slideX.from = viewShift.x
+                slideO.from = viewHost.opacity
+                slide.restart()
+            }
+            // prev / next: the same view, other dates
+            function slideIn(dir) { prepareSlide(dir, 0.25); runSlide() }
             ParallelAnimation {
                 id: slide
-                NumberAnimation { id: slideX; target: viewShift; property: "x"; to: 0; duration: 260; easing.type: Easing.OutCubic }
-                NumberAnimation { target: viewHost; property: "opacity"; from: 0.25; to: 1; duration: 220; easing.type: Easing.OutCubic }
+                NumberAnimation { id: slideX; target: viewShift; property: "x"; to: 0; duration: 280; easing.type: Easing.OutCubic }
+                NumberAnimation { id: slideO; target: viewHost; property: "opacity"; to: 1; duration: 240; easing.type: Easing.OutCubic }
+            }
+
+            // ── several selected events (SelectionBar) ──
+            function openEvent(ev) { CalendarStore.clearSelection(); eventDialog.showEvent(ev) }
+            function shiftedEv(ev, dMin, dDay) {
+                const s = new Date(ev.start); s.setDate(s.getDate() + dDay); s.setMinutes(s.getMinutes() + dMin)
+                const e = new Date(ev.end); e.setDate(e.getDate() + dDay); e.setMinutes(e.getMinutes() + dMin)
+                return { ev: ev, start: s.getTime(), end: e.getTime() }
+            }
+            // all selected (writable) ones by the same amount; repeating ones: asked once
+            function groupMove(dMin, dDay) {
+                const moves = CalendarStore.selectedEvents.filter(e => !(CalendarStore.calendarMap[e.calendar]?.readOnly ?? true))
+                                                          .map(e => shiftedEv(e, dMin, dDay))
+                const main = moves.find(m => m.ev.recurring)
+                if (main) scopeDialog.ask(main.ev, main.start, main.end, moves.filter(m => m !== main))
+                else for (const m of moves) CalendarStore.moveEvent(m.ev, m.start, m.end)
+            }
+            function deleteSelection(onlyThis) {
+                const list = CalendarStore.selectedEvents.filter(e => !(CalendarStore.calendarMap[e.calendar]?.readOnly ?? true))
+                CalendarStore.clearSelection()
+                CalendarStore.deleteMany(list, onlyThis, () => {
+                    // my invitations: the guests get a cancellation (like deleting one in the dialog)
+                    const sent = {}
+                    for (const e of list) {
+                        if ((onlyThis && e.recurring) || !(e.attendees ?? []).length || sent[e.uid]) continue
+                        if (CalendarStore.calendarMap[e.calendar]?.accountType === "graph") continue
+                        const org = (e.organizer?.email ?? "").toLowerCase()
+                        const acc = MailStore.activeAccounts.find(a => a.email.toLowerCase() === org)
+                        if (!acc) continue
+                        sent[e.uid] = true
+                        MailStore.sendInvite(acc.id, { uid: e.uid, title: e.title, start: e.start, end: e.end, allDay: e.allDay,
+                                                       location: e.location, sequence: (e.sequence ?? 0) + 1, attendees: e.attendees,
+                                                       rrule: e.rrule ?? "" }, "CANCEL", r => { if (!r.ok) CalendarStore.lastError = "Cancellation not sent: " + r.error })
+                    }
+                })
             }
 
             function newEvent(start, allDay, end) {
@@ -289,6 +341,14 @@ Scope {
                     focus: true
                     Keys.onPressed: event => {
                         if (eventDialog.shown || accountDialog.shown || calSettings.shown || scopeDialog.shown || importDialog.shown) return
+                        if (event.modifiers & Qt.ControlModifier) {
+                            const z = event.key === Qt.Key_Plus || event.key === Qt.Key_Equal ? 1
+                                    : event.key === Qt.Key_Minus ? -1 : event.key === Qt.Key_0 ? 0 : null
+                            if (z === null || !win.timeGrid) return
+                            win.zoom(z)
+                            event.accepted = true
+                            return
+                        }
                         switch (event.key) {
                         case Qt.Key_Left: win.step(-1); break
                         case Qt.Key_Right: win.step(1); break
@@ -299,8 +359,12 @@ Scope {
                         case Qt.Key_2: win.backTo = ""; root.view = "week"; break
                         case Qt.Key_3: win.backTo = ""; root.view = "month"; break
                         case Qt.Key_4: win.backTo = ""; root.view = "agenda"; break
-                        case Qt.Key_Backspace:
-                        case Qt.Key_Escape: if (win.backTo === "") return; win.goBack(); break
+                        case Qt.Key_Delete: if (CalendarStore.selectedCount === 0) return; selBar.confirming = true; break
+                        case Qt.Key_Escape:
+                            if (selBar.confirming) { selBar.confirming = false; break }
+                            if (CalendarStore.selectedCount > 0) { CalendarStore.clearSelection(); break }
+                            if (win.backTo === "") return; win.goBack(); break
+                        case Qt.Key_Backspace: if (win.backTo === "") return; win.goBack(); break
                         default: return
                         }
                         event.accepted = true
@@ -370,8 +434,7 @@ Scope {
                                     implicitHeight: Properties.buttonHeight + 4
                                     icon: "󰃶"
                                     text: "Today"
-                                    opacity: win.showingToday ? 1 : 0.45
-                                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                                    interactive: !win.showingToday
                                     onClicked: win.goToday()
                                 }
                             }
@@ -551,11 +614,10 @@ Scope {
                                     }
                                 }
 
+                                // greyed out while today is already shown (clicking would do nothing)
                                 ActionButton {
                                     text: "Today"
-                                    primary: win.showingToday
-                                    opacity: win.showingToday ? 1 : 0.45
-                                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                                    interactive: !win.showingToday
                                     onClicked: win.goToday()
                                 }
                                 IconButton {
@@ -576,7 +638,43 @@ Scope {
                                     text: "Back to " + win.backTo
                                     onClicked: win.goBack()
                                 }
+                                // zoom of the day / week view
+                                RowLayout {
+                                    visible: win.timeGrid
+                                    spacing: 0
+                                    IconButton {
+                                        implicitWidth: 26; implicitHeight: 26
+                                        iconSize: 11
+                                        icon: "󰍴"
+                                        tooltip: "Zoom out  (Ctrl −, Ctrl + wheel) · " + CalendarStore.zoom + "%"
+                                        interactive: CalendarStore.zoom > CalendarStore.zoomSteps[0]
+                                        onClicked: win.zoom(-1)
+                                    }
+                                    Text {
+                                        visible: CalendarStore.zoom !== 100
+                                        Layout.preferredWidth: 38
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: CalendarStore.zoom + "%"
+                                        color: Colors.fade(CalendarStore.zoom === 100 ? 0.4 : 0.75)
+                                        font.pixelSize: 11
+                                        font.family: Properties.fontFamily
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: win.zoom(0)
+                                        }
+                                    }
+                                    IconButton {
+                                        implicitWidth: 26; implicitHeight: 26
+                                        iconSize: 11
+                                        icon: "󰐕"
+                                        tooltip: "Zoom in  (Ctrl +) · " + CalendarStore.zoom + "%"
+                                        interactive: CalendarStore.zoom < CalendarStore.zoomSteps[CalendarStore.zoomSteps.length - 1]
+                                        onClicked: win.zoom(1)
+                                    }
+                                }
                                 ChoiceControl {
+                                    navStyle: true
                                     options: ["day", "week", "month", "agenda"]
                                     value: root.view
                                     onEdited: v => { win.backTo = ""; root.view = v }
@@ -681,9 +779,19 @@ Scope {
                     }
                 }
 
+                SelectionBar {
+                    id: selBar
+                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
+                    z: 50
+                    onShiftDays: n => win.groupMove(0, n)
+                    onDeleteAll: onlyThis => win.deleteSelection(onlyThis)
+                    onMoveTo: calId => { const l = CalendarStore.selectedEvents; CalendarStore.clearSelection(); CalendarStore.moveManyTo(l, calId) }
+                    onDuplicate: { const l = CalendarStore.selectedEvents; CalendarStore.clearSelection(); CalendarStore.duplicateMany(l, 0) }
+                }
+
                 // writing errors that happen outside a dialog (e.g. keyring)
                 Rectangle {
-                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
+                    anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: selBar.shown ? 84 : 20 }
                     visible: CalendarStore.lastError !== "" && !eventDialog.shown && !accountDialog.shown && !calSettings.shown && !importDialog.shown
                     width: Math.min(errText.implicitWidth + 50, parent.width - 80)
                     height: 40
@@ -711,7 +819,7 @@ Scope {
                     cursor: win.cursor
                     onDaySelected: d => win.cursor = d
                     onDayOpened: d => win.openDay(d)
-                    onEventClicked: ev => eventDialog.showEvent(ev)
+                    onEventClicked: ev => win.openEvent(ev)
                     onCreateAt: (start, allDay) => win.newEvent(start, allDay)
                 }
             }
@@ -723,18 +831,19 @@ Scope {
                     cursor: win.cursor
                     onDaySelected: d => win.cursor = d
                     onDayOpened: d => win.openDay(d)
-                    onEventClicked: ev => eventDialog.showEvent(ev)
+                    onEventClicked: ev => win.openEvent(ev)
                     onCreateAt: (start, allDay) => win.newEvent(start, allDay)
                     onCreateRange: (start, end) => win.newEvent(new Date(start), false, new Date(end))
                     onEventMoved: (ev, start, end) => ev.recurring ? scopeDialog.ask(ev, start, end)
                                                                    : CalendarStore.moveEvent(ev, start, end)
+                    onGroupMoved: (dMin, dDay) => win.groupMove(dMin, dDay)
                 }
             }
             Component {
                 id: agendaView
                 AgendaView {
                     cursor: win.cursor
-                    onEventClicked: ev => eventDialog.showEvent(ev)
+                    onEventClicked: ev => win.openEvent(ev)
                     onDayOpened: d => win.openDay(d)
                 }
             }

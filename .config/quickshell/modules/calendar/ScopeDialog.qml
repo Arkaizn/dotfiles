@@ -15,17 +15,23 @@ Modal {
     property var ev: null
     property double newStart: 0
     property double newEnd: 0
+    // several selected events moved together: [{ ev, start, end }] besides ev
+    // (the answer counts for every repeating one among them)
+    property var others: []
     readonly property bool dayChanged: ev !== null && !U.sameDay(new Date(newStart), new Date(ev.start))
 
-    function ask(e, s, en) {
+    function ask(e, s, en, more) {
         ev = e
         newStart = s
         newEnd = en
+        others = more ?? []
         open()
     }
 
     function pick(scope) {
         CalendarStore.moveEvent(ev, newStart, newEnd, scope)
+        for (const o of others) CalendarStore.moveEvent(o.ev, o.start, o.end, o.ev.recurring ? scope : "all")
+        others = []
         close()
     }
 
@@ -47,7 +53,7 @@ Modal {
                 spacing: 1
                 Text {
                     Layout.fillWidth: true
-                    text: "Move a repeating event"
+                    text: root.others.length ? "Move " + (root.others.length + 1) + " events, some repeating" : "Move a repeating event"
                     color: Colors.ink
                     font.pixelSize: 16
                     font.bold: true
@@ -80,9 +86,9 @@ Modal {
             spacing: 8
             ActionButton { text: "Cancel"; onClicked: root.close() }
             Item { Layout.fillWidth: true }
-            ActionButton { text: "Only this event"; primary: root.dayChanged; onClicked: root.pick("this") }
+            ActionButton { text: root.others.length ? "Only these" : "Only this event"; primary: root.dayChanged; onClicked: root.pick("this") }
             ActionButton {
-                text: "All events"
+                text: root.others.length ? "Whole series" : "All events"
                 primary: !root.dayChanged
                 interactive: !root.dayChanged
                 onClicked: root.pick("all")

@@ -468,10 +468,18 @@ def fix_until(rule, start):
     return re.sub(r"UNTIL=([0-9TZ]+)", repl, rule)
 
 
+def person(params, value):
+    """ORGANIZER / ATTENDEE -> {name, email, status}"""
+    mail = re.sub(r"^mailto:", "", (value or "").strip(), flags=re.I)
+    return {"name": (params or {}).get("CN", ""), "email": mail, "status": (params or {}).get("PARTSTAT", "").upper()}
+
+
 def event_fields(ev):
     def text(name):
         _, v = ev.get(name)
         return unescape(v) if v is not None else ""
+    op, ov = ev.get("ORGANIZER")
+    seq = text("SEQUENCE")
     return {
         "uid": text("UID"),
         "title": text("SUMMARY") or "(No title)",
@@ -479,7 +487,36 @@ def event_fields(ev):
         "description": text("DESCRIPTION"),
         "url": text("URL"),
         "status": text("STATUS").upper(),
+        "organizer": person(op, ov) if ov else None,
+        "attendees": [person(p, v) for p, v in ev.all("ATTENDEE")],
+        "sequence": int(seq) if seq.isdigit() else 0,
     }
+
+
+EMAIL_RE = re.compile(r"[^@\s<>,;:\"]+@[^@\s<>,;:\"]+\.[^@\s<>,;:\"]+")
+
+
+def people_lines(ev):
+    """ORGANIZER + ATTENDEE lines for ev["organizer"] / ev["attendees"]; SCHEDULE-AGENT=CLIENT:
+    the app sends the invitations itself, so iCloud & co. don't send a second one"""
+    def cn(name, mail):
+        n = re.sub(r'[\x00-\x1f\x7f"]', "", str(name or "")).strip()[:120]
+        return '"' + (n or mail) + '"'
+    org = ev.get("organizer") or {}
+    att = [a for a in ev.get("attendees") or [] if EMAIL_RE.fullmatch(str(a.get("email") or "").strip())]
+    if not att:
+        return None, None
+    mail = str(org.get("email") or "").strip()
+    if not EMAIL_RE.fullmatch(mail):
+        raise CalError("The organizer's address isn't valid")
+    org_line = fold(f"ORGANIZER;CN={cn(org.get('name'), mail)};SCHEDULE-AGENT=CLIENT:mailto:{mail}")
+    lines = []
+    for a in att:
+        m = a["email"].strip()
+        stat = a.get("status") if a.get("status") in ("ACCEPTED", "DECLINED", "TENTATIVE") else "NEEDS-ACTION"
+        lines.append(fold(f"ATTENDEE;CN={cn(a.get('name'), m)};ROLE=REQ-PARTICIPANT;PARTSTAT={stat};RSVP=TRUE;"
+                          f"SCHEDULE-AGENT=CLIENT:mailto:{m}"))
+    return org_line, lines
 
 
 def times_of(ev):
@@ -829,7 +866,8 @@ def join_blocks(head, blocks, tail):
 
 
 def set_props(block, props):
-    """Replace (or add) top-level properties of a VEVENT block. props: name -> full line or None (remove)."""
+    """Replace (or add) top-level properties of a VEVENT block. props: name -> full line, a list of
+    lines (ATTENDEE) or None (remove)."""
     out, depth = [], 0
     names = set(props)
     for ln in block[1:-1]:
@@ -841,7 +879,12 @@ def set_props(block, props):
         elif depth == 0 and parse_line(ln)[0] in names:
             continue
         out.append(ln)
-    new = [v for v in props.values() if v]
+    new = []
+    for v in props.values():
+        if isinstance(v, list):
+            new += v
+        elif v:
+            new.append(v)
     return [block[0]] + new + out + [block[-1]]
 
 
@@ -923,6 +966,9 @@ def apply_event(text, ev, now):
                 block.append(f"{name}:{escape(ev[key])}")
         if ev.get("setRrule"):
             block.append("RRULE:" + clean_rule(ev["setRrule"]))
+        org_line, att_lines = people_lines(ev)
+        if att_lines:
+            block += [org_line] + att_lines
         block.append("END:VEVENT")
         blocks.append(block)
         return ensure_vtimezones(join_blocks(head, blocks, tail)), uid
@@ -973,6 +1019,11 @@ def apply_event(text, ev, now):
             # the changed single occurrences of the old series would float around on their own
             blocks = [b for i, b in enumerate(blocks) if i == master_i or not (block_uid(b) == uid and not is_master(b))]
             master_i = next(i for i, b in enumerate(blocks) if block_uid(b) == uid and is_master(b))
+    # guests changed in the editor (given = the editor knows them; [] removes them)
+    if "attendees" in ev:
+        org_line, att_lines = people_lines(ev)
+        props["ORGANIZER"] = org_line
+        props["ATTENDEE"] = att_lines
     blocks[master_i] = set_props(block, props)
     return ensure_vtimezones(join_blocks(head, blocks, tail)), uid
 
@@ -1043,12 +1094,12 @@ def save(req):
     if account["type"] == "local":
         path = os.path.expanduser(cal["href"])
         text = open(path, encoding="utf-8").read() if os.path.exists(path) else new_calendar_text()
-        text, _ = apply_event(text, ev, now)
+        text, uid = apply_event(text, ev, now)
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(text)
         os.replace(tmp, path)
-        return {}
+        return {"uid": uid}
     if account["type"] == "graph":
         return graph_save(account, cal, ev)
     if account["type"] != "caldav":
@@ -1062,7 +1113,7 @@ def save(req):
         if status != 200:
             raise CalError(f"Couldn't load the event (status {status})")
         etag = headers.get("ETag") or ev.get("etag") or ""
-        text, _ = apply_event(body.decode("utf-8", "replace"), ev, now)
+        text, uid = apply_event(body.decode("utf-8", "replace"), ev, now)
         hdr = {"Content-Type": "text/calendar; charset=utf-8"}
         if etag:
             hdr["If-Match"] = etag
@@ -1083,7 +1134,7 @@ def save(req):
         raise CalError("The event was changed somewhere else meanwhile — refresh and try again")
     if status not in (200, 201, 204):
         raise CalError(f"The server didn't accept the event (status {status})")
-    return {}
+    return {"uid": uid}
 
 
 def delete(req):
@@ -1463,6 +1514,8 @@ def graph_save(account, cal, ev):
                 "start": graph_dt_out(ev["start"], all_day, tzid), "end": graph_dt_out(ev["end"], all_day, tzid)}
         if ev.get("setRrule"):
             body["recurrence"] = graph_recurrence(ev["setRrule"], ev["start"], all_day, tzid)
+        if ev.get("attendees"):
+            body["attendees"] = graph_attendees(ev["attendees"])     # Exchange sends the invitations
         graph(account, "POST", f"/me/calendars/{quote(cal['href'], safe='')}/events", body)
         if href and str(ev.get("calendar", "")).startswith(account["id"] + "|"):
             graph_delete(account, ev, False)
@@ -1496,10 +1549,17 @@ def graph_save(account, cal, ev):
                      end=graph_dt_out(new_end, all_day, tzid))
     if "setRrule" in ev and ev.get("scope") != "this":
         patch["recurrence"] = graph_recurrence(ev["setRrule"] or "", new_start, all_day, tzid)
+    if "attendees" in ev:
+        patch["attendees"] = graph_attendees(ev["attendees"])
 
     if patch:
         graph(account, "PATCH", f"/me/events/{quote(target, safe='')}", patch)
     return {}
+
+
+def graph_attendees(people):
+    return [{"emailAddress": {"address": a["email"].strip(), "name": (a.get("name") or "")[:120]}, "type": "required"}
+            for a in people if EMAIL_RE.fullmatch(str(a.get("email") or "").strip())]
 
 
 def graph_delete(account, ev, only_this):

@@ -13,6 +13,7 @@ Item {
 
     property var options: []
     property var value
+    property int listWidth: 0          // the open list can be wider than the button (long hints)
     signal edited(var value)
 
     readonly property var current: options.find(o => o.value === value)
@@ -66,7 +67,7 @@ Item {
         y: root.height + 4
         // stays inside the window (moved up / left when there's no room below / right)
         margins: 8
-        width: Math.max(root.width, 160)
+        width: Math.max(root.width, 160, root.listWidth)
         height: Math.min(view.contentHeight + 12, 260)
         padding: 6
         closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape   // the button itself toggles it
@@ -105,16 +106,21 @@ Item {
                         radius: 5
                         color: entry.modelData.color ?? "transparent"
                     }
+                    // label and hint never overlap: both are cut ("…") when it's tight
                     Text {
                         Layout.fillWidth: true
+                        Layout.minimumWidth: 40
                         text: entry.modelData.label
                         color: entry.selected ? Colors.color6 : Colors.ink
                         font.pixelSize: 12
                         font.bold: entry.selected
                         font.family: Properties.fontFamily
+                        elide: Text.ElideRight
                     }
                     Text {
                         visible: text !== ""
+                        Layout.maximumWidth: entry.width * 0.55
+                        elide: Text.ElideMiddle
                         text: entry.modelData.hint ?? ""
                         color: Colors.fade(0.4)
                         font.pixelSize: 10

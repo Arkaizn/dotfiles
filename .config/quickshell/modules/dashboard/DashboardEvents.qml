@@ -13,7 +13,7 @@ Item {
     property date day: new Date()
     clip: true
 
-    readonly property bool isToday: sameDay(day, new Date())
+    readonly property bool isToday: sameDay(day, new Date(now))
 
     // another day picked: the list slides in from that side
     property date lastDay: day
@@ -35,14 +35,13 @@ Item {
     // with nothing left today: the next thing coming up
     readonly property var nextUp: {
         if (!isToday) return null
-        const now = Date.now()
+        const now = root.now
         if (events.some(e => e.end > now)) return null
         return CalendarStore.visibleEvents.find(e => e.start > now) ?? null
     }
 
-    // minute ticker so past events dim on time
-    property double now: Date.now()
-    Timer { interval: 60000; running: true; repeat: true; onTriggered: root.now = Date.now() }
+    // on the minute (Time ticks with the system clock), so "now" / past show on time
+    readonly property double now: { Time.minutes; return Date.now() }
 
     function sameDay(a, b) {
         return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()

@@ -22,7 +22,8 @@ ColumnLayout {
 
     property string firewall: ""            // ufw: "active" / "inactive" / "" (not installed)
     Component.onCompleted: {
-        Jobs.which(["ssh", "xfreerdp3", "vncviewer", "kitty", "nc", "secret-tool", "zenity"], h => page.have = h)
+        Jobs.which(["ssh", "xfreerdp3", "vncviewer", "kitty", "nc", "secret-tool"], h => page.have = h)
+        if (RemoteConnections.smartcardOn) page.checkCards()
         RemoteConnections.probe()
         VncServer.refresh()
         Jobs.run(["sh", "-c", "command -v ufw >/dev/null && systemctl is-active ufw"], (c, out) => page.firewall = out.trim())
@@ -32,6 +33,15 @@ ColumnLayout {
         Quickshell.execDetached(["kitty", "--title", title, "bash", "-c",
             script + '\necho; read -r -p "Done. Press Enter to close." _', "bash"].concat(args ?? []))
     }
+    // smartcards: setup (pcscd, ccid, opensc) and what's on the card
+    property var cardSetup: null
+    property var cards: null                // null = not checked, "checking", or listCards' result
+    function checkCards() {
+        RemoteConnections.cardSetup(s => page.cardSetup = s)
+        page.cards = "checking"
+        RemoteConnections.listCards("", r => page.cards = r)
+    }
+
     // a change to a running server applies by restarting it
     function setServer(k, v) { VncServer.setOpt(k, v); if (VncServer.running) VncServer.restart() }
 
@@ -236,12 +246,79 @@ ColumnLayout {
 
     NetCard {
         Layout.fillWidth: true
+        title: "Smartcards"
+        icon: "󰌋"
+        header: [
+            IconButton {
+                visible: RemoteConnections.smartcardOn
+                icon: "󰑐"; tooltip: "Check again"
+                interactive: page.cards !== "checking"
+                onClicked: page.checkCards()
+            }
+        ]
+        NetRow {
+            first: true
+            label: "Smartcards for RDP"
+            desc: "A smartcard or YubiKey (PIV): pass it into the session, or log in with it and its PIN. Chosen per connection (Edit → Smartcard)."
+            ToggleSwitch {
+                checked: RemoteConnections.smartcardOn
+                onToggled: v => { Settings.set("connections", "smartcard", v); if (v) page.checkCards() }
+            }
+        }
+        NetRow {
+            sub: true
+            visible: RemoteConnections.smartcardOn && page.cardSetup !== null
+            label: (page.cardSetup?.pcscd === "active" ? "󰄬" : "󰀦") + "  Card service (pcscd)"
+            desc: page.cardSetup?.pcscd === "active" ? "running" : "off: no smartcard works without it (started by its socket once enabled)"
+            ActionButton {
+                visible: page.cardSetup?.pcscd !== "active"
+                icon: "󰐥"; text: "Turn on"
+                onClicked: page.terminal("Smartcards: pcscd", 'sudo systemctl enable --now pcscd.socket && systemctl --no-pager status pcscd.socket')
+            }
+        }
+        NetRow {
+            sub: true
+            visible: RemoteConnections.smartcardOn && page.cardSetup !== null
+            label: (page.cardSetup?.ccid ? "󰄬" : "󰀦") + "  Reader driver (ccid)"
+            desc: page.cardSetup?.ccid ? "installed" : "missing: USB card readers and YubiKeys need it"
+            ActionButton {
+                visible: !(page.cardSetup?.ccid ?? true)
+                icon: "󰇚"; text: "Install"
+                onClicked: page.terminal("Smartcards: install ccid", 'sudo pacman -S --needed ccid')
+            }
+        }
+        NetRow {
+            sub: true
+            visible: RemoteConnections.smartcardOn && page.cardSetup !== null
+            label: (page.cardSetup?.opensc ? "󰄬" : "󰀦") + "  OpenSC"
+            desc: page.cardSetup?.opensc ? "installed (xfreerdp3 reads the card's certificates with it)"
+                                         : "missing: needed to log in with the card (passing it through works without)"
+            ActionButton {
+                visible: !(page.cardSetup?.opensc ?? true)
+                icon: "󰇚"; text: "Install"
+                onClicked: page.terminal("Smartcards: install opensc", 'sudo pacman -S --needed opensc')
+            }
+        }
+        NetRow {
+            sub: true
+            visible: RemoteConnections.smartcardOn
+            label: "Card"
+            desc: page.cards === null ? "not checked"
+                : page.cards === "checking" ? "looking…"
+                : page.cardSetup && page.cardSetup.pcscd !== "active" ? "can't look while pcscd is off"
+                : page.cards.ok ? page.cards.certs.map(c => (c.upn || c.subject) + (c.reader ? "  ·  " + c.reader : "")).join("\n")
+                : page.cards.error
+        }
+    }
+
+    NetCard {
+        Layout.fillWidth: true
         title: "How passwords are kept"
         NetRow {
             first: true
             wide: true
             label: "Never in the settings file"
-            desc: "RDP: in your keyring (secret-tool), or a prompt every time; handed to xfreerdp3 in an environment variable only you can read, not on the command line. SSH: your keys / agent, or ssh asks in the terminal. VNC: vncviewer asks."
+            desc: "RDP: in your keyring (secret-tool), or a prompt every time; handed to xfreerdp3 in an environment variable only you can read, not on the command line. A smartcard PIN is asked on every connect and handed over the same way, never stored. SSH: your keys / agent, or ssh asks in the terminal. VNC: vncviewer asks."
         }
     }
 }

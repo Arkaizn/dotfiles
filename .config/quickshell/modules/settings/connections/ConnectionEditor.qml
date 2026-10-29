@@ -24,6 +24,9 @@ ColumnLayout {
     property bool dynres: conn?.dynres ?? true
     property bool shareHome: conn?.shareHome ?? false
     property bool ignoreCert: conn?.ignoreCert ?? false
+    property string smartcard: conn?.smartcard ?? "off"
+    // logging in with the card: its PIN replaces the password
+    readonly property bool cardLogon: ed.type === "rdp" && RemoteConnections.smartcardOn && ed.smartcard === "logon"
     property string extra: (conn?.extra ?? []).join(" ")
 
     property var errors: ({})
@@ -39,6 +42,7 @@ ColumnLayout {
             port: port.trim() === "" ? RemoteConnections.types[type].port : Number(port.trim()),
             user: user.trim(), password: type === "rdp" ? password : "none",
             clipboard: clipboard, dynres: dynres, shareHome: shareHome, ignoreCert: ignoreCert,
+            smartcard: type === "rdp" ? smartcard : "off",
             extra: type === "rdp" ? extra.split(/\s+/).filter(x => x !== "") : [],
             lastUsed: conn?.lastUsed ?? 0
         }
@@ -47,7 +51,7 @@ ColumnLayout {
     function save() {
         const d = draft()
         const e = RemoteConnections.validate(Object.assign({}, d, { port: port.trim() === "" ? undefined : port.trim() }))
-        if (d.password === "keyring" && !inKeyring && newPassword === "") e.password = "enter the password to store in the keyring"
+        if (d.password === "keyring" && !cardLogon && !inKeyring && newPassword === "") e.password = "enter the password to store in the keyring"
         errors = e
         if (Object.keys(e).length > 0) { message = "Check the marked fields"; return }
         const finish = () => {
@@ -116,7 +120,8 @@ ColumnLayout {
     NetRow {
         visible: ed.type !== "vnc"
         label: "User"
-        desc: ed.errors.user ?? (ed.type === "ssh" ? "empty = from ~/.ssh/config or your login name" : "DOMAIN\\user works too")
+        desc: ed.errors.user ?? (ed.type === "ssh" ? "empty = from ~/.ssh/config or your login name"
+                                 : ed.cardLogon ? "empty = from the card's certificate" : "DOMAIN\\user works too")
         SearchField {
             Layout.preferredWidth: 280
             icon: ""; clearable: false
@@ -128,7 +133,20 @@ ColumnLayout {
 
     // ── RDP ─────────────────────────────────────────────────────────────────
     NetRow {
-        visible: ed.type === "rdp"
+        visible: ed.type === "rdp" && RemoteConnections.smartcardOn
+        label: "Smartcard"
+        desc: ed.smartcard === "logon" ? "log in with the card: the shell asks for its PIN when you connect"
+            : ed.smartcard === "redirect" ? "the card works inside the session (the remote side asks for the PIN)"
+            : "not used"
+        Segmented {
+            small: true
+            options: [{ label: "Off", value: "off" }, { label: "Pass through", value: "redirect" }, { label: "Log in", value: "logon" }]
+            value: ed.smartcard
+            onEdited: v => ed.smartcard = v
+        }
+    }
+    NetRow {
+        visible: ed.type === "rdp" && !ed.cardLogon
         label: "Password"
         desc: ed.errors.password ?? (ed.password === "keyring" ? (ed.inKeyring ? "stored in the keyring; type a new one to replace it" : "stored in the keyring (secret-tool)")
                                     : ed.password === "ask" ? "a prompt on every connect" : "the server asks, or no password")
@@ -140,7 +158,7 @@ ColumnLayout {
         }
     }
     NetRow {
-        visible: ed.type === "rdp" && ed.password === "keyring"
+        visible: ed.type === "rdp" && ed.password === "keyring" && !ed.cardLogon
         sub: true
         label: ed.inKeyring ? "New password" : "Password"
         desc: "Never written to the settings file"

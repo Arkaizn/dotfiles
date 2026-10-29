@@ -18,6 +18,7 @@ Item {
     implicitWidth: row.implicitWidth + 26
     implicitHeight: Properties.buttonHeight
     opacity: interactive ? 1 : 0.4
+    Behavior on opacity { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
 
     // the whole button scales (background and text together); wide buttons
     // grow at most 4px per side, so they stay inside the edges around them

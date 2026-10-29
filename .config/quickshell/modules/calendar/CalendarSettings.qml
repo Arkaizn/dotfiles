@@ -109,6 +109,42 @@ Modal {
                             onToggled: v => root.setOpt("allDayReminder", v)
                         }
                     }
+                    Divider {}
+                    PlainRow {
+                        Layout.fillWidth: true
+                        enabled: root.opt("reminders", true)
+                        opacity: enabled ? 1 : 0.4
+                        label: "When it starts"
+                        desc: "Another notification at the start time"
+                        ToggleSwitch {
+                            checked: root.opt("startReminder", false)
+                            onToggled: v => root.setOpt("startReminder", v)
+                        }
+                    }
+                    Divider {}
+                    PlainRow {
+                        Layout.fillWidth: true
+                        enabled: root.opt("reminders", true)
+                        opacity: enabled ? 1 : 0.4
+                        label: "Sound"
+                        desc: "Played with the notification (not with do not disturb)"
+                        RowLayout {
+                            spacing: 4
+                            IconButton {
+                                implicitWidth: 26; implicitHeight: 26
+                                iconSize: 11
+                                icon: "󰐊"
+                                tooltip: "Play it"
+                                visible: root.opt("reminderSound", "message") !== "off"
+                                onClicked: CalendarStore.playSound(root.opt("reminderSound", "message"))
+                            }
+                            ChoiceControl {
+                                options: ["off", "message", "bell", "alarm", "complete"]
+                                value: root.opt("reminderSound", "message")
+                                onEdited: v => { root.setOpt("reminderSound", v); CalendarStore.playSound(v) }
+                            }
+                        }
+                    }
                 }
 
                 // ── View ─────────────────────────────────────────────────────
@@ -138,6 +174,17 @@ Modal {
                     Divider {}
                     PlainRow {
                         Layout.fillWidth: true
+                        label: "Zoom"
+                        desc: "Hour height in the day and week views, %  (also Ctrl + wheel)"
+                        ChoiceControl {
+                            options: CalendarStore.zoomSteps.map(String)
+                            value: String(CalendarStore.zoom)
+                            onEdited: v => root.setOpt("zoom", v)
+                        }
+                    }
+                    Divider {}
+                    PlainRow {
+                        Layout.fillWidth: true
                         label: "Week numbers"
                         ToggleSwitch {
                             checked: root.opt("weekNumbers", true)
@@ -153,6 +200,17 @@ Modal {
                             options: ["5", "15", "30", "60"]
                             value: root.opt("syncMinutes", "15")
                             onEdited: v => root.setOpt("syncMinutes", v)
+                        }
+                    }
+                    Divider {}
+                    PlainRow {
+                        Layout.fillWidth: true
+                        label: "Save moves after"
+                        desc: "Seconds after the last drag in the day / week view; moves made meanwhile are saved together"
+                        ChoiceControl {
+                            options: ["0", "5", "10", "30", "60"]
+                            value: root.opt("moveDelay", "10")
+                            onEdited: v => root.setOpt("moveDelay", v)
                         }
                     }
                 }

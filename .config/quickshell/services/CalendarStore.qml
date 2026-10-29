@@ -120,7 +120,9 @@ Singleton {
         root.current = root.queue[0]
         root.queue = root.queue.slice(1)
         proc.environment = { CAL_REQUEST: JSON.stringify(root.current.request) }
-        proc.command = ["python3", root.script, root.current.cmd]
+        // a time limit, so one server that never answers can't block the queue
+        // for good (the sign-in and the import run as Jobs, not here)
+        proc.command = ["timeout", "-k", "5", root.current.cmd === "sync" ? "180" : "90", "python3", root.script, root.current.cmd]
         proc.running = true
     }
 
@@ -131,8 +133,11 @@ Singleton {
         onExited: code => {
             const job = root.current
             let res
-            try { res = JSON.parse(out.text) }
-            catch (e) { res = { ok: false, error: (err.text.trim().split("\n").pop() || "calendar helper failed (exit " + code + ")") } }
+            if (code === 124 || code === 137) res = { ok: false, error: "The server took too long to answer — try again in a moment" }
+            else {
+                try { res = JSON.parse(out.text) }
+                catch (e) { res = { ok: false, error: (err.text.trim().split("\n").pop() || "calendar helper failed (exit " + code + ")") } }
+            }
             root.current = null
             if (job.done) job.done(res)
             root.next()
@@ -159,7 +164,7 @@ Singleton {
         run("sync", req, res => {
             root.syncing = false
             if (res.ok) {
-                root.events = res.events
+                root.events = withLocalMoves(res.events)
                 root.errors = res.errors
                 root.lastSync = Date.now()
                 saveCache()
@@ -425,18 +430,26 @@ Singleton {
         return v === "off" ? -1 : parseInt(v)
     }
     readonly property bool allDayReminder: Settings.calendar.allDayReminder ?? false
+    readonly property bool startReminder: Settings.calendar.startReminder ?? false
+    // played with the popup (not with do-not-disturb on, the popup isn't shown then)
+    readonly property var sounds: ({ message: "message-new-instant", bell: "bell", alarm: "alarm-clock-elapsed", complete: "complete" })
+    readonly property string reminderSound: Settings.calendar.reminderSound ?? "message"
 
     property double lastCheck: Date.now()    // nothing from before the shell started
     property var fired: ({})                 // "eventId|time" → true
 
     function reminderTimes(e) {
-        if (e.alarms && e.alarms.length > 0) return e.alarms
         if (e.allDay) {
+            if (e.alarms && e.alarms.length > 0) return e.alarms
             if (!root.allDayReminder) return []
             const d = new Date(e.start); d.setHours(9, 0, 0, 0)
             return [d.getTime()]
         }
-        return root.defaultReminder >= 0 ? [e.start - root.defaultReminder * 60000] : []
+        const out = e.alarms && e.alarms.length > 0 ? e.alarms.slice()
+                  : root.defaultReminder >= 0 ? [e.start - root.defaultReminder * 60000] : []
+        // and one when it starts
+        if (root.startReminder && !out.includes(e.start)) out.push(e.start)
+        return out
     }
 
     function checkReminders() {
@@ -461,7 +474,7 @@ Singleton {
     }
 
     Timer {
-        interval: 20000
+        interval: 10000
         repeat: true
         running: root.activeAccounts.length > 0
         onTriggered: root.checkReminders()
@@ -487,7 +500,24 @@ Singleton {
                   "--expire-time=20000", "--action=default=Open", e.title, parts.join("  ·  "), "--wait"],
                  (code, out) => { if (code === 0 && out.trim() === "default") Panels.call("calendar", "openDate", iso) },
                  { LC_ALL: "C.UTF-8" })
+        playSound()
     }
+
+    function playSound(name) {
+        const file = root.sounds[name ?? root.reminderSound]
+        if (!file || (name === undefined && Notifs.dnd)) return
+        Jobs.run(["pw-play", "/usr/share/sounds/freedesktop/stereo/" + file + ".oga"], () => {})
+    }
+
+    // ── Zoom of the day / week view (hour height in %) ──────────────────────
+    readonly property var zoomSteps: [60, 80, 100, 125, 150, 200, 250, 300]
+    readonly property int zoom: parseInt(Settings.calendar.zoom ?? "100") || 100
+    function zoomBy(dir) {
+        const i = root.zoomSteps.findIndex(z => z >= root.zoom)
+        const next = root.zoomSteps[Math.max(0, Math.min(root.zoomSteps.length - 1, (i < 0 ? root.zoomSteps.length - 1 : i) + dir))]
+        if (next !== root.zoom) Settings.set("calendar", "zoom", String(next))
+    }
+    function zoomReset() { Settings.set("calendar", "zoom", "100") }
 
     // ── Events ───────────────────────────────────────────────────────────────
     function accountOf(calId) { return root.accounts.find(a => calId.startsWith(a.id + "|")) }
@@ -495,6 +525,7 @@ Singleton {
 
     // ev: { title, start, end, allDay, location, description, + uid/href/etag/... when editing }
     function saveEvent(ev, calId, done) {
+        if (ev.id) dropPendingMove(ev.id)
         root.working = true
         run("save", { account: accountOf(calId), calendar: calendarOf(calId), event: ev }, res => {
             root.working = false
@@ -504,14 +535,84 @@ Singleton {
         })
     }
 
-    // dragged in the week / day view: show it at the new place right away,
-    // save in the background, and put it back if the server says no
-    // scope ("this" | "all") matters for repeating events only
+    // dragged in the week / day view: show it at the new place right away and
+    // save a few seconds after the last move (Settings.calendar.moveDelay), all
+    // moves at once, then one sync. Until then a sync (background, another move's
+    // save) keeps the moved events where they were put instead of snapping back.
+    // A failed save puts that one back. scope ("this" | "all"): repeating events only
+    readonly property int moveDelay: parseInt(Settings.calendar.moveDelay ?? "10") || 0
+    property var pendingMoves: ({})       // id → moved event, not saved yet
+    property var savingMoves: ({})        // id → moved event, being saved
+
     function moveEvent(ev, start, end, scope) {
         if (start === ev.start && end === ev.end) return
         const moved = Object.assign({}, ev, { start: start, end: end, scope: scope || "all" })
         root.events = root.events.map(e => e.id === ev.id ? moved : e)
-        saveEvent(moved, ev.calendar, res => { if (!res.ok) sync() })
+        const p = Object.assign({}, root.pendingMoves)
+        p[ev.id] = moved
+        root.pendingMoves = p
+        if (root.moveDelay > 0) moveTimer.restart()
+        else Qt.callLater(flushMoves)
+    }
+
+    Timer {
+        id: moveTimer
+        interval: root.moveDelay * 1000
+        onTriggered: root.flushMoves()
+    }
+
+    function withLocalMoves(list) {
+        const local = Object.assign({}, root.savingMoves, root.pendingMoves)
+        if (Object.keys(local).length === 0) return list
+        return list.map(e => local[e.id] ?? e)
+    }
+
+    // save the waiting moves now (timer, calendar window closed)
+    function flushMoves() {
+        moveTimer.stop()
+        const list = Object.values(root.pendingMoves)
+        if (list.length === 0) return
+        root.pendingMoves = {}
+        root.savingMoves = Object.assign({}, root.savingMoves, ...list.map(m => ({ [m.id]: m })))
+        let left = list.length
+        const failed = []
+        for (const m of list)
+            run("save", { account: accountOf(m.calendar), calendar: calendarOf(m.calendar), event: m }, res => {
+                const s = Object.assign({}, root.savingMoves)
+                if (s[m.id] === m) delete s[m.id]
+                root.savingMoves = s
+                if (!res.ok) failed.push(m.title + ": " + res.error)
+                else {
+                    inviteUpdate(m)
+                    // a series moved again before the next sync: the server has the new time already
+                    if (m.recurring && m.scope !== "this")
+                        root.events = root.events.map(e => e.id === m.id ? Object.assign({}, e, { occurrence: m.start }) : e)
+                }
+                if (--left > 0) return
+                root.lastError = failed.join("\n")
+                sync()
+            })
+    }
+
+    // a moved event I invited people to: they get the new time (iMIP update)
+    function inviteUpdate(m) {
+        const org = (m.organizer?.email ?? "").toLowerCase()
+        const acc = org ? MailStore.activeAccounts.find(a => a.email.toLowerCase() === org) : null
+        if (!acc || !(m.attendees ?? []).length || calendarMap[m.calendar]?.accountType === "graph") return
+        // one occurrence of a series would need a RECURRENCE-ID update: not sent (the series stays right)
+        if (m.recurring && m.scope === "this") return
+        MailStore.sendInvite(acc.id, { uid: m.uid, title: m.title, start: m.start, end: m.end, allDay: m.allDay,
+                                       location: m.location, description: m.description, sequence: (m.sequence ?? 0) + 1,
+                                       attendees: m.attendees, rrule: m.scope === "this" ? "" : (m.rrule ?? "") }, "REQUEST", res => {
+            if (!res.ok) root.lastError = m.title + ": the guests weren't told about the new time (" + res.error + ")"
+        })
+    }
+
+    function dropPendingMove(id) {
+        if (!(id in root.pendingMoves)) return
+        const p = Object.assign({}, root.pendingMoves)
+        delete p[id]
+        root.pendingMoves = p
     }
 
     // ── Importing .ics files ─────────────────────────────────────────────────
@@ -566,6 +667,7 @@ Singleton {
     }
 
     function deleteEvent(ev, onlyThis, done) {
+        dropPendingMove(ev.id)
         root.working = true
         run("delete", { account: accountOf(ev.calendar), calendar: calendarOf(ev.calendar), event: ev, occurrence: onlyThis }, res => {
             root.working = false
@@ -573,5 +675,76 @@ Singleton {
             if (done) done(res)
             if (res.ok) sync()
         })
+    }
+
+    // ── Several events at once (Ctrl / Shift + click in the views) ───────────
+    property var selected: ({})          // event id → event
+    readonly property int selectedCount: Object.keys(selected).length
+    readonly property var selectedEvents: Object.values(selected)
+    function isSelected(id) { return root.selected[id] !== undefined }
+    function toggleSelect(ev) {
+        const s = Object.assign({}, root.selected)
+        if (s[ev.id]) delete s[ev.id]
+        else s[ev.id] = ev
+        root.selected = s
+    }
+    function clearSelection() { if (root.selectedCount > 0) root.selected = {} }
+    // the events are replaced after each sync: keep the selection pointing at the
+    // current ones. An id is "calendar|uid|start", so a moved event comes back
+    // with another one: found again by its calendar, uid and (new) start
+    onEventsChanged: {
+        if (root.selectedCount === 0) return
+        const byId = {}, byPlace = {}
+        for (const e of root.events) { byId[e.id] = e; byPlace[e.calendar + "|" + e.uid + "|" + e.start] = e }
+        const s = {}
+        for (const id in root.selected) {
+            const old = root.selected[id]
+            const e = byId[id] ?? byPlace[old.calendar + "|" + old.uid + "|" + old.start]
+            if (e) s[e.id] = e
+        }
+        root.selected = s
+    }
+
+    // one request after the other, then a single sync; done({ ok, failed, error })
+    function bulk(jobs, done) {
+        let left = jobs.length, failed = 0, lastErr = ""
+        if (left === 0) { if (done) done({ ok: true, failed: 0 }); return }
+        root.working = true
+        for (const j of jobs)
+            run(j.cmd, j.request, res => {
+                if (!res.ok) { failed++; lastErr = res.error }
+                if (--left > 0) return
+                root.working = false
+                root.lastError = failed ? (failed === jobs.length ? lastErr : failed + " of " + jobs.length + " didn't work: " + lastErr) : ""
+                sync()
+                if (done) done({ ok: failed === 0, failed: failed, error: lastErr })
+            })
+    }
+    // onlyThis: repeating ones lose only that occurrence (else the whole series, once)
+    function deleteMany(list, onlyThis, done) {
+        const seen = {}
+        const jobs = []
+        for (const ev of list) {
+            if (ev.recurring && !onlyThis) { if (seen[ev.calendar + "|" + ev.uid]) continue; seen[ev.calendar + "|" + ev.uid] = true }
+            dropPendingMove(ev.id)
+            jobs.push({ cmd: "delete", request: { account: accountOf(ev.calendar), calendar: calendarOf(ev.calendar), event: ev, occurrence: onlyThis && !!ev.recurring } })
+        }
+        bulk(jobs, done)
+    }
+    function moveManyTo(list, calId, done) {
+        bulk(list.filter(ev => ev.calendar !== calId).map(ev => {
+            dropPendingMove(ev.id)
+            return { cmd: "save", request: { account: accountOf(calId), calendar: calendarOf(calId), event: Object.assign({}, ev, { scope: "all" }) } }
+        }), done)
+    }
+    // copies (a new event each, no guests): days later, or the same time when 0
+    function duplicateMany(list, days, done) {
+        bulk(list.filter(ev => !(calendarMap[ev.calendar]?.readOnly ?? true)).map(ev => {
+            const s = new Date(ev.start); s.setDate(s.getDate() + days)
+            const e = new Date(ev.end); e.setDate(e.getDate() + days)
+            const copy = { title: ev.title, start: s.getTime(), end: e.getTime(), allDay: ev.allDay, location: ev.location ?? "",
+                           description: ev.description ?? "", scope: "all" }
+            return { cmd: "save", request: { account: accountOf(ev.calendar), calendar: calendarOf(ev.calendar), event: copy } }
+        }), done)
     }
 }

@@ -131,6 +131,7 @@ Singleton {
         { id: "connections",  name: "Connections",      icon: "󰣀", desc: "SSH / RDP / VNC" },
         { id: "dashboard",    name: "Dashboard",        icon: "󰕮", desc: "Open the dashboard" },
         { id: "calendar",     name: "Calendar",         icon: "󰃭", desc: "Calendar app" },
+        { id: "mail",         name: "Mail",             icon: "󰇮", desc: "Mail app (unread count on the button)" },
         { id: "perfmon",      name: "Performance",      icon: "󰓅", desc: "Performance monitor" },
         { id: "keybinds",     name: "Keybinds",         icon: "󰌌", desc: "Keybind cheatsheet" },
         { id: "settings",     name: "Settings",         icon: "󰒓", desc: "Settings app" },

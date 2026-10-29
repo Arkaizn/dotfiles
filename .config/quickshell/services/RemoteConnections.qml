@@ -9,11 +9,18 @@ import qs.services.lib
 //
 // Settings.connections.list: [{ id, name, type: "ssh" | "rdp" | "vnc", host, port,
 //   user, password: "none" | "ask" | "keyring", clipboard, dynres, shareHome,
-//   ignoreCert, extra: ["/arg", …], lastUsed }]
+//   ignoreCert, smartcard: "off" | "redirect" | "logon", extra: ["/arg", …], lastUsed }]
+// Settings.connections.smartcard: smartcards on at all (settings → Connections)
 //
 // Passwords never go into the settings file or a command line:
 //   - "keyring": stored with secret-tool (service quickshell-connections, id <id>)
-//   - "ask": a zenity password prompt on every connect
+//   - "ask": the shell's own prompt (SecretPrompt) on every connect
+// Smartcards (RDP, xfreerdp3 + pcscd):
+//   - "redirect": /smartcard, the card works inside the session (Windows asks for the PIN there)
+//   - "logon": /smartcard-logon /sec:nla, log in with the card: its PIN is asked
+//     here and handed over like a password (/p: is the PIN then); the user name
+//     comes from the certificate when none is set. Several certificates on the
+//     card: you pick one, its number goes to xfreerdp3's question on stdin.
 //   RDP gets its arguments (incl. /p:) from an environment variable
 //   (xfreerdp3 /args-from:env:…), which only you can read, unlike argv.
 // SSH uses your keys / agent / ssh's own prompt; VNC uses vncviewer's prompt.
@@ -32,6 +39,10 @@ Singleton {
         rdp: { name: "RDP", icon: "󰢹", port: 3389, bin: "xfreerdp3" },
         vnc: { name: "VNC", icon: "󰍹", port: 5900, bin: "vncviewer" }
     })
+
+    readonly property var smartcardModes: ["off", "redirect", "logon"]
+    readonly property bool smartcardOn: Settings.connections.smartcard ?? false
+    function cardMode(c) { return smartcardOn && c.type === "rdp" ? c.smartcard : "off" }
 
     // the saved list, cleaned (anything invalid is left out)
     readonly property var list: {
@@ -52,6 +63,7 @@ Singleton {
             password: c.type === "rdp" && ["none", "ask", "keyring"].includes(c.password) ? c.password : "none",
             clipboard: c.clipboard ?? true, dynres: c.dynres ?? true,
             shareHome: c.shareHome ?? false, ignoreCert: c.ignoreCert ?? false,
+            smartcard: c.type === "rdp" && smartcardModes.includes(c.smartcard) ? c.smartcard : "off",
             extra: Array.isArray(c.extra) ? c.extra.map(String) : [],
             lastUsed: Number(c.lastUsed) || 0
         }
@@ -64,6 +76,7 @@ Singleton {
         if (typeof c.name !== "string" || c.name.trim() === "") e.name = "enter a name"
         else if (/[\n\r]/.test(c.name) || c.name.length > 80) e.name = "one line, at most 80 characters"
         if (!types[c.type]) e.type = "ssh, rdp or vnc"
+        if (c.smartcard !== undefined && !smartcardModes.includes(c.smartcard)) e.smartcard = "off, redirect or logon"
         const h = Valid.host(c.host); if (h) e.host = h
         if (c.port !== undefined && c.port !== "") { const p = Valid.port(String(c.port)); if (p) e.port = p }
         const u = String(c.user ?? "")
@@ -117,7 +130,7 @@ Singleton {
         const c = get(id)
         if (!c) return
         const t = types[c.type]
-        Jobs.which([t.bin, "kitty", "zenity"], have => {
+        Jobs.which([t.bin, "kitty"], have => {
             if (!have[t.bin]) return fail(c, t.bin + " isn't installed: " + Jobs.installHint(t.bin))
             touch(c.id)
             if (c.type === "ssh") {
@@ -130,24 +143,76 @@ Singleton {
                           "bash"].concat(args), null)
             } else if (c.type === "vnc") {
                 detached(["vncviewer", c.host + "::" + c.port], null)
+            } else if (cardMode(c) === "logon") {
+                cardLogon(c)
             } else if (c.password === "keyring") {
                 Jobs.run(["secret-tool", "lookup", "service", secretService, "id", c.id], (code, out) => {
                     if (code !== 0 || out === "") return fail(c, "no password in the keyring: set it in Settings → Connections")
                     rdp(c, out.replace(/\n$/, ""))
                 })
             } else if (c.password === "ask") {
-                if (!have.zenity) return fail(c, "zenity isn't installed: " + Jobs.installHint("zenity"))
-                Jobs.run(["zenity", "--password", "--title=" + c.name], (code, out) => {
-                    if (code === 0) rdp(c, out.replace(/\n$/, ""))
-                })
+                SecretPrompt.ask({ title: c.name, message: "Password" + (c.user ? " for " + c.user : "") + " on " + c.host,
+                                   action: "Connect" }, pw => { if (pw !== null) rdp(c, pw) })
             } else rdp(c, "")
+        })
+    }
+
+    // ── Smartcards ──────────────────────────────────────────────────────────
+    // the certificates xfreerdp3 can log in with (needs pcscd, the card reader
+    // driver and a PKCS#11 module, OpenSC by default)
+    // cb({ ok, certs: [{ subject, upn, reader }], error })
+    function listCards(user, cb) {
+        Jobs.run(["xfreerdp3"].concat(user ? ["/u:" + user] : []).concat(["/list:smartcard"]), (code, out, err) => {
+            const certs = []
+            for (const line of out.split("\n")) {
+                let m
+                if ((m = /^(\d+): (.*)$/.exec(line))) certs.push({ subject: m[2].trim(), upn: "", reader: "" })
+                else if (certs.length && (m = /^\s+\* UPN: (.*)$/.exec(line))) certs[certs.length - 1].upn = m[1].trim()
+                else if (certs.length && (m = /^\s+\* reader: (.*)$/.exec(line))) certs[certs.length - 1].reader = m[1].trim()
+            }
+            const reader = /smartcard reader detected/.test(out)
+            cb({ ok: certs.length > 0, certs: certs,
+                 error: certs.length > 0 ? "" : reader ? "no certificate on the card (or OpenSC missing)"
+                      : "no smartcard found: is it in the reader, is pcscd running?" })
+        })
+    }
+
+    // pcscd (socket activated), the CCID reader driver, OpenSC
+    // cb({ pcscd: "active" | "inactive", ccid: bool, opensc: bool })
+    function cardSetup(cb) {
+        Jobs.run(["sh", "-c", 'systemctl is-active pcscd.socket pcscd.service | paste -sd " "; '
+                            + 'test -e /usr/lib/pcsc/drivers/ifd-ccid.bundle && echo ccid; '
+                            + 'test -e /usr/lib/opensc-pkcs11.so -o -e /usr/lib/pkcs11/opensc-pkcs11.so && echo opensc'],
+                 (code, out) => {
+            const l = out.split("\n")
+            cb({ pcscd: /(^| )active( |$)/.test(l[0]) ? "active" : "inactive",
+                 ccid: l.includes("ccid"), opensc: l.includes("opensc") })
+        })
+    }
+
+    function cardLogon(c) {
+        listCards(c.user, res => {
+            if (!res.ok) return fail(c, res.error)
+            const cert = res.certs[0]
+            SecretPrompt.ask({
+                title: c.name,
+                message: "Smartcard PIN" + (res.certs.length === 1 ? " for " + (cert.upn || cert.subject) : ""),
+                placeholder: "PIN",
+                minLength: 4,
+                action: "Connect",
+                hint: "The card locks after a few wrong PINs",
+                choices: res.certs.map(x => ({ label: x.upn || x.subject, desc: (x.upn ? x.subject + "  ·  " : "") + x.reader }))
+            }, (pin, choice) => { if (pin !== null) rdp(c, pin, res.certs.length > 1 ? choice : -1) })
         })
     }
 
     function rdpArgs(c, password) {
         const a = ["/v:" + c.host + ":" + c.port]
         if (c.user) a.push("/u:" + c.user)
-        if (password) a.push("/p:" + password)
+        if (password) a.push("/p:" + password)          // the PIN with a smartcard logon
+        const card = cardMode(c)
+        if (card === "logon") a.push("/smartcard-logon", "/sec:nla")
+        if (card !== "off") a.push("/smartcard")
         if (c.ignoreCert) a.push("/cert:ignore")
         if (c.dynres) a.push("+dynamic-resolution")
         if (c.clipboard) a.push("+clipboard")
@@ -155,16 +220,17 @@ Singleton {
         return a.concat(c.extra)
     }
 
-    function rdp(c, password) {
+    // card: which certificate (several on the smartcard), -1 / none = no question
+    function rdp(c, password, card) {
         if (/[\n\r]/.test(password)) return fail(c, "the password contains a line break")
         // one argument per line in QS_RDP_ARGS; a notification if it can't connect
         // (exit ≥ 128 = connection / auth / DNS error, 6-10 = denied)
         detached(["bash", "-c",
-                  'out=$(xfreerdp3 /args-from:env:QS_RDP_ARGS 2>&1 | tail -n 30; exit "${PIPESTATUS[0]}"); code=$?\n'
+                  'out=$(printf "%s\\n" "$QS_RDP_CARD" | xfreerdp3 /args-from:env:QS_RDP_ARGS 2>&1 | tail -n 30; exit "${PIPESTATUS[1]}"); code=$?\n'
                 + 'if [ "$code" -ge 128 ] || { [ "$code" -ge 6 ] && [ "$code" -le 10 ]; }; then\n'
                 + '  notify-send -a Connections -i network-error "$1: could not connect" "$(printf "%s\\n" "$out" | grep ERROR | tail -n 2 | sed "s/^.*\\] - //") (exit $code)"\n'
                 + 'fi', "bash", c.name],
-                 { QS_RDP_ARGS: rdpArgs(c, password).join("\n") })
+                 { QS_RDP_ARGS: rdpArgs(c, password).join("\n"), QS_RDP_CARD: card >= 0 ? String(card) : "" })
     }
 
     function fail(c, message) {
@@ -239,7 +305,7 @@ Singleton {
             return { source: src, password: "", conn: { id: newId(), name: base, type: "vnc", host: m[1], port: port, user: "", extra: [] } }
         }
         const c = { id: newId(), name: base, type: "rdp", host: "", port: 3389, user: "", password: "none",
-                    clipboard: false, dynres: false, shareHome: false, ignoreCert: false, extra: [] }
+                    clipboard: false, dynres: false, shareHome: false, ignoreCert: false, smartcard: "off", extra: [] }
         let password = ""
         for (const t of toks.slice(i + 1)) {
             let m
@@ -254,6 +320,9 @@ Singleton {
             else if (t === "+clipboard") c.clipboard = true
             else if (t === "+dynamic-resolution") c.dynres = true
             else if (t === "/cert:ignore") c.ignoreCert = true
+            else if (t === "/smartcard-logon") c.smartcard = "logon"
+            else if (t === "/smartcard") { if (c.smartcard !== "logon") c.smartcard = "redirect" }
+            else if (t === "/sec:nla" && c.smartcard === "logon") continue
             else if (/^\/drive:[^,]+,/.test(t) && t.replace(/^\/drive:[^,]+,/, "") === home) c.shareHome = true
             else if (/^[/+-]/.test(t)) c.extra.push(t)
         }
@@ -314,7 +383,7 @@ Singleton {
     // `secret` (the keyring password, plain text) only with withPasswords. The
     // file is written through stdin with umask 077: passwords never show up in
     // a command line, and only you can read the file.
-    readonly property var fileFields: ["name", "type", "host", "port", "user", "password", "clipboard", "dynres", "shareHome", "ignoreCert", "extra"]
+    readonly property var fileFields: ["name", "type", "host", "port", "user", "password", "clipboard", "dynres", "shareHome", "ignoreCert", "smartcard", "extra"]
 
     function exportTo(path, ids, withPasswords, cb) {
         const conns = list.filter(c => ids.includes(c.id))
