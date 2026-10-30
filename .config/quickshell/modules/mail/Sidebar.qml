@@ -7,6 +7,8 @@ import "../calendar"
 import "MailIcons.js" as I
 
 // Folder list: the unified views, local drafts, then each account with its folders.
+// Looks like the settings app's sidebar: the open folder has one highlight that
+// slides from folder to folder, hover a lighter version of it.
 Flickable {
     id: root
 
@@ -15,11 +17,56 @@ Flickable {
     signal accountSettings(string id)                   // the account's page in the mail settings
     signal newFolder(string account, string parent)     // from the right-click menus
 
+    // (first: the rows above Entry use it)
+    // hover: a lighter version of the highlight (like the settings app's sidebar)
+    component HoverFace: Rectangle {
+        property bool shown: false
+        z: -2
+        anchors.fill: parent
+        radius: Properties.radius + 2
+        border.width: 1.5
+        border.color: Colors.fade(0.14)
+        gradient: ButtonGradient { hovered: false }
+        opacity: shown ? 0.6 : 0
+        Behavior on opacity { NumberAnimation { duration: 140 } }
+    }
+
     contentHeight: col.implicitHeight
     clip: true
     boundsBehavior: Flickable.StopAtBounds
     ScrollBar.vertical: CalScrollBar { id: bar }
     SmoothWheel { flick: root; step: 100 }       // like the settings app's page list
+
+    // the open folder's highlight (the Entries point it at themselves)
+    Rectangle {
+        id: pick
+        property Item target: null
+        readonly property bool on: target !== null && target.current && target.visible
+        // its x / y and every parent's up to the list: follows folders folding, the list rebuilt
+        readonly property point at: {
+            let x = 0, y = 0
+            for (let it = target; it && it !== root.contentItem; it = it.parent) { x += it.x; y += it.y }
+            return Qt.point(x, y)
+        }
+        x: at.x
+        y: at.y
+        width: target?.width ?? 0
+        height: target?.height ?? 0
+        radius: Properties.radius + 2
+        border.width: 1.5
+        border.color: Colors.fade(0.24)
+        gradient: ButtonGradient { hovered: true }
+        opacity: on ? 1 : 0
+        scale: travel.running ? 0.97 : 1
+        onTargetChanged: if (opacity > 0) travel.restart()
+        Timer { id: travel; interval: 180 }
+        readonly property bool slides: opacity > 0
+        Behavior on x { enabled: pick.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+        Behavior on y { enabled: pick.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+        Behavior on width { enabled: pick.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+    }
 
     ColumnLayout {
         id: col
@@ -35,6 +82,7 @@ Flickable {
                 required property string modelData
                 readonly property bool many: MailStore.activeAccounts.length > 1
                 v: "unified:" + modelData
+                glow: pick
                 current: root.view === v
                 onActivated: root.picked(v)
                 icon: modelData === "unread" ? I.mail : modelData === "flagged" ? I.star : I.role(modelData)
@@ -46,7 +94,7 @@ Flickable {
                 muted: modelData !== "inbox"
             }
         }
-        Entry { v: "local:drafts"; current: root.view === v; onActivated: root.picked(v); icon: I.draft; label: "Unsent drafts"; visible: MailStore.drafts.length > 0
+        Entry { v: "local:drafts"; glow: pick; current: root.view === v; onActivated: root.picked(v); icon: I.draft; label: "Unsent drafts"; visible: MailStore.drafts.length > 0
                 count: MailStore.drafts.length; muted: true }
         // pinned folders (the pin on a folder's row)
         Repeater {
@@ -54,6 +102,7 @@ Flickable {
             Entry {
                 required property var modelData
                 v: modelData.view
+                glow: pick
                 current: root.view === v
                 onActivated: root.picked(v)
                 icon: I.role(modelData.folder.role)
@@ -88,9 +137,9 @@ Flickable {
                     Layout.fillWidth: true
                     Layout.topMargin: 4
                     implicitHeight: 38
-                    radius: 8
-                    color: headMouse.containsMouse ? Colors.fade(0.06) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    radius: Properties.radius + 2
+                    color: "transparent"
+                    HoverFace { shown: headMouse.containsMouse }
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 6
@@ -132,7 +181,7 @@ Flickable {
                         }
                         Text {
                             visible: acc.error !== ""
-                            text: I.junk
+                            text: I.alert
                             color: Colors.red
                             font.pixelSize: 12
                             font.family: Properties.fontFamily
@@ -202,6 +251,7 @@ Flickable {
                             id: folderEntry
                             readonly property var f: fRow.modelData.folder
                             v: acc.modelData.id + "|" + f.path
+                            glow: pick
                             current: root.view === v
                             onActivated: root.picked(v)
                             icon: I.role(f.role)
@@ -288,18 +338,20 @@ Flickable {
         property string dot: ""              // a color dot (the account) in front
         property bool pinnable: false
         property bool pinned: false
+        property Item glow: null             // the sliding highlight, while current
+        onCurrentChanged: if (current && glow) glow.target = e
+        Component.onCompleted: if (current && glow) glow.target = e
         signal activated()
         signal pinToggled()
         signal context(real x, real y)        // right-click (where, in the row)
         Layout.fillWidth: true
-        implicitHeight: 30
-        radius: 8
-        color: current ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16)
-             : e.hovered ? Colors.fade(0.06) : "transparent"
+        implicitHeight: 32
+        radius: Properties.radius + 2
+        color: "transparent"
         HoverHandler { id: eHover }
         // the row, its pin and the area right of the pin all count as hovering the row
         readonly property bool hovered: eHover.hovered || eMouse.containsMouse || pinHover.containsMouse
-        Behavior on color { ColorAnimation { duration: 100 } }
+        HoverFace { shown: e.hovered && !e.current }
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 8 + e.indent * 12
@@ -307,7 +359,7 @@ Flickable {
             spacing: 9
             Text {
                 text: e.icon
-                color: e.current ? Colors.color6 : Colors.fade(0.55)
+                color: Icons.tint(e.icon, e.current ? Colors.color6 : Colors.fade(0.55))
                 font.pixelSize: 14
                 font.family: Properties.fontFamily
                 Rectangle {
@@ -325,7 +377,7 @@ Flickable {
                 textFormat: e.hint ? Text.StyledText : Text.PlainText
                 color: e.current ? Colors.ink : Colors.fade(0.78)
                 font.pixelSize: 12
-                font.bold: e.count > 0 && !e.muted
+                font.bold: e.current || (e.count > 0 && !e.muted)
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
             }

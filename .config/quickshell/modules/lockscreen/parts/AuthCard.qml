@@ -116,7 +116,7 @@ Rectangle {
                 implicitWidth: Properties.buttonHeight + 4
                 implicitHeight: Properties.buttonHeight + 4
                 icon: root.lock.checking ? "󰔟" : "󰁔"
-                interactive: !root.lock.checking && root.lock.password.length > 0
+                interactive: !root.lock.checking && (root.lock.password.length > 0 || root.lock.emptySubmit)
                 tooltip: root.submitTip
                 onClicked: root.lock.submit()
             }
@@ -152,8 +152,9 @@ Rectangle {
             Layout.maximumWidth: cardCol.width
             horizontalAlignment: Text.AlignHCenter
             elide: Text.ElideRight
-            text: root.lock.status
-            color: root.lock.failed ? Colors.red : Colors.fade(0.6)
+            // the status, else what to do with the YubiKey (FIDO2: touch it)
+            text: root.lock.status || root.lock.keyHint
+            color: root.lock.failed && root.lock.status ? Colors.red : Colors.fade(0.6)
             font.pixelSize: 12
         }
     }

@@ -36,7 +36,7 @@ Rectangle {
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
-        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels"]
+        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "iconColors"]
     // group → function(value, err) for the feature groups that need more than "is an object"
     property var validators: ({
         // enabled, monitors, instances [{ id, type, x, y, rot, scale, monitors, opts }] (services/lib/DeskWidgets.js)
@@ -64,6 +64,13 @@ Rectangle {
                 const m = LockItems.checkGreeter(k, v[k])
                 if (m === null) err([k], "unknown setting \"" + k + "\"")
                 else if (m !== "") err([k], m)
+            }
+        },
+        // icons colored by what they do, turned off one by one (services/Icons.qml colorList)
+        iconColors: (v, err) => {
+            for (const k of Object.keys(v)) {
+                if (!Icons.colorList.some(c => c.id === k)) err([k], "unknown icon color \"" + k + "\" (" + Icons.colorList.map(c => c.id).join(", ") + ")")
+                else if (typeof v[k] !== "boolean") err([k], k + " must be true or false")
             }
         },
         wizard: (v, err) => {

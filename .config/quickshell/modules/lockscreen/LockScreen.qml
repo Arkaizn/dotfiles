@@ -67,8 +67,13 @@ Scope {
     readonly property bool capsLock: caps.on
     CapsLock { id: caps; active: sessionLock.locked }
 
-    // YubiKey OTP login is set up (services/Yubikey.qml, re-checked on every lock)
-    readonly property bool yubikey: Yubikey.present
+    // YubiKey login (services/Yubikey.qml, re-checked on every lock): "none", "otp"
+    // (the key types its code into the password field, system-auth checks it) or
+    // "fido2" (a touch unlocks: see `touch` below; typing still works)
+    readonly property string keyMode: Yubikey.mode
+    readonly property bool yubikey: keyMode !== "none"
+    readonly property string keyHint: keyMode === "fido2" ? "…or touch your YubiKey" : ""
+    readonly property bool emptySubmit: false
     // Session.lock() → Panels.open("lockscreen")
     readonly property var api: ({ open: () => root.lock() })
     Component.onCompleted: {
@@ -167,7 +172,8 @@ Scope {
     PamContext {
         id: pam
         configDirectory: Quickshell.shellDir + "/pam"
-        config: "password.conf"
+        // FIDO2: the password alone (system-auth would wait for a touch after a wrong one)
+        config: root.keyMode === "fido2" ? "password-only.conf" : "password.conf"
 
         // last info/error text from PAM (e.g. pam_faillock's "account is locked")
         property string lastMessage: ""
@@ -177,18 +183,48 @@ Scope {
 
         onCompleted: result => {
             root.checking = false
-            if (result === PamResult.Success) {
-                root.status = ""
-                root.unlocking = true
-                unlockTimer.restart()
-            } else {
-                root.fail(AuthText.failure(lastMessage, result === PamResult.MaxTries))
-            }
+            if (root.unlocking) return                  // the key was faster
+            if (result === PamResult.Success) root.unlockNow()
+            else root.fail(AuthText.failure(lastMessage, result === PamResult.MaxTries))
         }
         onError: error => {
             root.checking = false
-            root.fail(AuthText.error())
+            if (!root.unlocking) root.fail(AuthText.error())
         }
+    }
+
+    // FIDO2: a second PAM conversation (pam/u2f.conf) that only waits for a touch of
+    // a linked key, from the moment it locks, next to the typed password. Whichever
+    // succeeds first unlocks; the other one is stopped. No key plugged in: it fails
+    // at once; plugged in but not touched: when the key times out (~15-30 s). Either
+    // way it's started again after a pause while it's locked (no faillock in u2f.conf,
+    // so these don't count as failed logins). The key blinks while it waits.
+    readonly property bool touchWanted: sessionLock.locked && keyMode === "fido2" && !unlocking
+    onTouchWantedChanged: {
+        if (touchWanted) { if (!touch.active) touch.start() }
+        else { touchRetry.stop(); if (touch.active) touch.abort() }
+    }
+    Timer { id: touchRetry; interval: 1500; onTriggered: if (root.touchWanted && !touch.active) touch.start() }
+    PamContext {
+        id: touch
+        configDirectory: Quickshell.shellDir + "/pam"
+        config: "u2f.conf"
+        // pam_u2f doesn't ask anything (no cue here); answer empty if it ever does
+        onResponseRequiredChanged: if (responseRequired) respond("")
+        onCompleted: result => {
+            if (result === PamResult.Success && root.touchWanted) {
+                if (pam.active) pam.abort()
+                root.checking = false
+                root.unlockNow()
+            } else if (root.touchWanted) touchRetry.restart()
+        }
+        onError: error => { if (root.touchWanted) touchRetry.restart() }
+    }
+
+    function unlockNow() {
+        status = ""
+        unlocking = true
+        unlockTimer.restart()
     }
 
     function fail(msg) {

@@ -4,7 +4,8 @@ import qs.components
 import qs.services
 
 // Button with icon + text in the ButtonBackground style.
-// `primary` keeps the highlighted look (the main action of a bar).
+// `primary` keeps the highlighted look (the main action of a bar). A trash /
+// archive / star / junk icon gets its color (Icons.tint).
 Item {
     id: root
 
@@ -38,7 +39,7 @@ Item {
         Text {
             visible: root.icon !== ""
             text: root.icon
-            color: root.primary ? Colors.color6 : root.textColor
+            color: root.primary ? Colors.color6 : Icons.tint(root.icon, root.textColor)
             font.pixelSize: 14
             font.family: Properties.fontFamily
         }

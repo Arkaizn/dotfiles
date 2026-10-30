@@ -92,6 +92,44 @@ Singleton {
     readonly property var groups: [...new Set(list.map(i => i.group))]
 
     function get(id) { return Settings.icons[id] || defaults[id] || "" }
+
+    // ── Colored icons ──
+    // Some icons get the color of what they do, all over the shell (IconButton,
+    // ActionButton, the mail app): trash red, archive blue, star yellow, junk
+    // orange. Each color can be turned off (Shell → Icons); a button that sets
+    // its own textColor keeps it.
+    // Settings.iconColors: { "<id>": false }   (only the turned-off ones)
+    //   textColor: Icons.tint(icon, Properties.color)
+    readonly property var colorList: [
+        { id: "delete", label: "Delete", desc: "Trash cans: delete, remove, forget", color: "red", glyph: "󰆴",
+          codes: [0xF01B4, 0xF01B3, 0xF05E8, 0xF05E9, 0xF0683, 0xF06CC, 0xF09E7, 0xF0A79, 0xF0A7A, 0xF0B88, 0xF0B89, 0xF0C62, 0xF0E9D] },
+        { id: "archive", label: "Archive", desc: "Archive (mail, …)", color: "blue", glyph: "󰀼",
+          codes: [0xF003C, 0xF120E, 0xF1259, 0xF125A] },
+        { id: "star", label: "Star", desc: "Starred / favorite, filled or outline", color: "yellow", glyph: "󰓎",
+          codes: [0xF04CE, 0xF04D2, 0xF0246, 0xF04D0, 0xF04CF, 0xF09A4] },
+        { id: "junk", label: "Junk", desc: "Junk / spam (mail)", color: "orange", glyph: "󰀩",
+          codes: [0xF0029, 0xF0CE6] }
+    ]
+    readonly property var colorByCode: {
+        const m = {}
+        for (const c of colorList) for (const code of c.codes) m[code] = c.id
+        return m
+    }
+    function colorOn(id) { return Settings.iconColors[id] !== false }
+    function setColorOn(id, on) {
+        if (on) Settings.reset("iconColors", id)
+        else Settings.set("iconColors", id, false)
+    }
+    function colorOf(id) {
+        return id === "delete" ? Colors.red : id === "archive" ? Colors.blue
+             : id === "star" ? Colors.yellow : id === "junk" ? Colors.orange : Colors.ink
+    }
+    // the color for a single glyph, else `fallback` (not one of them, or turned off)
+    function tint(glyph, fallback) {
+        const g = String(glyph ?? "")
+        const id = g.length > 0 && g.length <= 2 ? colorByCode[g.codePointAt(0)] : undefined
+        return id && colorOn(id) ? colorOf(id) : fallback
+    }
     function set(id, glyph) {
         if (!glyph || glyph === defaults[id]) Settings.reset("icons", id)
         else Settings.set("icons", id, glyph)

@@ -65,6 +65,7 @@ Singleton {
         const c = [
             { id: "bins", group: "Programs", title: "Required programs" },
             { id: "optbins", group: "Programs", title: "Optional programs" },
+            { id: "notifications", group: "Services", title: "Notifications (who receives them)" },
             { id: "polkit", group: "Services", title: "Polkit agent" },
             { id: "keyring", group: "Services", title: "Keyring (Secret Service)" },
             { id: "cliphist", group: "Services", title: "Clipboard watcher" },
@@ -112,16 +113,54 @@ Singleton {
             })
             break
         }
+        case "notifications":
+            // org.freedesktop.Notifications: the shell's server (services/Notifs.qml) or another daemon
+            // (swaync, mako, dunst, a desktop's) — then popups / the notification center stay empty.
+            // Also: daemons D-Bus can start by itself when nobody holds the name (at login, before the shell)
+            Jobs.run(["sh", "-c", 'echo "self=$PPID"; pid=$(busctl --user status org.freedesktop.Notifications 2>/dev/null | sed -n "s/^PID=//p"); ' +
+                      'echo "pid=$pid"; [ -n "$pid" ] || exit 0; echo "comm=$(cat /proc/$pid/comm 2>/dev/null)"; ' +
+                      'echo "cmd=$(tr "\\0" " " < /proc/$pid/cmdline 2>/dev/null)"; ' +
+                      'echo "unit=$(systemctl --user status "$pid" 2>/dev/null | head -1 | sed -E "s/^[^a-zA-Z0-9]*([^ ]+).*/\\1/")"; ' +
+                      'for f in /usr/share/dbus-1/services/*.service "$HOME"/.local/share/dbus-1/services/*.service; do ' +
+                      '  [ -f "$f" ] && grep -q "^Name=org.freedesktop.Notifications" "$f" && ! grep -q "^Exec=/bin/false" "$f" && echo "act=$f"; done; true'],
+                     (code, out) => {
+                const v = k => (new RegExp("^" + k + "=(.*)$", "m").exec(out)?.[1] ?? "").trim()
+                const acts = out.split("\n").filter(l => l.startsWith("act=")).map(l => l.slice(4))
+                // only what isn't hidden by a same-named file in ~/.local/share (that one wins)
+                const local = acts.filter(f => f.startsWith(home)).map(f => f.split("/").pop())
+                const others = acts.filter(f => f.startsWith(home) || !local.includes(f.split("/").pop()))
+                const hide = f => { const n = f.split("/").pop(); return "mkdir -p ~/.local/share/dbus-1/services && printf '[D-BUS Service]\\nName=org.freedesktop.Notifications\\nExec=/bin/false\\n' > ~/.local/share/dbus-1/services/" + n }
+                const pid = v("pid"), comm = v("comm"), unit = v("unit")
+                if (!pid) return done("error", "nobody receives notifications: the shell's server isn't registered", "restart the shell (qs kill; then start qs again)")
+                const mine = pid === v("self")
+                const extra = others.length ? " · also installed and D-Bus-startable: " + others.map(f => f.split("/").pop().replace(/\.service$/, "")).join(", ")
+                                              + " (could take over if one starts before the shell)" : ""
+                if (mine) return done("ok", "received by this shell (popups, notification center)" + extra)
+                if (comm === "qs" || comm === "quickshell")
+                    return done("warn", "another Quickshell instance (pid " + pid + ") holds them, not this one", "close the other instance (qs list; qs kill -i …)")
+                const fixes = []
+                if (unit.endsWith(".service") && !/^(niri|greetd|hyprland|sway)/i.test(unit))
+                    fixes.push("systemctl --user disable --now " + unit + " && systemctl --user mask " + unit)
+                for (const f of others) fixes.push(hide(f))
+                fixes.push("remove " + comm + " from your autostart (niri spawn-at-startup / exec-once) or uninstall it, then restart the shell")
+                done("error", "taken by " + (comm || "another program") + " (pid " + pid + (unit ? ", " + unit : "") + "): notifications go there — "
+                              + "the shell's popups and notification center get none" + (others.length ? " · D-Bus-startable: "
+                              + others.map(f => f.split("/").pop().replace(/\.service$/, "")).join(", ") : ""),
+                     fixes.join("   ·   "))
+            })
+            break
         case "polkit":
             if (polkitAgent) done("ok", "the shell's agent is registered")
             else done("error", "no polkit agent: password prompts (hosts file, global DNS, apps) fail silently",
                       "the shell registers one (modules/polkit): restart it, or check that no other agent blocks it")
             break
         case "keyring":
-            Jobs.run(["busctl", "--user", "status", "org.freedesktop.secrets"], code =>
-                code === 0 ? done("ok", "org.freedesktop.secrets is available")
+            Jobs.run(["busctl", "--user", "status", "org.freedesktop.secrets"], (code, out) => {
+                const comm = /^Comm=(.*)$/m.exec(out)?.[1] ?? ""
+                code === 0 ? done("ok", "provided by " + (comm || "a Secret Service") + " (calendar / connection passwords)")
                            : done("error", "no Secret Service on the session bus (calendar / connection passwords can't be stored)",
-                                  "sudo pacman -S gnome-keyring"))
+                                  "sudo pacman -S gnome-keyring")
+            })
             break
         case "cliphist":
             Jobs.run(Clipboard.watcherPids, (code, out) =>
@@ -201,16 +240,29 @@ Singleton {
             }, { HYPRLAND_NO_SD_VARS: "1", HYPRLAND_NO_SD_NOTIFY: "1" })
             break
         case "greeter": {
-            // its code = this config's greeter/, its theme copy written, the font readable for the greeter user
-            const installed = Files.read("/usr/local/share/quickshell-greeter/shell/VERSION").trim()
-            Jobs.run(["sh", "-c", 'bash "$1/greeter/build.sh" "${XDG_RUNTIME_DIR:-/tmp}/quickshell-greeter-check"; ' +
-                      'fc-list -f "%{file}\\n" "$2" | grep -c "^/usr/" || true', "sh", Quickshell.shellDir, Properties.fontFamily], (code, out) => {
-                const [built, sysFonts] = out.trim().split("\n")
+            // its code = this config's greeter/ (comment-only changes don't count), its theme copy
+            // written, the font readable for the greeter user
+            Jobs.run(["sh", "-c", 'out="${XDG_RUNTIME_DIR:-/tmp}/quickshell-greeter-check"; inst=/usr/local/share/quickshell-greeter/shell; ' +
+                      'bash "$1/greeter/build.sh" "$out" || exit 1; cat "$inst/VERSION" 2>/dev/null || echo; ' +
+                      'fc-list -f "%{file}\\n" "$2" | grep -c "^/usr/" || true; ' +
+                      'strip() { sed -E "/^[[:space:]]*(\\/\\/|#)/d; /^[[:space:]]*$/d; s/[[:space:]]+$//" "$1"; }; ' +
+                      'cd "$out" && find . -type f ! -name VERSION | sort | while read -r f; do cmp -s "$f" "$inst/$f" && continue; ' +
+                      '  if [ -f "$inst/$f" ] && [ "$(strip "$f")" = "$(strip "$inst/$f")" ]; then echo "C ${f#./}"; else echo "D ${f#./}"; fi; done',
+                      "sh", Quickshell.shellDir, Properties.fontFamily], (code, out) => {
+                const lines = out.trim().split("\n")
+                const [built, installed, sysFonts] = lines
+                root.greeterSeen = installed ?? ""
+                const changed = lines.slice(3).filter(l => l.startsWith("D ")).map(l => l.slice(2))
+                const comments = lines.slice(3).filter(l => l.startsWith("C ")).length
                 const probs = []
-                if (built && built !== installed) probs.push("the installed login screen (" + installed + ") is older than greeter/ (" + built + ")")
+                if (code !== 0) probs.push("greeter/build.sh failed")
+                else if (changed.length > 0)
+                    probs.push("the installed login screen (" + installed + ") is older than greeter/ (" + built + "): " + changed.length
+                               + (changed.length === 1 ? " file changed since: " : " files changed since: ") + changed.slice(0, 4).join(", ")
+                               + (changed.length > 4 ? " …" : ""))
                 if (GreeterSync.status !== "up to date" && GreeterSync.status !== "off") probs.push("theme copy: " + GreeterSync.status)
                 if (Number(sysFonts) === 0) probs.push("the font \"" + Properties.fontFamily + "\" isn't installed system-wide (the login screen falls back to another one)")
-                probs.length === 0 ? done("ok", "code " + installed + ", theme copy up to date")
+                probs.length === 0 ? done("ok", "code " + installed + (comments > 0 ? " (greeter/ differs only in comments)" : "") + ", theme copy up to date")
                                    : done("warn", probs.join("; ") + " (Settings → Login screen → Install / update, or the command)", "sudo ~/.config/quickshell/greeter/install.sh")
             })
             break
@@ -221,6 +273,18 @@ Singleton {
     }
 
     signal finished()
+
+    // the greeter check's installed version: while it warns, a new install (install.sh in a
+    // terminal) is noticed and the check runs again by itself
+    property string greeterSeen: ""
+    Timer {
+        interval: 10000
+        repeat: true
+        running: root.results.some(r => r.id === "greeter" && r.status === "warn")
+        onTriggered: Jobs.run(["cat", "/usr/local/share/quickshell-greeter/shell/VERSION"], (code, out) => {
+            if (code === 0 && out.trim() !== root.greeterSeen) root.runOne("greeter")
+        })
+    }
 
     function summary() {
         if (results.length === 0) return "not run yet"

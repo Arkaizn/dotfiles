@@ -364,7 +364,7 @@ Item {
                 spacing: 10
                 Text {
                     Layout.alignment: Qt.AlignHCenter
-                    text: root.error ? I.junk : I.clip
+                    text: root.error ? I.alert : I.clip
                     color: root.error ? Colors.red : Colors.fade(0.25)
                     font.pixelSize: 40
                     font.family: Properties.fontFamily

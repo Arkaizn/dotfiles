@@ -41,6 +41,8 @@ LockStage {
         anchors.bottomMargin: media.visible ? 28 : 70
         show: root.show.hint
         auth: root.auth
+        // FIDO2: a touch unlocks right from here (LockScreen's `touch`)
+        text: root.lock.keyMode === "fido2" ? "Press any key or touch your YubiKey" : "Press any key to unlock"
     }
 
     AuthCard {

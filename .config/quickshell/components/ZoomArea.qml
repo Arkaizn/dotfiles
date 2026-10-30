@@ -24,21 +24,34 @@ Item {
         scale: root.zoom
         transformOrigin: Item.TopLeft
 
-        // Ctrl + wheel: above everything, lets every other wheel through
-        MouseArea {
+        // Ctrl + wheel: above everything, lets every other wheel through. A plain Item with
+        // a WheelHandler, not a MouseArea: every MouseArea has a cursor (the arrow, even
+        // without cursorShape), and one over the whole window was the cursor everywhere —
+        // no pointing hand on buttons, no text cursor in fields. Over a wheelExcept item it
+        // isn't "there" (containmentMask), so that one gets the wheel.
+        Item {
+            id: wheelLayer
             z: 1000000
             anchors.fill: parent
-            acceptedButtons: Qt.NoButton
-            property real acc: 0
-            onWheel: wheel => {
-                if (!(wheel.modifiers & Qt.ControlModifier)) { wheel.accepted = false; return }
-                for (const it of root.wheelExcept) {
-                    if (!it || !it.visible) continue
-                    const p = mapToItem(it, wheel.x, wheel.y)
-                    if (p.x >= 0 && p.y >= 0 && p.x < it.width && p.y < it.height) { wheel.accepted = false; return }
+            containmentMask: QtObject {
+                function contains(point: point): bool {
+                    for (const it of root.wheelExcept) {
+                        if (!it || !it.visible) continue
+                        const p = wheelLayer.mapToItem(it, point.x, point.y)
+                        if (p.x >= 0 && p.y >= 0 && p.x < it.width && p.y < it.height) return false
+                    }
+                    return true
                 }
-                acc += wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.pixelDelta.y * 4
-                if (Math.abs(acc) >= 120) { root.step(acc > 0 ? 1 : -1); acc = 0 }
+            }
+            WheelHandler {
+                target: null
+                acceptedModifiers: Qt.ControlModifier
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                property real acc: 0
+                onWheel: event => {
+                    acc += event.angleDelta.y !== 0 ? event.angleDelta.y : event.pixelDelta.y * 4
+                    if (Math.abs(acc) >= 120) { root.step(acc > 0 ? 1 : -1); acc = 0 }
+                }
             }
         }
     }

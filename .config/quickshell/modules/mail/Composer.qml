@@ -97,7 +97,9 @@ Modal {
     }
 
     function accountFor(m) {
-        return MailStore.accountMap[m.account]?.enabled !== false ? m.account : defaultAccount()
+        // (an .eml opened from disk has no account: the default one)
+        const a = MailStore.accountMap[m.account]
+        return a && a.enabled !== false ? m.account : defaultAccount()
     }
 
     function reply(m, all) {

@@ -19,10 +19,13 @@ import "defaultapps"
 import "clipboard"
 import "diagnostics"
 import "keys"
+import "yubikey"
 import "updates"
 import "profiles"
 import "maintenance"
 import "icons"
+import "../mail"
+import "../calendar"
 import "SettingsSearch.js" as SI
 
 // Settings app: a normal (floating) window to change the Properties.qml
@@ -100,7 +103,27 @@ Scope {
     property string flashKey: ""           // "store.key" of a setting to scroll to and flash
     readonly property string wm: Compositor.isHyprland ? "hyprland" : "niri"
     readonly property string wmGroup: Compositor.isHyprland ? "Hyprland" : "Niri"
-    readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm)
+    readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm).concat(appSubPages)
+    // the mail / calendar apps' own settings pages (MailSettingsPages, CalendarSettingsPages):
+    // sub-pages of Mail / Calendar, listed under them in the sidebar while one of them is open.
+    // action entries (Add account) are buttons that open the app
+    readonly property var appSubPages: [["mail", MailStore.settingsPages], ["calendar", CalendarStore.settingsPages]]
+        .reduce((all, [app, list]) => all.concat(list.map(sp => ({
+            id: app + "/" + sp.id, group: "Apps", parent: app, subnav: true, custom: sp.action ? "" : "appSettings",
+            app: app, sub: sp.id, action: !!sp.action, icon: sp.color ? "󰄯" : sp.icon ?? "", tint: sp.color ?? "",
+            title: sp.label, desc: sp.heading ?? "", keywords: app + (sp.id.startsWith("acc:") ? " account" : "")
+        }))), [])
+    function subPagesOf(id) { return appSubPages.filter(p => p.parent === id) }
+    // the sidebar's pages top to bottom, sub-pages under theirs (which way a page comes in)
+    readonly property var navOrder: {
+        const out = []
+        for (const g of ["Shell", "System", "Apps", wmGroup, "Developer"])
+            for (const p of visiblePages.filter(p => p.group === g && !p.parent && p.nav !== false)) {
+                out.push(p.id)
+                for (const s of subPagesOf(p.id)) out.push(s.id)
+            }
+        return out
+    }
 
     readonly property var pages: [
         { id: "profile", group: "Shell", icon: "󰀄", title: "Profile", custom: "profile",
@@ -244,6 +267,9 @@ Scope {
         { id: "power", group: "System", icon: "󰓅", title: "Power", custom: "power",
           keywords: "power profile performance balanced saver battery energy powerprofilesctl",
           desc: "Power profiles" },
+        { id: "yubikey", group: "System", icon: "󰌋", title: "YubiKey", custom: "yubikey",
+          keywords: "yubikey security key fido2 u2f otp pam login sudo lockscreen touch 2fa hardware key pam_u2f pam_yubico",
+          desc: "Log in, unlock and sudo with a YubiKey (FIDO2 or OTP), next to the password" },
         { id: "updates", group: "Maintenance", parent: "maintenance", icon: "󰚰", title: "Updates", custom: "updates",
           keywords: "updates upgrade pacman yay aur checkupdates pacnew reboot kernel arch news",
           desc: "Pending updates, reboot needed, Arch news, .pacnew files" },
@@ -409,8 +435,8 @@ Scope {
                   desc: "When a message has both" },
                 { key: "remoteContent", type: "bool", def: false, label: "Load remote content",
                   desc: "Images from the web in every message — they can tell the sender you opened it. Embedded images always show; senders can be allowed one by one in a message" },
-                { key: "style", type: "choice", def: "original", options: ["original", "dark"], label: "Message style",
-                  desc: "original: the sender's colors on a light page · dark: the theme's colors (like Thunderbird's dark mode)" },
+                { key: "style", type: "choice", def: "dark", options: ["original", "dark"], label: "Message style",
+                  desc: "dark: forced dark mode, like Dark Reader — light backgrounds turn dark, dark text light, the colors' hues stay · original: the sender's colors on a light page" },
                 { key: "solid", type: "bool", def: false, label: "Solid background", desc: "No transparency behind the mail window" },
                 { key: "inlineAttachments", type: "bool", def: true, label: "Show image attachments inline",
                   desc: "Under the message; PDFs, images and text open in the built-in viewer" },
@@ -595,6 +621,7 @@ Scope {
         { page: "panelEditor", label: "Launcher size per view", desc: "Apps, clipboard, connections, wallpapers, keybinds", keywords: "launcher resize width height apps clipboard wallpapers keybinds connections", icon: "󰀻" },
         { page: "theme", label: "Light / dark from the wallpaper", desc: "Bright wallpaper → light mode, dark wallpaper → dark mode", keywords: "auto automatic light dark mode wallpaper brightness follow switch", icon: "󰸉" },
         { page: "theme", label: "Save the current colors", keywords: "save theme scheme palette", icon: "󰆓" },
+        { page: "icons", label: "Colored icons", desc: "Trash red, archive blue, star yellow, junk orange — each on / off", keywords: "icon color colour colored tint red blue yellow orange delete trash archive star junk spam", icon: "󰏘" },
         { page: "theme", label: "pywal built-in themes", keywords: "base16 gruvbox nord dracula solarized monokai", icon: "󰏘" },
         { page: "audio", label: "Default audio output", keywords: "speaker headphones sink default device", icon: "󰓃" },
         { page: "audio", label: "Microphone", keywords: "mic input source", icon: "󰍬" },
@@ -624,6 +651,9 @@ Scope {
         { page: "keys", label: "Remove a changed host key", keywords: "known_hosts host identification changed ssh-keygen -R", icon: "󰣀" },
         { page: "keys", label: "New SSH key", keywords: "ssh-keygen generate ed25519", icon: "󰐕" },
         { page: "keys", label: "GPG keys", keywords: "gpg pgp sign expire", icon: "󰌆" },
+        { page: "yubikey", label: "Set up YubiKey login", desc: "FIDO2 (touch) or OTP, in a terminal", keywords: "yubikey setup fido2 u2f otp pam login sudo unlock touch", icon: "󰌋" },
+        { page: "yubikey", label: "Add another YubiKey", desc: "A spare key for the same login", keywords: "yubikey second spare backup key add link", icon: "󰌋" },
+        { page: "yubikey", label: "Turn off YubiKey login", desc: "Back to password only", keywords: "yubikey disable remove password only restore backup pam", icon: "󰌋" },
         { page: "updates", label: "Check for updates", keywords: "pacman yay aur upgrade", icon: "󰚰" },
         { page: "updates", label: ".pacnew files", keywords: "pacdiff pacnew pacsave etc config merge", icon: "󰈙" },
         { page: "profiles", label: "Save settings as a profile", keywords: "profile preset snapshot", icon: "󰆓" },
@@ -765,22 +795,6 @@ Scope {
             readonly property string suggestion: query.trim() !== "" && results.length === 0 ? SI.suggest(query, root.searchVocabulary) : ""
             onQueryChanged: { selected = 0; flick.contentY = 0 }
 
-            // a page's parts come in one after another (StaggerIn): the cards
-            // of a custom page, or the sections of a settings page
-            StaggerIn { id: pageEnter }
-            function animatePage() {
-                if (query.trim() !== "") return
-                const parts = []
-                for (const c of content.children) {
-                    if (!c.visible) continue
-                    if (c.sourceComponent !== undefined) {           // a page's Loader
-                        if (c.item && !c.item.ownEntrance) for (const x of c.item.children) parts.push(x)
-                    } else parts.push(c)
-                }
-                pageEnter.run(parts)
-            }
-            onPageIdChanged: Qt.callLater(animatePage)
-
             // go to a result
             function openEntry(e) {
                 if (!e) return
@@ -804,7 +818,7 @@ Scope {
                 onActivated: { searchField.forceActiveFocus(); searchField.selectAll() }
             }
 
-            Component.onCompleted: { Compositor.settings.refresh(); Network.refresh(); Qt.callLater(animatePage) }
+            Component.onCompleted: { Compositor.settings.refresh(); Network.refresh() }
 
             // Ctrl +/−/0, Ctrl + wheel: the whole window bigger or smaller (AppZoom)
             ZoomArea {
@@ -905,6 +919,42 @@ Scope {
                                     boundsBehavior: Flickable.StopAtBounds
                                     SmoothWheel { flick: navFlick; step: 100 }
 
+                                    // the open page's highlight: one, sliding from item to item (a small
+                                    // squash on the way), like the mail / calendar settings. The NavItems
+                                    // point it at themselves when they're selected.
+                                    Rectangle {
+                                        id: navGlow
+                                        property Item target: null
+                                        readonly property bool on: target !== null && target.selected
+                                        // where the target sits: its x / y and every parent's up to the list, so
+                                        // it follows each layout change (sub-pages folding, the list rebuilt);
+                                        // transforms left out (a sub-page's fold-in shift)
+                                        readonly property point at: {
+                                            let x = 0, y = 0
+                                            for (let it = target; it && it !== navFlick.contentItem; it = it.parent) { x += it.x; y += it.y }
+                                            return Qt.point(x, y)
+                                        }
+                                        x: at.x
+                                        y: at.y
+                                        width: target?.width ?? 0
+                                        height: target?.height ?? 0
+                                        radius: Properties.radius + 2
+                                        border.width: 1.5
+                                        border.color: Colors.fade(0.24)
+                                        gradient: ButtonGradient { hovered: true }
+                                        opacity: on ? 1 : 0
+                                        scale: travel.running ? 0.97 : 1
+                                        onTargetChanged: if (opacity > 0) travel.restart()
+                                        Timer { id: travel; interval: 180 }
+                                        readonly property bool slides: opacity > 0
+                                        Behavior on x { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+                                        Behavior on y { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+                                        Behavior on width { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+                                        Behavior on height { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
+                                        Behavior on opacity { NumberAnimation { duration: 160 } }
+                                        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                                    }
+
                                     ColumnLayout {
                                         id: nav
                                         x: 4
@@ -934,15 +984,74 @@ Scope {
 
                                                 Repeater {
                                                     model: root.visiblePages.filter(p => p.group === group.modelData && !p.parent && p.nav !== false)
-                                                    NavItem {
+                                                    ColumnLayout {
+                                                        id: navEntry
                                                         required property var modelData
+                                                        readonly property var subs: root.subPagesOf(modelData.id)
+                                                        // its sub-pages fold out while it or one of them is open
+                                                        readonly property bool expanded: subs.length > 0 && win.query === ""
+                                                            && (win.pageId === modelData.id || win.page.parent === modelData.id)
                                                         Layout.fillWidth: true
-                                                        icon: modelData.icon
-                                                        label: modelData.title
-                                                        selected: win.query === "" && (win.pageId === modelData.id || win.page.parent === modelData.id)
-                                                        changes: modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(modelData)
-                                                            .filter(k => Settings[modelData.store]?.[k] !== undefined).length
-                                                        onClicked: { root.pageId = modelData.id; flick.contentY = 0 }
+                                                        spacing: 3
+                                                        NavItem {
+                                                            id: hubItem
+                                                            Layout.fillWidth: true
+                                                            slideHighlight: true
+                                                            onSelectedChanged: if (selected) navGlow.target = hubItem
+                                                            Component.onCompleted: if (selected) navGlow.target = hubItem
+                                                            icon: navEntry.modelData.icon
+                                                            label: navEntry.modelData.title
+                                                            arrow: navEntry.subs.length > 0 ? (navEntry.expanded ? 1 : 0) : -1
+                                                            selected: win.query === "" && (win.pageId === navEntry.modelData.id
+                                                                || win.page.parent === navEntry.modelData.id && !win.page.subnav)
+                                                            changes: navEntry.modelData.custom === "monitors" ? Object.keys(Settings.monitors).length : root.pageKeys(navEntry.modelData)
+                                                                .filter(k => Settings[navEntry.modelData.store]?.[k] !== undefined).length
+                                                            onClicked: { root.pageId = navEntry.modelData.id; flick.contentY = 0 }
+                                                        }
+                                                        // the sub-pages: fold out (height + one after another)
+                                                        Item {
+                                                            Layout.fillWidth: true
+                                                            implicitHeight: navEntry.expanded ? subCol.implicitHeight : 0
+                                                            visible: implicitHeight > 0
+                                                            clip: true
+                                                            Behavior on implicitHeight { NumberAnimation { duration: 320; easing.type: Easing.OutQuint } }
+                                                            // a thin line along them, left of their highlight
+                                                            Rectangle { x: 6; y: 2; width: 1.5; height: parent.height - 4; radius: 1; color: Colors.fade(0.1) }
+                                                            ColumnLayout {
+                                                                id: subCol
+                                                                x: 14
+                                                                width: parent.width - 14
+                                                                spacing: 2
+                                                                Repeater {
+                                                                    model: navEntry.subs
+                                                                    NavItem {
+                                                                        id: subItem
+                                                                        required property var modelData
+                                                                        required property int index
+                                                                        Layout.fillWidth: true
+                                                                        implicitHeight: Properties.buttonHeight - 2
+                                                                        small: true
+                                                                        slideHighlight: true
+                                                                        onSelectedChanged: if (selected) navGlow.target = subItem
+                                                                        Component.onCompleted: if (selected) navGlow.target = subItem
+                                                                        icon: modelData.icon
+                                                                        tint: modelData.tint
+                                                                        label: modelData.title
+                                                                        dim: modelData.action
+                                                                        selected: win.query === "" && win.pageId === modelData.id
+                                                                        onClicked: {
+                                                                            if (modelData.action) { Panels.call(modelData.app, "addAccount"); return }
+                                                                            root.pageId = modelData.id; flick.contentY = 0
+                                                                        }
+                                                                        // in one after another when they fold out
+                                                                        opacity: navEntry.expanded ? 1 : 0
+                                                                        transform: Translate { x: navEntry.expanded ? 0 : -10
+                                                                            Behavior on x { NumberAnimation { duration: 260 + subItem.index * 30; easing.type: Easing.OutCubic } } }
+                                                                        Behavior on opacity { NumberAnimation { duration: 200 + subItem.index * 30; easing.type: Easing.OutCubic } }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -981,15 +1090,17 @@ Scope {
                                     spacing: 8
 
                                     IconButton {
-                                        visible: win.query === "" && win.hub !== null
+                                        visible: win.query === "" && win.hub !== null && !win.page.subnav
                                         icon: "󰁍"
                                         tooltip: "Back to " + (win.hub?.title ?? "")
                                         onClicked: { root.pageId = win.hub.id; flick.contentY = 0 }
                                     }
 
                                     ColumnLayout {
+                                        id: titleBlock
                                         Layout.fillWidth: true
                                         spacing: 0
+                                        transform: Translate { id: titleShift }
                                         Text {
                                             visible: win.query === "" && win.hub !== null
                                             text: (win.hub?.title ?? "") + "  ›"
@@ -1120,6 +1231,52 @@ Scope {
                                     y: flick.pad
                                     width: flick.width - flick.pad * 2
                                     spacing: 18
+                                    transform: Translate { id: contentShift }
+
+                                    // another page: it comes in from where it is in the sidebar (a page
+                                    // further down: from below, further up: from above), like the mail /
+                                    // calendar settings; a page that isn't in the sidebar only fades in
+                                    Connections {
+                                        target: root
+                                        function onPageIdChanged() {
+                                            const i = root.navOrder.indexOf(root.pageId)
+                                            contentIn.dir = contentIn.last < 0 || i < 0 || i === contentIn.last ? 0 : i > contentIn.last ? 1 : -1
+                                            contentIn.last = i
+                                            contentIn.restart()
+                                        }
+                                    }
+                                    Component.onCompleted: contentIn.last = root.navOrder.indexOf(root.pageId)
+                                    ParallelAnimation {
+                                        id: contentIn
+                                        property int dir: 0             // 1: from below, -1: from above, 0: only fades
+                                        property int last: -1           // the page before, in the sidebar's order
+                                        NumberAnimation { target: content; property: "opacity"; from: 0; to: 1; duration: 240; easing.type: Easing.OutCubic }
+                                        NumberAnimation { target: contentShift; property: "y"; from: contentIn.dir * 26; to: 0; duration: 380; easing.type: Easing.OutQuint }
+                                        NumberAnimation { target: titleBlock; property: "opacity"; from: 0; to: 1; duration: 240; easing.type: Easing.OutCubic }
+                                        NumberAnimation { target: titleShift; property: "x"; from: contentIn.dir === 0 ? 0 : 10; to: 0; duration: 320; easing.type: Easing.OutQuint }
+                                    }
+
+                                    // a mail / calendar app settings page (the same pages as the app's settings dialog)
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "appSettings" && win.page.app === "mail"
+                                        visible: active
+                                        sourceComponent: MailSettingsPages {
+                                            page: win.page.sub ?? ""
+                                            onEditAccount: a => Panels.call("mail", "editAccount", a.id)
+                                            onTransfer: mode => Panels.call("mail", "transfer", mode)
+                                            onOpenPage: id => { root.pageId = "mail/" + id; flick.contentY = 0 }
+                                        }
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "appSettings" && win.page.app === "calendar"
+                                        visible: active
+                                        sourceComponent: CalendarSettingsPages {
+                                            page: win.page.sub ?? ""
+                                            onTransfer: mode => Panels.call("calendar", "transfer", mode)
+                                        }
+                                    }
 
                                     Loader {
                                         Layout.fillWidth: true
@@ -1272,6 +1429,12 @@ Scope {
                                         active: win.query === "" && win.page.custom === "keys"
                                         visible: active
                                         sourceComponent: KeysPage {}
+                                    }
+                                    Loader {
+                                        Layout.fillWidth: true
+                                        active: win.query === "" && win.page.custom === "yubikey"
+                                        visible: active
+                                        sourceComponent: YubikeyPage {}
                                     }
                                     Loader {
                                         Layout.fillWidth: true

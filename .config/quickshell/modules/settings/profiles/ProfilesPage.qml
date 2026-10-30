@@ -130,7 +130,7 @@ ColumnLayout {
                     }
                     IconButton {
                         icon: page.confirmDelete === p.name ? "󰄬" : "󰆴"
-                        textColor: page.confirmDelete === p.name ? Colors.red : Properties.color
+                        textColor: page.confirmDelete === p.name ? Colors.red : Icons.tint(icon, Properties.color)
                         tooltip: page.confirmDelete === p.name ? "Click again to delete" : "Delete"
                         onClicked: {
                             if (deleteArm.confirm(p.name)) SettingsProfiles.remove(p.name)

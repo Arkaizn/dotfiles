@@ -19,6 +19,7 @@ Item {
     required property int uid
     required property string appName
     required property string appIcon
+    required property string glyph          // the shell's own senders, when there's no icon
     required property string image
     required property string summary
     required property string body
@@ -157,7 +158,7 @@ Item {
                 // Notification image (avatar, album art, …) or the app icon
                 Rectangle {
                     readonly property string src: root.image || root.appIcon
-                    visible: src !== ""
+                    visible: src !== "" || root.glyph !== ""
                     Layout.preferredWidth: 42
                     Layout.preferredHeight: 42
                     Layout.alignment: Qt.AlignTop
@@ -165,6 +166,14 @@ Item {
                     color: Colors.fade(0.13)
                     clip: true
 
+                    Text {
+                        visible: parent.src === ""
+                        anchors.centerIn: parent
+                        text: root.glyph
+                        color: Colors.color6
+                        font.pixelSize: 21
+                        font.family: Properties.fontFamily
+                    }
                     Image {
                         anchors.fill: parent
                         anchors.margins: root.image ? 0 : 6

@@ -11,7 +11,8 @@ import "../../calendar"
 // Icons page: the shell's font (a Nerd Font, from the installed ones) and every
 // named icon (services/Icons.qml). Click an icon to change it: search the
 // font's icons by name (names come from the font: scripts/nerd-glyphs.py),
-// or paste a glyph / type its code (e.g. f08c7).
+// or paste a glyph / type its code (e.g. f08c7). Above them: the colored icons
+// (trash red, archive blue, …), each on / off.
 ColumnLayout {
     id: page
     spacing: 16
@@ -75,6 +76,37 @@ ColumnLayout {
                 options: page.nerdFonts.map(f => ({ label: f, value: f }))
                 value: Properties.fontFamily
                 onEdited: v => Settings.set("properties", "fontFamily", v)
+            }
+        }
+    }
+
+    // icons colored by what they do (Icons.colorList), each one on / off
+    NetCard {
+        Layout.fillWidth: true
+        title: "Colors"
+        icon: "󰏘"
+        Repeater {
+            model: Icons.colorList
+            NetRow {
+                id: colorRow
+                required property var modelData
+                required property int index
+                readonly property bool on: Icons.colorOn(modelData.id)
+                first: index === 0
+                changed: !on
+                label: modelData.label + " in color"
+                desc: modelData.desc
+                RowLayout {
+                    spacing: 12
+                    Text {
+                        text: colorRow.modelData.glyph
+                        color: colorRow.on ? Icons.colorOf(colorRow.modelData.id) : Properties.color
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                        font.pixelSize: 18
+                        font.family: Properties.fontFamily
+                    }
+                    ToggleSwitch { checked: colorRow.on; onToggled: v => Icons.setColorOn(colorRow.modelData.id, v) }
+                }
             }
         }
     }

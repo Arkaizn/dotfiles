@@ -86,7 +86,7 @@ Popup {
                             width: 16
                             horizontalAlignment: Text.AlignHCenter
                             text: entry.modelData.icon ?? ""
-                            color: entry.modelData.danger ? Colors.red : mouse.containsMouse ? Colors.color6 : Colors.fade(0.55)
+                            color: entry.modelData.danger ? Colors.red : Icons.tint(text, mouse.containsMouse ? Colors.color6 : Colors.fade(0.55))
                             font.pixelSize: 13
                             font.family: Properties.fontFamily
                         }

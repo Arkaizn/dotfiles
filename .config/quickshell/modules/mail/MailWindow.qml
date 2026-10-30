@@ -36,7 +36,7 @@ Scope {
     }
 
     // what to do once the window is there
-    property var pending: null               // { compose: to } | { mailto } | { message: id } | { settings: true | page } | { addAccount } | { transfer: mode }
+    property var pending: null               // { compose: to } | { mailto } | { message: id } | { file: path } | { settings: true | page } | { addAccount } | { editAccount: id } | { transfer: mode }
 
     readonly property var api: ({
         open: () => root.show(),
@@ -45,8 +45,10 @@ Scope {
         compose: to => { root.pending = { compose: to ?? "" }; root.show() },
         mailto: url => { root.pending = { mailto: url }; root.show() },
         showMessage: id => { root.pending = { message: id }; root.show() },
+        openFile: path => { root.pending = { file: path }; root.show() },          // an .eml from disk
         settings: page => { root.pending = { settings: page || true }; root.show() },
         addAccount: () => { root.pending = { addAccount: true }; root.show() },
+        editAccount: id => { root.pending = { editAccount: id }; root.show() },     // its servers & password
         transfer: mode => { root.pending = { transfer: mode === "import" ? "import" : "export" }; root.show() },
         importAccounts: path => { root.pending = { importFile: path }; root.show() },
         check: () => MailStore.check(true)
@@ -63,6 +65,8 @@ Scope {
         function compose(to: string): void { root.api.compose(to) }
         function mailto(url: string): void { root.api.mailto(url) }
         function showMessage(id: string): void { root.api.showMessage(id) }
+        // e.g. qs ipc call mail openFile ~/Downloads/rechnung.eml   (file managers: the .desktop entry)
+        function openFile(path: string): void { root.api.openFile(path) }
         function settings(): void { root.api.settings() }
         function unread(): string { return String(MailStore.unread) }
     }
@@ -100,6 +104,7 @@ Scope {
                 root.pending = null
                 if (p.settings) { if (typeof p.settings === "string") settingsDialog.openPage(p.settings); else settingsDialog.open() }
                 else if (p.addAccount) accountDialog.start()
+                else if (p.editAccount) { const a = MailStore.accountMap[p.editAccount]; if (a) accountDialog.edit(a) }
                 else if (p.transfer) transfer.start(p.transfer)
                 else if (p.importFile) transfer.startFile(p.importFile)
                 else if (p.compose !== undefined) composer.compose(p.compose)
@@ -109,6 +114,12 @@ Scope {
                     composer.fCc = m.cc; composer.fBcc = m.bcc; composer.showCc = !!(m.cc || m.bcc)
                     composer.fSubject = m.subject
                     if (m.body) composer.fText = m.body + composer.fText
+                } else if (p.file) {
+                    MailStore.openFile(p.file, res => {
+                        if (!res.ok) { MailStore.lastError = res.error; return }
+                        win.row = res.row
+                        list.selected = ""
+                    })
                 } else if (p.message) {
                     const m = MailStore.byId[p.message]
                     if (!m) return
@@ -407,6 +418,7 @@ Scope {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             row: win.row
+                            order: list.keys
                             onReply: (m, all) => composer.reply(m, all)
                             onForward: m => composer.forward(m)
                             onViewAttachment: (m, atts, i) => viewer.show(m, atts, i)

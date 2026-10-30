@@ -39,11 +39,18 @@ Scope {
     property string status: ""
     property bool unlocking: false
     readonly property bool capsLock: caps.on
-    readonly property bool yubikey: meta.yubikey === true
+    // the owner's YubiKey login (services/Yubikey.qml, via meta.json): greetd runs one PAM
+    // conversation (system-auth: password first, then the key), so unlike the lockscreen
+    // nothing listens for a touch on its own. FIDO2: Enter on the empty field fails the
+    // password at once, then pam_u2f waits for the touch ("Please touch the device")
+    readonly property string keyMode: !isOwner ? "none" : meta.yubikeyMode ?? (meta.yubikey === true ? "otp" : "none")
+    readonly property bool yubikey: keyMode !== "none"
+    readonly property string keyHint: keyMode === "fido2" ? "…or Enter with an empty field, then touch your YubiKey" : ""
+    readonly property bool emptySubmit: keyMode === "fido2"
 
     // what to show (Settings → Login screen; settings.json is the shell's copy)
     readonly property var show: LockItems.resolveGreeter(Settings.lockscreen, Settings.greeter)
-    // { owner, yubikey, rev } written by the shell
+    // { owner, yubikey, yubikeyMode, face } written by the shell
     readonly property var meta: { try { return JSON.parse(metaFile.text()) } catch (e) { return {} } }
     FileView { id: metaFile; path: root.dataDir + "/meta.json"; blockLoading: true; printErrors: false }
     readonly property string wallpaper: dataDir + "/wallpaper.jpg"
@@ -184,7 +191,7 @@ Scope {
         failed = false
     }
     function submit() {
-        if (checking || unlocking || password.length === 0 || !user || !session) return
+        if (checking || unlocking || (password.length === 0 && !emptySubmit) || !user || !session) return
         failed = false
         checking = true
         status = "Checking…"
@@ -224,6 +231,8 @@ Scope {
             } else if (message) {
                 root.lastMessage = message
                 if (error) root.status = message.trim()
+                // pam_u2f's cue after the (empty) password: now it waits for the touch
+                else if (/touch/i.test(message)) root.status = "Touch your YubiKey…"
             }
         }
         function onAuthFailure(message) { root.fail(AuthText.failure(root.lastMessage + "\n" + message, false)) }

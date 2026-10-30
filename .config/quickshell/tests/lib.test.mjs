@@ -636,5 +636,51 @@ test("calendar: short events keep their real length", () => {
     assert.equal(apart[1].cols, 1)
 })
 
+test("MailUtil.linkCheck: what a link says vs. where it goes", () => {
+    const html = '<a href="https://evil.example.ru/x?a=1&amp;b=2">www.paypal.com</a> <a href="https://www.paypal.com/de">PayPal</a>'
+    const texts = MU.anchorTexts(html)
+    assert.deepEqual(Object.keys(texts), ["https://evil.example.ru/x?a=1&b=2", "https://www.paypal.com/de"])
+    assert.match(MU.linkCheck("https://evil.example.ru/x?a=1&b=2", texts["https://evil.example.ru/x?a=1&b=2"]).warn, /paypal\.com.*example\.ru/)
+    assert.equal(MU.linkCheck("https://www.paypal.com/de", ["PayPal"]).warn, "")
+    assert.equal(MU.linkCheck("https://links.paypal.com/t", ["paypal.com"]).warn, "")       // same site, other host
+    assert.equal(MU.linkCheck("https://www.bbc.co.uk/news", ["bbc.co.uk"]).site, "bbc.co.uk")
+    assert.match(MU.linkCheck("https://paypal.com@evil.ru/", []).warn, /disguise/)
+    assert.match(MU.linkCheck("http://192.168.1.4/login", []).warn, /IP address/)
+    assert.match(MU.linkCheck("https://xn--pypal-4ve.com/", []).warn, /look-alike/)
+    assert.match(MU.linkCheck("javascript:alert(1)", []).warn, /javascript/)
+    assert.equal(MU.linkCheck("mailto:a@b.org", []).warn, "")
+})
+
+test("MailUtil.findDates", () => {
+    const now = new Date(2026, 9, 30, 10, 0).getTime()          // Fri 30 Oct 2026
+    const at = (y, m, d, h, mi) => new Date(y, m, d, h ?? 0, mi ?? 0).getTime()
+    let f = MU.findDates("Termin am 12.11.2026 um 14:00 Uhr im Büro", now)
+    assert.deepEqual([f[0].start, f[0].allDay], [at(2026, 10, 12, 14), false])
+    f = MU.findDates("Meeting: 3. Dezember, 9:30 – 11:00", now)
+    assert.deepEqual([f[0].start, f[0].end], [at(2026, 11, 3, 9, 30), at(2026, 11, 3, 11)])
+    f = MU.findDates("See you on November 5th at 2 pm", now)
+    assert.equal(f[0].start, at(2026, 10, 5, 14))
+    f = MU.findDates("Deadline 2026-12-01", now)
+    assert.deepEqual([f[0].start, f[0].allDay], [at(2026, 11, 1), true])
+    f = MU.findDates("Am 5.1. geht's los", now)                     // already past this year: next year
+    assert.equal(f[0].start, at(2027, 0, 5))
+    assert.equal(MU.findDates("Version 1.2.3, 12.50 CHF, gestern 01.10.2026", now).length, 0)
+    assert.equal(MU.findDates("> am 12.11.2026 um 9:00\nneu", now).length, 0)              // quoted
+    assert.equal(MU.findDates("12.11.2026 und nochmal 12.11.2026", now).length, 1)
+})
+
+test("MailUtil.linkDates: dates in the HTML become qsdate: links", () => {
+    const now = new Date(2026, 9, 30, 10, 0).getTime()
+    const s = new Date(2026, 9, 31).getTime()
+    const h = MU.linkDates('<p>Am Samstag 31.&nbsp;Oktober gibt es <b>12.11.2026 um 14:00 Uhr</b> und <a href="x">5.12.2026</a></p>', now, "color:red")
+    assert.ok(h.includes('<a href="qsdate:' + s + '-0-1" style="color:red">31.&nbsp;Oktober</a>'), h)
+    const t = new Date(2026, 10, 12, 14).getTime()
+    assert.ok(h.includes('<a href="qsdate:' + t + '-0-0" style="color:red">12.11.2026 um 14:00 Uhr</a>'), h)
+    assert.ok(h.includes('<a href="x">5.12.2026</a>'))                   // already a link: left alone
+    const d = MU.parseDateLink("qsdate:" + t + "-0-0")
+    assert.deepEqual([d.start, d.end, d.allDay], [t, 0, false])
+    assert.equal(MU.parseDateLink("https://x.org"), null)
+})
+
 console.log(passed + " passed, " + failed + " failed")
 process.exit(failed ? 1 : 0)

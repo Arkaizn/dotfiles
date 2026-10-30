@@ -15,8 +15,10 @@ Usage:  mailsync.py <command>   with the request JSON in $MAIL_REQUEST,
   sync          {accounts: [{account, folders: [{path, uidvalidity, uids}]}], limit}
                                             -> {results: [{account, folders: [...], error}]}
   body          {account, folder, uid, cache, allowRemote}
-                                            -> {text, html, attachments, headers, remoteBlocked}
+                                            -> {text, html, attachments, headers, remoteBlocked, source}
   attachment    {account, folder, uid, cache, index, dest}  -> {path}
+  save-eml      {account, folder, uid, cache, dest}         -> {path}   (the whole message as .eml)
+                body / attachment / view / save-eml also take {file, cache}: an .eml from disk
   flags         {account, folder, uids, add, remove}
   move          {account, folder, uids, to}
   delete        {account, folder, uids, trash}     (to trash, or for good when already there)
@@ -36,6 +38,7 @@ An account: {id, name, email, displayName, username, provider,
 """
 
 import base64
+import colorsys
 import email
 import email.header
 import email.policy
@@ -519,6 +522,115 @@ def preview_text(raw, part):
     return re.sub(r"\s+", " ", " ".join(lines)).strip()[:220]
 
 
+# ── Dark mode for messages (like the Dark Reader browser extension) ─────────
+# The sender's colors stay, only flipped in lightness: light backgrounds turn
+# dark, dark text turns light, the hue is kept (a blue button stays blue, a
+# link stays a link color). Plain white / light gray page backgrounds go away
+# completely, so the message sits on the app's own background. Pictures stay.
+
+COLOR_NAMES = {
+    "white": (255, 255, 255), "black": (0, 0, 0), "red": (255, 0, 0), "green": (0, 128, 0), "blue": (0, 0, 255),
+    "yellow": (255, 255, 0), "orange": (255, 165, 0), "purple": (128, 0, 128), "gray": (128, 128, 128),
+    "grey": (128, 128, 128), "silver": (192, 192, 192), "maroon": (128, 0, 0), "navy": (0, 0, 128),
+    "teal": (0, 128, 128), "olive": (128, 128, 0), "lime": (0, 255, 0), "aqua": (0, 255, 255),
+    "fuchsia": (255, 0, 255), "lightgray": (211, 211, 211), "lightgrey": (211, 211, 211),
+    "darkgray": (169, 169, 169), "darkgrey": (169, 169, 169), "dimgray": (105, 105, 105), "dimgrey": (105, 105, 105),
+    "whitesmoke": (245, 245, 245), "gainsboro": (220, 220, 220), "ghostwhite": (248, 248, 255),
+    "snow": (255, 250, 250), "ivory": (255, 255, 240), "beige": (245, 245, 220), "linen": (250, 240, 230),
+    "aliceblue": (240, 248, 255), "lightblue": (173, 216, 230), "lightyellow": (255, 255, 224),
+    "darkblue": (0, 0, 139), "darkred": (139, 0, 0), "darkgreen": (0, 100, 0),
+}
+COLOR_TOKEN = re.compile(r"#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\([^)]*\)|\b(?:" + "|".join(COLOR_NAMES) + r")\b", re.I)
+
+
+def parse_color(t):
+    """-> (r, g, b, a) with r, g, b 0..1, or None"""
+    t = t.strip().lower()
+    if t in COLOR_NAMES:
+        return tuple(x / 255 for x in COLOR_NAMES[t]) + (1.0,)
+    if t.startswith("#"):
+        h = t[1:]
+        if len(h) in (3, 4):
+            h = "".join(ch * 2 for ch in h)
+        if len(h) not in (6, 8):
+            return None
+        try:
+            v = [int(h[i:i + 2], 16) / 255 for i in range(0, len(h), 2)]
+        except ValueError:
+            return None
+        return tuple(v[:3]) + ((v[3],) if len(v) == 4 else (1.0,))
+    m = re.fullmatch(r"(rgba?|hsla?)\((.*)\)", t)
+    if not m:
+        return None
+    parts = [x for x in re.split(r"[\s,/]+", m.group(2).strip()) if x]
+    if len(parts) < 3:
+        return None
+    try:
+        def num(x, scale):
+            return float(x[:-1]) / 100 if x.endswith("%") else float(x) / scale
+        a = num(parts[3], 1) if len(parts) > 3 else 1.0
+        if m.group(1).startswith("rgb"):
+            r, g, b = (num(x, 255) for x in parts[:3])
+        else:
+            hue = float(re.sub(r"deg$", "", parts[0])) / 360 % 1
+            r, g, b = colorsys.hls_to_rgb(hue, num(parts[2], 100), num(parts[1], 100))
+    except ValueError:
+        return None
+    return tuple(min(1.0, max(0.0, x)) for x in (r, g, b, a))
+
+
+def dark_color(t, kind):
+    """kind: "text" | "bg" | "border" -> the color for a dark page; "" = drop it (a white
+    page background), None = leave it as it is (not a color: transparent, inherit …)"""
+    c = parse_color(t)
+    if c is None:
+        return None
+    h, l, s = colorsys.rgb_to_hls(*c[:3])
+    if kind == "text":
+        # dark → light (black ends at 0.9), light text stays
+        l = l if l >= 0.7 else 0.9 - l * (0.2 / 0.7)
+    else:
+        if kind == "bg" and l >= 0.92 and (s < 0.3 or l >= 0.97):
+            return ""
+        # light → dark (white ends at 0.08), dark stays; borders a bit lighter
+        l = l if l <= 0.25 else 0.25 - (l - 0.25) * (0.17 / 0.75)
+        if kind == "border":
+            l += 0.1
+        s = min(s, 0.75)
+    r, g, b = colorsys.hls_to_rgb(h, l, s)
+    if c[3] < 1:
+        return "rgba(%d,%d,%d,%.2f)" % (round(r * 255), round(g * 255), round(b * 255), c[3])
+    return "#%02x%02x%02x" % (round(r * 255), round(g * 255), round(b * 255))
+
+
+def dark_style(style):
+    """the color declarations of a style attribute turned dark"""
+    def decl(d):
+        if ":" not in d:
+            return d
+        prop, val = d.split(":", 1)
+        p = prop.strip().lower()
+        kind = ("text" if p in ("color", "text-decoration-color") else
+                "bg" if p.startswith("background") else
+                "border" if p.startswith(("border", "outline")) else None)
+        if kind is None:
+            return d
+        dropped = []
+
+        def swap(m):
+            v = dark_color(m.group(0), kind)
+            if v == "":
+                dropped.append(1)
+                return "transparent"
+            return m.group(0) if v is None else v
+        val = COLOR_TOKEN.sub(swap, val)
+        # a plain white background (just the color): gone
+        if dropped and p in ("background", "background-color") and re.fullmatch(r"\s*transparent\s*(!important)?\s*", val, re.I):
+            return ""
+        return prop + ":" + val
+    return ";".join(x for x in (decl(d) for d in style.split(";")) if x.strip())
+
+
 # ── HTML for Qt's rich text: no scripts / styles, remote content blocked ─────
 
 REMOTE = re.compile(r"^\s*(https?:)?//", re.I)
@@ -558,7 +670,7 @@ class _Sanitizer(HTMLParser):
             if m:
                 own = m.group(1)
         inherited = next((c for _, c in reversed(self.bg) if c), None)
-        if own is None and inherited and not self.adapt and tag in ("table", "td", "th"):
+        if own is None and inherited and tag in ("table", "td", "th"):
             kept = kept + [f'bgcolor="{inherited}"']
         self.bg.append([tag, own])
         return kept
@@ -587,8 +699,8 @@ class _Sanitizer(HTMLParser):
         lh = re.search(r"line-height\s*:\s*([\d.]+)px", style, re.I)
         if lh and float(lh.group(1)) < max(12.0, float(fs.group(1)) if fs else 0):
             style = re.sub(r"(^|;)\s*line-height\s*:[^;]*", r"\1", style, flags=re.I)
-        if self.adapt:      # dark style: the theme's colors, not the sender's
-            style = re.sub(r"(^|;)\s*(color|background(-color|-image)?|border(-\w+)*-color)\s*:[^;]*", r"\1", style, flags=re.I)
+        if self.adapt:      # dark mode: the sender's colors turned dark
+            style = dark_style(style)
         return style
 
     def handle_starttag(self, tag, attrs, closed=False):
@@ -611,7 +723,9 @@ class _Sanitizer(HTMLParser):
             k = (k or "").lower()
             v = v or ""
             if self.adapt and k in ("color", "bgcolor"):
-                continue
+                v = dark_color(v, "text" if k == "color" else "bg")
+                if not v:           # a white page background, or not a color
+                    continue
             if k.startswith("on") or k not in self.KEEP_ATTRS:
                 if k == "background" and REMOTE.match(v) and not self.allow_remote:
                     self.blocked += 1
@@ -797,7 +911,7 @@ def localize_images(out_html, cache):
 
 
 def sanitize_html(s, allow_remote=False, cids=None, adapt=False):
-    """-> (html, number of remote things blocked). adapt: drop the sender's colors (dark style)"""
+    """-> (html, number of remote things blocked). adapt: the sender's colors turned dark (dark mode)"""
     out = sanitize(s, allow_remote, cids, adapt)
     return out["html"], out["blocked"]
 
@@ -1309,7 +1423,26 @@ def prefetch(im, acc_id, folder, uidvalidity, sizes, cache, deadline):
                 store_raw(batch[uid], raw)
 
 
+EML_MAX = 100 * 1024 * 1024
+
+
 def raw_message(req):
+    """-> (the message's bytes, its .eml in the cache: inline images / viewed attachments go next to it)
+    req: account + folder + uid, or file: an .eml opened from disk (cached by its path, size and time)"""
+    if req.get("file"):
+        fpath = os.path.abspath(os.path.expanduser(req["file"]))
+        try:
+            st = os.stat(fpath)
+            if st.st_size > EML_MAX:
+                raise MailError(f"{os.path.basename(fpath)} is too big for a message ({st.st_size // 1048576} MB)")
+            with open(fpath, "rb") as f:
+                raw = f.read()
+        except OSError as e:
+            raise MailError(f"Can't read {os.path.basename(fpath)}: {e.strerror}")
+        d = os.path.join(os.path.expanduser(req.get("cache") or "/tmp"), "files")
+        os.makedirs(d, mode=0o700, exist_ok=True)
+        key = hashlib.sha1(f"{fpath}|{st.st_size}|{st.st_mtime_ns}".encode()).hexdigest()
+        return raw, os.path.join(d, key + ".eml")
     path = cache_path(req)
     if path and os.path.exists(path):
         with open(path, "rb") as f:
@@ -1356,6 +1489,51 @@ def part_text(part):
         return payload.decode(part.get_content_charset() or "utf-8", "replace")
 
 
+def header_time(v):
+    """a Date header -> ms since 1970 (0: none / unreadable)"""
+    try:
+        return int(email.utils.parsedate_to_datetime(str(v)).timestamp() * 1000) if v else 0
+    except Exception:
+        return 0
+
+
+def header_block(raw):
+    """the message's header lines as sent (folded lines kept), at most 64 KB"""
+    end = raw.find(b"\r\n\r\n")
+    if end < 0:
+        end = raw.find(b"\n\n")
+    head = raw[:end] if end >= 0 else raw
+    return head[:65536].decode("utf-8", "replace").replace("\r\n", "\n")
+
+
+def auth_results(msg):
+    """the receiving servers' checks (Authentication-Results; the topmost, i.e. your own
+    provider's, wins) -> {"spf": "pass", "dkim": "fail", "dmarc": "none", …}"""
+    out = {}
+    for h in msg.get_all("Authentication-Results") or []:
+        for k in ("spf", "dkim", "dmarc"):
+            m = re.search(r"\b" + k + r"\s*=\s*([a-z]+)", str(h), re.I)
+            if m and k not in out:
+                out[k] = m.group(1).lower()
+    return out
+
+
+def mime_tree(msg, depth=0, out=None):
+    """how the message is built: [{depth, type, name, size, disposition, charset}], parents first"""
+    out = [] if out is None else out
+    if len(out) >= 200:
+        return out
+    multi = msg.is_multipart()
+    out.append({"depth": depth, "type": msg.get_content_type(),
+                "name": "" if multi else decode_header(msg.get_filename()),
+                "size": 0 if multi else len(msg.get_payload(decode=True) or b""),
+                "disposition": msg.get_content_disposition() or "", "charset": msg.get_content_charset() or ""})
+    if multi:
+        for part in msg.get_payload():
+            mime_tree(part, depth + 1, out)
+    return out
+
+
 def body(req):
     raw, path = raw_message(req)
     msg = email.message_from_bytes(raw, policy=email.policy.default)
@@ -1389,11 +1567,15 @@ def body(req):
         "headers": {
             "from": addresses(msg.get("From")), "to": addresses(msg.get("To")), "cc": addresses(msg.get("Cc")),
             "replyTo": addresses(msg.get("Reply-To")), "subject": decode_header(msg.get("Subject")),
-            "date": decode_header(msg.get("Date")),
+            "date": decode_header(msg.get("Date")), "dateTs": header_time(msg.get("Date")),
             "messageId": (re.findall(r"<[^>]+>", str(msg.get("Message-ID") or "")) or [""])[0],
             "references": re.findall(r"<[^>]+>", str(msg.get("References") or "")),
             "unsubscribe": decode_header(msg.get("List-Unsubscribe")),
         },
+        # "Show headers": the header as sent, the servers' checks, the MIME parts
+        "source": {"header": header_block(raw), "auth": auth_results(msg), "parts": mime_tree(msg),
+                   "returnPath": decode_header(msg.get("Return-Path")).strip("<>"),
+                   "sender": addresses(msg.get("Sender"))},
     }
 
 
@@ -1416,14 +1598,34 @@ def attachment(req):
         raise MailError("No folder to save to")
     os.makedirs(dest, exist_ok=True)
     name = safe_name(decode_header(part.get_filename()) or f"attachment-{i + 1}")
+    path = free_path(dest, name, req.get("overwrite"))
+    with open(path, "wb") as f:
+        f.write(part.get_payload(decode=True) or b"")
+    return {"path": path}
+
+
+def free_path(dest, name, overwrite=False):
+    """dest/name, or "name (1).ext", "name (2).ext", … when taken"""
     path = os.path.join(dest, name)
     base, ext = os.path.splitext(path)
     n = 1
-    while os.path.exists(path) and not req.get("overwrite"):
+    while os.path.exists(path) and not overwrite:
         path = f"{base} ({n}){ext}"
         n += 1
+    return path
+
+
+def save_eml(req):
+    """the whole message as an .eml file (opens in any mail app) in req["dest"], named after its subject"""
+    raw, _ = raw_message(req)
+    msg = email.message_from_bytes(raw, policy=email.policy.default)
+    dest = os.path.expanduser(req.get("dest") or "")
+    if not dest:
+        raise MailError("No folder to save to")
+    os.makedirs(dest, exist_ok=True)
+    path = free_path(dest, safe_name(decode_header(msg.get("Subject")) or "message")[:120] + ".eml")
     with open(path, "wb") as f:
-        f.write(part.get_payload(decode=True) or b"")
+        f.write(raw)
     return {"path": path}
 
 
@@ -1989,7 +2191,7 @@ def invite(req):
 
 COMMANDS = {
     "autoconfig": autoconfig, "test": test_login, "folders": folders, "sync": sync, "body": body,
-    "attachment": attachment, "view": view, "export": export_accounts, "import-read": import_read,
+    "attachment": attachment, "save-eml": save_eml, "view": view, "export": export_accounts, "import-read": import_read,
     "import": import_accounts, "invite": invite, "flags": flags, "move": move, "create-folder": create_folder, "delete": delete, "search": search, "send": send,
     "store-secret": lambda r: (secret_store(r["id"], r.get("label") or "Quickshell mail", r["password"]), {})[1],
     "forget-secret": lambda r: (secret_clear(r["id"]), {})[1],

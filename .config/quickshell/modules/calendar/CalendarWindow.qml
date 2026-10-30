@@ -50,6 +50,15 @@ Scope {
         if (!root.open) root.resetView()
         root.show()
     }
+    function newEventDraft(d) {
+        if (!d || !d.start) return
+        const day = new Date(d.start); day.setHours(0, 0, 0, 0)
+        root.pendingDraft = d
+        root.pendingNew = true
+        root.jumpTo = day
+        if (!root.open) root.resetView()
+        root.show()
+    }
     // details of one event (id from CalendarStore), e.g. from the dashboard
     function showEventId(id) {
         const e = CalendarStore.visibleEvents.find(x => x.id === id)
@@ -74,6 +83,8 @@ Scope {
         close: () => root.open = false,
         openDate: date => root.goToDate(date),
         newEvent: date => root.newEventOn(date),
+        // a new event filled in: { title, start, end, allDay, location, description } (ms; e.g. a date in a mail)
+        newEventWith: draft => root.newEventDraft(draft),
         showEvent: id => root.showEventId(id),
         setView: view => root.switchView(view),
         importFile: path => root.importPath(path),
@@ -115,6 +126,7 @@ Scope {
     // jump the open (or opening) window to a day — set by openDate()
     property var jumpTo: null
     property bool pendingNew: false        // then open the editor there
+    property var pendingDraft: null        // … filled in with this (newEventDraft)
     property string pendingEvent: ""       // then show that event
     property var pendingImport: []         // then open the import dialog for these files
     property string pendingDialog: ""      // "settings[:page]" | "addAccount" | "export" | "import" | "importfile:<path>" (the settings app)
@@ -172,6 +184,7 @@ Scope {
                 if (eventDialog.shown && eventDialog.editing && (root.pendingNew || root.pendingEvent)) {
                     root.jumpTo = null
                     root.pendingNew = false
+                    root.pendingDraft = null
                     root.pendingEvent = ""
                     eventDialog.shake()
                     return
@@ -183,7 +196,13 @@ Scope {
                     else { eventDialog.close(); accountDialog.close(); importDialog.openFiles(p) }
                 }
                 if (root.jumpTo) { cursor = root.jumpTo; root.jumpTo = null }
-                if (root.pendingNew) { root.pendingNew = false; newEvent() }
+                if (root.pendingNew) {
+                    const d = root.pendingDraft
+                    root.pendingNew = false
+                    root.pendingDraft = null
+                    if (d) newEvent(new Date(d.start), d.allDay, d.end ? new Date(d.end) : null, d)
+                    else newEvent()
+                }
                 if (root.pendingEvent) {
                     const e = CalendarStore.visibleEvents.find(x => x.id === root.pendingEvent)
                     root.pendingEvent = ""
@@ -320,7 +339,7 @@ Scope {
                 })
             }
 
-            function newEvent(start, allDay, end) {
+            function newEvent(start, allDay, end, draft) {
                 if (CalendarStore.writableCalendars.length === 0) { accountDialog.start(); return }
                 if (!start) {
                     const d = new Date(cursor)
@@ -328,7 +347,7 @@ Scope {
                     d.setHours(U.sameDay(d, now) ? now.getHours() + 1 : 9, 0, 0, 0)
                     start = d
                 }
-                eventDialog.create(start, !!allDay, end)
+                eventDialog.create(start, !!allDay, end, draft)
             }
 
             readonly property string heading: {
@@ -589,6 +608,14 @@ Scope {
                                         ToolTip.visible: errHover.hovered && errs > 0
                                         ToolTip.text: CalendarStore.errors.map(e => (e.account ? e.account + ": " : "") + e.message).join("\n")
                                     }
+                                    // settings next to sync, like the mail app
+                                    IconButton {
+                                        implicitWidth: 26; implicitHeight: 26
+                                        iconSize: 12
+                                        icon: "󰒓"
+                                        tooltip: "Calendar settings"
+                                        onClicked: calSettings.open()
+                                    }
                                     IconButton {
                                         implicitWidth: 26; implicitHeight: 26
                                         iconSize: 12
@@ -712,11 +739,6 @@ Scope {
                                         onEdited: v => { win.backTo = ""; root.view = v }
                                     }
                                     Item { Layout.preferredWidth: 6 }
-                                    IconButton {
-                                        icon: "󰒓"
-                                        tooltip: "Calendar settings"
-                                        onClicked: calSettings.open()
-                                    }
                                     IconButton {
                                         icon: "󰅖"
                                         tooltip: "Close"

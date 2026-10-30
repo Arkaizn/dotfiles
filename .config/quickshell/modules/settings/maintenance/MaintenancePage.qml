@@ -17,7 +17,6 @@ ColumnLayout {
     spacing: 16
 
     property var tools: []
-    readonly property bool ownEntrance: true     // the settings window's StaggerIn leaves it alone
     signal openPage(string id)
 
     readonly property string home: Quickshell.env("HOME")

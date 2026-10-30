@@ -62,7 +62,24 @@ Singleton {
     readonly property bool threaded: Settings.mail.threads ?? true
     readonly property string saveDir: Settings.mail.saveDir ?? "~/Downloads"
     readonly property bool solid: Settings.mail.solid ?? false
-    readonly property string style: Settings.mail.style ?? "original"           // original | dark
+    readonly property string style: Settings.mail.style ?? "dark"               // original | dark (forced dark mode)
+
+    // the mail settings' pages (MailSettingsPages): the app's settings dialog lists them,
+    // the settings app shows them as sub-pages of Mail. action: a button, not a page
+    readonly property var settingsPages: [
+        { id: "new", icon: "󰂚", label: "New mail" },
+        { id: "reading", icon: "󰈈", label: "Reading" },
+        { id: "writing", icon: "󰏫", label: "Writing" },
+        { id: "actions", icon: "󰁨", label: "Actions" },
+        { id: "sidebar", icon: "󰕰", label: "Sidebar", heading: "Favorites in the sidebar" }
+    ].concat(accounts.map((a, i) => ({
+        id: "acc:" + a.id, label: accountLabel(a), heading: accountLabel(a) + "  ·  " + a.email, color: a.color || Colors.color6,
+        dim: a.enabled === false, group: i === 0 ? "Accounts" : undefined
+    }))).concat([
+        { id: "transfer", icon: "󰑓", label: "Export / import", group: accounts.length === 0 ? "Accounts" : undefined,
+          heading: "Move accounts to another device" },
+        { id: "add", icon: "󰐕", label: "Add account", action: true }
+    ])
     readonly property bool inlineAttachments: Settings.mail.inlineAttachments ?? true
     readonly property int undoSeconds: parseInt(Settings.mail.undo ?? "5") || 0
     readonly property bool attachmentReminder: Settings.mail.attachmentReminder ?? true
@@ -508,17 +525,22 @@ Singleton {
     property var bodyMemo: ({})
     property var bodyOrder: []
     function bodyKey(m, remote) {
-        return [m.account, m.folder, uvOf(m), m.uid, remote ? 1 : 0, root.style].join("|")
+        return (m.file ? ["file", m.file] : [m.account, m.folder, uvOf(m), m.uid]).concat([remote ? 1 : 0, root.style]).join("|")
+    }
+    // mailsync's request for one message: on the server (account + folder + uid), or an
+    // .eml opened from disk (m.file, see openFile); extra fields added
+    function msgReq(m, extra) {
+        const base = m.file ? { file: m.file, cache: root.bodyDir }
+            : { account: wire(root.accountMap[m.account]), folder: m.folder, uid: m.uid, uidvalidity: uvOf(m), cache: root.bodyDir }
+        return Object.assign(base, extra ?? {})
     }
     function uvOf(m) { return root.folderState[key(m.account, m.folder)]?.uidvalidity ?? 0 }
     function loadBody(m, allowRemote, done) {
-        const acc = root.accountMap[m.account]
-        if (!acc) { done({ ok: false, error: "The account is gone" }); return { cancel: () => {} } }
+        if (!m.file && !root.accountMap[m.account]) { done({ ok: false, error: "The account is gone" }); return { cancel: () => {} } }
         const remote = allowRemote || root.remoteDefault || root.remoteOk.includes((m.from?.email ?? "").toLowerCase())
         const k = bodyKey(m, remote)
         if (root.bodyMemo[k]) { done(root.bodyMemo[k]); return { cancel: () => {} } }
-        return readLane.run("body", { account: wire(acc), folder: m.folder, uid: m.uid, uidvalidity: uvOf(m), cache: root.bodyDir,
-                                      style: root.style, allowRemote: remote }, res => {
+        return readLane.run("body", msgReq(m, { style: root.style, allowRemote: remote }), res => {
             if (res.ok) {
                 const memo = Object.assign({}, root.bodyMemo)
                 memo[k] = res
@@ -538,12 +560,36 @@ Singleton {
         saveBook()
     }
 
+    // the whole message as an .eml file in the download folder: done({ ok, path | error })
+    function saveEml(m, done) {
+        readLane.run("save-eml", msgReq(m, { dest: root.saveDir }), res => { if (done) done(res) })
+    }
+
+    // an .eml file from disk (a file manager, `qs ipc call mail openFile`), shown like a
+    // message of the inbox but in no folder: done({ ok, row | error }); row as MessageList's
+    // ({ key, msgs, subject, file }). Its body is read once here and kept like any other.
+    function openFile(path, done) {
+        let p = String(path || "").trim()
+        if (p.startsWith("file://")) p = decodeURIComponent(p.slice(7))
+        if (!p) { done({ ok: false, error: "No file" }); return }
+        readLane.run("body", { file: p, cache: root.bodyDir, style: root.style, allowRemote: root.remoteDefault }, res => {
+            if (!res.ok) { done(res); return }
+            const h = res.headers ?? {}
+            const m = { id: "file:" + p, file: p, account: "", folder: "", uid: 0, seen: true, flagged: false,
+                        from: (h.from ?? [])[0] ?? { name: "", email: "" }, to: h.to ?? [], cc: h.cc ?? [], replyTo: h.replyTo ?? [],
+                        subject: h.subject ?? "", date: h.dateTs || Date.now(), messageId: h.messageId ?? "", references: h.references ?? [],
+                        preview: String(res.text ?? "").replace(/\s+/g, " ").slice(0, 160) }
+            const memo = Object.assign({}, root.bodyMemo)
+            memo[bodyKey(m, root.remoteDefault)] = res
+            root.bodyMemo = memo
+            done({ ok: true, row: { key: m.id, msgs: [m], last: m, subject: m.subject, file: p, people: [MailUtil.displayName(m.from)] } })
+        })
+    }
+
     // dest: a folder (default the download folder); open: then open it with the default app
     function saveAttachment(m, index, open, done) {
-        const acc = root.accountMap[m.account]
         const dest = open ? root.dir + "/open" : root.saveDir
-        readLane.run("attachment", { account: wire(acc), folder: m.folder, uid: m.uid, uidvalidity: uvOf(m), cache: root.bodyDir,
-                                     index: index, dest: dest, overwrite: open }, res => {
+        readLane.run("attachment", msgReq(m, { index: index, dest: dest, overwrite: open }), res => {
             if (res.ok && open) Qt.openUrlExternally("file://" + res.path)
             if (done) done(res)
         })
@@ -551,14 +597,12 @@ Singleton {
 
     // a forwarded message's attachments, saved to attach them again: done(paths, errors)
     function fetchAttachments(m, list, done) {
-        const acc = root.accountMap[m.account]
         const dest = root.dir + "/forward/" + Date.now().toString(36)
         let left = list.length
         const paths = [], errs = []
         if (left === 0) { done(paths, errs); return }
         for (const a of list)
-            readLane.run("attachment", { account: wire(acc), folder: m.folder, uid: m.uid, uidvalidity: uvOf(m), cache: root.bodyDir,
-                                         index: a.index, dest: dest }, res => {
+            readLane.run("attachment", msgReq(m, { index: a.index, dest: dest }), res => {
                 if (res.ok) paths.push(res.path); else errs.push(a.name + ": " + res.error)
                 if (--left === 0) done(paths, errs)
             })
@@ -704,16 +748,13 @@ Singleton {
     // ── Viewing attachments ──────────────────────────────────────────────────
     // done({ ok, kind: image|pdf|text|other, path, name, type, size, pages, pageCount, text })
     function view(m, index, done) {
-        const acc = root.accountMap[m.account]
-        if (!acc) return
-        readLane.run("view", { account: wire(acc), folder: m.folder, uid: m.uid, uidvalidity: uvOf(m), cache: root.bodyDir, index: index }, done)
+        if (!m.file && !root.accountMap[m.account]) return
+        readLane.run("view", msgReq(m, { index: index }), done)
     }
 
     // an invitation (.ics) → the calendar's import dialog
     function addToCalendar(m, index, done) {
-        const acc = root.accountMap[m.account]
-        readLane.run("attachment", { account: wire(acc), folder: m.folder, uid: m.uid, uidvalidity: uvOf(m), cache: root.bodyDir,
-                                     index: index, dest: root.dir + "/open", overwrite: true }, res => {
+        readLane.run("attachment", msgReq(m, { index: index, dest: root.dir + "/open", overwrite: true }), res => {
             if (res.ok) Panels.call("calendar", "importFile", res.path)
             if (done) done(res)
         })

@@ -42,7 +42,8 @@ Singleton {
             greeter: Settings.greeter,
             profile: shown && Settings.profile.name ? { name: Settings.profile.name } : {}
         }
-        const meta = { owner: Quickshell.env("USER") ?? "", yubikey: Yubikey.present, face: shown }
+        // yubikey: kept for a greeter installed before yubikeyMode ("none" | "otp" | "fido2")
+        const meta = { owner: Quickshell.env("USER") ?? "", yubikey: Yubikey.present, yubikeyMode: Yubikey.mode, face: shown }
         return { settings: settings, meta: meta, outputs: outputsText(), input: inputText() }
     }
 

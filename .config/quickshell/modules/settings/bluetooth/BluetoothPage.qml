@@ -142,7 +142,7 @@ ColumnLayout {
                     }
                     IconButton {
                         icon: page.confirmForget === dev.address ? "󰄬" : "󰆴"
-                        textColor: page.confirmForget === dev.address ? Colors.red : Properties.color
+                        textColor: page.confirmForget === dev.address ? Colors.red : Icons.tint(icon, Properties.color)
                         tooltip: page.confirmForget === dev.address ? "Click again to forget it" : "Forget (unpair)"
                         onClicked: {
                             if (forgetArm.confirm(dev.address)) dev.forget()

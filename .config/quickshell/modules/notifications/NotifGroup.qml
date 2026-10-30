@@ -85,13 +85,13 @@ Item {
                             sourceSize: Qt.size(48, 48)
                             fillMode: Image.PreserveAspectFit
                         }
-                        // Fallback: first letter of the app name
+                        // Fallback: the shell's own icon for it (Notifs.glyphFor), else the app name's first letter
                         Text {
                             visible: appIconImg.status !== Image.Ready
                             anchors.centerIn: parent
-                            text: (root.model.appName || "?").charAt(0).toUpperCase()
-                            color: Colors.fade(0.8)
-                            font { bold: true; pixelSize: 15 }
+                            text: root.model.glyph || (root.model.appName || "?").charAt(0).toUpperCase()
+                            color: root.model.glyph ? Colors.color6 : Colors.fade(0.8)
+                            font { bold: !root.model.glyph; pixelSize: root.model.glyph ? 17 : 15; family: Properties.fontFamily }
                         }
                     }
 

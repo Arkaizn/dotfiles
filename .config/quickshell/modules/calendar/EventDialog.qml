@@ -129,13 +129,14 @@ Modal {
         open()
     }
 
-    function create(start, allDay, end) {
+    // draft: title / location / description to start with (e.g. a date found in a mail)
+    function create(start, allDay, end, draft) {
         ev = null
         askScope = false
         scope = ""
         const e = end ? end.getTime() : start.getTime() + (allDay ? 86400000 : 3600000)
-        fillForm({ title: "", start: start.getTime(), end: e, allDay: allDay,
-                   location: "", description: "", calendar: "" })
+        fillForm({ title: draft?.title ?? "", start: start.getTime(), end: e, allDay: allDay,
+                   location: draft?.location ?? "", description: draft?.description ?? "", calendar: "" })
         editing = true
         error = ""
         open()

@@ -12,7 +12,8 @@ ColumnLayout {
     id: page
     spacing: 16
 
-    Component.onCompleted: if (Health.results.length === 0 && !Health.running) Health.run()
+    // results older than a minute (the startup check): checked again, so a fix made meanwhile shows
+    Component.onCompleted: if (!Health.running && (Health.results.length === 0 || Date.now() - Health.lastRun > 60000)) Health.run()
 
     readonly property var groups: {
         const g = []

@@ -241,7 +241,7 @@ ColumnLayout {
                         readonly property bool armed: delArm.armed !== ""
                         icon: armed ? "󰄬" : "󰆴"
                         tooltip: armed ? "Click again to delete" : "Delete"
-                        textColor: armed ? Colors.red : Properties.color
+                        textColor: armed ? Colors.red : Icons.tint(icon, Properties.color)
                         onClicked: if (delArm.confirm("delete")) Theme.remove(modelData.name)
                     }
                 }

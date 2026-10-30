@@ -243,6 +243,59 @@ ColumnLayout {
             reuseItems: true
             cacheBuffer: 1600          // rows are built ahead, so scrolling doesn't stall on new ones
 
+            // a new rows array (a message deleted / moved / arrived) resets a ListView to the
+            // top: the row at the top (key + how far it's scrolled in) is kept and scrolled back
+            // to. Not for another folder or filter — those start at the top.
+            property var anchorRows: null       // the model the anchor belongs to
+            property var anchor: null           // { key, index, offset, view, filter }
+            function filterKey() { return [root.query, root.fUnread, root.fFlagged, root.fAttachments].join("|") }
+            function noteAnchor() {
+                anchorRows = model
+                const i = indexAt(10, contentY + 1)
+                const it = i >= 0 ? itemAtIndex(i) : null
+                anchor = it ? { key: model[i].key, index: i, offset: contentY - it.y, view: root.view, filter: filterKey() } : null
+            }
+            function restoreAnchor() {
+                const a = anchor
+                if (a && a.view === root.view && a.filter === filterKey() && count > 0) {
+                    let i = root.keys.indexOf(a.key)
+                    // the top row itself went away: the one that took its place
+                    const offset = i < 0 ? 0 : a.offset
+                    if (i < 0) i = Math.min(a.index, count - 1)
+                    positionViewAtIndex(i, ListView.Beginning)
+                    if (offset > 0) contentY = Math.min(contentY + offset, Math.max(originY, originY + contentHeight - height))
+                }
+                noteAnchor()
+            }
+            onContentYChanged: if (model === anchorRows) noteAnchor()
+            onModelChanged: Qt.callLater(restoreAnchor)
+
+            // hover: one plain tint under the rows that slides to the hovered one (a small
+            // squash on the way), like the pages of the mail settings. The rows point it
+            // at their card; leaving the list fades it out where it is.
+            Rectangle {
+                id: hoverGlow
+                property Item card: null
+                readonly property real cardY: card ? card.parent.y + card.y : -1
+                // the first hover after it faded: it appears there (no slide from the last one)
+                onCardYChanged: if (cardY >= 0) { glowY.enabled = opacity > 0.05; y = cardY; glowY.enabled = true }
+                onCardChanged: if (card && opacity > 0.05) travel.restart()
+                z: -1
+                x: 2
+                width: list.width - 8
+                height: 74
+                radius: 10
+                color: Colors.fade(0.06)
+                opacity: card ? 1 : 0
+                scale: travel.running ? 0.98 : 1
+                Timer { id: travel; interval: 160 }
+                // leaving one row for the next: no fade in between
+                Timer { id: glowOff; interval: 60; onTriggered: hoverGlow.card = null }
+                Behavior on y { id: glowY; NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
+                Behavior on opacity { NumberAnimation { duration: 160 } }
+                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            }
+
             delegate: Column {
                 id: row
                 required property var modelData
@@ -289,12 +342,19 @@ ColumnLayout {
                     radius: 10
                     color: row.picked ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.24)
                          : row.sel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16)
-                         : rowHover.hovered ? Colors.fade(0.05) : "transparent"
+                         : "transparent"
                     Behavior on color { ColorAnimation { duration: 90 } }
 
                     // hover of the whole row, the action buttons included (the row's own
-                    // MouseArea loses it over them: the buttons would hide, show, hide, …)
-                    HoverHandler { id: rowHover }
+                    // MouseArea loses it over them: the buttons would hide, show, hide, …);
+                    // its look is the sliding hoverGlow under the rows
+                    HoverHandler {
+                        id: rowHover
+                        onHoveredChanged: {
+                            if (hovered) { glowOff.stop(); hoverGlow.card = card }
+                            else if (hoverGlow.card === card) glowOff.restart()
+                        }
+                    }
                     readonly property bool actions: rowHover.hovered && !row.r.draft
 
                     // unread dot
@@ -555,7 +615,7 @@ ColumnLayout {
                                         anchors.verticalCenter: parent.verticalCenter
                                         x: 10
                                         spacing: 8
-                                        Text { text: I.role(modelData.role); color: Colors.fade(0.55); font.pixelSize: 13; font.family: Properties.fontFamily }
+                                        Text { text: I.role(modelData.role); color: Icons.tint(text, Colors.fade(0.55)); font.pixelSize: 13; font.family: Properties.fontFamily }
                                         Text { text: modelData.role === "inbox" ? "Inbox" : modelData.path; color: Colors.fade(0.85)
                                                font.pixelSize: 12; font.family: Properties.fontFamily }
                                     }
@@ -571,7 +631,7 @@ ColumnLayout {
                         }
                     }
                 }
-                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; icon: I.trash; textColor: Colors.red; tooltip: "Delete  (Del)"; onClicked: root.batch("delete") }
+                IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; icon: I.trash; tooltip: "Delete  (Del)"; onClicked: root.batch("delete") }
                 Rectangle { implicitWidth: 1; implicitHeight: 18; color: Colors.fade(0.12); Layout.leftMargin: 3; Layout.rightMargin: 3 }
                 IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 12; icon: I.close; tooltip: "Clear the selection  (Esc)"; onClicked: root.clearPicks() }
             }

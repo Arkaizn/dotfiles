@@ -29,8 +29,9 @@ Singleton {
     readonly property int clearStagger: 45     // delay between groups on "clear all"
 
     // ── Models ────────────────────────────────────────────────
-    // popupModel:  { uid, appName, appIcon, image, summary, body, urgency, timeout, closing }
-    // groupModel:  { appName, appIcon, time, expanded, closing, items: ListModel }
+    // popupModel:  { uid, appName, appIcon, glyph, image, summary, body, urgency, timeout, closing }
+    // groupModel:  { appName, appIcon, glyph, time, expanded, closing, items: ListModel }
+    //   glyph: a Nerd Font icon for the shell's own senders, shown when there's no icon
     //   items:     { uid, summary, body, image, time, closing }
     readonly property alias popupModel: popupModel
     readonly property alias groupModel: groupModel
@@ -233,6 +234,21 @@ Singleton {
         return Quickshell.iconPath(icon, true)
     }
 
+    // the notification's image: an icon name that comes as image://icon/<name> (notify-send -i)
+    // only when the icon theme has it — else Qt draws its missing-icon checkerboard
+    function imageSource(img) {
+        const s = String(img || "")
+        if (!s.startsWith("image://icon/")) return s
+        return Quickshell.iconPath(decodeURIComponent(s.slice(13).split("?")[0]), true)
+    }
+    // the shell's own senders (notify-send -a …): their icon when the theme has none
+    function glyphFor(appName) {
+        return ({ "Updates": Icons.get("updates"), "Health check": "󰓙", "Mail": "󰇮", "Calendar": "󰃭",
+                  "Battery": Icons.get("bat20"), "Screenshot": Icons.get("screenshot"), "Recording": Icons.get("recording"),
+                  "Connections": "󰢹", "Theme": "󰏘", "Launcher": Icons.get("modeApps"), "VNC server": "󰢹",
+                  "Notification test": Icons.get("notifications") })[appName] ?? ""
+    }
+
     // ── Internals ─────────────────────────────────────────────
 
     function _add(notif) {
@@ -246,7 +262,8 @@ Singleton {
 
         const appName = notif.appName || "Unknown"
         const appIcon = iconSource(notif.appIcon, notif.desktopEntry)
-        const image = notif.image || ""
+        const image = imageSource(notif.image)
+        const glyph = glyphFor(appName)
         const time = Date.now()
 
         // App closed/replaced the notification on its own → drop it everywhere.
@@ -261,7 +278,7 @@ Singleton {
         const item = { uid, summary: notif.summary || "", body: notif.body || "", image, time, closing: false }
         let gi = _groupIndex(appName)
         if (gi < 0) {
-            groupModel.insert(0, { appName, appIcon, time, expanded: false, closing: false, items: [item] })
+            groupModel.insert(0, { appName, appIcon, glyph, time, expanded: false, closing: false, items: [item] })
         } else {
             const g = groupModel.get(gi)
             g.items.insert(0, item)
@@ -276,7 +293,7 @@ Singleton {
         if (rule === "silent") return
         if (dnd && !(notif.urgency === NotificationUrgency.Critical && (cfg.allowCritical ?? true))) { missed++; return }
         popupModel.insert(0, {
-            uid, appName, appIcon, image,
+            uid, appName, appIcon, glyph, image,
             summary: notif.summary || "",
             body: notif.body || "",
             urgency: notif.urgency,

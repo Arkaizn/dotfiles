@@ -79,6 +79,40 @@ class Unit(unittest.TestCase):
         self.assertEqual([p["filename"] for p in atts], ["a.pdf"])           # the cid logo isn't one
         self.assertEqual(M.preview_part(parts)["section"], "1.1")
 
+    def test_source(self):
+        raw = message("x", "A", "a@x.org", "plain body", html="<p>hi</p>",
+                      attach=[("a.pdf", b"%PDF", "application/pdf")])
+        raw = (b"Authentication-Results: mx.me.org; spf=pass smtp.mailfrom=x.org; dkim=fail header.d=x.org\r\n"
+               b"Authentication-Results: relay.org; dkim=pass; dmarc=none\r\n") + raw
+        msg = email.message_from_bytes(raw, policy=email.policy.default)
+        head = M.header_block(raw)
+        self.assertIn("Subject: x", head)
+        self.assertNotIn("plain body", head)
+        self.assertEqual(M.auth_results(msg), {"spf": "pass", "dkim": "fail", "dmarc": "none"})   # topmost wins
+        tree = M.mime_tree(msg)
+        self.assertEqual([(p["depth"], p["type"]) for p in tree],
+                         [(0, "multipart/mixed"), (1, "multipart/alternative"), (2, "text/plain"), (2, "text/html"), (1, "application/pdf")])
+        self.assertEqual(tree[-1]["name"], "a.pdf")
+        self.assertEqual(tree[-1]["size"], 4)
+
+    def test_eml_file(self):
+        raw = message("Rechnung / Oktober", "A", "a@x.org", "plain body", attach=[("a.pdf", b"%PDF", "application/pdf")])
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "in.eml")
+            with open(src, "wb") as f:
+                f.write(raw)
+            req = {"file": src, "cache": os.path.join(d, "cache")}
+            b = M.body(req)
+            self.assertEqual(b["headers"]["subject"], "Rechnung / Oktober")
+            self.assertGreater(b["headers"]["dateTs"], 0)
+            self.assertEqual([a["name"] for a in b["attachments"]], ["a.pdf"])
+            out = M.save_eml(dict(req, dest=os.path.join(d, "out")))["path"]
+            self.assertEqual(os.path.basename(out), "Rechnung _ Oktober.eml")
+            self.assertEqual(open(out, "rb").read(), raw)
+            self.assertTrue(M.save_eml(dict(req, dest=os.path.join(d, "out")))["path"].endswith("Oktober (1).eml"))
+            with self.assertRaises(M.MailError):
+                M.body({"file": os.path.join(d, "missing.eml"), "cache": d})
+
     def test_decode_header_and_addresses(self):
         self.assertEqual(M.decode_header("=?utf-8?q?Gr=C3=BCsse?= aus =?utf-8?q?Z=C3=BCrich?="), "Grüsse aus Zürich")
         a = M.addresses('"Fischer, Lea" <lea@example.org>, tom@example.org')
@@ -529,11 +563,26 @@ class Part2Unit(unittest.TestCase):
         h, _ = M.sanitize_html('<p style="color:#000;background-color:#fff;font-weight:bold" bgcolor="#fff">'
                                '<font color="red">x</font></p>', adapt=True)
         self.assertNotIn("#000", h)
-        self.assertNotIn("bgcolor", h)
+        self.assertNotIn("bgcolor", h)                      # a white page background goes away
+        self.assertNotIn("#fff", h)
         self.assertNotIn('color="red"', h)
+        self.assertIn('color="#ff8383"', h)                 # red stays red, lighter
         self.assertIn("font-weight:bold", h)
         h2, _ = M.sanitize_html('<p style="color:#000">x</p>')
         self.assertIn("color:#000", h2)                     # original style keeps them
+
+    def test_dark_colors(self):
+        self.assertEqual(M.dark_color("#ffffff", "bg"), "")
+        self.assertEqual(M.dark_color("transparent", "bg"), None)
+        lum = lambda c: M.colorsys.rgb_to_hls(*M.parse_color(c)[:3])[1]
+        self.assertLess(lum(M.dark_color("#1a73e8", "bg")), 0.25)     # a blue button: dark blue
+        self.assertGreater(lum(M.dark_color("#333", "text")), 0.75)     # dark text: light
+        self.assertEqual(M.dark_color("#eeeeee", "text"), "#eeeeee")    # light text stays
+        self.assertEqual(M.dark_color("#222222", "bg"), "#222222")      # a dark card stays
+        self.assertEqual(M.parse_color("rgb(255, 0, 0)"), (1.0, 0.0, 0.0, 1.0))
+        self.assertTrue(M.dark_color("hsla(0, 0%, 100%, 0.5)", "text").startswith("rgba("))
+        self.assertEqual(M.dark_style("background:#fff url(none);color:#000").split(";")[1], "color:#e6e6e6")
+        self.assertNotIn("background", M.dark_style("background-color:#ffffff;color:#000"))
 
     def test_clean_account(self):
         good = {"email": "a@x.org", "imap": {"host": "imap.x.org", "port": 993, "security": "ssl"},

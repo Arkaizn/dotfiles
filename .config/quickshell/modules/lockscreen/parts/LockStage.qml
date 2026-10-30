@@ -9,7 +9,8 @@ import QtQuick.Effects
 //
 // `lock` is the state shared by all monitors (LockScreen.qml / greeter's
 // Greeter.qml): authOpen, password, checking, failed, status, unlocking,
-// capsLock, yubikey, showAuth(), hideAuth(), submit().
+// capsLock, yubikey, keyHint (what to do with the key, under the field),
+// emptySubmit (Enter on an empty field is allowed), showAuth(), hideAuth(), submit().
 //
 //  idle:  any key / click opens the password view (the key is already typed)
 //  auth:  Esc goes back; a monitor without the password field types into the

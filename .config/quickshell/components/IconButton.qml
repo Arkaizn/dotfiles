@@ -12,6 +12,8 @@ import qs.services
 //       interactive: true    // false = static indicator, no clicks/hover
 //       onClicked: doThing()
 //   }
+// A trash / archive / star / junk icon gets its color (Icons.tint, Shell → Icons)
+// unless textColor is set.
 Item {
     id: root
 
@@ -20,7 +22,7 @@ Item {
     property bool active: false
     property bool interactive: true
     property int iconSize: 14
-    property color textColor: Properties.color
+    property color textColor: Icons.tint(icon, Properties.color)
     signal clicked()
 
     implicitWidth: Properties.buttonHeight

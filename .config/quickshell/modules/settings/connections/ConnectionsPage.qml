@@ -121,7 +121,7 @@ ColumnLayout {
                         IconButton {
                             icon: page.confirmDelete === entry.c.id ? "󰄬" : "󰆴"
                             tooltip: page.confirmDelete === entry.c.id ? "Click again to delete" : "Delete (and its keyring password)"
-                            textColor: page.confirmDelete === entry.c.id ? Colors.red : Properties.color
+                            textColor: page.confirmDelete === entry.c.id ? Colors.red : Icons.tint(icon, Properties.color)
                             onClicked: {
                                 if (deleteArm.confirm(entry.c.id)) RemoteConnections.remove(entry.c.id)
                             }

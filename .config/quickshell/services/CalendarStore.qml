@@ -25,6 +25,21 @@ Singleton {
     //    calendars: [{ id, href, name, color, readOnly, enabled, notify }] }]
     //    (notify: false = no reminders from that calendar)
     property var accounts: []
+    function kindOf(a) { return a.type === "ics" ? "Subscription" : a.type === "local" ? "Local" : /icloud/i.test(a.url) ? "iCloud" : "CalDAV" }
+    // the calendar settings' pages (CalendarSettingsPages): the app's settings dialog lists
+    // them, the settings app shows them as sub-pages of Calendar. action: a button, not a page
+    readonly property var settingsPages: [
+        { id: "reminders", icon: "󰂚", label: "Reminders" },
+        { id: "view", icon: "󰃭", label: "View" },
+        { id: "sync", icon: "󰓦", label: "Sync" }
+    ].concat(accounts.map((a, i) => ({
+        id: "acc:" + a.id, label: a.name, heading: a.name === kindOf(a) ? a.name : a.name + "  ·  " + kindOf(a),
+        color: a.calendars?.[0]?.color || Colors.color6, group: i === 0 ? "Accounts" : undefined
+    }))).concat([
+        { id: "transfer", icon: "󰑓", label: "Export / import", group: accounts.length === 0 ? "Accounts" : undefined,
+          heading: "Move accounts to another device" },
+        { id: "add", icon: "󰐕", label: "Add account", action: true }
+    ])
     property var events: []
     property var errors: []            // [{ calendar, account, message }] from the last sync
     property bool syncing: false
