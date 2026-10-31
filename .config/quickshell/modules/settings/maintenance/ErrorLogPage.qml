@@ -7,7 +7,9 @@ import ".."
 import "../network"
 
 // Error log: the system journal's errors (or warnings) of this or the previous
-// boot, optionally for one service, plus the shell's own warnings. Read-only.
+// boot, optionally for one service, plus the shell's own warnings. Read-only;
+// "Mark as seen" only remembers when you looked (Settings.health.errorsSeenAt,
+// seconds): older entries are dimmed, and the Maintenance tile counts only newer ones.
 ColumnLayout {
     id: page
     spacing: 16
@@ -17,7 +19,9 @@ ColumnLayout {
     property string boot: "0"               // 0 = this boot, -1 = previous
     property string unit: ""
     property string filter: ""
-    property var entries: []                // [{ time, who, text, prio }]
+    property var entries: []                // [{ time, ts (ms), who, text, prio }]
+    readonly property real seenAt: (Settings.health.errorsSeenAt ?? 0) * 1000
+    function markSeen() { Settings.set("health", "errorsSeenAt", Math.floor(Date.now() / 1000)) }
     property string error: ""
     readonly property bool loading: Jobs.isRunning("errlog")
     readonly property var shown: {
@@ -59,7 +63,7 @@ ColumnLayout {
                         let msg = j.MESSAGE
                         if (Array.isArray(msg)) msg = String.fromCharCode.apply(null, msg.slice(0, 2000))
                         const t = new Date(Number(j.__REALTIME_TIMESTAMP) / 1000)
-                        out.push({ time: Qt.formatDateTime(t, "MM-dd HH:mm:ss"), who: j.SYSLOG_IDENTIFIER || j._SYSTEMD_UNIT || j._COMM || "?",
+                        out.push({ time: Qt.formatDateTime(t, "MM-dd HH:mm:ss"), ts: t.getTime(), who: j.SYSLOG_IDENTIFIER || j._SYSTEMD_UNIT || j._COMM || "?",
                                    text: String(msg ?? "").split("\n").find(x => x.trim() !== "")?.slice(0, 400) ?? "", prio: Number(j.PRIORITY ?? 3) })
                     } catch (e) {}
                 }
@@ -128,6 +132,11 @@ ColumnLayout {
         Layout.fillWidth: true
         title: page.loading ? "Loading…" : page.shown.length + " entries" + (page.entries.length >= 400 ? " (newest 400)" : "")
         header: [
+            ActionButton {
+                icon: "󰄬"
+                text: "Mark as seen"
+                onClicked: page.markSeen()
+            },
             ActionButton { icon: "󰆏"; text: "Copy"; interactive: page.shown.length > 0
                 onClicked: Quickshell.execDetached(["wl-copy", "--", page.shown.map(e => (e.time ? e.time + " " : "") + e.who + ": " + e.text).join("\n")]) },
             ActionButton { icon: "󰑓"; text: "Reload"; onClicked: page.load() }
@@ -137,14 +146,19 @@ ColumnLayout {
         Repeater {
             model: page.shown.slice(0, 200)
             Item {
+                id: entry
                 required property var modelData
                 Layout.fillWidth: true
                 implicitHeight: line.implicitHeight + 10
+                // marked as seen (journal entries up to errorsSeenAt): dimmed, grey dot
+                readonly property bool seen: (modelData.ts ?? 0) > 0 && modelData.ts <= page.seenAt
+                opacity: seen ? 0.45 : 1
                 RowLayout {
                     id: line
                     anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 14 }
                     spacing: 10
-                    Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 4; implicitWidth: 6; implicitHeight: 6; radius: 3; color: modelData.prio <= 3 ? Colors.red : Colors.yellow }
+                    Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 4; implicitWidth: 6; implicitHeight: 6; radius: 3
+                                color: entry.seen ? Colors.fade(0.4) : modelData.prio <= 3 ? Colors.red : Colors.yellow }
                     Text { Layout.alignment: Qt.AlignTop; text: modelData.time; visible: modelData.time !== ""; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
                     Text { Layout.alignment: Qt.AlignTop; Layout.preferredWidth: 130; text: modelData.who; color: Colors.color6; font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideRight }
                     Text { Layout.fillWidth: true; text: modelData.text; color: Colors.fade(0.8); font.pixelSize: 11; font.family: Properties.fontFamily; wrapMode: Text.WrapAnywhere; maximumLineCount: 4; elide: Text.ElideRight }

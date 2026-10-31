@@ -103,7 +103,10 @@ Scope {
     property string flashKey: ""           // "store.key" of a setting to scroll to and flash
     readonly property string wm: Compositor.isHyprland ? "hyprland" : "niri"
     readonly property string wmGroup: Compositor.isHyprland ? "Hyprland" : "Niri"
-    readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm).concat(appSubPages)
+    // the maintenance tools fold out under Maintenance in the sidebar like the apps' pages
+    // (subnav: the tool itself is highlighted there, no back button)
+    readonly property var visiblePages: pages.filter(p => !p.wm || p.wm === wm)
+        .map(p => p.parent === "maintenance" ? Object.assign({ subnav: true }, p) : p).concat(appSubPages)
     // the mail / calendar apps' own settings pages (MailSettingsPages, CalendarSettingsPages):
     // sub-pages of Mail / Calendar, listed under them in the sidebar while one of them is open.
     // action entries (Add account) are buttons that open the app
@@ -113,7 +116,7 @@ Scope {
             app: app, sub: sp.id, action: !!sp.action, icon: sp.color ? "󰄯" : sp.icon ?? "", tint: sp.color ?? "",
             title: sp.label, desc: sp.heading ?? "", keywords: app + (sp.id.startsWith("acc:") ? " account" : "")
         }))), [])
-    function subPagesOf(id) { return appSubPages.filter(p => p.parent === id) }
+    function subPagesOf(id) { return visiblePages.filter(p => p.parent === id && p.subnav) }
     // the sidebar's pages top to bottom, sub-pages under theirs (which way a page comes in)
     readonly property var navOrder: {
         const out = []
@@ -651,11 +654,12 @@ Scope {
         { page: "keys", label: "Remove a changed host key", keywords: "known_hosts host identification changed ssh-keygen -R", icon: "󰣀" },
         { page: "keys", label: "New SSH key", keywords: "ssh-keygen generate ed25519", icon: "󰐕" },
         { page: "keys", label: "GPG keys", keywords: "gpg pgp sign expire", icon: "󰌆" },
+        { page: "errorlog", label: "Mark errors as seen", desc: "The Maintenance tile then only counts new ones", keywords: "error log acknowledge dismiss clear warning seen journal", icon: "󰄬" },
         { page: "yubikey", label: "Set up YubiKey login", desc: "FIDO2 (touch) or OTP, in a terminal", keywords: "yubikey setup fido2 u2f otp pam login sudo unlock touch", icon: "󰌋" },
         { page: "yubikey", label: "Add another YubiKey", desc: "A spare key for the same login", keywords: "yubikey second spare backup key add link", icon: "󰌋" },
         { page: "yubikey", label: "Turn off YubiKey login", desc: "Back to password only", keywords: "yubikey disable remove password only restore backup pam", icon: "󰌋" },
         { page: "updates", label: "Check for updates", keywords: "pacman yay aur upgrade", icon: "󰚰" },
-        { page: "updates", label: ".pacnew files", keywords: "pacdiff pacnew pacsave etc config merge", icon: "󰈙" },
+        { page: "updates", label: ".pacnew files", desc: "Remove all, use the new one, or merge", keywords: "pacdiff pacnew pacsave etc config merge remove delete overwrite", icon: "󰈙" },
         { page: "profiles", label: "Save settings as a profile", keywords: "profile preset snapshot", icon: "󰆓" },
         { page: "profiles", label: "Switch settings profile", desc: "Or the icons at the bottom of the sidebar", keywords: "profile switch apply work gaming", icon: "󰆓" },
         { page: "profiles", label: "Export profiles", desc: "One or all, into one file", keywords: "profile export backup share save file", icon: "󰈝" },
@@ -1035,9 +1039,9 @@ Scope {
                                                                         onSelectedChanged: if (selected) navGlow.target = subItem
                                                                         Component.onCompleted: if (selected) navGlow.target = subItem
                                                                         icon: modelData.icon
-                                                                        tint: modelData.tint
+                                                                        tint: modelData.tint ?? ""
                                                                         label: modelData.title
-                                                                        dim: modelData.action
+                                                                        dim: !!modelData.action
                                                                         selected: win.query === "" && win.pageId === modelData.id
                                                                         onClicked: {
                                                                             if (modelData.action) { Panels.call(modelData.app, "addAccount"); return }
@@ -1074,10 +1078,10 @@ Scope {
                             Layout.fillHeight: true
                             spacing: 10
 
-                            // header (drag handle too)
+                            // header (drag handle too); taller when the description wraps (narrow window)
                             Item {
                                 Layout.fillWidth: true
-                                implicitHeight: 56
+                                implicitHeight: Math.max(56, headerRow.implicitHeight)
 
                                 DragHandler {
                                     target: null
@@ -1085,43 +1089,56 @@ Scope {
                                 }
 
                                 RowLayout {
-                                    anchors.fill: parent
+                                    id: headerRow
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
                                     anchors.leftMargin: 6
                                     spacing: 8
 
                                     IconButton {
-                                        visible: win.query === "" && win.hub !== null && !win.page.subnav
+                                        // not for the apps' settings pages (Mail ›, Calendar ›): those switch in the sidebar
+                                        visible: win.query === "" && win.hub !== null && !win.page.app
                                         icon: "󰁍"
                                         tooltip: "Back to " + (win.hub?.title ?? "")
                                         onClicked: { root.pageId = win.hub.id; flick.contentY = 0 }
                                     }
 
+                                    // the texts fill the width (a layout is only as wide as its children let
+                                    // it be): the buttons on the right stay at the right edge on every page
                                     ColumnLayout {
                                         id: titleBlock
                                         Layout.fillWidth: true
+                                        Layout.minimumWidth: 0
                                         spacing: 0
                                         transform: Translate { id: titleShift }
                                         Text {
                                             visible: win.query === "" && win.hub !== null
+                                            Layout.fillWidth: true
                                             text: (win.hub?.title ?? "") + "  ›"
                                             color: Colors.fade(0.45)
                                             font.pixelSize: 11
                                             font.family: Properties.fontFamily
+                                            elide: Text.ElideRight
                                         }
                                         Text {
+                                            Layout.fillWidth: true
                                             text: win.query !== "" ? "Search" : win.page.title
                                             color: Colors.ink
                                             font.pixelSize: 24
                                             font.bold: true
                                             font.family: Properties.fontFamily
+                                            elide: Text.ElideRight
                                         }
                                         Text {
+                                            Layout.fillWidth: true
                                             text: win.query !== ""
                                                 ? (win.results.length > 0 ? "Results for \"" + win.query.trim() + "\", best first" : "Nothing matches \"" + win.query.trim() + "\"")
                                                 : win.page.desc
                                             color: Colors.fade(0.5)
                                             font.pixelSize: 12
                                             font.family: Properties.fontFamily
+                                            wrapMode: Text.Wrap
                                         }
                                     }
 
@@ -1357,7 +1374,9 @@ Scope {
                                         active: win.query === "" && win.page.custom === "maintenance"
                                         visible: active
                                         sourceComponent: MaintenancePage {
+                                            // its tools, plus pages whose state belongs to an overview of the system
                                             tools: root.visiblePages.filter(p => p.parent === "maintenance")
+                                                .concat(["greeter", "lockscreen", "yubikey"].map(id => root.visiblePages.find(p => p.id === id)).filter(p => p))
                                             onOpenPage: id => { root.pageId = id; flick.contentY = 0 }
                                         }
                                     }

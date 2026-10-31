@@ -34,6 +34,7 @@ ColumnLayout {
             font.pixelSize: 12
             font.bold: true
             font.family: Properties.fontFamily
+            elide: Text.ElideRight          // the buttons on the right keep their size
         }
         RowLayout { id: headerSlot; spacing: 6 }
     }

@@ -18,6 +18,8 @@ Item {
 
     implicitWidth: row.implicitWidth + 26
     implicitHeight: Properties.buttonHeight
+    // in a layout: never squeezed below its size (the texts next to it give way)
+    Layout.minimumWidth: implicitWidth
     opacity: interactive ? 1 : 0.4
     Behavior on opacity { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
 

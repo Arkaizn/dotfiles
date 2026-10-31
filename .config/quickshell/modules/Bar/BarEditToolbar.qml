@@ -49,6 +49,7 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 0
                 Text {
+                    Layout.fillWidth: true
                     text: "Editing the bar"
                     color: Colors.ink
                     font.pixelSize: 13
@@ -56,6 +57,7 @@ Rectangle {
                     font.family: Properties.fontFamily
                 }
                 Text {
+                    Layout.fillWidth: true
                     text: (root.editor.editScreen === "" ? (Quickshell.screens.length > 1 ? "All monitors" : "Shared layout")
                                                          : "Only " + root.editor.editScreen)
                           + "  ·  drag to move  ·  drop here or − to remove"

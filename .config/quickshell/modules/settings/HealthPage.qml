@@ -51,6 +51,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 2
                 Text {
+                    Layout.fillWidth: true
                     text: Health.running ? "Checking…"
                         : Health.results.length === 0 ? "Not checked yet"
                         : Health.errors > 0 ? Health.errors + (Health.errors === 1 ? " problem" : " problems") + (Health.warnings > 0 ? ", " + Health.warnings + " warnings" : "")
@@ -62,6 +63,8 @@ ColumnLayout {
                     font.family: Properties.fontFamily
                 }
                 Text {
+                    Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                     text: Health.lastRun > 0 ? Health.results.filter(r => r.status === "ok").length + " of " + Health.results.length
                                                 + " checks ok  ·  last run " + new Date(Health.lastRun).toLocaleTimeString(Qt.locale(), "HH:mm:ss") : ""
                     color: Colors.fade(0.5)

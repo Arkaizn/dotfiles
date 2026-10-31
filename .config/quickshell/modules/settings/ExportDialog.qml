@@ -70,8 +70,8 @@ Modal {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
-                Text { text: "Export settings"; color: Colors.ink; font.pixelSize: 17; font.bold: true; font.family: Properties.fontFamily }
-                Text { text: "Pick what goes into the file"; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
+                Text { Layout.fillWidth: true; text: "Export settings"; color: Colors.ink; font.pixelSize: 17; font.bold: true; font.family: Properties.fontFamily }
+                Text { Layout.fillWidth: true; text: "Pick what goes into the file"; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
             }
             IconButton { implicitWidth: 30; implicitHeight: 30; icon: "󰅖"; onClicked: root.close() }
         }

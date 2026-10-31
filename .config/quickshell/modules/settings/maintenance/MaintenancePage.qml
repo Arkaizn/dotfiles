@@ -8,8 +8,11 @@ import ".."
 
 // Maintenance overview: every maintenance tool of the settings app as a tile
 // with a quick status (read-only, cheap commands; nothing needs a password),
-// so you see at a glance what needs attention. Click a tile to open the tool.
-//   tools: the pages with parent "maintenance" (SettingsWindow.qml)
+// so you see at a glance what needs attention. Click a tile to open the tool;
+// a yellow / red one can carry a button that fixes it right there (status().action).
+// All tiles are as tall as the tallest one.
+//   tools: the pages with parent "maintenance", plus the login screen, YubiKey and
+//          lockscreen pages (SettingsWindow.qml)
 // A new tool only needs `parent: "maintenance"` there; give it a status in
 // status() below if there's a cheap way to tell.
 ColumnLayout {
@@ -31,11 +34,27 @@ ColumnLayout {
 
     Component.onCompleted: refresh()
 
+    // journal errors of this boot, only those after "Mark as seen" (Error log page)
+    readonly property real errorsSeenAt: Settings.health.errorsSeenAt ?? 0
+    onErrorsSeenAtChanged: countErrors()
+    function countErrors() {
+        const since = errorsSeenAt > 0 ? ["--since", "@" + errorsSeenAt] : []
+        Jobs.run(["journalctl", "-b", "-p", "3", "-q", "--no-pager", "-o", "cat", "-n", "1000"].concat(since), (c, o) => {
+            const n = o.split("\n").filter(x => x.trim()).length
+            const what = (n >= 1000 ? "1000+" : n) + (since.length ? " new" : "") + (n === 1 ? " error" : " errors") + " this boot"
+            put("errorlog", n > 0 ? "warn" : "ok", n === 0 ? (since.length ? "no new errors (older ones marked as seen)" : "no errors this boot") : what)
+        })
+    }
+
     function refresh() {
         info = ({})
         if (Health.results.length === 0 && !Health.running) Health.run()
         if (Updates.lastCheck === 0 && !Updates.checking) Updates.refresh()
         Dotfiles.refresh()
+        Yubikey.loadStatus()
+        // locks when idle: swayidle runs (started by the compositor's config with scripts/lock.sh)
+        Jobs.run(["pgrep", "-x", "swayidle"], c => put("lockscreen", c === 0 ? "ok" : "warn",
+            c === 0 ? "locks when idle (swayidle runs)" : "swayidle isn't running: the screen doesn't lock when idle"))
 
         Jobs.run(["pacman", "-Qdtq"], (c, o) => {
             const n = o.split("\n").filter(x => x).length
@@ -60,10 +79,7 @@ ColumnLayout {
                 failed += o.split("\n").filter(x => x.trim()).length
                 if (--pending === 0) put("services", failed > 0 ? "error" : "ok", failed === 0 ? "none failed" : failed + " failed")
             })
-        Jobs.run(["journalctl", "-b", "-p", "3", "-q", "--no-pager", "-o", "cat", "-n", "1000"], (c, o) => {
-            const n = o.split("\n").filter(x => x.trim()).length
-            put("errorlog", n > 0 ? "warn" : "ok", n === 0 ? "no errors this boot" : (n >= 1000 ? "1000+" : n) + (n === 1 ? " error" : " errors") + " this boot")
-        })
+        countErrors()
         Jobs.run(["systemd-analyze"], (c, o) => {
             const m = /=\s*([^\n]+?)\s*$/m.exec(o.split("\n")[0] ?? "")
             put("boottime", "info", m ? "last boot took " + m[1] : "still booting, or not available")
@@ -92,7 +108,9 @@ ColumnLayout {
             const parts = [Updates.count === 0 ? "up to date" : Updates.count + (Updates.count === 1 ? " update" : " updates")]
             if (Updates.rebootNeeded) parts.push("reboot needed")
             if (Updates.pacnew.length > 0) parts.push(Updates.pacnew.length + " .pacnew")
-            return { level: Updates.rebootNeeded || Updates.pacnew.length > 0 ? "warn" : Updates.count > 0 ? "info" : "ok", text: parts.join("  ·  ") }
+            return { level: Updates.rebootNeeded || Updates.pacnew.length > 0 ? "warn" : Updates.count > 0 ? "info" : "ok", text: parts.join("  ·  "),
+                     action: Updates.rebootNeeded ? { label: "Reboot", run: () => Session.reboot() }
+                           : Updates.count > 0 ? { label: "Upgrade", run: () => Updates.upgrade() } : null }
         }
         case "dotfiles":
             if (!Dotfiles.isRepo) return { level: Dotfiles.loading ? "busy" : "info", text: Dotfiles.loading ? "reading…" : "no repo set up" }
@@ -102,8 +120,36 @@ ColumnLayout {
             return { level: "ok", text: "in sync" }
         case "diagnostics":
             return { level: "info", text: "ping, traceroute, ports, speed test" }
+        case "errorlog": {
+            const e = info.errorlog ?? { level: "busy", text: "…" }
+            return e.level === "warn" ? Object.assign({ action: { label: "Mark as seen", run: () => Settings.set("health", "errorsSeenAt", Math.floor(Date.now() / 1000)) } }, e) : e
+        }
+        case "greeter": {
+            // Health's check (only where the login screen is installed)
+            const r = Health.results.find(x => x.id === "greeter")
+            if (!r) return Health.running ? { level: "busy", text: "checking…" } : { level: "info", text: "not installed (greetd login screen)" }
+            if (r.status === "running") return { level: "busy", text: "checking…" }
+            if (r.status === "ok") return { level: "ok", text: "up to date" }
+            return { level: r.status === "error" ? "error" : "warn", text: r.detail.replace(/ \(Settings → .*$/, ""),
+                     action: r.fix ? { label: "Update it", run: () => page.terminal("Update the login screen", 'eval "$1"', [r.fix]) } : null }
+        }
+        case "yubikey": {
+            const s = Yubikey.status
+            if (!s) return Yubikey.statusError ? { level: "info", text: Yubikey.statusError } : { level: "busy", text: "checking…" }
+            const mode = ({ none: "password only", fido2: "FIDO2 (touch)", otp: "OTP (YubiCloud)", both: "OTP and FIDO2 at once" })[s.mode] ?? s.mode
+            const warns = s.warnings ?? []
+            if (warns.length === 0) return { level: s.mode === "none" ? "info" : "ok", text: mode + (s.mode !== "none" ? "  ·  " + s.linked?.[s.mode === "otp" ? "otp" : "fido2"] + " key(s) linked" : "") }
+            return { level: "warn", text: warns[0] + (warns.length > 1 ? "  (+" + (warns.length - 1) + ")" : ""),
+                     action: { label: "Set up / change", run: () => Yubikey.setup() } }
+        }
         }
         return info[id] ?? { level: "busy", text: "…" }
+    }
+
+    // a terminal for a fix (Health's fix command), the command passed as data
+    function terminal(title, script, args) {
+        Quickshell.execDetached(["kitty", "--title", title, "bash", "-c",
+            script + '\necho; read -r -p "Done. Press Enter to close." _', "bash"].concat(args ?? []))
     }
 
     function levelColor(l) { return l === "ok" ? Colors.green : l === "warn" ? Colors.yellow : l === "error" ? Colors.red : Colors.fade(0.35) }
@@ -163,6 +209,14 @@ ColumnLayout {
     }
 
     // ── Tiles ───────────────────────────────────────────────────────────────
+    // every tile as tall as the tallest one's content (text wraps with the width,
+    // so this is read again whenever a tile's content height changes)
+    property real tileHeight: 0
+    function measureTiles() {
+        let h = 0
+        for (let i = 0; i < tileRep.count; i++) h = Math.max(h, tileRep.itemAt(i)?.need ?? 0)
+        tileHeight = h
+    }
     GridLayout {
         id: grid
         Layout.fillWidth: true
@@ -171,6 +225,7 @@ ColumnLayout {
         rowSpacing: 10
 
         Repeater {
+            id: tileRep
             model: page.tools
             Rectangle {
                 id: tile
@@ -181,7 +236,9 @@ ColumnLayout {
                 readonly property bool alert: st.level === "warn" || st.level === "error"
                 Layout.fillWidth: true
                 Layout.preferredWidth: 250
-                implicitHeight: tileCol.implicitHeight + 24
+                readonly property real need: tileCol.implicitHeight + 24
+                onNeedChanged: Qt.callLater(page.measureTiles)
+                implicitHeight: Math.max(need, page.tileHeight)
                 radius: 14
                 clip: true
                 color: alert ? Qt.tint(Colors.card, Qt.rgba(accent.r, accent.g, accent.b, 0.06)) : Colors.card
@@ -283,6 +340,14 @@ ColumnLayout {
                         font.pixelSize: 11
                         font.family: Properties.fontFamily
                         wrapMode: Text.WordWrap
+                    }
+                    // a fix right here (yellow / red tiles that have one)
+                    ActionButton {
+                        visible: !!tile.st.action
+                        Layout.topMargin: 4
+                        icon: "󰁔"
+                        text: tile.st.action?.label ?? ""
+                        onClicked: tile.st.action.run()
                     }
                 }
 

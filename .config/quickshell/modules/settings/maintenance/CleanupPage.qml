@@ -73,9 +73,17 @@ ColumnLayout {
             script + '\necho; read -r -p "Done. Press Enter to close." _', "bash"].concat(args ?? []))
     }
 
+    // only folders right inside ~/.cache
+    function isCache(p) { return p.startsWith(cacheDir + "/") && !p.includes("/..") && p !== cacheDir + "/" }
     function clearCache(p) {
-        if (!p.startsWith(cacheDir + "/") || p.includes("/..") || p === cacheDir + "/") return
+        if (!isCache(p)) return
         Jobs.run(["rm", "-rf", "--", p], () => refresh())
+    }
+    // every folder the list shows (the biggest ones), in one go
+    readonly property real listedSize: caches.reduce((n, c) => n + c.size, 0)
+    function clearListed() {
+        const ps = caches.map(c => c.path).filter(isCache)
+        if (ps.length > 0) Jobs.run(["rm", "-rf", "--"].concat(ps), () => refresh())
     }
 
     NetCard {
@@ -88,6 +96,13 @@ ColumnLayout {
             wide: true
             label: "~/.cache"
             desc: "safe to clear: apps rebuild what they need (close the app first; the next start can be slower)"
+            ActionButton {
+                visible: page.caches.length > 0
+                icon: "󰃢"
+                text: page.armed("listed") ? "Delete " + page.caches.length + " folders, " + Format.bytes(page.listedSize) : "Clear all listed…"
+                textColor: page.armed("listed") ? Colors.red : Colors.ink
+                onClicked: { if (arm.confirm("listed")) page.clearListed() }
+            }
         }
         Repeater {
             model: page.caches

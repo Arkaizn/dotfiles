@@ -14,6 +14,11 @@ ColumnLayout {
     spacing: 16
 
     property bool showAll: false
+    // .pacnew / .pacsave: the last remove / overwrite's result, and click-again to confirm
+    property string pacnewMsg: ""
+    ConfirmArm { id: pacnewArm }
+    // a line of pacdiff -o: the .pacnew / .pacsave file itself
+    function pacfile(line) { return String(line).trim() }
     readonly property var all: Updates.repo.map(u => Object.assign({ src: "repo" }, u))
                                  .concat(Updates.withAur ? Updates.aurPending.map(u => Object.assign({ src: "AUR" }, u)) : [])
 
@@ -118,19 +123,59 @@ ColumnLayout {
     NetCard {
         Layout.fillWidth: true
         title: "After updating"
+        // .pacnew / .pacsave: remove (always safe: your file stays), use the new one
+        // (your file goes to /var/backups/pacnew/ first), or merge in a terminal.
+        // Remove / overwrite run as root through polkit (Updates.pacnewAct)
         NetRow {
             first: true
-            wide: Updates.pacnew.length > 0
             label: Updates.pacnew.length === 0 ? "No .pacnew files" : Updates.pacnew.length + " .pacnew / .pacsave files"
-            desc: Updates.pacnew.length === 0 ? "config files in /etc are in sync with the packages"
-                  : Updates.pacnew.join("\n") + "\nnew defaults from packages next to your changed configs. Merge opens a terminal: sudo DIFFPROG=\"nvim -d\" pacdiff"
-                    + " (per file: view / merge side by side, overwrite with the new one, or remove it). After changing mkinitcpio.conf run  sudo mkinitcpio -P"
-            ActionButton {
+            desc: page.pacnewMsg !== "" ? page.pacnewMsg
+                : Updates.pacnew.length === 0 ? "config files in /etc are in sync with the packages"
+                : "new defaults from packages next to configs you changed. Remove: keeps yours as it is (always safe). "
+                  + "Merge opens a terminal (sudo DIFFPROG=\"nvim -d\" pacdiff) to compare side by side"
+            RowLayout {
+                spacing: 6
                 visible: Updates.pacnew.length > 0
-                icon: "󰦒"
-                text: "Merge…"
-                primary: true
-                onClicked: Updates.mergePacnew()
+                ActionButton {
+                    icon: "󰆴"
+                    text: Updates.pacnewBusy ? "Working…" : pacnewArm.armed === "all" ? "Remove all " + Updates.pacnew.length + "?" : "Remove all"
+                    textColor: pacnewArm.armed === "all" ? Colors.red : Colors.ink
+                    interactive: !Updates.pacnewBusy
+                    onClicked: if (pacnewArm.confirm("all")) Updates.pacnewAct("remove", Updates.pacnew.map(f => page.pacfile(f)), (ok, msg) => page.pacnewMsg = msg)
+                }
+                ActionButton { icon: "󰦒"; text: "Merge…"; primary: true; onClicked: Updates.mergePacnew() }
+            }
+        }
+        Repeater {
+            model: Updates.pacnew
+            NetRow {
+                id: pacRow
+                required property string modelData
+                readonly property string file: page.pacfile(modelData)
+                readonly property bool isNew: file.endsWith(".pacnew")
+                sub: true
+                label: file.replace(/^\/etc\//, "")
+                desc: pacnewArm.armed === "new:" + file ? "replaces your " + file.replace(/\.pacnew$/, "") + " with the package's default (yours is kept in /var/backups/pacnew/)"
+                    : isNew ? (file.includes("mkinitcpio") ? "careful: your MODULES / HOOKS (nvidia, btrfs, …) would be lost with \"Use new\"; after a change: sudo mkinitcpio -P"
+                                                          : "the package's new default, next to your changed file")
+                    : "your config from a package that was removed"
+                descError: pacnewArm.armed === "new:" + file
+                RowLayout {
+                    spacing: 6
+                    ActionButton {
+                        text: pacnewArm.armed === "rm:" + pacRow.file ? "Remove?" : "Remove"
+                        textColor: pacnewArm.armed === "rm:" + pacRow.file ? Colors.red : Colors.ink
+                        interactive: !Updates.pacnewBusy
+                        onClicked: if (pacnewArm.confirm("rm:" + pacRow.file)) Updates.pacnewAct("remove", [pacRow.file], (ok, msg) => page.pacnewMsg = msg)
+                    }
+                    ActionButton {
+                        visible: pacRow.isNew
+                        text: pacnewArm.armed === "new:" + pacRow.file ? "Replace mine?" : "Use new"
+                        textColor: pacnewArm.armed === "new:" + pacRow.file ? Colors.red : Colors.ink
+                        interactive: !Updates.pacnewBusy
+                        onClicked: if (pacnewArm.confirm("new:" + pacRow.file)) Updates.pacnewAct("overwrite", [pacRow.file], (ok, msg) => page.pacnewMsg = msg)
+                    }
+                }
             }
         }
         NetRow {

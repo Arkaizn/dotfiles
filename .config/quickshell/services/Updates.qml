@@ -57,7 +57,7 @@ Singleton {
             })
         }
         loadHeld()
-        Jobs.run(["pacdiff", "-o"], (code, out) => pacnew = out.split("\n").filter(l => l.startsWith("/")))
+        loadPacnew()
         const kernel = Files.read("/proc/sys/kernel/osrelease").trim()
         if (kernel !== "") Jobs.run(["test", "-d", "/usr/lib/modules/" + kernel], code => rebootNeeded = code !== 0)
     }
@@ -88,6 +88,42 @@ Singleton {
     function upgrade() {
         if (!upgradeProc.running)
             upgradeProc.running = true;
+    }
+
+    function loadPacnew() {
+        Jobs.run(["pacdiff", "-o"], (code, out) => pacnew = out.split("\n").filter(l => l.startsWith("/")))
+    }
+
+    // Removes .pacnew / .pacsave files, or puts a .pacnew in place of its file
+    // ("overwrite", pacdiff's (O)), as root through polkit (pkexec), no terminal.
+    // Removing only drops the new default (your file stays as it is): always safe.
+    // Overwriting first copies your file to /var/backups/pacnew/<time>/<its path>.
+    // The root script takes the paths as arguments and checks each one again: only
+    // regular files in /etc ending in .pacnew / .pacsave, no "..".
+    //   pacnewAct("remove" | "overwrite", [paths], done(ok, message))
+    property bool pacnewBusy: false
+    readonly property string pacnewScript: 'act=$1; shift; ts=$(date +%Y%m%d-%H%M%S); rc=0\n'
+        + 'for f; do\n'
+        + '  case $f in *..*) echo "skipped $f" >&2; rc=1; continue ;; /etc/*.pacnew|/etc/*.pacsave) ;; *) echo "skipped $f" >&2; rc=1; continue ;; esac\n'
+        + '  if [ ! -f "$f" ] || [ -L "$f" ]; then echo "skipped $f: not a regular file" >&2; rc=1; continue; fi\n'
+        + '  if [ "$act" = overwrite ]; then\n'
+        + '    case $f in *.pacnew) ;; *) echo "skipped $f: only a .pacnew can replace its file" >&2; rc=1; continue ;; esac\n'
+        + '    t=${f%.pacnew}\n'
+        + '    if [ -e "$t" ]; then b=/var/backups/pacnew/$ts$t; mkdir -p "${b%/*}" && cp -a "$t" "$b" || { echo "no backup of $t, left it alone" >&2; rc=1; continue; }; fi\n'
+        + '    mv -f "$f" "$t" && echo "replaced $t" || rc=1\n'
+        + '  else rm -f "$f" && echo "removed $f" || rc=1; fi\n'
+        + 'done; exit $rc'
+    function pacnewAct(action, files, done) {
+        if (pacnewBusy || files.length === 0) return
+        pacnewBusy = true
+        Jobs.run(["pkexec", "sh", "-c", pacnewScript, "sh", action].concat(files), (code, out, err) => {
+            pacnewBusy = false
+            loadPacnew()
+            const n = out.split("\n").filter(l => l.trim()).length
+            if (done) done(code === 0, code === 126 || code === 127 ? "cancelled (no password given)"
+                : (action === "remove" ? n + " removed" : n + " replaced (your old file: /var/backups/pacnew/)")
+                  + (err.trim() ? " · " + err.trim().split("\n").pop() : ""))
+        })
     }
 
     // Merges the .pacnew / .pacsave files (pacdiff, side by side in nvim) in a

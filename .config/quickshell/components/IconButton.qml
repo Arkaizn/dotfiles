@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import qs.services
 
 // Square icon button with the same look/feel as the bar buttons
@@ -27,6 +28,8 @@ Item {
 
     implicitWidth: Properties.buttonHeight
     implicitHeight: Properties.buttonHeight
+    // in a layout: never squeezed below its size (the texts next to it give way)
+    Layout.minimumWidth: implicitWidth
     opacity: interactive ? 1.0 : 0.5
 
     ButtonBackground {

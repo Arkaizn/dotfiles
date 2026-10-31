@@ -1,0 +1,8 @@
+# PAM's fallback for a service without a file of its own. PAM looks for it in
+# this directory on every start (quickshell runs PAM with pam/ as its config
+# directory); without it each lockscreen attempt logged "no default config
+# other" as an error. Never used for anything real: everything is denied.
+auth     required pam_deny.so
+account  required pam_deny.so
+password required pam_deny.so
+session  required pam_deny.so

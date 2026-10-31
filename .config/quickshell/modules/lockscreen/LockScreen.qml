@@ -196,19 +196,24 @@ Scope {
     // FIDO2: a second PAM conversation (pam/u2f.conf) that only waits for a touch of
     // a linked key, from the moment it locks, next to the typed password. Whichever
     // succeeds first unlocks; the other one is stopped. No key plugged in: it fails
-    // at once; plugged in but not touched: when the key times out (~15-30 s). Either
-    // way it's started again after a pause while it's locked (no faillock in u2f.conf,
-    // so these don't count as failed logins). The key blinks while it waits.
+    // at once (then the next try waits 4 s); plugged in but not touched: when the key
+    // times out (~15-30 s, then again right away). Either way it's started again while
+    // it's locked (no faillock in u2f.conf, so these don't count as failed logins).
+    // The key blinks while it waits.
     readonly property bool touchWanted: sessionLock.locked && keyMode === "fido2" && !unlocking
     onTouchWantedChanged: {
-        if (touchWanted) { if (!touch.active) touch.start() }
+        if (touchWanted) { if (!touch.active) touch.begin() }
         else { touchRetry.stop(); if (touch.active) touch.abort() }
     }
-    Timer { id: touchRetry; interval: 1500; onTriggered: if (root.touchWanted && !touch.active) touch.start() }
+    Timer { id: touchRetry; interval: 1500; onTriggered: if (root.touchWanted && !touch.active) touch.begin() }
     PamContext {
         id: touch
         configDirectory: Quickshell.shellDir + "/pam"
         config: "u2f.conf"
+        property double startedAt: 0
+        function begin() { startedAt = Date.now(); start() }
+        // failed within a second: no key there, so wait longer before the next try
+        function retry() { touchRetry.interval = Date.now() - startedAt < 1000 ? 4000 : 500; touchRetry.restart() }
         // pam_u2f doesn't ask anything (no cue here); answer empty if it ever does
         onResponseRequiredChanged: if (responseRequired) respond("")
         onCompleted: result => {
@@ -216,9 +221,9 @@ Scope {
                 if (pam.active) pam.abort()
                 root.checking = false
                 root.unlockNow()
-            } else if (root.touchWanted) touchRetry.restart()
+            } else if (root.touchWanted) retry()
         }
-        onError: error => { if (root.touchWanted) touchRetry.restart() }
+        onError: error => { if (root.touchWanted) retry() }
     }
 
     function unlockNow() {
