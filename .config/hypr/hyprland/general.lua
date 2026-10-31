@@ -55,7 +55,7 @@ hl.config({
             render_power = 4,
             sharp = false,
             color = "0xff000000",
-            scale = 10.0,
+            scale = 2.0,
         },
     },
 
