@@ -50,7 +50,7 @@ Item {
         scale: mouse.pressed ? Properties.onPressedButtonScale
              : mouse.containsMouse ? Properties.onEnteredButtonScale
              : Properties.onExitedButtonScale
-        Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
 
         ButtonBackground {
             id: background

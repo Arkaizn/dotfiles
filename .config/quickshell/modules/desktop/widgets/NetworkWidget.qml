@@ -10,7 +10,7 @@ ColumnLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 8
+    spacing: Tokens.space.s8
     implicitWidth: 240
 
     property bool using: false
@@ -30,7 +30,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 16
+        spacing: Tokens.space.s16
         Text { text: "󰇚 " + root.rate(SysStats.rxRate); color: Colors.color6; font.pixelSize: 15; font.bold: true; font.family: Properties.fontFamily }
         Text { text: "󰕒 " + root.rate(SysStats.txRate); color: Colors.color4; font.pixelSize: 15; font.bold: true; font.family: Properties.fontFamily }
     }

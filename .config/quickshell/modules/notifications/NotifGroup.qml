@@ -29,14 +29,14 @@ Item {
     }
 
     Behavior on reveal {
-        NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Anim.medium; easing.type: Anim.standard }
     }
 
     Rectangle {
         id: card
         width: root.width
         height: col.implicitHeight + 20
-        radius: 12
+        radius: Tokens.radius.xl
         color: Colors.card
         border.width: 1
         border.color: headerHover.hovered ? Colors.fade(0.18) : Properties.cardBorder
@@ -45,12 +45,12 @@ Item {
         x: 60
         opacity: root.reveal
 
-        Behavior on border.color { ColorAnimation { duration: Anim.color } }
-        Behavior on x { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+        Behavior on border.color { ColorAnimation { duration: Anim.fast } }
+        Behavior on x { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
 
         Column {
             id: col
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s10 }
 
             // ── Header ────────────────────────────────────────
             Item {
@@ -69,7 +69,7 @@ Item {
 
                 RowLayout {
                     anchors.fill: parent
-                    spacing: 10
+                    spacing: Tokens.space.s10
 
                     Rectangle {
                         Layout.preferredWidth: 34
@@ -97,12 +97,12 @@ Item {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 1
+                        spacing: Tokens.space.s1
 
                         Text {
                             text: root.model.appName
                             color: Colors.fade(0.9)
-                            font { bold: true; pixelSize: 13 }
+                            font { bold: true; pixelSize: Tokens.font.body }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
@@ -110,7 +110,7 @@ Item {
                             text: (root.itemCount > 1 ? root.itemCount + " notifications · " : "")
                                   + Notifs.relativeTime(root.model.time)
                             color: Colors.fade(0.44)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                         }
                     }
 

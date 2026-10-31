@@ -10,7 +10,12 @@ modules/lockscreen/parts/PowerRow.qml
 modules/lockscreen/parts/LockChip.qml
 modules/lockscreen/parts/CapsLock.qml
 components/SearchField.qml
+components/FieldBackground.qml
 components/IconButton.qml
+components/Pressable.qml
+components/FocusRing.qml
+components/HoverTip.qml
+components/Spinner.qml
 components/ButtonBackground.qml
 components/ButtonGradient.qml
 components/ConfirmArm.qml
@@ -18,6 +23,14 @@ services/Colors.qml
 services/Properties.qml
 services/Settings.qml
 services/Anim.qml
+services/Tokens.qml
+services/TokenFont.qml
+services/TokenSpace.qml
+services/TokenRadius.qml
+services/TokenIcon.qml
+services/TokenBorder.qml
+services/TokenAlpha.qml
+services/TokenSize.qml
 services/Time.qml
 services/Files.qml
 services/Icons.qml

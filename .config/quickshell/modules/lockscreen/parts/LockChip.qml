@@ -20,7 +20,7 @@ Rectangle {
         anchors.centerIn: parent
         text: root.text
         color: root.warn ? Colors.red : Colors.ink
-        font.pixelSize: 12
+        font.pixelSize: Tokens.font.small
         font.family: Properties.fontFamily
     }
 }

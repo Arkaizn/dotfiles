@@ -208,14 +208,12 @@ Rectangle {
     property var exportOpts: null
     function exportWith(opts) {
         exportOpts = opts
-        pick.forImport = false
-        pick.command = ["zenity", "--file-selection", "--save", "--confirm-overwrite", "--title=Export Quickshell settings",
-                        "--filename=" + defaultPath, "--file-filter=JSON | *.json", "--file-filter=All files | *"]
-        pick.running = true
+        Jobs.pickFile({ title: "Export Quickshell settings", save: true, start: defaultPath, filters: ["JSON | *.json"] },
+                       (path, error) => path !== "" ? root.writeTo(path) : error ? root.show("error", "Couldn't open the file picker", error) : undefined)
     }
 
     // where an account export is written for a moment (per user, not on disk)
-    readonly property string tmpDir: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/quickshell-transfer"
+    readonly property string tmpDir: (Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.cachePath("run")) + "/quickshell-transfer"
 
     function writeTo(path) {
         const opts = exportOpts ?? { groups: groups.filter(g => g !== "monitors"), monitors: false }
@@ -261,17 +259,19 @@ Rectangle {
 
     // ── Import ───────────────────────────────────────────────────────────────
     function importSettings() {
-        pick.forImport = true
-        pick.command = ["zenity", "--file-selection", "--title=Import Quickshell settings",
-                        "--filename=" + Quickshell.env("HOME") + "/", "--file-filter=JSON | *.json", "--file-filter=All files | *"]
-        pick.running = true
+        Jobs.pickFile({ title: "Import Quickshell settings", start: Quickshell.env("HOME") + "/", filters: ["JSON | *.json"] },
+                       (path, error) => path !== "" ? root.readFrom(path) : error ? root.show("error", "Couldn't open the file picker", error) : undefined)
     }
 
     function readFrom(path) {
-        reader.path = path
-        reader.command = ["cat", "--", path]
         show("busy", "Checking " + path + "…")
-        reader.running = true
+        // at most 4 MiB: a settings export is a few KB (with accounts a few
+        // hundred); anything bigger isn't one and shouldn't be parsed
+        Jobs.run(["head", "-c", "4194305", "--", path], (code, out, err) => {
+            if (code !== 0) root.show("error", "Couldn't read " + path, (err ?? "").trim())
+            else if ((out ?? "").length > 4194304) root.show("error", "Couldn't read " + path, "The file is bigger than 4 MiB — not a settings export.")
+            else root.check(out ?? "", path)
+        })
     }
 
     function check(text, path) {
@@ -305,11 +305,45 @@ Rectangle {
             return
         }
         pending = v
+        pendingCommands = newCommands(v)
+        importArm.disarm()
         show("confirm", name + " is valid: " + parts.join(", "),
              "Importing replaces your current " + groups.filter(g => v[g] !== undefined).map(g => groupNames[g]).join(", ")
              + " settings with the ones in the file."
-             + (accs.length ? " The " + accs.join(" and ") + " accounts open in their app's import afterwards (passphrase, which ones)." : ""))
+             + (accs.length ? " The " + accs.join(" and ") + " accounts open in their app's import afterwards (passphrase, which ones)." : "")
+             + (pendingCommands.length ? "\n\nIt brings " + pendingCommands.length + (pendingCommands.length === 1 ? " command" : " commands")
+                + " you don't have now — only import if you trust the file:\n• "
+                + pendingCommands.slice(0, 15).join("\n• ") + (pendingCommands.length > 15 ? "\n… and " + (pendingCommands.length - 15) + " more" : "") : ""))
     }
+
+    // Everything in a settings object that runs something: autostart / keybind
+    // / widget commands (any `cmd`, `command`, `exec`), RDP extra arguments,
+    // the VNC server starting by itself. An import shows the ones that are new
+    // compared to the current settings and asks twice — the file may come
+    // from anywhere, and these run at the next login or key press.
+    function commandsIn(v) {
+        const out = []
+        const walk = (x, path) => {
+            if (Array.isArray(x)) { x.forEach((y, i) => walk(y, path)); return }
+            if (x === null || typeof x !== "object") return
+            for (const k of Object.keys(x)) {
+                const y = x[k]
+                if ((k === "cmd" || k === "command" || k === "exec") && typeof y === "string" && y.trim() !== "") out.push(path + ": " + y.trim())
+                else if (k === "extra" && Array.isArray(y) && y.length) out.push(path + " (RDP arguments): " + y.join(" "))
+                else walk(y, path)
+            }
+        }
+        for (const g of groups) if (v[g] !== undefined && g !== "properties" && g !== "monitors") walk(v[g], groupNames[g] ?? g)
+        if (v.connections?.server?.autostart === true) out.push("VNC server: starts with the shell (others on the network can connect)")
+        return out
+    }
+    function newCommands(v) {
+        const cur = {}
+        for (const g of groups) cur[g] = Settings[g]
+        const have = new Set(commandsIn(cur))
+        return commandsIn(v).filter(c => !have.has(c))
+    }
+    property var pendingCommands: []
 
     // the line with the error and a ^ under the spot
     function excerpt(text, line, col) {
@@ -490,33 +524,7 @@ Rectangle {
         }
     }
 
-    // ── Processes ────────────────────────────────────────────────────────────
-    Process {
-        id: pick
-        property bool forImport: false
-        stdout: StdioCollector { id: pickOut }
-        onExited: code => {
-            const path = pickOut.text.trim()
-            if (code === 0 && path !== "") {
-                if (forImport) root.readFrom(path)
-                else root.writeTo(path)
-            } else if (code !== 1) {                // 1 = cancelled
-                root.show("error", "Couldn't open the file picker",
-                          code === 127 ? "zenity isn't installed." : "zenity exited with code " + code + ".")
-            }
-        }
-    }
 
-    Process {
-        id: reader
-        property string path: ""
-        stdout: StdioCollector { id: readOut }
-        stderr: StdioCollector { id: readErr }
-        onExited: code => {
-            if (code === 0) root.check(readOut.text, reader.path)
-            else root.show("error", "Couldn't read " + reader.path, readErr.text.trim())
-        }
-    }
 
     // "done" goes away by itself
     Timer {
@@ -526,11 +534,11 @@ Rectangle {
     }
 
     // ── Banner ───────────────────────────────────────────────────────────────
-    readonly property color tint: mode === "error" ? Qt.rgba(0.95, 0.55, 0.66, 1) : Colors.color6
+    readonly property color tint: mode === "error" ? Colors.alpha(Colors.danger, 1) : Colors.color6
 
     visible: mode !== ""
     implicitHeight: body.implicitHeight + 20
-    radius: 14
+    radius: Tokens.radius.card
     color: Qt.rgba(tint.r, tint.g, tint.b, 0.12)
     border.width: Properties.panelBorderWidth
     border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.35)
@@ -538,27 +546,27 @@ Rectangle {
     RowLayout {
         id: body
         anchors.fill: parent
-        anchors.margins: 10
-        anchors.leftMargin: 14
-        spacing: 10
+        anchors.margins: Tokens.space.s10
+        anchors.leftMargin: Tokens.space.s14
+        spacing: Tokens.space.s10
 
         Text {
             Layout.alignment: Qt.AlignTop
-            Layout.topMargin: 1
+            Layout.topMargin: Tokens.space.s1
             text: root.mode === "error" ? "󰀦" : root.mode === "confirm" ? "󰄬" : root.mode === "busy" ? "󰔟" : "󰄴"
             color: root.mode === "error" ? Colors.red : Colors.color6
-            font.pixelSize: 18
+            font.pixelSize: Tokens.font.title
             font.family: Properties.fontFamily
         }
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: Tokens.space.s4
             Text {
                 Layout.fillWidth: true
                 text: root.title
                 color: Colors.ink
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.bold: true
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
@@ -568,7 +576,7 @@ Rectangle {
                 visible: text !== ""
                 text: root.details
                 color: Colors.fade(0.75)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap
                 textFormat: Text.PlainText
@@ -578,11 +586,13 @@ Rectangle {
         ActionButton {
             Layout.alignment: Qt.AlignTop
             visible: root.mode === "confirm"
-            text: "Import"
+            text: root.pendingCommands.length && importArm.armed === "import" ? "Import with commands" : "Import"
             icon: "󰋺"
             primary: true
-            onClicked: root.apply()
+            // new commands in the file: the first click arms, the second imports
+            onClicked: if (root.pendingCommands.length === 0 || importArm.confirm("import")) root.apply()
         }
+        ConfirmArm { id: importArm }
         IconButton {
             Layout.alignment: Qt.AlignTop
             visible: root.mode !== "busy"

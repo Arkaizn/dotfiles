@@ -11,7 +11,7 @@ import qs.services
 ColumnLayout {
     id: page
 
-    spacing: 14
+    spacing: Tokens.space.s14
 
     // editable copy of Monitors.outputs
     property var draft: []
@@ -125,15 +125,15 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: !Monitors.included || Monitors.error !== ""
         implicitHeight: bannerText.implicitHeight + 20
-        radius: 14
-        color: Qt.rgba(0.95, 0.55, 0.66, 0.12)
+        radius: Tokens.radius.card
+        color: Colors.alpha(Colors.danger, 0.12)
         border.width: Properties.panelBorderWidth
-        border.color: Qt.rgba(0.95, 0.55, 0.66, 0.35)
+        border.color: Colors.alpha(Colors.danger, 0.35)
         Text {
             id: bannerText
             anchors.fill: parent
-            anchors.margins: 10
-            anchors.leftMargin: 14
+            anchors.margins: Tokens.space.s10
+            anchors.leftMargin: Tokens.space.s14
             text: !Monitors.included
                 ? (Compositor.isHyprland
                     ? "󰀦  Hyprland doesn't load the settings file yet: " + HyprSettings.mainConfig
@@ -142,7 +142,7 @@ ColumnLayout {
                       + " needs\n" + Monitors.includeLine + "\nright before the output.kdl include.")
                 : "󰀦  " + Monitors.error
             color: Colors.ink
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
         }
@@ -152,24 +152,24 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: 290
-        radius: 14
+        radius: Tokens.radius.card
         color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
 
         Text {
-            anchors { left: parent.left; top: parent.top; margins: 14 }
+            anchors { left: parent.left; top: parent.top; margins: Tokens.space.s14 }
             text: "Drag to arrange  ·  click to select"
             color: Colors.fade(0.4)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
         }
 
         RowLayout {
-            anchors { right: parent.right; top: parent.top; margins: 10 }
-            spacing: 6
+            anchors { right: parent.right; top: parent.top; margins: Tokens.space.s10 }
+            spacing: Tokens.space.s6
             // where the names show up (picking one shows them right away)
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 130
                 implicitHeight: 30
                 options: page.identifySpots
@@ -193,7 +193,7 @@ ColumnLayout {
         Item {
             id: canvas
             anchors.fill: parent
-            anchors.margins: 16
+            anchors.margins: Tokens.space.s16
             anchors.topMargin: 44
 
             // logical px → canvas px, fitted around the enabled monitors
@@ -225,17 +225,17 @@ ColumnLayout {
                     y: m.oy + r.y * m.sf
                     width: r.w * m.sf
                     height: r.h * m.sf
-                    radius: 10
-                    color: isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.28) : Colors.fade(0.08)
+                    radius: Tokens.radius.lg
+                    color: isSel ? Colors.alpha(Colors.color6, 0.28) : Colors.fade(0.08)
                     border.width: isSel ? 2 : 1.5
                     border.color: isSel ? Colors.color6 : Colors.fade(drag.containsMouse ? 0.4 : 0.22)
                     z: isSel ? 1 : 0
-                    Behavior on color { ColorAnimation { duration: 120 } }
+                    Behavior on color { ColorAnimation { duration: Anim.fast } }
 
                     ColumnLayout {
                         anchors.centerIn: parent
                         width: parent.width - 16
-                        spacing: 2
+                        spacing: Tokens.space.s2
                         Text {
                             Layout.fillWidth: true
                             horizontalAlignment: Text.AlignHCenter
@@ -251,7 +251,7 @@ ColumnLayout {
                             horizontalAlignment: Text.AlignHCenter
                             text: mon.c.model
                             color: Colors.fade(0.6)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -261,7 +261,7 @@ ColumnLayout {
                             text: mon.c.width + "×" + mon.c.height + " @ " + Math.round(mon.c.refresh / 1000) + "Hz"
                                   + (mon.c.scale !== 1 ? "  ·  " + mon.c.scale + "x" : "")
                             color: Colors.fade(0.45)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -303,8 +303,8 @@ ColumnLayout {
 
         // turned-off monitors
         Row {
-            anchors { left: parent.left; bottom: parent.bottom; margins: 12 }
-            spacing: 6
+            anchors { left: parent.left; bottom: parent.bottom; margins: Tokens.space.s12 }
+            spacing: Tokens.space.s6
             Repeater {
                 model: page.draft.length
                 ActionButton {
@@ -324,15 +324,15 @@ ColumnLayout {
     ColumnLayout {
         Layout.fillWidth: true
         visible: page.sel !== null
-        spacing: 8
+        spacing: Tokens.space.s8
 
         RowLayout {
-            Layout.leftMargin: 6
-            spacing: 8
+            Layout.leftMargin: Tokens.space.s6
+            spacing: Tokens.space.s8
             Text {
                 text: page.sel ? (page.sel.make + " " + page.sel.model).trim() || page.sel.name : ""
                 color: Colors.fade(0.55)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -344,7 +344,7 @@ ColumnLayout {
                     return page.sel.name + "  ·  " + inch + "at " + page.sel.x + ", " + page.sel.y
                 }
                 color: Colors.fade(0.35)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
         }
@@ -352,7 +352,7 @@ ColumnLayout {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: rows.implicitHeight
-            radius: 14
+            radius: Tokens.radius.card
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
@@ -391,7 +391,7 @@ ColumnLayout {
                     label: "Resolution"
                     enabled: page.sel?.enabled ?? false
                     opacity: enabled ? 1 : 0.4
-                    DropdownControl {
+                    Dropdown {
                         options: {
                             if (!page.sel) return []
                             const seen = {}
@@ -420,7 +420,7 @@ ColumnLayout {
                     label: "Refresh rate"
                     enabled: page.sel?.enabled ?? false
                     opacity: enabled ? 1 : 0.4
-                    DropdownControl {
+                    Dropdown {
                         options: page.sel
                             ? page.sel.modes.filter(m => m.width === page.sel.width && m.height === page.sel.height)
                                 .sort((a, b) => b.refresh_rate - a.refresh_rate)
@@ -439,7 +439,7 @@ ColumnLayout {
                     desc: "Bigger = everything larger, less space"
                     enabled: page.sel?.enabled ?? false
                     opacity: enabled ? 1 : 0.4
-                    NumberControl {
+                    NumberField {
                         from: 0.5
                         to: 3
                         step: 0.05
@@ -454,7 +454,7 @@ ColumnLayout {
                     label: "Rotation"
                     enabled: page.sel?.enabled ?? false
                     opacity: enabled ? 1 : 0.4
-                    ChoiceControl {
+                    Segmented {
                         options: ["normal", "90", "180", "270"]
                         value: page.sel?.transform ?? "normal"
                         onEdited: v => page.resize(page.selected, { transform: v })
@@ -482,18 +482,18 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: 54
-        radius: 14
-        color: Monitors.pending ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12) : Colors.card
+        radius: Tokens.radius.card
+        color: Monitors.pending ? Colors.alpha(Colors.color6, 0.12) : Colors.card
         border.width: Properties.panelBorderWidth
-        border.color: Monitors.pending ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4) : Properties.cardBorder
-        Behavior on color { ColorAnimation { duration: 150 } }
+        border.color: Monitors.pending ? Colors.alpha(Colors.color6, 0.4) : Properties.cardBorder
+        Behavior on color { ColorAnimation { duration: Anim.normal } }
 
         // normal: forget / undo / apply
         RowLayout {
             anchors.fill: parent
             anchors.margins: 11
-            anchors.leftMargin: 14
-            spacing: 8
+            anchors.leftMargin: Tokens.space.s14
+            spacing: Tokens.space.s8
             visible: !Monitors.pending
 
             ActionButton {
@@ -506,7 +506,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: page.edited ? "Not applied yet" : Object.keys(Settings.monitors).length > 0 ? "Saved" : "Using output.kdl"
                 color: Colors.fade(0.45)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 horizontalAlignment: Text.AlignRight
             }
@@ -529,15 +529,15 @@ ColumnLayout {
         RowLayout {
             anchors.fill: parent
             anchors.margins: 11
-            anchors.leftMargin: 14
-            spacing: 8
+            anchors.leftMargin: Tokens.space.s14
+            spacing: Tokens.space.s8
             visible: Monitors.pending
 
             Text {
                 Layout.fillWidth: true
                 text: "Keep this display setup?  Reverting in " + Monitors.countdown + "s"
                 color: Colors.ink
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -555,13 +555,6 @@ ColumnLayout {
         }
     }
 
-    component Divider: Rectangle {
-        Layout.fillWidth: true
-        Layout.leftMargin: 16
-        Layout.rightMargin: 16
-        implicitHeight: 1
-        color: Colors.fade(0.06)
-    }
 
     // ── Identify: big name on every screen for a moment, at the chosen edge ──
     Timer { id: identifyTimer; interval: 2500; onTriggered: page.identifying = false }
@@ -594,12 +587,12 @@ ColumnLayout {
                 Rectangle {
                     anchors.fill: parent
                     radius: Properties.panelRadius
-                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.92)
+                    color: Colors.alpha(Colors.background, 0.92)
                     border.width: 2
                     border.color: Colors.color6
                     ColumnLayout {
                         anchors.centerIn: parent
-                        spacing: 2
+                        spacing: Tokens.space.s2
                         Text {
                             Layout.alignment: Qt.AlignHCenter
                             text: modelData.name
@@ -612,7 +605,7 @@ ColumnLayout {
                             Layout.alignment: Qt.AlignHCenter
                             text: modelData.model
                             color: Colors.fade(0.6)
-                            font.pixelSize: 13
+                            font.pixelSize: Tokens.font.body
                             font.family: Properties.fontFamily
                         }
                     }

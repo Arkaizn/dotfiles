@@ -15,7 +15,7 @@ import "../../calendar"
 // (trash red, archive blue, …), each on / off.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property var glyphs: []                 // [{ g: glyph, name }]
     property string glyphError: ""
@@ -63,15 +63,15 @@ ColumnLayout {
         return t.length > 0 && t.length <= 4 ? t : ""
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Font"
         icon: "󰛖"
-        NetRow {
+        SettingRow {
             first: true
             label: "Shell font"
             desc: page.nerdFonts.length + " Nerd Fonts installed · the icons come from it, so it has to be a Nerd Font"
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 260
                 options: page.nerdFonts.map(f => ({ label: f, value: f }))
                 value: Properties.fontFamily
@@ -81,13 +81,13 @@ ColumnLayout {
     }
 
     // icons colored by what they do (Icons.colorList), each one on / off
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Colors"
         icon: "󰏘"
         Repeater {
             model: Icons.colorList
-            NetRow {
+            SettingRow {
                 id: colorRow
                 required property var modelData
                 required property int index
@@ -97,12 +97,12 @@ ColumnLayout {
                 label: modelData.label + " in color"
                 desc: modelData.desc
                 RowLayout {
-                    spacing: 12
+                    spacing: Tokens.space.s12
                     Text {
                         text: colorRow.modelData.glyph
                         color: colorRow.on ? Icons.colorOf(colorRow.modelData.id) : Properties.color
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        font.pixelSize: 18
+                        Behavior on color { ColorAnimation { duration: Anim.normal } }
+                        font.pixelSize: Tokens.font.title
                         font.family: Properties.fontFamily
                     }
                     ToggleSwitch { checked: colorRow.on; onToggled: v => Icons.setColorOn(colorRow.modelData.id, v) }
@@ -113,14 +113,14 @@ ColumnLayout {
 
     Repeater {
         model: Icons.groups
-        NetCard {
+        Section {
             id: groupCard
             required property string modelData
             Layout.fillWidth: true
             title: modelData
             Repeater {
                 model: Icons.list.filter(i => i.group === groupCard.modelData)
-                NetRow {
+                SettingRow {
                     id: row
                     required property var modelData
                     required property int index
@@ -136,11 +136,11 @@ ColumnLayout {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 10
+                        spacing: Tokens.space.s10
 
                         RowLayout {
                             Layout.alignment: Qt.AlignRight
-                            spacing: 6
+                            spacing: Tokens.space.s6
                             IconButton {
                                 visible: row.isChanged
                                 icon: "󰑓"
@@ -151,16 +151,16 @@ ColumnLayout {
                             // the icon itself: click to change
                             Rectangle {
                                 implicitWidth: 44; implicitHeight: 36
-                                radius: Properties.radius
+                                radius: Tokens.radius.md
                                 color: row.open ? Colors.fade(0.14) : glyphHover.hovered ? Colors.fade(0.1) : Colors.fade(0.05)
                                 border.width: 1
                                 border.color: row.open ? Colors.color6 : Colors.fade(0.12)
-                                Behavior on color { ColorAnimation { duration: 100 } }
+                                Behavior on color { ColorAnimation { duration: Anim.fast } }
                                 Text {
                                     anchors.centerIn: parent
                                     text: row.glyph
                                     color: Colors.ink
-                                    font.pixelSize: 20
+                                    font.pixelSize: Tokens.font.titleLarge
                                     font.family: Properties.fontFamily
                                 }
                                 HoverHandler { id: glyphHover; cursorShape: Qt.PointingHandCursor }
@@ -177,11 +177,11 @@ ColumnLayout {
                         ColumnLayout {
                             Layout.fillWidth: true
                             visible: row.open
-                            spacing: 8
+                            spacing: Tokens.space.s8
 
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 8
+                                spacing: Tokens.space.s8
                                 SearchField {
                                     id: search
                                     Layout.fillWidth: true
@@ -209,7 +209,7 @@ ColumnLayout {
                                     : page.query.trim() !== "" ? page.results.length + (page.results.length === 240 ? "+" : "") + " found"
                                     : "Icons next to the current one (similar ones are grouped in the font) · search to find others"
                                 color: page.glyphError !== "" ? Colors.red : Colors.fade(0.45)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                             }
 
@@ -222,7 +222,7 @@ ColumnLayout {
                                 clip: true
                                 model: row.open ? page.results : []
                                 boundsBehavior: Flickable.StopAtBounds
-                                ScrollBar.vertical: CalScrollBar {}
+                                ScrollBar.vertical: SlimScrollBar {}
                                 SmoothWheel { flick: grid; step: 92 }
 
                                 delegate: Item {
@@ -234,26 +234,24 @@ ColumnLayout {
                                     Rectangle {
                                         anchors.fill: parent
                                         anchors.margins: 3
-                                        radius: Properties.radius
-                                        color: cell.current ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.22)
+                                        radius: Tokens.radius.md
+                                        color: cell.current ? Colors.alpha(Colors.color6, 0.22)
                                              : cellHover.hovered ? Colors.fade(0.1) : "transparent"
                                         border.width: cell.current ? 1 : 0
                                         border.color: Colors.color6
                                         scale: cellHover.hovered ? 1.12 : 1
-                                        Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
+                                        Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
                                         Text {
                                             anchors.centerIn: parent
                                             text: cell.modelData.g
                                             color: Colors.ink
-                                            font.pixelSize: 20
+                                            font.pixelSize: Tokens.font.titleLarge
                                             font.family: Properties.fontFamily
                                         }
                                     }
                                     HoverHandler { id: cellHover; cursorShape: Qt.PointingHandCursor }
                                     TapHandler { onTapped: Icons.set(row.modelData.id, cell.modelData.g) }
-                                    ToolTip.visible: cellHover.hovered
-                                    ToolTip.delay: 300
-                                    ToolTip.text: cell.modelData.name
+                                    HoverTip { shown: cellHover.hovered; text: cell.modelData.name }
                                 }
                             }
                         }

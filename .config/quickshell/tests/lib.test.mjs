@@ -682,5 +682,26 @@ test("MailUtil.linkDates: dates in the HTML become qsdate: links", () => {
     assert.equal(MU.parseDateLink("https://x.org"), null)
 })
 
+const TC = load("ThemeCheck.js")
+test("ThemeCheck keeps a plain theme, rebuilt", () => {
+    const colors = {}; for (let i = 0; i < 16; i++) colors["color" + i] = "#10203" + (i % 10)
+    const r = TC.clean({ special: { background: "#000000", foreground: "#ffffff" }, colors, wallpaper: "/home/u/Pictures/a b.png", alpha: "90", extra: "x" })
+    assert.equal(r.ok, true)
+    assert.equal(r.theme.special.cursor, "#ffffff")              // missing cursor: the foreground
+    assert.equal(r.theme.wallpaper, "/home/u/Pictures/a b.png")
+    assert.equal(r.theme.alpha, "90")
+    assert.equal(r.theme.extra, undefined)
+})
+test("ThemeCheck refuses shell code in colours, drops it in the wallpaper", () => {
+    const colors = {}; for (let i = 0; i < 16; i++) colors["color" + i] = "#000000"
+    const bad = Object.assign({}, colors, { color3: "#000000'; touch /tmp/x; '" })
+    assert.equal(TC.clean({ special: { background: "#000000", foreground: "#ffffff" }, colors: bad }).ok, false)
+    const r = TC.clean({ special: { background: "#000000", foreground: "#ffffff" }, colors, wallpaper: "x'; curl e | sh; '" })
+    assert.equal(r.ok, true)
+    assert.equal(r.theme.wallpaper, undefined)
+    assert.equal(TC.clean({ special: { background: "$(id)", foreground: "#ffffff" }, colors }).ok, false)
+    assert.equal(TC.clean([]).ok, false)
+})
+
 console.log(passed + " passed, " + failed + " failed")
 process.exit(failed ? 1 : 0)

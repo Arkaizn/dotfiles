@@ -27,7 +27,7 @@ RowLayout {
     Component.onCompleted: host.registerHolder(root)
     Component.onDestruction: host.unregisterHolder(root)
 
-    spacing: 6
+    spacing: Tokens.space.s6
 
     ColumnLayout {
         Layout.fillWidth: true
@@ -45,21 +45,21 @@ RowLayout {
                 ? "Click again to " + PanelLayout.item(root.host.armed).name.toLowerCase()
                 : Time.format("dddd, d. MMMM")
             color: root.host.armed !== "" ? Colors.red : Colors.fade(0.6)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
         }
         // batteries
         Flow {
             Layout.fillWidth: true
-            Layout.topMargin: 8
+            Layout.topMargin: Tokens.space.s8
             visible: root.batteries.length > 0
-            spacing: 6
+            spacing: Tokens.space.s6
             Repeater {
                 model: root.batteries
                 delegate: Rectangle {
                     required property var modelData
                     implicitWidth: chip.implicitWidth + 16
                     implicitHeight: 24
-                    radius: Properties.radius
+                    radius: Tokens.radius.md
                     color: Colors.card
                     border.width: Properties.panelBorderWidth
                     border.color: Properties.cardBorder
@@ -68,7 +68,7 @@ RowLayout {
                         anchors.centerIn: parent
                         text: modelData.icon + "  " + modelData.name + "  " + modelData.level + "%"
                         color: modelData.level <= 15 ? Colors.red : modelData.level <= 30 ? Colors.orange : Colors.ink
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                     }
                 }
@@ -85,14 +85,14 @@ RowLayout {
         Layout.alignment: Qt.AlignVCenter
         Layout.minimumWidth: root.host.editButtons ? Properties.buttonHeight * 2 + 6 : 0
         Layout.minimumHeight: root.host.editButtons ? Properties.buttonHeight : 0
-        spacing: 6
+        spacing: Tokens.space.s6
 
         Repeater {
             model: root.rows
             RowLayout {
                 required property var modelData
                 Layout.alignment: Qt.AlignRight
-                spacing: 6
+                spacing: Tokens.space.s6
                 Repeater {
                     model: parent.modelData
                     CCItem {

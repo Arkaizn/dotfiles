@@ -103,7 +103,7 @@ Scope {
     function noteStart() {
         // the boot this login was in; and for lock-watchdog.sh, whether to expect a lock (per niri instance)
         Jobs.run(["sh", "-c", 'mkdir -p "${1%/*}" && printf "%s\\n" "$2" > "$1"; ' +
-                  'printf "%s %s\\n" "$3" "$NIRI_SOCKET" > "${XDG_RUNTIME_DIR:-/tmp}/quickshell-login-lock"',
+                  'printf "%s %s\\n" "$3" "$NIRI_SOCKET" > "${XDG_RUNTIME_DIR:?}/quickshell-login-lock"',   // no runtime dir: no marker, the watchdog expects a lock
                   "sh", bootFile, bootId, loginLock ? "lock" : "none"])
     }
     function processAge() {

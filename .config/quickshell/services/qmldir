@@ -1,6 +1,7 @@
 module qs.services
 singleton Properties Properties.qml
 singleton Anim Anim.qml
+singleton Tokens Tokens.qml
 singleton BarState BarState.qml
 singleton Time Time.qml
 singleton Colors Colors.qml
@@ -55,3 +56,11 @@ singleton PanelGeometry PanelGeometry.qml
 singleton SecretPrompt SecretPrompt.qml
 singleton MailStore MailStore.qml
 singleton AppZoom AppZoom.qml
+singleton Wallpapers Wallpapers.qml
+TokenFont TokenFont.qml
+TokenSpace TokenSpace.qml
+TokenRadius TokenRadius.qml
+TokenIcon TokenIcon.qml
+TokenBorder TokenBorder.qml
+TokenAlpha TokenAlpha.qml
+TokenSize TokenSize.qml

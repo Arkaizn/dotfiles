@@ -16,6 +16,7 @@ import "MailIcons.js" as I
 // it, Ctrl+B / I / U / K) and goes out as HTML with a plain-text copy.
 //   compose(to)  reply(m, all)  forward(m)  openDraft(d)
 Modal {
+    enterAccepts: false        // Enter in the subject must not send the mail
     id: root
 
     cardWidth: 760
@@ -230,7 +231,7 @@ Modal {
         id: form
         width: parent.width
         height: Math.min(720, root.height - 100)
-        spacing: 8
+        spacing: Tokens.space.s8
 
         Keys.onPressed: event => {
             if ((event.modifiers & Qt.ControlModifier) && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
@@ -241,23 +242,23 @@ Modal {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: Tokens.space.s10
             Text {
                 text: root.replyTo?.flag === "forwarded" ? I.forward : root.replyTo ? I.reply : I.draft
                 color: Colors.color6
-                font.pixelSize: 20
+                font.pixelSize: Tokens.font.titleLarge
                 font.family: Properties.fontFamily
             }
             Text {
                 Layout.fillWidth: true
                 text: root.fSubject.trim() || (root.replyTo ? "Reply" : "New message")
                 color: Colors.ink
-                font.pixelSize: 17
+                font.pixelSize: Tokens.font.title
                 font.bold: true
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
             }
-            DropdownControl {
+            Dropdown {
                 visible: MailStore.activeAccounts.length > 1
                 implicitWidth: 170
                 listWidth: 320
@@ -270,7 +271,7 @@ Modal {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: Tokens.space.s6
             AddressField {
                 id: toField
                 Layout.fillWidth: true
@@ -316,15 +317,15 @@ Modal {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            radius: 12
+            radius: Tokens.radius.xl
             color: Colors.card
             border.width: Properties.panelBorderWidth
-            border.color: body.activeFocus ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45) : Properties.cardBorder
+            border.color: body.activeFocus ? Colors.alpha(Colors.color6, 0.45) : Properties.cardBorder
             ScrollView {
                 id: bodyScroll
                 anchors.fill: parent
-                anchors.margins: 2
-                ScrollBar.vertical: CalScrollBar {}
+                anchors.margins: Tokens.space.s2
+                ScrollBar.vertical: SlimScrollBar {}
                 SmoothWheel { flick: bodyScroll.contentItem; step: 120 }
                 TextArea {
                     id: body
@@ -337,9 +338,9 @@ Modal {
                     selectionColor: Colors.fade(0.28)
                     selectByMouse: true
                     persistentSelection: true            // stays while a toolbar button is clicked
-                    font.pixelSize: 14
+                    font.pixelSize: Tokens.font.label
                     font.family: "Noto Sans"              // the message's font (mailsync adds fallbacks for other apps)
-                    leftPadding: 14; rightPadding: 14; topPadding: 12; bottomPadding: 12
+                    leftPadding: Tokens.space.s14; rightPadding: Tokens.space.s14; topPadding: Tokens.space.s12; bottomPadding: Tokens.space.s12
                     background: null
                     onCursorPositionChanged: fmt.refresh()
                     onSelectedTextChanged: fmt.refresh()
@@ -378,15 +379,15 @@ Modal {
             }
             DropZone {
                 anchors.fill: parent
-                anchors.margins: 6
-                radius: 10
+                anchors.margins: Tokens.space.s6
+                radius: Tokens.radius.lg
                 shown: drop.containsDrag
                 hot: true
                 Text {
                     anchors.centerIn: parent
                     text: I.clip + "  Drop to attach"
                     color: Colors.ink
-                    font.pixelSize: 14
+                    font.pixelSize: Tokens.font.label
                     font.family: Properties.fontFamily
                 }
             }
@@ -395,7 +396,7 @@ Modal {
         Flow {
             Layout.fillWidth: true
             visible: root.attachments.length > 0
-            spacing: 6
+            spacing: Tokens.space.s6
             Repeater {
                 model: root.attachments
                 Rectangle {
@@ -403,16 +404,16 @@ Modal {
                     required property int index
                     implicitWidth: aRow.implicitWidth + 12
                     implicitHeight: 28
-                    radius: 8
+                    radius: Tokens.radius.md
                     color: Colors.fade(0.05)
                     RowLayout {
                         id: aRow
                         anchors.verticalCenter: parent.verticalCenter
                         x: 8
-                        spacing: 4
-                        Text { text: I.clip; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
+                        spacing: Tokens.space.s4
+                        Text { text: I.clip; color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                         Text { Layout.maximumWidth: 220; text: modelData.split("/").pop(); color: Colors.fade(0.85)
-                               font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
+                               font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
                         IconButton { implicitWidth: 20; implicitHeight: 20; iconSize: 10; icon: I.close; tooltip: "Remove"
                                      onClicked: root.attachments = root.attachments.filter((_, i) => i !== index) }
                     }
@@ -422,13 +423,13 @@ Modal {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             ActionButton { icon: I.clip; text: "Attach"; onClicked: root.pickFiles() }
             Text {
                 Layout.fillWidth: true
                 text: root.error || root.note || (root.acc ? "From " + MailUtil.formatAddress({ name: root.acc.displayName, email: root.acc.email }) : "No account to send from")
                 color: root.error ? Colors.red : Colors.fade(0.45)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
                 wrapMode: root.error ? Text.Wrap : Text.NoWrap

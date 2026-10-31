@@ -111,15 +111,15 @@ Item {
     }
     ParallelAnimation {
         id: monthSlide
-        NumberAnimation { id: monthSlideX; target: weeksShift; property: "x"; to: 0; duration: 260; easing.type: Easing.OutCubic }
-        NumberAnimation { target: weeksCol; property: "opacity"; from: 0.15; to: 1; duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { id: monthSlideX; target: weeksShift; property: "x"; to: 0; duration: Anim.medium; easing.type: Anim.standard }
+        NumberAnimation { target: weeksCol; property: "opacity"; from: 0.15; to: 1; duration: Anim.medium; easing.type: Anim.standard }
     }
 
     // ── Layout ───────────────────────────────────────────────
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 6
+        anchors.margins: Tokens.space.s12
+        spacing: Tokens.space.s6
 
         // ── Header: prev / month+year pill / next ────────────
         RowLayout {
@@ -136,7 +136,7 @@ Item {
                 TapHandler   { id: prevTap; onTapped: root.prevMonth() }
 
                 Behavior on scale {
-                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Anim.fast; easing.type: Anim.standard }
                 }
                 scale: prevTap.pressed ? Properties.onPressedButtonScale : prevHover.hovered ? 1.10 : 1.0
 
@@ -155,9 +155,9 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "‹"
-                    font.pixelSize: 20
+                    font.pixelSize: Tokens.font.titleLarge
                     color: prevHover.hovered ? Colors.ink : Colors.fade(0.6)
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Behavior on color { ColorAnimation { duration: Anim.fast } }
                 }
             }
 
@@ -182,7 +182,7 @@ Item {
                 TapHandler   { id: monthTap; onTapped: root.goToToday() }
 
                 Behavior on scale {
-                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Anim.fast; easing.type: Anim.standard }
                 }
                 scale: monthTap.pressed ? Properties.onPressedButtonScale : monthPillItem.hovered ? 1.08 : 1.0
 
@@ -206,7 +206,7 @@ Item {
                     id: longName
                     visible: false
                     text: root.monthNames[root.curMonth] + "   " + root.curYear
-                    font.pixelSize: 13
+                    font.pixelSize: Tokens.font.body
                     font.weight: Font.Medium
                 }
                 Text {
@@ -216,13 +216,13 @@ Item {
                                                                              : root.monthNames[root.curMonth]) + "   " + root.curYear
                     Behavior on text {
                         SequentialAnimation {
-                            NumberAnimation { target: monthLabel; property: "opacity"; to: 0; duration: 90 }
+                            NumberAnimation { target: monthLabel; property: "opacity"; to: 0; duration: Anim.instant }
                             PropertyAction {}
-                            NumberAnimation { target: monthLabel; property: "opacity"; to: 1; duration: 140 }
+                            NumberAnimation { target: monthLabel; property: "opacity"; to: 1; duration: Anim.fast }
                         }
                     }
                     color: Colors.ink
-                    font.pixelSize: 13
+                    font.pixelSize: Tokens.font.body
                     font.weight: Font.Medium
                 }
             }
@@ -236,8 +236,8 @@ Item {
                 implicitWidth: todayLabel.implicitWidth + 14
                 opacity: away ? 1 : 0.45
                 scale: todayTap.pressed ? Properties.onPressedButtonScale : todayHover.hovered ? 1.08 : 1.0
-                Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-                Behavior on opacity { NumberAnimation { duration: 150 } }
+                Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+                Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
                 Rectangle {
                     anchors.fill: parent
@@ -251,7 +251,7 @@ Item {
                     anchors.centerIn: parent
                     text: "Today"
                     color: Colors.ink
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.weight: Font.Medium
                 }
                 HoverHandler { id: todayHover; cursorShape: Qt.PointingHandCursor }
@@ -270,7 +270,7 @@ Item {
                 TapHandler   { id: nextTap; onTapped: root.nextMonth() }
 
                 Behavior on scale {
-                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: Anim.fast; easing.type: Anim.standard }
                 }
                 scale: nextTap.pressed ? Properties.onPressedButtonScale : nextHover.hovered ? 1.10 : 1.0
 
@@ -289,9 +289,9 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "›"
-                    font.pixelSize: 20
+                    font.pixelSize: Tokens.font.titleLarge
                     color: nextHover.hovered ? Colors.ink : Colors.fade(0.6)
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Behavior on color { ColorAnimation { duration: Anim.fast } }
                 }
             }
         }
@@ -299,7 +299,7 @@ Item {
         // ── Day-of-week header row ────────────────────────────
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 4
+            Layout.topMargin: Tokens.space.s4
             spacing: 0
 
             Item { width: 15 }
@@ -313,7 +313,7 @@ Item {
                     Layout.preferredWidth: 0
                     text: modelData
                     color: index >= 5 ? Colors.fade(0.2) : Colors.fade(0.35)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     horizontalAlignment: Text.AlignHCenter
                 }
             }
@@ -348,7 +348,7 @@ Item {
                             root.isoWeek(dt.getFullYear(), dt.getMonth(), dt.getDate())
                         }
                         color: Colors.fade(0.2)
-                        font.pixelSize: 9
+                        font.pixelSize: Tokens.font.micro
                         verticalAlignment: Text.AlignVCenter
                         horizontalAlignment: Text.AlignHCenter
                     }
@@ -376,7 +376,7 @@ Item {
 
                             // Hover scale — snappy spring feel
                             Behavior on scale {
-                                NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                                NumberAnimation { duration: Anim.fast; easing.type: Anim.standard }
                             }
                             scale: dayTap.pressed ? Properties.onPressedButtonScale
                                  : (dayHover.hovered && !dayCell.isOther) ? 1.20 : 1.0
@@ -413,13 +413,13 @@ Item {
                                 visible: dayHover.hovered && !dayCell.isOther
                                          && !dayCell.isToday && !dayCell.isSelected
                                 color: Colors.fade(0.08)
-                                Behavior on color { ColorAnimation { duration: 80 } }
+                                Behavior on color { ColorAnimation { duration: Anim.instant } }
                             }
 
                             Text {
                                 anchors.centerIn: parent
                                 text: dayCell.cell.d
-                                font.pixelSize: 12
+                                font.pixelSize: Tokens.font.small
                                 font.weight: (dayCell.isToday || dayCell.isSelected) ? Font.Medium : Font.Normal
                                 color: dayCell.isOther    ? Colors.fade(0.15)
                                      : dayCell.isSelected ? Colors.ink
@@ -432,8 +432,8 @@ Item {
                             Row {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 anchors.top: parent.verticalCenter
-                                anchors.topMargin: 8           // just under the number
-                                spacing: 2
+                                anchors.topMargin: Tokens.space.s8           // just under the number
+                                spacing: Tokens.space.s2
                                 visible: !dayCell.isOther
                                 Repeater {
                                     model: [...new Set(CalendarStore.eventsOn(root.cellDate(dayCell.cell)).map(e => e.calendar))].slice(0, 3)

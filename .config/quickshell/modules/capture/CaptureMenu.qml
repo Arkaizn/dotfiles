@@ -80,9 +80,9 @@ PanelWindow {
     // dim + click outside closes
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.35)
+        color: Colors.dim(0.35)
         opacity: win.visible ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
         MouseArea { anchors.fill: parent; onClicked: Capture.menuOpen = false }
     }
 
@@ -92,7 +92,7 @@ PanelWindow {
         width: 560
         height: (win.screenFor ? picker.implicitHeight : col.implicitHeight) + 40
         clip: true
-        Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
         radius: Properties.panelRadius
         color: Properties.panelColor
         border.width: Properties.panelBorderWidth
@@ -118,13 +118,13 @@ PanelWindow {
 
         ColumnLayout {
             id: col
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 20 }
-            spacing: 14
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s20 }
+            spacing: Tokens.space.s14
             opacity: win.screenFor ? 0 : 1
             visible: opacity > 0
             enabled: !win.screenFor
-            transform: Translate { x: win.screenFor ? -40 : 0; Behavior on x { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } } }
-            Behavior on opacity { NumberAnimation { duration: 160 } }
+            transform: Translate { x: win.screenFor ? -40 : 0; Behavior on x { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } } }
+            Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -132,7 +132,7 @@ PanelWindow {
                     Layout.fillWidth: true
                     text: "Capture"
                     color: Colors.ink
-                    font.pixelSize: 18
+                    font.pixelSize: Tokens.font.title
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -145,10 +145,10 @@ PanelWindow {
             }
 
             // ── Screenshot ──────────────────────────────────────────────────
-            Text { text: "Screenshot"; color: Colors.fade(0.55); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
+            Text { text: "Screenshot"; color: Colors.fade(0.55); font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: Tokens.space.s10
                 CaptureButton { icon: "󰩭"; text: "Region"; key: "1"; onClicked: win.shot("region") }
                 CaptureButton { icon: "󰍹"; text: "Screen"; key: "2"; onClicked: win.chooseScreen("shot") }
                 CaptureButton { icon: "󰖯"; text: "Window"; key: "3"; onClicked: win.shot("window") }
@@ -156,8 +156,8 @@ PanelWindow {
             }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
-                Text { text: "Then"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
+                spacing: Tokens.space.s10
+                Text { text: "Then"; color: Colors.fade(0.6); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                 Segmented {
                     small: true
                     options: [{ label: "Save & copy", value: "save" }, { label: "Copy", value: "copy" }, { label: "Edit", value: "edit" }]
@@ -165,7 +165,7 @@ PanelWindow {
                     onEdited: v => win.after = v
                 }
                 Item { Layout.fillWidth: true }
-                Text { text: "Delay"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
+                Text { text: "Delay"; color: Colors.fade(0.6); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                 Segmented {
                     small: true
                     options: [{ label: "0", value: "0" }, { label: "3s", value: "3" }, { label: "5s", value: "5" }, { label: "10s", value: "10" }]
@@ -177,10 +177,10 @@ PanelWindow {
             Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Colors.fade(0.08) }
 
             // ── Recording ───────────────────────────────────────────────────
-            Text { text: "Record"; color: Colors.fade(0.55); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
+            Text { text: "Record"; color: Colors.fade(0.55); font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: Tokens.space.s10
                 visible: !Capture.recording
                 CaptureButton { icon: "󰖯"; text: "Window"; key: "5"; onClicked: win.rec("window") }
                 CaptureButton { icon: "󰕧"; text: "Screen"; key: "6"; onClicked: win.chooseScreen("rec") }
@@ -195,9 +195,9 @@ PanelWindow {
             }
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: Tokens.space.s10
                 visible: !Capture.recording
-                Text { text: "Sound"; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily }
+                Text { text: "Sound"; color: Colors.fade(0.6); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                 Segmented {
                     small: true
                     options: [{ label: "Desktop + mic", value: "both" }, { label: "Desktop", value: "desktop" }, { label: "Microphone", value: "mic" }, { label: "None", value: "none" }]
@@ -211,7 +211,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 text: "Screenshots → " + Capture.shotDir.replace(Capture.home, "~") + "   ·   Videos → " + Capture.videoDir.replace(Capture.home, "~")
                 color: Colors.fade(0.35)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 elide: Text.ElideMiddle
             }
@@ -220,13 +220,13 @@ PanelWindow {
         // ── Monitor picker (Screen with several monitors) ──────────────────
         ColumnLayout {
             id: picker
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 20 }
-            spacing: 14
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s20 }
+            spacing: Tokens.space.s14
             opacity: win.screenFor ? 1 : 0
             visible: opacity > 0
             enabled: !!win.screenFor
-            transform: Translate { x: win.screenFor ? 0 : 40; Behavior on x { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } } }
-            Behavior on opacity { NumberAnimation { duration: 160 } }
+            transform: Translate { x: win.screenFor ? 0 : 40; Behavior on x { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } } }
+            Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -235,7 +235,7 @@ PanelWindow {
                     Layout.fillWidth: true
                     text: win.screenFor === "rec" ? "Record which screen?" : "Screenshot of which screen?"
                     color: Colors.ink
-                    font.pixelSize: 16
+                    font.pixelSize: Tokens.font.subtitle
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -266,14 +266,14 @@ PanelWindow {
                         y: layoutView.offY + (modelData.y - layoutView.minY) * layoutView.k
                         width: modelData.width * layoutView.k
                         height: modelData.height * layoutView.k
-                        radius: 10
+                        radius: Tokens.radius.lg
                         readonly property color tint: win.screenFor === "rec" ? Colors.red : Colors.color6
                         color: monMouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.2) : Colors.fade(0.05)
                         border.width: 1.5
                         border.color: monMouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.7) : Colors.fade(0.14)
                         scale: monMouse.pressed ? 0.96 : monMouse.containsMouse ? 1.03 : 1
-                        Behavior on color { ColorAnimation { duration: 120 } }
-                        Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                        Behavior on color { ColorAnimation { duration: Anim.fast } }
+                        Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
 
                         MouseArea {
                             id: monMouse
@@ -284,19 +284,19 @@ PanelWindow {
                         }
                         ColumnLayout {
                             anchors.centerIn: parent
-                            spacing: 2
+                            spacing: Tokens.space.s2
                             Text {
                                 Layout.alignment: Qt.AlignHCenter
                                 text: "󰍹"
                                 color: monMouse.containsMouse ? mon.tint : Colors.fade(0.6)
-                                font.pixelSize: 22
+                                font.pixelSize: Tokens.font.headline
                                 font.family: Properties.fontFamily
                             }
                             Text {
                                 Layout.alignment: Qt.AlignHCenter
                                 text: mon.modelData.name
                                 color: Colors.ink
-                                font.pixelSize: 12
+                                font.pixelSize: Tokens.font.small
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
@@ -304,7 +304,7 @@ PanelWindow {
                                 Layout.alignment: Qt.AlignHCenter
                                 text: mon.modelData.width + "×" + mon.modelData.height
                                 color: Colors.fade(0.5)
-                                font.pixelSize: 10
+                                font.pixelSize: Tokens.font.micro
                                 font.family: Properties.fontFamily
                             }
                         }
@@ -312,7 +312,7 @@ PanelWindow {
                             anchors { top: parent.top; right: parent.right; margins: 7 }
                             text: mon.index + 1
                             color: Colors.fade(0.35)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                         }
                     }

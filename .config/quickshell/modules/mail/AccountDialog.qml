@@ -111,12 +111,12 @@ Modal {
 
     ColumnLayout {
         width: parent.width
-        spacing: 10
+        spacing: Tokens.space.s10
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
-            Text { text: I.mail; color: Colors.color6; font.pixelSize: 22; font.family: Properties.fontFamily }
+            spacing: Tokens.space.s10
+            Text { text: I.mail; color: Colors.color6; font.pixelSize: Tokens.font.headline; font.family: Properties.fontFamily }
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
@@ -125,7 +125,7 @@ Modal {
                     elide: Text.ElideRight
                     text: root.editing ? "Edit " + root.editing.email : "Add a mail account"
                     color: Colors.ink
-                    font.pixelSize: 17
+                    font.pixelSize: Tokens.font.title
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -134,7 +134,7 @@ Modal {
                     elide: Text.ElideRight
                     text: "iCloud, Gmail, Yahoo, Fastmail, GMX, mailbox.org, Posteo, any IMAP server"
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -178,19 +178,19 @@ Modal {
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: found.implicitHeight + 20
-            Behavior on implicitHeight { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-            radius: 10
-            color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.08)
+            Behavior on implicitHeight { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
+            radius: Tokens.radius.lg
+            color: Colors.alpha(Colors.color6, 0.08)
             ColumnLayout {
                 id: found
-                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 12 }
-                spacing: 6
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Tokens.space.s12 }
+                spacing: Tokens.space.s6
                 Text {
                     Layout.fillWidth: true
                     text: root.looking ? "Looking up the servers…"
                         : "󰄬  " + root.imapHost + " / " + root.smtpHost + "  ·  " + root.sourceText
                     color: Colors.fade(0.7)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -199,7 +199,7 @@ Modal {
                     visible: root.hint !== ""
                     text: root.hint
                     color: Colors.fade(0.85)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                     wrapMode: Text.Wrap
                 }
@@ -218,32 +218,32 @@ Modal {
             text: '<a href="x">' + (root.advanced ? "Hide server settings" : "Server settings") + '</a>'
             textFormat: Text.StyledText
             linkColor: Colors.fade(0.55)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             onLinkActivated: root.advanced = !root.advanced
             HoverHandler { cursorShape: Qt.PointingHandCursor }
         }
         Reveal {
           open: root.advanced
-          spacing: 8
+          spacing: Tokens.space.s8
           GridLayout {
             Layout.fillWidth: true
             columns: 4
-            columnSpacing: 8
-            rowSpacing: 8
-            Text { text: "Receive (IMAP)"; color: Colors.fade(0.6); font.pixelSize: 11; font.family: Properties.fontFamily }
+            columnSpacing: Tokens.space.s8
+            rowSpacing: Tokens.space.s8
+            Text { text: "Receive (IMAP)"; color: Colors.fade(0.6); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
             SearchField { Layout.fillWidth: true; icon: ""; clearable: false; placeholderText: "imap.example.org"
                           text: root.imapHost; onTextEdited: root.imapHost = text }
             SearchField { Layout.preferredWidth: 70; icon: ""; clearable: false; text: root.imapPort; onTextEdited: root.imapPort = text }
             Segmented { small: true; value: root.imapSec; onEdited: v => root.imapSec = v
                         options: [{ label: "SSL", value: "ssl" }, { label: "STARTTLS", value: "starttls" }, { label: "None", value: "none" }] }
-            Text { text: "Send (SMTP)"; color: Colors.fade(0.6); font.pixelSize: 11; font.family: Properties.fontFamily }
+            Text { text: "Send (SMTP)"; color: Colors.fade(0.6); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
             SearchField { Layout.fillWidth: true; icon: ""; clearable: false; placeholderText: "smtp.example.org"
                           text: root.smtpHost; onTextEdited: root.smtpHost = text }
             SearchField { Layout.preferredWidth: 70; icon: ""; clearable: false; text: root.smtpPort; onTextEdited: root.smtpPort = text }
             Segmented { small: true; value: root.smtpSec; onEdited: v => root.smtpSec = v
                         options: [{ label: "SSL", value: "ssl" }, { label: "STARTTLS", value: "starttls" }, { label: "None", value: "none" }] }
-            Text { text: "User name"; color: Colors.fade(0.6); font.pixelSize: 11; font.family: Properties.fontFamily }
+            Text { text: "User name"; color: Colors.fade(0.6); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
             SearchField { Layout.fillWidth: true; Layout.columnSpan: 3; icon: ""; clearable: false; placeholderText: "usually the address"
                           text: root.fUser; onTextEdited: root.fUser = text }
         }
@@ -251,7 +251,7 @@ Modal {
             Layout.fillWidth: true
             text: "\"None\" (no encryption) only works for servers on this computer, like Proton Mail Bridge."
             color: Colors.fade(0.4)
-            font.pixelSize: 10
+            font.pixelSize: Tokens.font.micro
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap
           }
@@ -259,13 +259,13 @@ Modal {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 4
-            spacing: 8
+            Layout.topMargin: Tokens.space.s4
+            spacing: Tokens.space.s8
             Text {
                 Layout.fillWidth: true
                 text: root.error || (root.testing ? "Checking the login (receiving and sending)…" : "󰌾  The password goes to your keyring, nowhere else.")
                 color: root.error ? Colors.red : Colors.fade(0.45)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap
             }

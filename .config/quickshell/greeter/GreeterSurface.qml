@@ -62,10 +62,10 @@ LockStage {
     // ── Top-left: which machine this is ──
     Text {
         visible: root.lock.hostname !== ""
-        anchors { left: parent.left; top: parent.top; margins: 32 }
+        anchors { left: parent.left; top: parent.top; margins: Tokens.space.s32 }
         text: "󰍹  " + root.lock.hostname
-        color: Qt.rgba(1, 1, 1, 0.55)
-        font.pixelSize: 13
+        color: Colors.onWallpaper(0.55)
+        font.pixelSize: Tokens.font.body
         font.family: Properties.fontFamily
     }
 
@@ -82,7 +82,7 @@ LockStage {
     // ── Bottom-right: power ──
     PowerRow {
         visible: root.show.power
-        anchors { right: parent.right; bottom: parent.bottom; margins: 32 }
+        anchors { right: parent.right; bottom: parent.bottom; margins: Tokens.space.s32 }
         onRun: id => root.lock.power(id)
     }
 }

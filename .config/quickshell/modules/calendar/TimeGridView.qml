@@ -68,14 +68,14 @@ ColumnLayout {
     // the now-line moves on the minute (Time ticks with the system clock)
     readonly property double now: { Time.minutes; return Date.now() }
 
-    spacing: 6
+    spacing: Tokens.space.s6
 
     // ── Day headers ──
     RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: root.gutter
-        Layout.rightMargin: 8
-        spacing: 4
+        Layout.rightMargin: Tokens.space.s8
+        spacing: Tokens.space.s4
         Repeater {
             model: root.dayList
             Item {
@@ -90,11 +90,11 @@ ColumnLayout {
                 RowLayout {
                     anchors.verticalCenter: parent.verticalCenter
                     x: root.days === 1 ? 6 : (parent.width - width) / 2
-                    spacing: 8
+                    spacing: Tokens.space.s8
                     Text {
                         text: root.days === 1 ? U.dayNames[U.weekday(head.modelData)] : U.dayShort[U.weekday(head.modelData)]
                         color: head.today ? Colors.color6 : U.weekday(head.modelData) >= 5 ? Colors.fade(0.32) : Colors.fade(0.5)
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.bold: true
                         font.family: Properties.fontFamily
                     }
@@ -108,7 +108,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             text: head.modelData.getDate()
                             color: head.today ? U.onColor(Colors.color6) : U.weekday(head.modelData) >= 5 ? Colors.fade(0.6) : Colors.ink
-                            font.pixelSize: 16
+                            font.pixelSize: Tokens.font.subtitle
                             font.bold: true
                             font.family: Properties.fontFamily
                         }
@@ -130,7 +130,7 @@ ColumnLayout {
         // only there when the shown days have all-day events
         visible: any
         implicitHeight: rows * 22 + 10
-        radius: 12
+        radius: Tokens.radius.xl
         color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
@@ -141,17 +141,17 @@ ColumnLayout {
             horizontalAlignment: Text.AlignRight
             text: "all-day"
             color: Colors.fade(0.35)
-            font.pixelSize: 10
+            font.pixelSize: Tokens.font.micro
             font.family: Properties.fontFamily
         }
 
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: root.gutter
-            anchors.rightMargin: 8
+            anchors.rightMargin: Tokens.space.s8
             anchors.topMargin: 5
             anchors.bottomMargin: 5
-            spacing: 4
+            spacing: Tokens.space.s4
             Repeater {
                 model: root.dayList
                 Item {
@@ -167,7 +167,7 @@ ColumnLayout {
 
                     Column {
                         width: parent.width
-                        spacing: 2
+                        spacing: Tokens.space.s2
                         Repeater {
                             model: adCell.evs.slice(0, adCell.evs.length > allDay.rows ? allDay.rows - 1 : allDay.rows)
                             EventChip {
@@ -180,10 +180,10 @@ ColumnLayout {
                         }
                         Text {
                             visible: adCell.evs.length > allDay.rows
-                            leftPadding: 6
+                            leftPadding: Tokens.space.s6
                             text: "+" + (adCell.evs.length - allDay.rows + 1) + " more"
                             color: Colors.fade(0.5)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.bold: true
                             font.family: Properties.fontFamily
                             MouseArea {
@@ -202,7 +202,7 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        radius: 12
+        radius: Tokens.radius.xl
         color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
@@ -211,11 +211,11 @@ ColumnLayout {
         Flickable {
             id: flick
             anchors.fill: parent
-            anchors.margins: 1
+            anchors.margins: Tokens.space.s1
             contentHeight: 24 * root.hourHeight + 16
             boundsBehavior: Flickable.StopAtBounds
             clip: true
-            ScrollBar.vertical: CalScrollBar {}
+            ScrollBar.vertical: SlimScrollBar {}
             SmoothWheel { flick: flick; step: Math.min(root.hourHeight, 120); acceptedModifiers: Qt.NoModifier }
             WheelHandler {
                 acceptedModifiers: Qt.ControlModifier
@@ -262,7 +262,7 @@ ColumnLayout {
                             horizontalAlignment: Text.AlignRight
                             text: U.pad(parent.index) + ":00"
                             color: Colors.fade(0.35)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                         }
                         Rectangle {
@@ -286,7 +286,7 @@ ColumnLayout {
                                     horizontalAlignment: Text.AlignRight
                                     text: U.pad(tick.parent.index) + ":" + tick.modelData
                                     color: Colors.fade(0.22)
-                                    font.pixelSize: 9
+                                    font.pixelSize: Tokens.font.micro
                                     font.family: Properties.fontFamily
                                 }
                                 Rectangle {
@@ -305,7 +305,7 @@ ColumnLayout {
                     y: 8
                     width: gridArea.width - root.gutter - 8
                     height: 24 * root.hourHeight
-                    spacing: 4
+                    spacing: Tokens.space.s4
 
                     Repeater {
                         model: root.dayList
@@ -340,8 +340,8 @@ ColumnLayout {
                             Rectangle {
                                 anchors.fill: parent
                                 visible: col.today && root.days > 1
-                                radius: 8
-                                color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.04)
+                                radius: Tokens.radius.md
+                                color: Colors.alpha(Colors.color6, 0.04)
                             }
 
                             // empty space: click selects the day, double-click adds an
@@ -384,16 +384,16 @@ ColumnLayout {
                                 y: slots.fromMin / 60 * root.hourHeight
                                 height: (slots.toMin - slots.fromMin) / 60 * root.hourHeight
                                 radius: 7
-                                color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.25)
+                                color: Colors.alpha(Colors.color6, 0.25)
                                 border.width: 1.5
                                 border.color: Colors.color6
                                 z: 4
                                 Text {
-                                    anchors { left: parent.left; top: parent.top; margins: 6 }
+                                    anchors { left: parent.left; top: parent.top; margins: Tokens.space.s6 }
                                     text: U.pad(Math.floor(slots.fromMin / 60)) + ":" + U.pad(slots.fromMin % 60) + " – "
                                         + U.pad(Math.floor(slots.toMin / 60) % 24) + ":" + U.pad(slots.toMin % 60)
                                     color: Colors.ink
-                                    font.pixelSize: 11
+                                    font.pixelSize: Tokens.font.caption
                                     font.bold: true
                                     font.family: Properties.fontFamily
                                 }
@@ -436,23 +436,23 @@ ColumnLayout {
                                     color: Qt.rgba(calColor.r, calColor.g, calColor.b, dragging ? 0.55 : body.containsMouse ? 0.4 : 0.28)
                                     border.width: picked ? 2 : dragging ? 1.5 : 1
                                     border.color: picked ? Colors.color6 : dragging ? block.calColor : Qt.rgba(calColor.r, calColor.g, calColor.b, 0.55)
-                                    Behavior on color { ColorAnimation { duration: 100 } }
+                                    Behavior on color { ColorAnimation { duration: Anim.fast } }
 
                                     Rectangle {
                                         width: 3
                                         height: block.compact ? parent.height : parent.height - 8
                                         anchors.verticalCenter: parent.verticalCenter
                                         x: block.compact ? 0 : 3
-                                        radius: 2
+                                        radius: Tokens.radius.xs
                                         color: block.calColor
                                     }
                                     // selected (Ctrl / Shift + click)
                                     Rectangle {
                                         visible: block.picked
                                         anchors.right: parent.right
-                                        anchors.rightMargin: 4
+                                        anchors.rightMargin: Tokens.space.s4
                                         anchors.top: block.compact ? undefined : parent.top
-                                        anchors.topMargin: 4
+                                        anchors.topMargin: Tokens.space.s4
                                         anchors.verticalCenter: block.compact ? parent.verticalCenter : undefined
                                         width: 14; height: 14; radius: 7
                                         z: 2
@@ -461,7 +461,7 @@ ColumnLayout {
                                             anchors.centerIn: parent
                                             text: "󰄬"
                                             color: U.onColor(Colors.color6)
-                                            font.pixelSize: 10
+                                            font.pixelSize: Tokens.font.micro
                                             font.family: Properties.fontFamily
                                         }
                                     }
@@ -473,7 +473,7 @@ ColumnLayout {
                                         width: Math.min(parent.width - 8, compactText.implicitWidth + 10)
                                         height: 15
                                         radius: 5
-                                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.85)
+                                        color: Colors.alpha(Colors.background, 0.85)
                                         border.width: 1
                                         border.color: Qt.rgba(block.calColor.r, block.calColor.g, block.calColor.b, 0.7)
                                         Text {
@@ -483,7 +483,7 @@ ColumnLayout {
                                             text: block.ev.title + "  " + (block.dragging ? U.fmtTime(block.preview.start) + " – " + U.fmtTime(block.preview.end)
                                                                                            : U.fmtTime(block.ev.start))
                                             color: Colors.ink
-                                            font.pixelSize: 10
+                                            font.pixelSize: Tokens.font.micro
                                             font.bold: true
                                             font.family: Properties.fontFamily
                                             elide: Text.ElideRight
@@ -491,13 +491,13 @@ ColumnLayout {
                                     }
                                     Column {
                                         visible: !block.compact
-                                        anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 10; rightMargin: 5; topMargin: 3 }
+                                        anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: Tokens.space.s10; rightMargin: 5; topMargin: 3 }
                                         spacing: 0
                                         Text {
                                             width: parent.width
                                             text: block.ev.title
                                             color: Colors.ink
-                                            font.pixelSize: 11
+                                            font.pixelSize: Tokens.font.caption
                                             font.bold: true
                                             font.family: Properties.fontFamily
                                             elide: Text.ElideRight
@@ -510,7 +510,7 @@ ColumnLayout {
                                             text: block.dragging ? U.fmtTime(block.preview.start) + " – " + U.fmtTime(block.preview.end)
                                                 : U.fmtRange(block.ev, col.modelData) + (block.ev.location ? "  ·  " + block.ev.location : "")
                                             color: Colors.fade(block.dragging ? 0.95 : 0.65)
-                                            font.pixelSize: 10
+                                            font.pixelSize: Tokens.font.micro
                                             font.bold: block.dragging
                                             font.family: Properties.fontFamily
                                             elide: Text.ElideRight
@@ -609,7 +609,7 @@ ColumnLayout {
                                 color: Colors.red
                                 z: 5
                                 Rectangle {
-                                    width: 8; height: 8; radius: 4
+                                    width: 8; height: 8; radius: Tokens.radius.sm
                                     x: -4
                                     anchors.verticalCenter: parent.verticalCenter
                                     color: Colors.red

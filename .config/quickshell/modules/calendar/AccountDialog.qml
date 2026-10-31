@@ -124,11 +124,11 @@ Modal {
 
     ColumnLayout {
         width: parent.width
-        spacing: 14
+        spacing: Tokens.space.s14
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             IconButton {
                 visible: root.step > 0
                 implicitWidth: 30; implicitHeight: 30
@@ -142,7 +142,7 @@ Modal {
                     Layout.fillWidth: true
                     text: root.step === 0 ? "Add calendars" : root.step === 1 ? root.kindInfo.title : "Choose calendars"
                     color: Colors.ink
-                    font.pixelSize: 17
+                    font.pixelSize: Tokens.font.title
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -151,7 +151,7 @@ Modal {
                     elide: Text.ElideRight
                     text: root.step === 0 ? "Where do your calendars live?" : root.step === 1 ? root.kindInfo.desc : "Found " + root.found.length + " — pick the ones to show"
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -166,7 +166,7 @@ Modal {
         ColumnLayout {
             Layout.fillWidth: true
             visible: root.step === 0
-            spacing: 8
+            spacing: Tokens.space.s8
             Repeater {
                 model: root.kinds
                 Rectangle {
@@ -174,32 +174,32 @@ Modal {
                     required property var modelData
                     Layout.fillWidth: true
                     implicitHeight: 58
-                    radius: 14
+                    radius: Tokens.radius.card
                     color: kindMouse.containsMouse ? Colors.fade(0.07) : Colors.card
                     border.width: Properties.panelBorderWidth
                     border.color: kindMouse.containsMouse ? Colors.fade(0.2) : Properties.cardBorder
                     scale: kindMouse.pressed ? 0.98 : 1
-                    Behavior on scale { NumberAnimation { duration: 100 } }
+                    Behavior on scale { NumberAnimation { duration: Anim.fast } }
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 16
-                        anchors.rightMargin: 14
-                        spacing: 14
+                        anchors.leftMargin: Tokens.space.s16
+                        anchors.rightMargin: Tokens.space.s14
+                        spacing: Tokens.space.s14
                         Text {
                             Layout.preferredWidth: 24
                             horizontalAlignment: Text.AlignHCenter
                             text: kindCard.modelData.icon
                             color: Colors.color6
-                            font.pixelSize: 20
+                            font.pixelSize: Tokens.font.titleLarge
                             font.family: Properties.fontFamily
                         }
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 1
+                            spacing: Tokens.space.s1
                             Text {
                                 text: kindCard.modelData.title
                                 color: Colors.ink
-                                font.pixelSize: 13
+                                font.pixelSize: Tokens.font.body
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
@@ -207,7 +207,7 @@ Modal {
                                 Layout.fillWidth: true
                                 text: kindCard.modelData.desc
                                 color: Colors.fade(0.5)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideRight
                             }
@@ -215,7 +215,7 @@ Modal {
                         Text {
                             text: "󰅂"
                             color: Colors.fade(0.4)
-                            font.pixelSize: 13
+                            font.pixelSize: Tokens.font.body
                             font.family: Properties.fontFamily
                         }
                     }
@@ -234,22 +234,22 @@ Modal {
         ColumnLayout {
             Layout.fillWidth: true
             visible: root.step === 1
-            spacing: 10
+            spacing: Tokens.space.s10
 
             // how-to for the kinds that need a bit of setup
             Rectangle {
                 Layout.fillWidth: true
                 visible: hint.text !== ""
                 implicitHeight: hint.implicitHeight + 20
-                radius: 12
-                color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.08)
+                radius: Tokens.radius.xl
+                color: Colors.alpha(Colors.color6, 0.08)
                 border.width: Properties.panelBorderWidth
-                border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.25)
+                border.color: Colors.alpha(Colors.color6, 0.25)
                 Text {
                     id: hint
                     anchors.fill: parent
-                    anchors.margins: 10
-                    anchors.leftMargin: 14
+                    anchors.margins: Tokens.space.s10
+                    anchors.leftMargin: Tokens.space.s14
                     text: root.kind === "icloud"
                         ? "1. Open <a href=\"https://account.apple.com\">account.apple.com</a> → Sign-In and Security → App-Specific Passwords<br>2. Create one (e.g. \"Quickshell\") and paste it below — not your normal Apple password."
                         : root.kind === "google"
@@ -261,7 +261,7 @@ Modal {
                     textFormat: Text.StyledText
                     linkColor: Colors.color6
                     color: Colors.fade(0.75)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
                     lineHeight: 1.15
@@ -310,7 +310,7 @@ Modal {
                 Layout.fillWidth: true
                 visible: root.kind === "m365" && root.loginCode !== null
                 implicitHeight: codeCol.implicitHeight + 28
-                radius: 14
+                radius: Tokens.radius.card
                 color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
@@ -319,13 +319,13 @@ Modal {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    anchors.margins: 16
-                    spacing: 8
+                    anchors.margins: Tokens.space.s16
+                    spacing: Tokens.space.s8
                     Text {
                         Layout.alignment: Qt.AlignHCenter
                         text: "Enter this code at " + (root.loginCode?.url ?? "").replace(/^https?:\/\//, "")
                         color: Colors.fade(0.6)
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                     }
                     Text {
@@ -348,7 +348,7 @@ Modal {
                         Layout.alignment: Qt.AlignHCenter
                         text: "󰔟  Waiting for you to sign in…"
                         color: Colors.fade(0.45)
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                     }
                 }
@@ -358,7 +358,7 @@ Modal {
                 visible: root.kind === "m365" && root.loginCode === null
                 text: (root.advanced ? "󰅀" : "󰅂") + "  Advanced"
                 color: Colors.fade(0.5)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 MouseArea {
                     anchors.fill: parent
@@ -389,7 +389,7 @@ Modal {
             Layout.fillWidth: true
             visible: root.step === 2
             implicitHeight: calList.implicitHeight
-            radius: 14
+            radius: Tokens.radius.card
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
@@ -407,9 +407,9 @@ Modal {
                         implicitHeight: 46
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 12
-                            spacing: 12
+                            anchors.leftMargin: Tokens.space.s16
+                            anchors.rightMargin: Tokens.space.s12
+                            spacing: Tokens.space.s12
                             Rectangle {
                                 Layout.preferredWidth: 12
                                 Layout.preferredHeight: 12
@@ -420,7 +420,7 @@ Modal {
                                 Layout.fillWidth: true
                                 text: calRow.modelData.name + (calRow.modelData.readOnly ? "  󰌾" : "")
                                 color: Colors.ink
-                                font.pixelSize: 13
+                                font.pixelSize: Tokens.font.body
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideRight
                             }
@@ -443,7 +443,7 @@ Modal {
             visible: root.error !== ""
             text: root.error
             color: Colors.red
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
         }
@@ -451,14 +451,14 @@ Modal {
         RowLayout {
             Layout.fillWidth: true
             visible: root.step > 0
-            spacing: 8
+            spacing: Tokens.space.s8
             Text {
                 Layout.fillWidth: true
                 text: root.step !== 1 ? ""
                     : root.kindInfo.type === "caldav" ? "󰌾  The password is stored in your keyring."
                     : root.kindInfo.type === "graph" ? "󰌾  The sign-in is stored in your keyring." : ""
                 color: Colors.fade(0.4)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
             }
             ActionButton {

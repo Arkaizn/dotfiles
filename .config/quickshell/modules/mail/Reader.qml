@@ -50,15 +50,15 @@ Rectangle {
     ParallelAnimation {
         id: enter
         property real dir: 0             // 1: from below, -1: from above
-        NumberAnimation { target: subjectText; property: "opacity"; from: 0; to: 1; duration: 240; easing.type: Easing.OutCubic }
-        NumberAnimation { target: subjectShift; property: "y"; from: enter.dir * 26; to: 0; duration: 380; easing.type: Easing.OutQuint }
+        NumberAnimation { target: subjectText; property: "opacity"; from: 0; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+        NumberAnimation { target: subjectShift; property: "y"; from: enter.dir * 26; to: 0; duration: Anim.slow; easing.type: Anim.emphasized }
         SequentialAnimation {
             PropertyAction { target: cards; property: "opacity"; value: 0 }
             PropertyAction { target: cardsShift; property: "y"; value: enter.dir * 26 }
             PauseAnimation { duration: 40 }
             ParallelAnimation {
-                NumberAnimation { target: cards; property: "opacity"; to: 1; duration: 240; easing.type: Easing.OutCubic }
-                NumberAnimation { target: cardsShift; property: "y"; to: 0; duration: 380; easing.type: Easing.OutQuint }
+                NumberAnimation { target: cards; property: "opacity"; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+                NumberAnimation { target: cardsShift; property: "y"; to: 0; duration: Anim.slow; easing.type: Anim.emphasized }
             }
         }
     }
@@ -68,7 +68,7 @@ Rectangle {
         onTriggered: MailStore.markRead(root.msgs, true)
     }
 
-    radius: 12
+    radius: Tokens.radius.xl
     color: Colors.card
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
@@ -76,19 +76,19 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 12
+        anchors.margins: Tokens.space.s14
+        spacing: Tokens.space.s12
         visible: root.row !== null && !root.gone
 
         // toolbar (thin lines between the groups): the buttons wrap onto a second row when the reader is narrow
         // (one row would force the reader wider than it is: everything cut off)
         RowLayout {
             Layout.fillWidth: true
-            spacing: 2
+            spacing: Tokens.space.s2
           Flow {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignTop
-            spacing: 2
+            spacing: Tokens.space.s2
             IconButton { icon: I.reply; tooltip: "Reply  (R)"; onClicked: root.reply(root.latest, false) }
             IconButton { icon: I.replyAll; tooltip: "Reply all  (Shift+R)"; onClicked: root.reply(root.latest, true) }
             IconButton { icon: I.forward; tooltip: "Forward  (F)"; onClicked: root.forward(root.latest) }
@@ -107,16 +107,11 @@ Rectangle {
                     scale: AppZoom.at(parent)
                     transformOrigin: Popup.TopLeft
                     y: parent.height + 4
-                    padding: 6
+                    padding: Tokens.space.s6
                     closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
-                    background: Rectangle {
-                        radius: Properties.popupRadius
-                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
-                        border.width: Properties.panelBorderWidth
-                        border.color: Properties.panelBorder
-                    }
+                    background: PopoverBackground {}
                     contentItem: Column {
-                        spacing: 1
+                        spacing: Tokens.space.s1
                         Repeater {
                             model: (MailStore.accountMap[root.latest?.account]?.folders ?? []).filter(f => f.path !== root.latest?.folder)
                             Rectangle {
@@ -129,10 +124,10 @@ Rectangle {
                                     id: fRow
                                     anchors.verticalCenter: parent.verticalCenter
                                     x: 10
-                                    spacing: 8
-                                    Text { text: I.role(modelData.role); color: Icons.tint(text, Colors.fade(0.55)); font.pixelSize: 13; font.family: Properties.fontFamily }
+                                    spacing: Tokens.space.s8
+                                    Text { text: I.role(modelData.role); color: Icons.tint(text, Colors.fade(0.55)); font.pixelSize: Tokens.font.body; font.family: Properties.fontFamily }
                                     Text { text: modelData.role === "inbox" ? "Inbox" : modelData.path; color: Colors.fade(0.85)
-                                           font.pixelSize: 12; font.family: Properties.fontFamily }
+                                           font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                                 }
                                 MouseArea {
                                     id: fMouse
@@ -175,7 +170,7 @@ Rectangle {
             Layout.fillWidth: true
             text: "󰈙  " + (root.row?.file ?? "").split("/").pop() + "  ·  opened from a file, not in your mailbox"
             color: Colors.fade(0.45)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             elide: Text.ElideRight
         }
@@ -185,7 +180,7 @@ Rectangle {
             Layout.fillWidth: true
             text: root.row?.subject || root.latest?.subject || "(no subject)"
             color: Colors.ink
-            font.pixelSize: 19
+            font.pixelSize: Tokens.font.title
             font.bold: true
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap
@@ -200,14 +195,14 @@ Rectangle {
             contentHeight: cards.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: CalScrollBar {}
+            ScrollBar.vertical: SlimScrollBar {}
             SmoothWheel { flick: flick; step: 140 }
 
             ColumnLayout {
                 id: cards
                 transform: Translate { id: cardsShift }
                 width: flick.width - 10
-                spacing: 8
+                spacing: Tokens.space.s8
                 Repeater {
                     model: root.row ? root.row.msgs : []
                     MessageCard {
@@ -236,20 +231,20 @@ Rectangle {
         Connections { target: root; function onHoverLinkChanged() { if (root.hoverLink) linkBar.info = root.hoverLink } }
         anchors.left: parent.left
         anchors.bottom: parent.bottom
-        anchors.margins: 10
+        anchors.margins: Tokens.space.s10
         width: Math.min(parent.width - 20, linkCol.implicitWidth + 24)
         height: linkCol.implicitHeight + 14
-        radius: 10
+        radius: Tokens.radius.lg
         z: 20
-        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
+        color: Colors.surfacePopover
         // red tint over the solid background (see-through it was unreadable over the message)
-        Rectangle { anchors.fill: parent; radius: parent.radius; visible: linkBar.warn; color: Qt.rgba(Colors.red.r, Colors.red.g, Colors.red.b, 0.14) }
+        Rectangle { anchors.fill: parent; radius: parent.radius; visible: linkBar.warn; color: Colors.alpha(Colors.red, 0.14) }
         border.width: 1
         border.color: warn ? Colors.red : Properties.cardBorder
         opacity: root.hoverLink ? 1 : 0
         visible: opacity > 0
-        transform: Translate { y: root.hoverLink ? 0 : 6; Behavior on y { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } } }
-        Behavior on opacity { NumberAnimation { duration: 140 } }
+        transform: Translate { y: root.hoverLink ? 0 : 6; Behavior on y { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } } }
+        Behavior on opacity { NumberAnimation { duration: Anim.fast } }
         // escaped, the site bold, very long ones cut in the middle
         function styled(i) {
             if (!i) return ""
@@ -270,16 +265,16 @@ Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
+            anchors.leftMargin: Tokens.space.s12
+            anchors.rightMargin: Tokens.space.s12
             spacing: 3
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 Layout.maximumWidth: linkBar.parent.width - 44
                 Text {
                     text: linkBar.warn ? "󰀦" : linkBar.info?.scheme === "mailto" ? I.mail : linkBar.info?.scheme === "qsdate" ? "󰃭" : "󰌹"
                     color: linkBar.warn ? Colors.red : linkBar.info?.scheme === "qsdate" ? Colors.color6 : Colors.fade(0.55)
-                    font.pixelSize: 13
+                    font.pixelSize: Tokens.font.body
                     font.family: Properties.fontFamily
                 }
                 Text {
@@ -287,7 +282,7 @@ Rectangle {
                     text: linkBar.styled(linkBar.info)
                     textFormat: Text.StyledText
                     color: Colors.ink
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     wrapMode: Text.WrapAnywhere
                     maximumLineCount: 2
@@ -299,7 +294,7 @@ Rectangle {
                 Layout.maximumWidth: linkBar.parent.width - 44
                 text: (linkBar.info?.warn ?? "") + (linkBar.info?.armed ? "  ·  click again to open it anyway" : "  ·  it takes two clicks to open")
                 color: Colors.red
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.bold: true
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap
@@ -312,7 +307,7 @@ Rectangle {
         anchors.centerIn: parent
         width: parent.width - 80
         visible: root.row === null || root.gone
-        spacing: 8
+        spacing: Tokens.space.s8
         Text {
             Layout.alignment: Qt.AlignHCenter
             text: I.mail
@@ -325,7 +320,7 @@ Rectangle {
             horizontalAlignment: Text.AlignHCenter
             text: MailStore.unread > 0 ? MailStore.unread + (MailStore.unread === 1 ? " unread message" : " unread messages") : "All read"
             color: Colors.fade(0.5)
-            font.pixelSize: 14
+            font.pixelSize: Tokens.font.label
             font.family: Properties.fontFamily
         }
         Text {
@@ -334,7 +329,7 @@ Rectangle {
             wrapMode: Text.WordWrap
             text: "↑ ↓ to move  ·  R reply  ·  A archive  ·  N next unread  ·  Ctrl+N new"
             color: Colors.fade(0.3)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
         }
     }

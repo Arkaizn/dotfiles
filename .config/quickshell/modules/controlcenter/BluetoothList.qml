@@ -14,7 +14,7 @@ ColumnLayout {
     readonly property var adapter: Bluetooth.defaultAdapter
     readonly property int maxListHeight: 260
 
-    spacing: 6
+    spacing: Tokens.space.s6
 
     // Discover new devices while the list is open
     onActiveChanged: if (adapter?.enabled) adapter.discovering = active
@@ -35,7 +35,7 @@ ColumnLayout {
                 : root.adapter.discovering ? "Searching for devices…"
                 : root.devices.length + " devices"
             color: Colors.fade(0.55)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
         }
         IconButton {
             implicitWidth: 26; implicitHeight: 26
@@ -59,12 +59,12 @@ ColumnLayout {
         contentHeight: list.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: SlimScrollBar {}
 
         ColumnLayout {
             id: list
             width: parent.width
-            spacing: 4
+            spacing: Tokens.space.s4
 
             Repeater {
                 model: root.adapter?.enabled ? root.devices : []
@@ -79,10 +79,10 @@ ColumnLayout {
 
                     Layout.fillWidth: true
                     implicitHeight: 44
-                    radius: 10
+                    radius: Tokens.radius.lg
                     color: dev.connected ? Colors.fade(0.12)
                          : rowMouse.containsMouse ? Colors.fade(0.07) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 80 } }
+                    Behavior on color { ColorAnimation { duration: Anim.instant } }
 
                     function activate() {
                         if (busy) return
@@ -110,8 +110,8 @@ ColumnLayout {
                     }
 
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 10; rightMargin: 6 }
-                        spacing: 8
+                        anchors { fill: parent; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s6 }
+                        spacing: Tokens.space.s8
 
                         Text {
                             text: BluetoothPower.iconFor(row.dev)
@@ -126,7 +126,7 @@ ColumnLayout {
                                 Layout.fillWidth: true
                                 text: row.dev.name || row.dev.address
                                 color: Colors.ink
-                                font.pixelSize: 12
+                                font.pixelSize: Tokens.font.small
                                 font.bold: row.dev.connected
                                 elide: Text.ElideRight
                             }
@@ -138,7 +138,7 @@ ColumnLayout {
                                     : row.dev.connected ? "Connected" + (row.dev.batteryAvailable ? " · " + Math.round(row.dev.battery * 100) + "%" : "")
                                     : row.dev.paired ? "Paired" : "Click to pair"
                                 color: Colors.fade(0.5)
-                                font.pixelSize: 10
+                                font.pixelSize: Tokens.font.micro
                             }
                         }
                         IconButton {

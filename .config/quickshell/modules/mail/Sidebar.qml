@@ -23,18 +23,18 @@ Flickable {
         property bool shown: false
         z: -2
         anchors.fill: parent
-        radius: Properties.radius + 2
+        radius: Tokens.radius.lg
         border.width: 1.5
         border.color: Colors.fade(0.14)
         gradient: ButtonGradient { hovered: false }
         opacity: shown ? 0.6 : 0
-        Behavior on opacity { NumberAnimation { duration: 140 } }
+        Behavior on opacity { NumberAnimation { duration: Anim.fast } }
     }
 
     contentHeight: col.implicitHeight
     clip: true
     boundsBehavior: Flickable.StopAtBounds
-    ScrollBar.vertical: CalScrollBar { id: bar }
+    ScrollBar.vertical: SlimScrollBar { id: bar }
     SmoothWheel { flick: root; step: 100 }       // like the settings app's page list
 
     // the open folder's highlight (the Entries point it at themselves)
@@ -52,27 +52,27 @@ Flickable {
         y: at.y
         width: target?.width ?? 0
         height: target?.height ?? 0
-        radius: Properties.radius + 2
+        radius: Tokens.radius.lg
         border.width: 1.5
         border.color: Colors.fade(0.24)
         gradient: ButtonGradient { hovered: true }
         opacity: on ? 1 : 0
         scale: travel.running ? 0.97 : 1
         onTargetChanged: if (opacity > 0) travel.restart()
-        Timer { id: travel; interval: 180 }
+        Timer { id: travel; interval: Anim.normal }   // the squash while the highlight travels
         readonly property bool slides: opacity > 0
-        Behavior on x { enabled: pick.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
-        Behavior on y { enabled: pick.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
-        Behavior on width { enabled: pick.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
-        Behavior on opacity { NumberAnimation { duration: 160 } }
-        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+        Behavior on x { enabled: pick.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+        Behavior on y { enabled: pick.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+        Behavior on width { enabled: pick.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
+        Behavior on scale { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
     }
 
     ColumnLayout {
         id: col
         // room for the scrollbar when there is one: it would cover the counts and the pin
         width: root.width - (bar.visible ? bar.width - 2 : 0)
-        spacing: 1
+        spacing: Tokens.space.s1
 
         Label { text: "FAVORITES" }
         // the unified views switched on in the settings (Mail → Favorites)
@@ -117,7 +117,7 @@ Flickable {
             }
         }
 
-        Label { text: "ACCOUNTS"; Layout.topMargin: 12; visible: MailStore.accounts.length > 0 }
+        Label { text: "ACCOUNTS"; Layout.topMargin: Tokens.space.s12; visible: MailStore.accounts.length > 0 }
         Repeater {
             model: MailStore.accounts
             ColumnLayout {
@@ -129,31 +129,31 @@ Flickable {
                 readonly property int unread: on ? MailStore.unreadIn(modelData.id, MailStore.inboxOf(modelData.id)) : 0
                 readonly property string label: MailStore.accountLabel(modelData)
                 Layout.fillWidth: true
-                spacing: 1
+                spacing: Tokens.space.s1
 
                 // the account: its color, name, new mail; click folds it, right-click: its menu
                 Rectangle {
                     id: head
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
+                    Layout.topMargin: Tokens.space.s4
                     implicitHeight: 38
-                    radius: Properties.radius + 2
+                    radius: Tokens.radius.lg
                     color: "transparent"
                     HoverFace { shown: headMouse.containsMouse }
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 6
-                        anchors.rightMargin: 8
-                        spacing: 8
+                        anchors.leftMargin: Tokens.space.s6
+                        anchors.rightMargin: Tokens.space.s8
+                        spacing: Tokens.space.s8
                         Rectangle {
-                            implicitWidth: 20; implicitHeight: 20; radius: 10
+                            implicitWidth: 20; implicitHeight: 20; radius: Tokens.radius.lg
                             color: acc.modelData.color || Colors.color6
                             opacity: acc.on ? 1 : 0.35
                             Text {
                                 anchors.centerIn: parent
                                 text: acc.label.charAt(0).toUpperCase()
                                 color: Colors.background
-                                font.pixelSize: 10
+                                font.pixelSize: Tokens.font.micro
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
@@ -165,7 +165,7 @@ Flickable {
                                 Layout.fillWidth: true
                                 text: acc.label
                                 color: acc.on ? Colors.ink : Colors.fade(0.4)
-                                font.pixelSize: 12
+                                font.pixelSize: Tokens.font.small
                                 font.bold: true
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideRight
@@ -174,7 +174,7 @@ Flickable {
                                 Layout.fillWidth: true
                                 text: acc.on ? acc.modelData.email : "Off — not checked"
                                 color: Colors.fade(0.38)
-                                font.pixelSize: 9
+                                font.pixelSize: Tokens.font.micro
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideRight
                             }
@@ -183,25 +183,24 @@ Flickable {
                             visible: acc.error !== ""
                             text: I.alert
                             color: Colors.red
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.family: Properties.fontFamily
                             HoverHandler { id: errHover }
-                            ToolTip.visible: errHover.hovered
-                            ToolTip.text: acc.error
+                            HoverTip { shown: errHover.hovered; text: acc.error }
                         }
                         // new mail in its inbox: also seen while it's folded
                         Rectangle {
                             visible: acc.unread > 0
                             implicitWidth: Math.max(18, unreadText.implicitWidth + 10)
                             implicitHeight: 16
-                            radius: 8
-                            color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.18)
+                            radius: Tokens.radius.md
+                            color: Colors.alpha(Colors.color6, 0.18)
                             Text {
                                 id: unreadText
                                 anchors.centerIn: parent
                                 text: acc.unread > 999 ? "999+" : acc.unread
                                 color: Colors.color6
-                                font.pixelSize: 10
+                                font.pixelSize: Tokens.font.micro
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
@@ -210,9 +209,9 @@ Flickable {
                             visible: acc.on
                             text: I.down
                             rotation: acc.collapsed ? -90 : 0
-                            Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                            Behavior on rotation { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
                             color: Colors.fade(headMouse.containsMouse ? 0.6 : 0.3)
-                            font.pixelSize: 13
+                            font.pixelSize: Tokens.font.body
                             font.family: Properties.fontFamily
                         }
                     }
@@ -235,15 +234,15 @@ Flickable {
                         id: fRow
                         required property var modelData
                         Layout.fillWidth: true
-                        spacing: 1
+                        spacing: Tokens.space.s1
                         // where the standard folders end and the own ones begin
                         Rectangle {
                             visible: fRow.modelData.firstOwn === true
                             Layout.fillWidth: true
-                            Layout.leftMargin: 12
-                            Layout.rightMargin: 12
-                            Layout.topMargin: 4
-                            Layout.bottomMargin: 4
+                            Layout.leftMargin: Tokens.space.s12
+                            Layout.rightMargin: Tokens.space.s12
+                            Layout.topMargin: Tokens.space.s4
+                            Layout.bottomMargin: Tokens.space.s4
                             implicitHeight: 1
                             color: Colors.fade(0.07)
                         }
@@ -294,7 +293,7 @@ Flickable {
     }
 
     // ── right-click menus ──
-    MailMenu { id: menu; parent: root }
+    PopupMenu { id: menu; parent: root }
     function folderContext(a, f, item, x, y) {
         const pinned = MailStore.isPinned(a.id, f.path)
         menu.show(item, x, y, f.role === "inbox" ? "Inbox" : f.name, [
@@ -316,10 +315,10 @@ Flickable {
     }
 
     component Label: Text {
-        Layout.leftMargin: 4
-        Layout.bottomMargin: 2
+        Layout.leftMargin: Tokens.space.s4
+        Layout.bottomMargin: Tokens.space.s2
         color: Colors.fade(0.4)
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.bold: true
         font.letterSpacing: 1.2
         font.family: Properties.fontFamily
@@ -346,7 +345,7 @@ Flickable {
         signal context(real x, real y)        // right-click (where, in the row)
         Layout.fillWidth: true
         implicitHeight: 32
-        radius: Properties.radius + 2
+        radius: Tokens.radius.lg
         color: "transparent"
         HoverHandler { id: eHover }
         // the row, its pin and the area right of the pin all count as hovering the row
@@ -355,12 +354,12 @@ Flickable {
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 8 + e.indent * 12
-            anchors.rightMargin: 8
+            anchors.rightMargin: Tokens.space.s8
             spacing: 9
             Text {
                 text: e.icon
                 color: Icons.tint(e.icon, e.current ? Colors.color6 : Colors.fade(0.55))
-                font.pixelSize: 14
+                font.pixelSize: Tokens.font.label
                 font.family: Properties.fontFamily
                 Rectangle {
                     visible: e.dot !== ""
@@ -376,7 +375,7 @@ Flickable {
                 text: e.label + (e.hint ? '<font color="' + Colors.fade(0.4) + '">  ·  ' + e.hint + '</font>' : "")
                 textFormat: e.hint ? Text.StyledText : Text.PlainText
                 color: e.current ? Colors.ink : Colors.fade(0.78)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.bold: e.current || (e.count > 0 && !e.muted)
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
@@ -386,7 +385,7 @@ Flickable {
                 visible: e.pinnable && e.hovered
                 text: e.pinned ? "󰤰" : "󰐃"
                 color: pinHover.containsMouse ? Colors.color6 : Colors.fade(0.5)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
                 // a MouseArea (not a TapHandler): the click must not also open the folder
                 MouseArea {
@@ -398,16 +397,14 @@ Flickable {
                     cursorShape: Qt.PointingHandCursor
                     onClicked: e.pinToggled()
                 }
-                ToolTip.visible: pinHover.containsMouse
-                ToolTip.text: e.pinned ? "Remove from favorites" : "Pin to favorites"
-                ToolTip.delay: 400
+                HoverTip { shown: pinHover.containsMouse; text: e.pinned ? "Remove from favorites" : "Pin to favorites" }
             }
             Text {
                 visible: e.count > 0 && !(e.pinnable && e.hovered)
-                Layout.leftMargin: 4
+                Layout.leftMargin: Tokens.space.s4
                 text: e.count > 999 ? "999+" : e.count
                 color: e.muted ? Colors.fade(0.45) : Colors.color6
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.bold: !e.muted
                 font.family: Properties.fontFamily
             }

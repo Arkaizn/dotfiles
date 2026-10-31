@@ -12,7 +12,7 @@ import "../network"
 // seconds): older entries are dimmed, and the Maintenance tile counts only newer ones.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string source: "journal"       // "journal" | "shell"
     property string level: "err"            // err | warning
@@ -73,10 +73,10 @@ ColumnLayout {
         })
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Show"
-        NetRow {
+        SettingRow {
             first: true
             label: "Source"
             Segmented {
@@ -86,11 +86,11 @@ ColumnLayout {
                 onEdited: v => { page.source = v; page.load() }
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.source === "journal"
             label: "Level and boot"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 Segmented {
                     small: true
                     options: [{ label: "Errors", value: "err" }, { label: "+ warnings", value: "warning" }]
@@ -105,7 +105,7 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.source === "journal"
             label: "Only one service"
             desc: "e.g. NetworkManager, bluetooth, sddm (empty = all)"
@@ -118,7 +118,7 @@ ColumnLayout {
                 onAccepted: page.load()
             }
         }
-        NetRow {
+        SettingRow {
             label: "Search in the results"
             SearchField {
                 Layout.preferredWidth: 220
@@ -128,7 +128,7 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: page.loading ? "Loading…" : page.shown.length + " entries" + (page.entries.length >= 400 ? " (newest 400)" : "")
         header: [
@@ -141,8 +141,8 @@ ColumnLayout {
                 onClicked: Quickshell.execDetached(["wl-copy", "--", page.shown.map(e => (e.time ? e.time + " " : "") + e.who + ": " + e.text).join("\n")]) },
             ActionButton { icon: "󰑓"; text: "Reload"; onClicked: page.load() }
         ]
-        NetRow { first: true; visible: page.error !== ""; label: "Problem"; desc: page.error }
-        NetRow { first: true; visible: page.error === "" && !page.loading && page.shown.length === 0; label: "Nothing here"; desc: "no entries match" }
+        SettingRow { first: true; visible: page.error !== ""; label: "Problem"; desc: page.error }
+        SettingRow { first: true; visible: page.error === "" && !page.loading && page.shown.length === 0; label: "Nothing here"; desc: "no entries match" }
         Repeater {
             model: page.shown.slice(0, 200)
             Item {
@@ -155,13 +155,13 @@ ColumnLayout {
                 opacity: seen ? 0.45 : 1
                 RowLayout {
                     id: line
-                    anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 14 }
-                    spacing: 10
-                    Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: 4; implicitWidth: 6; implicitHeight: 6; radius: 3
+                    anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s14; rightMargin: Tokens.space.s14 }
+                    spacing: Tokens.space.s10
+                    Rectangle { Layout.alignment: Qt.AlignTop; Layout.topMargin: Tokens.space.s4; implicitWidth: 6; implicitHeight: 6; radius: 3
                                 color: entry.seen ? Colors.fade(0.4) : modelData.prio <= 3 ? Colors.red : Colors.yellow }
-                    Text { Layout.alignment: Qt.AlignTop; text: modelData.time; visible: modelData.time !== ""; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
-                    Text { Layout.alignment: Qt.AlignTop; Layout.preferredWidth: 130; text: modelData.who; color: Colors.color6; font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideRight }
-                    Text { Layout.fillWidth: true; text: modelData.text; color: Colors.fade(0.8); font.pixelSize: 11; font.family: Properties.fontFamily; wrapMode: Text.WrapAnywhere; maximumLineCount: 4; elide: Text.ElideRight }
+                    Text { Layout.alignment: Qt.AlignTop; text: modelData.time; visible: modelData.time !== ""; color: Colors.fade(0.4); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
+                    Text { Layout.alignment: Qt.AlignTop; Layout.preferredWidth: 130; text: modelData.who; color: Colors.color6; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                    Text { Layout.fillWidth: true; text: modelData.text; color: Colors.fade(0.8); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; wrapMode: Text.WrapAnywhere; maximumLineCount: 4; elide: Text.ElideRight }
                 }
             }
         }

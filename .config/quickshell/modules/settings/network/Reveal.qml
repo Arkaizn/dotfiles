@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import QtQuick.Layouts
 
 // Part of a card that slides open / closed: height, opacity and a small
@@ -15,7 +16,7 @@ Item {
     // clip only while sliding: once open, buttons growing on hover at its
     // edges must not be cut off
     clip: Math.abs(Layout.preferredHeight - inner.implicitHeight) > 0.5
-    Behavior on Layout.preferredHeight { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+    Behavior on Layout.preferredHeight { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
 
     ColumnLayout {
         id: inner
@@ -23,7 +24,7 @@ Item {
         spacing: root.spacing
         opacity: root.open ? 1 : 0
         y: root.open ? 0 : -8
-        Behavior on opacity { NumberAnimation { duration: 200 } }
-        Behavior on y { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
+        Behavior on y { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
     }
 }

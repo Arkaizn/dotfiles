@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import qs.components
 import qs.services
 
 // ── Notifications part of the notification center ──
@@ -12,18 +13,18 @@ ColumnLayout {
     property bool fullHeight: false      // always maxListHeight high (resizing it live)
     readonly property bool empty: Notifs.count === 0
 
-    spacing: 8
+    spacing: Tokens.space.s8
 
     // ── Header ────────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: 32
-        spacing: 8
+        spacing: Tokens.space.s8
 
         Text {
             text: "Notifications"
             color: Colors.ink
-            font { bold: true; pixelSize: 14 }
+            font { bold: true; pixelSize: Tokens.font.label }
         }
 
         Rectangle {
@@ -32,14 +33,14 @@ ColumnLayout {
             Layout.preferredHeight: 18
             radius: 9
             color: Colors.fade(0.25)
-            Behavior on opacity { NumberAnimation { duration: Anim.hover } }
+            Behavior on opacity { NumberAnimation { duration: Anim.fast } }
 
             Text {
                 id: countLabel
                 anchors.centerIn: parent
                 text: Notifs.count
                 color: Colors.fade(0.87)
-                font { bold: true; pixelSize: 10 }
+                font { bold: true; pixelSize: Tokens.font.micro }
             }
         }
 
@@ -63,8 +64,8 @@ ColumnLayout {
             clip: true
             enabled: !root.empty
             opacity: root.empty ? 0 : 1
-            Behavior on opacity { NumberAnimation { duration: Anim.hover } }
-            Behavior on Layout.preferredWidth { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: Anim.fast } }
+            Behavior on Layout.preferredWidth { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
             onClicked: Notifs.clearAll()
         }
     }
@@ -81,14 +82,14 @@ ColumnLayout {
         Layout.preferredHeight: root.empty ? 56 : 0
         opacity: root.empty ? 1 : 0
         clip: true
-        Behavior on Layout.preferredHeight { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-        Behavior on opacity { NumberAnimation { duration: 220 } }
+        Behavior on Layout.preferredHeight { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
+        Behavior on opacity { NumberAnimation { duration: Anim.medium } }
 
         Text {
             anchors.centerIn: parent
             text: "   No notifications"
             color: Colors.fade(0.4)
-            font { pixelSize: 12; family: Properties.fontFamily }
+            font { pixelSize: Tokens.font.small; family: Properties.fontFamily }
         }
     }
 
@@ -100,7 +101,7 @@ ColumnLayout {
         contentHeight: groupsCol.height
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: SlimScrollBar {}
 
         Column {
             id: groupsCol

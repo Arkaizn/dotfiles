@@ -12,7 +12,7 @@ Row {
 
     signal run(string id)
 
-    spacing: 8
+    spacing: Tokens.space.s8
 
     ConfirmArm { id: arm }
     readonly property string armed: arm.armed

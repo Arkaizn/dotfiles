@@ -14,7 +14,7 @@ import "../network"
 // template is rejected (shown at the bottom), never written.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property bool hypr: Compositor.isHyprland
     readonly property var svc: hypr ? HyprSettings : NiriSettings
@@ -42,13 +42,13 @@ ColumnLayout {
 
     Text {
         Layout.fillWidth: true
-        Layout.leftMargin: 6
+        Layout.leftMargin: Tokens.space.s6
         text: "Everything the shell writes into " + (hypr ? "Hyprland's" : "niri's") + " config. Templates use two kinds of placeholders: "
               + "{@word} is a name " + (hypr ? "Hyprland" : "niri") + " uses (edit it under Words), {value} is filled in by the shell "
               + "(strings come quoted). Example: if spawn-sh-at-startup \"x\" became spawn-shell-at-startup=\"x\", set the autostart "
               + "template to {@autostart}={cmd} and the word autostart to spawn-shell-at-startup."
         color: Colors.fade(0.5)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap
     }
@@ -62,13 +62,13 @@ ColumnLayout {
     SyntaxTemplates { lg: page.lang; groups: page.groups[page.lang] }
 
     // ── Option paths ────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Option paths  ·  " + page.svc.schema.length + (page.hypr ? "  (section.option)" : "  (section/option)")
         icon: "󰘦"
         Repeater {
             model: page.svc.schema
-            NetRow {
+            SettingRow {
                 id: pr
                 required property var modelData
                 required property int index
@@ -82,7 +82,7 @@ ColumnLayout {
                     implicitHeight: Properties.buttonHeight
                     icon: ""
                     clearable: false
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     enabled: pr.modelData.path !== ""
                     text: pr.cur
                     onEditingFinished: if (text !== pr.cur) Syntax.setPath(page.store, pr.modelData.key, text.trim(), pr.modelData.path)
@@ -107,7 +107,7 @@ ColumnLayout {
     }
     Reveal {
         open: page.showOther
-        spacing: 16
+        spacing: Tokens.space.s16
         SyntaxWords { lg: page.hypr ? "niri" : "hypr" }
         SyntaxTemplates { lg: page.hypr ? "niri" : "hypr"; groups: page.groups[page.hypr ? "niri" : "hypr"] }
     }
@@ -115,11 +115,11 @@ ColumnLayout {
     // ── Preview ─────────────────────────────────────────────────────────────
 
     Text {
-        Layout.leftMargin: 6
-        Layout.topMargin: 4
+        Layout.leftMargin: Tokens.space.s6
+        Layout.topMargin: Tokens.space.s4
         text: "What gets written"
         color: Colors.fade(0.55)
-        font.pixelSize: 12
+        font.pixelSize: Tokens.font.small
         font.bold: true
         font.family: Properties.fontFamily
     }

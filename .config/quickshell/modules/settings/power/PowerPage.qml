@@ -10,23 +10,23 @@ import "../network"
 // power saver on battery.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     Component.onCompleted: Power.check()
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Power.checked && Power.available.length === 0
         title: "Power profiles unavailable"
         icon: "󰀦"
-        NetRow { first: true; wide: true; label: "power-profiles-daemon"; desc: Power.error + "   ·   it starts by itself over D-Bus once installed" }
+        SettingRow { first: true; wide: true; label: "power-profiles-daemon"; desc: Power.error + "   ·   it starts by itself over D-Bus once installed" }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Power.available.length > 0
         title: "Power profile"
-        NetRow {
+        SettingRow {
             first: true
             label: Power.labels[Power.current]
             desc: Power.current === "performance" ? "fastest, more power and heat"
@@ -38,28 +38,28 @@ ColumnLayout {
                 onEdited: v => Power.set(v)
             }
         }
-        NetRow {
+        SettingRow {
             visible: Power.degraded !== ""
             label: "Performance is limited"
             desc: "because " + Power.degraded
         }
-        NetRow {
+        SettingRow {
             visible: PowerProfiles.holds.length > 0
             wide: true
             label: "Held by apps"
             desc: PowerProfiles.holds.map(h => h.applicationId + " → " + PowerProfile.toString(h.profile) + (h.reason ? " (" + h.reason + ")" : "")).join("\n")
         }
-        NetRow {
+        SettingRow {
             label: "On the bar"
             desc: "add “Power profile” in Bar layout; click it to switch.  qs ipc call power cycle"
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Power.available.length > 0
         title: "Battery"
-        NetRow {
+        SettingRow {
             first: true
             label: "Power saver on battery"
             desc: Power.hasBattery ? "back to the previous profile when plugged in" : "this computer has no battery"

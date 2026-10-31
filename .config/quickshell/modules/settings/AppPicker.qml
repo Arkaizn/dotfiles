@@ -100,32 +100,27 @@ Item {
         y: root.height + 4
         width: root.width
         height: Math.min(Math.max(view.contentHeight, 30) + 12, 300)
-        padding: 6
+        padding: Tokens.space.s6
         closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape
         onClosed: if (!field.activeFocus) root.query = ""
 
         // drops open
         enter: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140 }
-                NumberAnimation { property: "y"; from: root.height - 4; to: root.height + 4; duration: 180; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Anim.fast }
+                NumberAnimation { property: "y"; from: root.height - 4; to: root.height + 4; duration: Anim.normal; easing.type: Anim.standard }
             }
         }
-        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 100 } }
+        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: Anim.fast } }
 
-        background: Rectangle {
-            radius: Properties.radius + 2
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-            border.width: Properties.panelBorderWidth
-            border.color: Properties.panelBorder
-        }
+        background: PopoverBackground {}
 
         Text {
             anchors.centerIn: parent
             visible: root.matches.length === 0
             text: "No app matches \"" + root.query + "\""
             color: Colors.fade(0.45)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
         }
 
@@ -144,13 +139,13 @@ Item {
                 readonly property bool selected: modelData.value === root.value
                 width: ListView.view.width
                 height: 32
-                radius: Properties.radius
+                radius: Tokens.radius.md
                 color: entry.index === view.currentIndex || hover.hovered ? Colors.fade(0.08)
                      : selected ? Colors.fade(0.05) : "transparent"
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 10
+                    anchors.leftMargin: Tokens.space.s8
+                    anchors.rightMargin: Tokens.space.s10
                     spacing: 9
                     Image {
                         Layout.preferredWidth: 20
@@ -163,7 +158,7 @@ Item {
                         Layout.fillWidth: true
                         text: entry.modelData.label
                         color: entry.selected ? Colors.color6 : Colors.ink
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.bold: entry.selected
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
@@ -173,7 +168,7 @@ Item {
                         Layout.maximumWidth: 120
                         text: entry.modelData.hint
                         color: Colors.fade(0.4)
-                        font.pixelSize: 10
+                        font.pixelSize: Tokens.font.micro
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
                     }

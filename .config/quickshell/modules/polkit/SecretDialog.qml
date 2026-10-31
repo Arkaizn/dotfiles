@@ -58,7 +58,7 @@ Scope {
             anchors.fill: parent
             color: Colors.shade(0.5)
             opacity: root.shown ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
             MouseArea { anchors.fill: parent; onClicked: {} }   // swallow clicks
         }
 
@@ -68,27 +68,27 @@ Scope {
             width: 420
             height: col.implicitHeight + 44
             radius: Properties.panelRadius
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.94)
+            color: Colors.alpha(Colors.background, 0.94)
             border.width: Properties.panelBorderWidth
             border.color: Properties.panelBorder
 
             opacity: root.shown ? 1 : 0
             scale: root.shown ? 1 : 0.9
-            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-            Behavior on scale { NumberAnimation { duration: 280; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+            Behavior on opacity { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
+            Behavior on scale { NumberAnimation { duration: Anim.medium; easing.type: Anim.pop; easing.overshoot: 1.4 } }
 
             ColumnLayout {
                 id: col
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 22 }
-                spacing: 12
+                spacing: Tokens.space.s12
 
                 // icon in a soft circle
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     width: 56; height: 56; radius: 28
-                    color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.15)
+                    color: Colors.alpha(Colors.color6, 0.15)
                     border.width: 1
-                    border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4)
+                    border.color: Colors.alpha(Colors.color6, 0.4)
                     Text {
                         anchors.centerIn: parent
                         text: root.view.icon ?? "󰌋"
@@ -103,7 +103,7 @@ Scope {
                     horizontalAlignment: Text.AlignHCenter
                     text: root.view.title ?? ""
                     color: Colors.ink
-                    font.pixelSize: 17
+                    font.pixelSize: Tokens.font.title
                     font.bold: true
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
@@ -114,7 +114,7 @@ Scope {
                     visible: text !== ""
                     text: root.view.message ?? ""
                     color: Colors.fade(0.7)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
                 }
@@ -123,7 +123,7 @@ Scope {
                 ColumnLayout {
                     Layout.fillWidth: true
                     visible: (root.view.choices ?? []).length > 1
-                    spacing: 4
+                    spacing: Tokens.space.s4
                     Repeater {
                         model: root.view.choices ?? []
                         Rectangle {
@@ -134,20 +134,20 @@ Scope {
                             Layout.fillWidth: true
                             implicitHeight: optCol.implicitHeight + 14
                             radius: 9
-                            color: picked ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.15)
+                            color: picked ? Colors.alpha(Colors.color6, 0.15)
                                  : optMouse.containsMouse ? Colors.fade(0.06) : Colors.fade(0.03)
                             border.width: 1
-                            border.color: picked ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.5) : "transparent"
-                            Behavior on color { ColorAnimation { duration: 100 } }
+                            border.color: picked ? Colors.alpha(Colors.color6, 0.5) : "transparent"
+                            Behavior on color { ColorAnimation { duration: Anim.fast } }
                             ColumnLayout {
                                 id: optCol
-                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
-                                spacing: 1
+                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Tokens.space.s10 }
+                                spacing: Tokens.space.s1
                                 Text {
                                     Layout.fillWidth: true
                                     text: opt.modelData.label
                                     color: Colors.ink
-                                    font.pixelSize: 12
+                                    font.pixelSize: Tokens.font.small
                                     font.bold: opt.picked
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
@@ -157,7 +157,7 @@ Scope {
                                     visible: text !== ""
                                     text: opt.modelData.desc ?? ""
                                     color: Colors.fade(0.5)
-                                    font.pixelSize: 10
+                                    font.pixelSize: Tokens.font.micro
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
                                 }
@@ -176,7 +176,7 @@ Scope {
                 SearchField {
                     id: field
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
+                    Layout.topMargin: Tokens.space.s4
                     icon: "󰌋"
                     password: true
                     placeholderText: root.view.placeholder ?? "Password"
@@ -193,15 +193,15 @@ Scope {
                     visible: text !== ""
                     text: root.view.hint ?? ""
                     color: Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
-                    spacing: 8
+                    Layout.topMargin: Tokens.space.s4
+                    spacing: Tokens.space.s8
                     ActionButton {
                         Layout.fillWidth: true
                         icon: "󰅖"

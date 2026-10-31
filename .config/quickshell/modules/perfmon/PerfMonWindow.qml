@@ -73,7 +73,7 @@ Scope {
             implicitWidth: 1280
             implicitHeight: 900
             minimumSize: Qt.size(820, 560)
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 1)
+            color: Colors.alpha(Colors.background, 1)
             onClosed: root.open = false
 
             // in the zoomed content's size (Ctrl +/−)
@@ -93,55 +93,39 @@ Scope {
                     contentHeight: page.implicitHeight + 36
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: ScrollBar {}
+                    ScrollBar.vertical: SlimScrollBar {}
                     SmoothWheel { flick: flick; step: 100 }
 
                     ColumnLayout {
                         id: page
                         x: 20; y: 16
                         width: win.pageWidth
-                        spacing: 12
+                        spacing: Tokens.space.s12
 
                         // ── title ───────────────────────────────────────────────
-                        Item {
-                            Layout.fillWidth: true
-                            implicitHeight: 44
-                            DragHandler { target: null; onActiveChanged: if (active) page.Window.window.startSystemMove() }
-                            RowLayout {
-                                anchors.fill: parent
-                                spacing: 10
-                                Text { text: "󰓅"; color: Colors.color6; font.pixelSize: 22; font.family: Properties.fontFamily }
-                                ColumnLayout {
-                                    spacing: 0
-                                    Text { text: "Performance"; color: Colors.ink; font.pixelSize: 18; font.bold: true; font.family: Properties.fontFamily }
-                                    Text {
-                                        text: [PerfMon.cpuName, PerfMon.hasGpu ? PerfMon.gpu.name ?? "" : "",
+                        AppTitle {
+                            icon: "󰓅"
+                            title: "Performance"
+                            subtitle: [PerfMon.cpuName, PerfMon.hasGpu ? PerfMon.gpu.name ?? "" : "",
                                                PerfMon.memTotal > 0 ? Math.round(PerfMon.memTotal / 1048576) + " GiB RAM" : ""].filter(x => x).join("  ·  ")
-                                        color: Colors.fade(0.45)
-                                        font.pixelSize: 11
-                                        font.family: Properties.fontFamily
-                                    }
-                                }
-                                Item { Layout.fillWidth: true }
-                                Text { text: "History"; color: Colors.fade(0.45); font.pixelSize: 11; font.family: Properties.fontFamily }
-                                ChoiceControl {
-                                    options: Object.keys(root.ranges)
-                                    value: root.rangeName
-                                    onEdited: v => v === "1 min" ? Settings.reset("perfmon", "chartRange") : Settings.set("perfmon", "chartRange", v)
-                                }
+                            Text { text: "History"; color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
+                            Segmented {
+                                options: Object.keys(root.ranges)
+                                value: root.rangeName
+                                onEdited: v => v === "1 min" ? Settings.reset("perfmon", "chartRange") : Settings.set("perfmon", "chartRange", v)
                             }
                         }
 
                         // ── overview ────────────────────────────────────────────
                         PerfCard {
                             Layout.fillWidth: true
-                            padding: 16
+                            padding: Tokens.space.s16
                             title: "Overview"
                             icon: "󰄪"
                             note: "updates every " + (PerfMon.interval / 1000) + " s while this window is open"
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 12
+                                spacing: Tokens.space.s12
                                 OverviewGauge {
                                     label: "CPU"; accent: root.cpuColor
                                     value: PerfMon.cpu
@@ -181,10 +165,10 @@ Scope {
                                 ColumnLayout {
                                     visible: fanList.count > 0 || gpuFan.visible
                                     Layout.preferredWidth: 250
-                                    Layout.leftMargin: 8
-                                    Layout.rightMargin: 4
+                                    Layout.leftMargin: Tokens.space.s8
+                                    Layout.rightMargin: Tokens.space.s4
                                     Layout.alignment: Qt.AlignTop
-                                    spacing: 6
+                                    spacing: Tokens.space.s6
                                     CapsLabel { text: "FANS"; dot: Colors.fade(0.5) }
                                     Repeater {
                                         id: fanList
@@ -210,8 +194,8 @@ Scope {
                         GridLayout {
                             Layout.fillWidth: true
                             columns: win.wide ? 2 : 1
-                            columnSpacing: 12
-                            rowSpacing: 12
+                            columnSpacing: Tokens.space.s12
+                            rowSpacing: Tokens.space.s12
                             uniformCellWidths: true
                             ChartCard {
                                 span: root.span
@@ -237,8 +221,8 @@ Scope {
                         GridLayout {
                             Layout.fillWidth: true
                             columns: win.wide ? 3 : 2
-                            columnSpacing: 12
-                            rowSpacing: 12
+                            columnSpacing: Tokens.space.s12
+                            rowSpacing: Tokens.space.s12
                             uniformCellWidths: true
 
                             // CPU
@@ -248,12 +232,12 @@ Scope {
                                 note: PerfMon.cpuName
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    spacing: 8
+                                    spacing: Tokens.space.s8
                                     Stat { label: "LOAD"; value: PerfMon.cpu < 0 ? "–" : PerfMon.cpu + "%" }
                                     Stat { label: "CLOCK"; value: root.ghz(PerfMon.cpuFreq) }
                                     Stat { label: "TEMP"; value: root.temp(PerfMon.cpuTemp) }
                                 }
-                                CapsLabel { text: PerfMon.cores.length + " THREADS"; Layout.topMargin: 2 }
+                                CapsLabel { text: PerfMon.cores.length + " THREADS"; Layout.topMargin: Tokens.space.s2 }
                                 // per-thread load; count model, so the bars stay and only their heights change
                                 Item {
                                     Layout.fillWidth: true
@@ -279,8 +263,7 @@ Scope {
                                                     opacity: 0.35 + 0.65 * Math.min(1, v / 50)
                                                 }
                                                 HoverHandler { id: coreHover }
-                                                ToolTip.visible: coreHover.hovered
-                                                ToolTip.text: "Thread " + index + ": " + v + "%"
+                                                HoverTip { shown: coreHover.hovered; text: "Thread " + index + ": " + v + "%" }
                                             }
                                         }
                                     }
@@ -297,7 +280,7 @@ Scope {
                                 note: PerfMon.gpu.name ?? ""
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    spacing: 8
+                                    spacing: Tokens.space.s8
                                     Stat { label: "CLOCK"; value: PerfMon.gpuValid && PerfMon.gpu.clock >= 0 ? PerfMon.gpu.clock + " MHz" : "–" }
                                     Stat { label: "TEMP"; value: PerfMon.gpuValid ? root.temp(PerfMon.gpu.temp) : "–" }
                                     Stat { label: "FAN"; value: !PerfMon.gpuValid || PerfMon.gpu.fan < 0 ? "–" : PerfMon.gpu.fan === 0 ? "0 rpm mode" : PerfMon.gpu.fan + " %" }
@@ -322,7 +305,7 @@ Scope {
                                     visible: !PerfMon.gpuValid
                                     text: "Waiting for nvidia-smi…"
                                     color: Colors.fade(0.4)
-                                    font.pixelSize: 11
+                                    font.pixelSize: Tokens.font.caption
                                     font.family: Properties.fontFamily
                                 }
                             }
@@ -335,26 +318,26 @@ Scope {
                                 // used | cache the kernel can give back | free
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: PerfMon.memTotal > 0 ? root.gib(PerfMon.memUsed) + " GiB" : "–"; color: Colors.ink; font.pixelSize: 16; font.bold: true; font.family: Properties.fontFamily }
-                                    Text { Layout.fillWidth: true; text: PerfMon.memTotal > 0 ? "used of " + root.gib(PerfMon.memTotal) + " GiB" : ""; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
-                                    Text { text: PerfMon.mem >= 0 ? Math.round(PerfMon.mem) + "%" : ""; color: Colors.fade(0.7); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
+                                    Text { text: PerfMon.memTotal > 0 ? root.gib(PerfMon.memUsed) + " GiB" : "–"; color: Colors.ink; font.pixelSize: Tokens.font.subtitle; font.bold: true; font.family: Properties.fontFamily }
+                                    Text { Layout.fillWidth: true; text: PerfMon.memTotal > 0 ? "used of " + root.gib(PerfMon.memTotal) + " GiB" : ""; color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
+                                    Text { text: PerfMon.mem >= 0 ? Math.round(PerfMon.mem) + "%" : ""; color: Colors.fade(0.7); font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily }
                                 }
                                 Rectangle {
                                     id: memBar
                                     Layout.fillWidth: true
                                     implicitHeight: 8
-                                    radius: 4
+                                    radius: Tokens.radius.sm
                                     color: Colors.fade(0.07)
                                     readonly property real t: Math.max(1, PerfMon.memTotal)
                                     readonly property real cache: Math.max(0, PerfMon.memTotal - PerfMon.memUsed - PerfMon.memFree)
-                                    Rectangle { x: 0; width: memBar.width * PerfMon.memUsed / memBar.t; height: parent.height; radius: 4
+                                    Rectangle { x: 0; width: memBar.width * PerfMon.memUsed / memBar.t; height: parent.height; radius: Tokens.radius.sm
                                                 color: PerfMon.mem > 92 ? Colors.red : PerfMon.mem > 80 ? Colors.yellow : root.memColor }
-                                    Rectangle { x: memBar.width * PerfMon.memUsed / memBar.t; width: memBar.width * memBar.cache / memBar.t; height: parent.height; radius: 4
+                                    Rectangle { x: memBar.width * PerfMon.memUsed / memBar.t; width: memBar.width * memBar.cache / memBar.t; height: parent.height; radius: Tokens.radius.sm
                                                 color: Qt.rgba(root.memColor.r, root.memColor.g, root.memColor.b, 0.3) }
                                 }
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    spacing: 14
+                                    spacing: Tokens.space.s14
                                     Legend { color: root.memColor; text: "Used " + root.gib(PerfMon.memUsed) + " GiB" }
                                     Legend { color: Qt.rgba(root.memColor.r, root.memColor.g, root.memColor.b, 0.35); text: "Cache " + root.gib(Math.max(0, PerfMon.memTotal - PerfMon.memUsed - PerfMon.memFree)) + " GiB" }
                                     Legend { color: Colors.fade(0.15); text: "Free " + root.gib(PerfMon.memFree) + " GiB" }
@@ -366,7 +349,7 @@ Scope {
                                     value: root.gib(PerfMon.swapUsed) + " / " + root.gib(PerfMon.swapTotal) + " GiB"
                                     bar: PerfMon.swapTotal > 0 ? PerfMon.swapUsed / PerfMon.swapTotal : -1; barColor: root.memColor
                                 }
-                                CapsLabel { text: "STORAGE"; Layout.topMargin: 4 }
+                                CapsLabel { text: "STORAGE"; Layout.topMargin: Tokens.space.s4 }
                                 Repeater {
                                     model: PerfMon.disks.length
                                     ColumnLayout {
@@ -375,15 +358,15 @@ Scope {
                                         readonly property var d: PerfMon.disks[index] ?? ({ device: "", fs: "", mount: "", used: 0, size: 0 })
                                         readonly property real frac: d.size > 0 ? d.used / d.size : 0
                                         Layout.fillWidth: true
-                                        spacing: 4
+                                        spacing: Tokens.space.s4
                                         RowLayout {
                                             Layout.fillWidth: true
-                                            spacing: 8
-                                            Text { text: "󰋊"; color: Colors.fade(0.5); font.pixelSize: 13; font.family: Properties.fontFamily }
-                                            Text { text: disk.d.mount; color: Colors.ink; font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily; elide: Text.ElideMiddle; Layout.maximumWidth: 140 }
-                                            Text { Layout.fillWidth: true; text: disk.d.device + " · " + disk.d.fs; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideRight }
-                                            Text { text: Format.ibytes(disk.d.used) + " / " + Format.ibytes(disk.d.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
-                                            Text { Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight; text: Math.round(disk.frac * 100) + "%"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                                            spacing: Tokens.space.s8
+                                            Text { text: "󰋊"; color: Colors.fade(0.5); font.pixelSize: Tokens.font.body; font.family: Properties.fontFamily }
+                                            Text { text: disk.d.mount; color: Colors.ink; font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily; elide: Text.ElideMiddle; Layout.maximumWidth: 140 }
+                                            Text { Layout.fillWidth: true; text: disk.d.device + " · " + disk.d.fs; color: Colors.fade(0.4); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                                            Text { text: Format.ibytes(disk.d.used) + " / " + Format.ibytes(disk.d.size); color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
+                                            Text { Layout.preferredWidth: 34; horizontalAlignment: Text.AlignRight; text: Math.round(disk.frac * 100) + "%"; color: Colors.fade(0.55); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                                         }
                                         Rectangle {
                                             Layout.fillWidth: true
@@ -399,7 +382,7 @@ Scope {
                                     visible: PerfMon.disks.length === 0
                                     text: "Reading disks…"
                                     color: Colors.fade(0.4)
-                                    font.pixelSize: 11
+                                    font.pixelSize: Tokens.font.caption
                                     font.family: Properties.fontFamily
                                 }
                             }
@@ -409,8 +392,8 @@ Scope {
                         GridLayout {
                             Layout.fillWidth: true
                             columns: win.wide ? 2 : 1
-                            columnSpacing: 12
-                            rowSpacing: 12
+                            columnSpacing: Tokens.space.s12
+                            rowSpacing: Tokens.space.s12
 
                             ProcessTable {
                                 id: procs
@@ -425,14 +408,14 @@ Scope {
                                 Layout.maximumWidth: win.wide ? 440 : 100000
                                 Layout.preferredHeight: win.wide ? 560 : -1
                                 Layout.fillHeight: true
-                                spacing: 12
+                                spacing: Tokens.space.s12
 
                                 PerfCard {
                                     Layout.fillWidth: true
                                     title: "Network"; icon: "󰌗"; iconColor: root.rxColor
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        spacing: 8
+                                        spacing: Tokens.space.s8
                                         Stat { label: "󰇚 DOWN"; labelColor: root.rxColor; value: Format.ibytes(PerfMon.netRx) + "/s" }
                                         Stat { label: "󰕒 UP"; labelColor: root.txColor; value: Format.ibytes(PerfMon.netTx) + "/s" }
                                     }
@@ -464,10 +447,10 @@ Scope {
                                         Layout.minimumHeight: 120
                                         clip: true
                                         boundsBehavior: Flickable.StopAtBounds
-                                        spacing: 10
+                                        spacing: Tokens.space.s10
                                         // count model: the groups only change when sensors come or go
                                         model: root.sensorGroups.length
-                                        ScrollBar.vertical: ScrollBar { policy: sensorList.contentHeight > sensorList.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff }
+                                        ScrollBar.vertical: SlimScrollBar {}
                                         delegate: ColumnLayout {
                                             id: group
                                             required property int index
@@ -477,7 +460,7 @@ Scope {
                                             RowLayout {
                                                 Layout.fillWidth: true
                                                 CapsLabel { text: group.g.name.toUpperCase() }
-                                                Text { Layout.fillWidth: true; text: group.g.chip; color: Colors.fade(0.28); font.pixelSize: 10; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                                                Text { Layout.fillWidth: true; text: group.g.chip; color: Colors.fade(0.28); font.pixelSize: Tokens.font.micro; font.family: Properties.fontFamily; elide: Text.ElideRight }
                                             }
                                             Repeater {
                                                 model: group.g.items.length
@@ -485,13 +468,13 @@ Scope {
                                                     required property int index
                                                     readonly property var s: group.g.items[index] ?? ({ label: "", kind: "temp", value: 0 })
                                                     Layout.fillWidth: true
-                                                    spacing: 8
-                                                    Text { text: parent.s.kind === "fan" ? "󰈐" : "󰔏"; color: Colors.fade(0.35); font.pixelSize: 12; font.family: Properties.fontFamily }
-                                                    Text { Layout.fillWidth: true; text: parent.s.label; color: Colors.fade(0.7); font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                                                    spacing: Tokens.space.s8
+                                                    Text { text: parent.s.kind === "fan" ? "󰈐" : "󰔏"; color: Colors.fade(0.35); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
+                                                    Text { Layout.fillWidth: true; text: parent.s.label; color: Colors.fade(0.7); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily; elide: Text.ElideRight }
                                                     Text {
                                                         text: parent.s.kind === "temp" ? parent.s.value.toFixed(1) + " °C" : parent.s.value + " rpm"
                                                         color: parent.s.kind === "temp" && parent.s.value >= 85 ? Colors.red : parent.s.kind === "temp" && parent.s.value >= 70 ? Colors.yellow : Colors.ink
-                                                        font.pixelSize: 12
+                                                        font.pixelSize: Tokens.font.small
                                                         font.family: Properties.fontFamily
                                                     }
                                                 }
@@ -502,7 +485,7 @@ Scope {
                                             visible: sensorList.count === 0
                                             text: PerfMon.sensors.length === 0 ? "No hwmon sensors found" : "Reading sensors…"
                                             color: Colors.fade(0.4)
-                                            font.pixelSize: 12
+                                            font.pixelSize: Tokens.font.small
                                             font.family: Properties.fontFamily
                                         }
                                     }

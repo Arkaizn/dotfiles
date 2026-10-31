@@ -11,7 +11,7 @@ ColumnLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 10
+    spacing: Tokens.space.s10
     implicitWidth: 260
 
     property bool using: false
@@ -51,7 +51,7 @@ ColumnLayout {
             id: row
             required property var modelData
             Layout.fillWidth: true
-            spacing: 4
+            spacing: Tokens.space.s4
             readonly property color tint: modelData.key === "temp" && modelData.value >= 80 ? Colors.red : Colors.color6
             RowLayout {
                 Layout.fillWidth: true
@@ -69,13 +69,13 @@ ColumnLayout {
             Rectangle {
                 visible: root.opts.graph === false
                 Layout.fillWidth: true
-                implicitHeight: 4; radius: 2
+                implicitHeight: 4; radius: Tokens.radius.xs
                 color: Colors.fade(0.12)
                 Rectangle {
                     width: parent.width * Math.min(1, row.modelData.value / row.modelData.max)
-                    height: parent.height; radius: 2
+                    height: parent.height; radius: Tokens.radius.xs
                     color: row.tint
-                    Behavior on width { NumberAnimation { duration: 300 } }
+                    Behavior on width { NumberAnimation { duration: Anim.slow } }
                 }
             }
         }

@@ -118,18 +118,18 @@ Modal {
 
     ColumnLayout {
         width: parent.width
-        spacing: 10
+        spacing: Tokens.space.s10
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
-            Text { text: root.mode === "export" ? "󰈔" : "󰇚"; color: Colors.color6; font.pixelSize: 20; font.family: Properties.fontFamily }
+            spacing: Tokens.space.s10
+            Text { text: root.mode === "export" ? "󰈔" : "󰇚"; color: Colors.color6; font.pixelSize: Tokens.font.titleLarge; font.family: Properties.fontFamily }
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
                 Text { Layout.fillWidth: true; text: root.mode === "export" ? "Export calendar accounts" : "Import calendar accounts"
-                       color: Colors.ink; font.pixelSize: 17; font.bold: true; font.family: Properties.fontFamily }
-                Text { Layout.fillWidth: true; elide: Text.ElideRight; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily
+                       color: Colors.ink; font.pixelSize: Tokens.font.title; font.bold: true; font.family: Properties.fontFamily }
+                Text { Layout.fillWidth: true; elide: Text.ElideRight; color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
                        text: root.mode === "export" ? "To set them up on another device in one go" : (root.path || "Pick the exported file") }
             }
             IconButton { implicitWidth: 30; implicitHeight: 30; icon: "󰅖"; onClicked: root.close() }
@@ -146,24 +146,24 @@ Modal {
                 readonly property bool exists: root.mode === "import" && !!CalendarStore.existingFor(modelData)
                 Layout.fillWidth: true
                 implicitHeight: 46
-                radius: 10
+                radius: Tokens.radius.lg
                 color: rowMouse.containsMouse && !bad ? Colors.fade(0.06) : Colors.fade(0.03)
                 opacity: bad ? 0.6 : 1
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
-                    spacing: 10
+                    anchors.leftMargin: Tokens.space.s12
+                    anchors.rightMargin: Tokens.space.s12
+                    spacing: Tokens.space.s10
                     Text {
                         text: root.picked[row.k] ? "󰄵" : "󰄱"
                         color: root.picked[row.k] ? Colors.color6 : Colors.fade(0.4)
-                        font.pixelSize: 16
+                        font.pixelSize: Tokens.font.subtitle
                         font.family: Properties.fontFamily
                     }
                     ColumnLayout {
                         Layout.fillWidth: true
                         spacing: 0
-                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: 12
+                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.small
                                font.family: Properties.fontFamily; elide: Text.ElideRight }
                         Text {
                             Layout.fillWidth: true
@@ -174,7 +174,7 @@ Modal {
                                       + (row.exists ? "  ·  already here: updated" : "")
                                     : "")
                             color: row.bad ? Colors.red : Colors.fade(0.45)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -225,7 +225,7 @@ Modal {
             visible: text !== ""
             text: root.error || root.done || (root.busy ? (root.mode === "export" ? "Exporting…" : "Reading…") : "")
             color: root.error ? Colors.red : root.done ? Colors.color6 : Colors.fade(0.5)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap
         }
@@ -234,14 +234,14 @@ Modal {
             visible: root.mode === "export" && root.withPasswords
             text: "󰌾  Keep the file and the passphrase apart (e.g. the file in your cloud, the passphrase in your head or a password manager)."
             color: Colors.fade(0.4)
-            font.pixelSize: 10
+            font.pixelSize: Tokens.font.micro
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap
         }
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             ActionButton { visible: root.mode === "import"; icon: "󰉋"; text: "Other file…"; onClicked: root.pickFile() }
             Item { Layout.fillWidth: true }
             ActionButton { text: root.done ? "Close" : "Cancel"; onClicked: root.close() }

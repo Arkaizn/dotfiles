@@ -1,51 +1,51 @@
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 
 // Big button of the capture menu: icon, label and its number key.
-Rectangle {
+// A tile, not a regular button (the menu is a grid of them); keyboard, focus
+// ring and screen-reader name from Pressable, the number keys from CaptureMenu.
+Pressable {
     id: btn
     property string icon
     property string text
     property string key: ""
     property bool danger: false
-    signal clicked()
 
-    readonly property color tint: danger ? Colors.red : Colors.color6
+    readonly property color tint: danger ? Colors.danger : Colors.accent
 
     Layout.fillWidth: true
     implicitHeight: 74
-    radius: 12
-    scale: mouse.pressed ? 0.97 : 1
-    color: mouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.18) : Colors.fade(0.05)
-    border.width: 1
-    border.color: mouse.containsMouse ? Qt.rgba(tint.r, tint.g, tint.b, 0.6) : Colors.fade(0.08)
-    Behavior on color { ColorAnimation { duration: 120 } }
-    Behavior on scale { NumberAnimation { duration: 90 } }
+    accessibleName: text + (key !== "" ? " (" + key + ")" : "")
+    focusRadius: Tokens.radius.xl
+    scale: pressed ? 0.97 : 1
+    Behavior on scale { NumberAnimation { duration: Anim.instant } }
 
-    MouseArea {
-        id: mouse
+    Rectangle {
         anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: btn.clicked()
+        radius: Tokens.radius.xl
+        color: btn.hovered ? Colors.alpha(btn.tint, 0.18) : Colors.fade(0.05)
+        border.width: Tokens.border.thin
+        border.color: btn.hovered ? Colors.alpha(btn.tint, 0.6) : Colors.fade(0.08)
+        Behavior on color { ColorAnimation { duration: Anim.fast } }
     }
 
     ColumnLayout {
         anchors.centerIn: parent
-        spacing: 4
+        spacing: Tokens.space.s4
         Text {
             Layout.alignment: Qt.AlignHCenter
             text: btn.icon
             color: btn.tint
-            font.pixelSize: 24
+            font.pixelSize: Tokens.icon.xl
             font.family: Properties.fontFamily
         }
         Text {
             Layout.alignment: Qt.AlignHCenter
             text: btn.text
             color: Colors.ink
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
         }
     }
@@ -54,7 +54,7 @@ Rectangle {
         anchors { top: parent.top; right: parent.right; margins: 7 }
         text: btn.key
         color: Colors.fade(0.35)
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.family: Properties.fontFamily
     }
 }

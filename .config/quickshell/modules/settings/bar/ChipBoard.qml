@@ -43,7 +43,7 @@ Item {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: 10
+        spacing: Tokens.space.s10
     }
 
     LayoutGhost {

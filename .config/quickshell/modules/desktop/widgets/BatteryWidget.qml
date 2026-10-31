@@ -10,7 +10,7 @@ RowLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 14
+    spacing: Tokens.space.s14
     readonly property var bat: UPower.displayDevice
     readonly property bool present: bat !== null && bat.isLaptopBattery !== false && bat.isPresent !== false
     readonly property int level: Math.round((bat?.percentage ?? 0) * 100)
@@ -31,11 +31,11 @@ RowLayout {
             Rectangle {
                 x: 4; y: 4
                 width: (parent.width - 8) * Math.min(1, root.level / 100)
-                height: parent.height - 8; radius: 4
+                height: parent.height - 8; radius: Tokens.radius.sm
                 color: root.tint
             }
         }
-        Rectangle { anchors { left: body.right; leftMargin: 1; verticalCenter: body.verticalCenter } width: 4; height: 12; radius: 2; color: Colors.fade(0.5) }
+        Rectangle { anchors { left: body.right; leftMargin: Tokens.space.s1; verticalCenter: body.verticalCenter } width: 4; height: 12; radius: Tokens.radius.xs; color: Colors.fade(0.5) }
         Text {
             anchors.centerIn: body
             visible: root.charging
@@ -46,7 +46,7 @@ RowLayout {
         }
     }
     ColumnLayout {
-        spacing: 2
+        spacing: Tokens.space.s2
         Text {
             text: root.present ? root.level + " %" : "No battery"
             color: Colors.ink

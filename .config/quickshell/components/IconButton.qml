@@ -1,60 +1,51 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Layouts
 import qs.services
 
 // Square icon button with the same look/feel as the bar buttons
-// (ButtonBackground + hover/press scale).
+// (ButtonBackground + hover/press scale). Tab / Space / Enter, focus ring,
+// tooltip and screen-reader name come from Pressable.
 //
 //   IconButton {
 //       icon: "󰑐"
-//       tooltip: "Rescan"
-//       active: false        // keeps the hovered look, e.g. the selected mode
-//       interactive: true    // false = static indicator, no clicks/hover
+//       tooltip: "Rescan"     // also its accessible name — set it on every icon-only button
+//       active: false         // keeps the hovered look, e.g. the selected mode
+//       interactive: true     // false = disabled (dimmed, no clicks / hover)
+//       busy: false           // true = the icon turns (Spinner), clicks are ignored
 //       onClicked: doThing()
 //   }
 // A trash / archive / star / junk icon gets its color (Icons.tint, Shell → Icons)
 // unless textColor is set.
-Item {
+Pressable {
     id: root
 
     property string icon: ""
-    property string tooltip: ""
     property bool active: false
-    property bool interactive: true
-    property int iconSize: 14
+    property int iconSize: Tokens.icon.md
     property color textColor: Icons.tint(icon, Properties.color)
-    signal clicked()
 
-    implicitWidth: Properties.buttonHeight
-    implicitHeight: Properties.buttonHeight
+    implicitWidth: Tokens.size.control
+    implicitHeight: Tokens.size.control
     // in a layout: never squeezed below its size (the texts next to it give way)
     Layout.minimumWidth: implicitWidth
-    opacity: interactive ? 1.0 : 0.5
+    focusRadius: Tokens.radius.md
 
     ButtonBackground {
-        id: buttonBackground
-        hovered: root.active || (root.interactive && mouseArea.containsMouse)
-        iconText: root.icon
+        hovered: root.active || root.hovered || root.activeFocus
+        iconText: root.busy ? "" : root.icon
         iconSize: root.iconSize
         textColor: root.textColor
         scale: !root.interactive ? Properties.onExitedButtonScale
-             : mouseArea.pressed ? Properties.onPressedButtonScale
-             : mouseArea.containsMouse ? Properties.onEnteredButtonScale
+             : root.pressed ? Properties.onPressedButtonScale
+             : root.hovered ? Properties.onEnteredButtonScale
              : Properties.onExitedButtonScale
+        Spinner {
+            anchors.centerIn: parent
+            visible: root.busy
+            running: root.busy
+            glyph: root.icon || "󰑓"
+            size: root.iconSize
+            color: root.textColor
+        }
     }
-
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        enabled: root.interactive
-        acceptedButtons: Qt.LeftButton
-        cursorShape: root.interactive ? Qt.PointingHandCursor : Qt.ArrowCursor
-        onClicked: root.clicked()
-    }
-
-    ToolTip.visible: root.tooltip.length > 0 && mouseArea.containsMouse && root.interactive
-    ToolTip.text: root.tooltip
-    ToolTip.delay: 400
 }

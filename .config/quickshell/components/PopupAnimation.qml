@@ -7,8 +7,8 @@ Item {
     property var target: parent
     property string direction: "top"   // "top" = enters from below, sliding up
                                         // "bottom" = enters from above, sliding down
-    property int enterDuration: Anim.popupIn
-    property int exitDuration:  Anim.popupOut
+    property int enterDuration: Anim.medium
+    property int exitDuration:  Anim.normal
     property int distance: 0           // 0 = auto, uses target's own height/width
 
     signal exitFinished()
@@ -54,14 +54,14 @@ Item {
 
     ParallelAnimation {
         id: enterGroup
-        NumberAnimation { target: root.target; property: "x"; to: 0; duration: root.enterDuration; easing.type: Easing.OutCubic }
-        NumberAnimation { target: root.target; property: "y"; to: 0; duration: root.enterDuration; easing.type: Easing.OutCubic }
+        NumberAnimation { target: root.target; property: "x"; to: 0; duration: root.enterDuration; easing.type: Anim.standard }
+        NumberAnimation { target: root.target; property: "y"; to: 0; duration: root.enterDuration; easing.type: Anim.standard }
     }
 
     ParallelAnimation {
         id: exitGroup
-        NumberAnimation { target: root.target; property: "x"; to: root._offset().x; duration: root.exitDuration; easing.type: Easing.InCubic }
-        NumberAnimation { target: root.target; property: "y"; to: root._offset().y; duration: root.exitDuration; easing.type: Easing.InCubic }
+        NumberAnimation { target: root.target; property: "x"; to: root._offset().x; duration: root.exitDuration; easing.type: Anim.exit }
+        NumberAnimation { target: root.target; property: "y"; to: root._offset().y; duration: root.exitDuration; easing.type: Anim.exit }
         onFinished: root.exitFinished()
     }
 }

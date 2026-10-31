@@ -40,7 +40,7 @@ ColumnLayout {
     readonly property bool isActive: device !== ""
     readonly property int changeCount: Object.keys(edits).length
 
-    spacing: 14
+    spacing: Tokens.space.s14
 
     function load() {
         Network.load(uuid, (p, err) => {
@@ -169,7 +169,7 @@ ColumnLayout {
         id: pane
         property string key
         Layout.fillWidth: true
-        spacing: 16
+        spacing: Tokens.space.s16
         visible: ed.tab === key
         property real slide: 0
         transform: Translate { x: pane.slide }
@@ -180,8 +180,8 @@ ColumnLayout {
         }
         ParallelAnimation {
             id: paneIn
-            NumberAnimation { target: pane; property: "opacity"; from: 0; to: 1; duration: 220 }
-            NumberAnimation { target: pane; property: "slide"; from: 36 * ed.tabDir; to: 0; duration: 280; easing.type: Easing.OutCubic }
+            NumberAnimation { target: pane; property: "opacity"; from: 0; to: 1; duration: Anim.medium }
+            NumberAnimation { target: pane; property: "slide"; from: 36 * ed.tabDir; to: 0; duration: Anim.medium; easing.type: Anim.standard }
         }
     }
 
@@ -189,15 +189,15 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: headRow.implicitHeight + 24
-        radius: 14
+        radius: Tokens.radius.card
         color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
 
         RowLayout {
             id: headRow
-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 12 }
-            spacing: 12
+            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s12 }
+            spacing: Tokens.space.s12
 
             IconButton {
                 icon: "󰁍"
@@ -206,25 +206,25 @@ ColumnLayout {
             }
             Rectangle {
                 width: 40; height: 40; radius: 20
-                color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, ed.isActive ? 0.18 : 0.06)
+                color: Colors.alpha(Colors.color6, ed.isActive ? 0.18 : 0.06)
                 border.width: 1.5
                 border.color: ed.isActive ? Colors.color6 : Colors.fade(0.2)
                 Text {
                     anchors.centerIn: parent
                     text: Network.typeIcon(ed.type)
                     color: ed.isActive ? Colors.color6 : Colors.fade(0.7)
-                    font.pixelSize: 18
+                    font.pixelSize: Tokens.font.title
                     font.family: Properties.fontFamily
                 }
             }
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 1
+                spacing: Tokens.space.s1
                 Text {
                     Layout.fillWidth: true
                     text: ed.val("connection.id") || "…"
                     color: Colors.ink
-                    font.pixelSize: 16
+                    font.pixelSize: Tokens.font.subtitle
                     font.bold: true
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
@@ -235,7 +235,7 @@ ColumnLayout {
                            ed.raw("connection.interface-name") ? "for " + ed.raw("connection.interface-name") : null]
                           .filter(x => x).join("  ·  ")
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -271,7 +271,7 @@ ColumnLayout {
         visible: ed.loadError !== ""
         text: "󰀦  " + ed.loadError
         color: Colors.red
-        font.pixelSize: 12
+        font.pixelSize: Tokens.font.small
         font.family: Properties.fontFamily
     }
 
@@ -286,20 +286,20 @@ ColumnLayout {
     // ── General ─────────────────────────────────────────────────────────────
     Pane {
         key: "general"
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Profile"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Name"
                 changed: ed.changed("connection.id")
                 Field { key: "connection.id" }
             }
-            NetRow {
+            SettingRow {
                 label: "Interface"
                 desc: "Only use this profile on this interface"
                 changed: ed.changed("connection.interface-name")
-                DropdownControl {
+                Dropdown {
                     implicitWidth: 240
                     readonly property string cur: ed.val("connection.interface-name")
                     options: [{ label: "Any interface", value: "" }]
@@ -309,12 +309,12 @@ ColumnLayout {
                     onEdited: v => ed.set("connection.interface-name", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Connect automatically"
                 changed: ed.changed("connection.autoconnect")
                 Toggle { key: "connection.autoconnect" }
             }
-            NetRow {
+            SettingRow {
                 sub: true
                 visible: ed.yes("connection.autoconnect")
                 label: "Priority"
@@ -322,7 +322,7 @@ ColumnLayout {
                 changed: ed.changed("connection.autoconnect-priority")
                 Field { key: "connection.autoconnect-priority"; Layout.preferredWidth: 90 }
             }
-            NetRow {
+            SettingRow {
                 label: "Available to all users"
                 desc: "Off: only you can use it"
                 changed: ed.changed("connection.permissions")
@@ -331,7 +331,7 @@ ColumnLayout {
                     onToggled: v => ed.set("connection.permissions", v ? "" : "user:" + (Quickshell.env("USER") ?? ""))
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Metered"
                 desc: "Apps avoid big downloads on metered networks"
                 changed: ed.changed("connection.metered")
@@ -344,10 +344,10 @@ ColumnLayout {
             }
         }
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Name resolution & firewall"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "DNS over TLS"
                 changed: ed.changed("connection.dns-over-tls")
@@ -358,7 +358,7 @@ ColumnLayout {
                     onEdited: v => ed.set("connection.dns-over-tls", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "mDNS"
                 desc: "Resolve .local names"
                 changed: ed.changed("connection.mdns")
@@ -369,7 +369,7 @@ ColumnLayout {
                     onEdited: v => ed.set("connection.mdns", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "LLMNR"
                 changed: ed.changed("connection.llmnr")
                 Segmented {
@@ -379,7 +379,7 @@ ColumnLayout {
                     onEdited: v => ed.set("connection.llmnr", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Firewall zone"
                 desc: "firewalld zone, empty for the default"
                 changed: ed.changed("connection.zone")
@@ -397,10 +397,10 @@ ColumnLayout {
         readonly property bool dhcp: method === "auto" || method === "dhcp"
         key: fam
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Address"
-            NetRow {
+            SettingRow {
                 first: true
                 wide: true
                 label: "Method"
@@ -426,7 +426,7 @@ ColumnLayout {
             }
             Reveal {
                 open: !["disabled", "ignore", "link-local"].includes(ip.method)
-                NetRow {
+                SettingRow {
                     wide: true
                     label: ip.method === "manual" ? "Addresses" : "Extra static addresses"
                     desc: ip.method === "manual" ? "With prefix, e.g. " + (ip.v4 ? "192.168.1.10/24" : "fd00::10/64") + " (a bare address gets /" + (ip.v4 ? "24" : "64") + ")"
@@ -441,7 +441,7 @@ ColumnLayout {
                         onEdited: l => ed.setList(ip.fam + ".addresses", l)
                     }
                 }
-                NetRow {
+                SettingRow {
                     visible: ip.method === "manual" || ed.list(ip.fam + ".addresses").length > 0
                     label: "Gateway"
                     changed: ed.changed(ip.fam + ".gateway")
@@ -457,10 +457,10 @@ ColumnLayout {
         // DHCP client options
         Reveal {
             open: ip.dhcp
-            NetCard {
+            Section {
                 Layout.fillWidth: true
                 title: ip.v4 ? "DHCP client" : "DHCPv6 client"
-                NetRow {
+                SettingRow {
                     first: true
                     label: "Send hostname"
                     changed: ed.changed(ip.fam + ".dhcp-send-hostname")
@@ -471,33 +471,33 @@ ColumnLayout {
                         onEdited: v => ed.set(ip.fam + ".dhcp-send-hostname", v)
                     }
                 }
-                NetRow {
+                SettingRow {
                     label: "Hostname to send"
                     desc: "Empty: this computer's hostname"
                     changed: ed.changed(ip.fam + ".dhcp-hostname")
                     Field { key: ip.fam + ".dhcp-hostname"; placeholderText: Network.hostname }
                 }
-                NetRow {
+                SettingRow {
                     visible: ip.v4
                     label: "Client ID"
                     desc: "mac, perm-mac, duid, stable, ipv6-duid or hex bytes"
                     changed: ed.changed("ipv4.dhcp-client-id")
                     Field { key: "ipv4.dhcp-client-id"; placeholderText: "default" }
                 }
-                NetRow {
+                SettingRow {
                     visible: !ip.v4
                     label: "DUID"
                     desc: "lease, llt, ll, stable-llt, stable-ll, stable-uuid or hex"
                     changed: ed.changed("ipv6.dhcp-duid")
                     Field { key: "ipv6.dhcp-duid"; placeholderText: "default" }
                 }
-                NetRow {
+                SettingRow {
                     label: "Timeout"
                     desc: "Seconds to wait for a lease, 0 = default"
                     changed: ed.changed(ip.fam + ".dhcp-timeout")
                     Field { key: ip.fam + ".dhcp-timeout"; Layout.preferredWidth: 90 }
                 }
-                NetRow {
+                SettingRow {
                     visible: ip.v4
                     wide: true
                     label: "Ignore these DHCP servers"
@@ -517,18 +517,18 @@ ColumnLayout {
         // sharing = NetworkManager's DHCP server (dnsmasq)
         Reveal {
             open: ip.v4 && ip.method === "shared"
-            NetCard {
+            Section {
                 Layout.fillWidth: true
                 title: "DHCP server (sharing)"
                 icon: "󰒍"
-                NetRow {
+                SettingRow {
                     first: true
                     label: "Address range"
                     desc: "First and last address handed out, e.g. 10.42.0.10,10.42.0.200. Empty: the whole subnet"
                     changed: ed.changed("ipv4.shared-dhcp-range")
                     Field { key: "ipv4.shared-dhcp-range"; placeholderText: "automatic" }
                 }
-                NetRow {
+                SettingRow {
                     label: "Lease time"
                     desc: "Seconds, 0 = default (1 h)"
                     changed: ed.changed("ipv4.shared-dhcp-lease-time")
@@ -537,12 +537,12 @@ ColumnLayout {
             }
         }
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: !["disabled", "ignore"].includes(ip.method)
             title: "DNS"
             icon: "󰇖"
-            NetRow {
+            SettingRow {
                 first: true
                 wide: true
                 label: "Servers"
@@ -557,14 +557,14 @@ ColumnLayout {
                     onEdited: l => ed.setList(ip.fam + ".dns", l)
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: ip.dhcp
                 label: "Ignore DNS from DHCP"
                 desc: "Use only the servers above"
                 changed: ed.changed(ip.fam + ".ignore-auto-dns")
                 Toggle { key: ip.fam + ".ignore-auto-dns" }
             }
-            NetRow {
+            SettingRow {
                 wide: true
                 label: "Search domains"
                 desc: "Short names like \"nas\" are tried with these"
@@ -577,13 +577,13 @@ ColumnLayout {
                     onEdited: l => ed.setList(ip.fam + ".dns-search", l)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Priority"
                 desc: "Lower wins across connections; negative = only these servers"
                 changed: ed.changed(ip.fam + ".dns-priority")
                 Field { key: ip.fam + ".dns-priority"; Layout.preferredWidth: 90 }
             }
-            NetRow {
+            SettingRow {
                 wide: true
                 label: "Resolver options"
                 desc: "e.g. rotate, timeout:1, edns0"
@@ -597,12 +597,12 @@ ColumnLayout {
             }
         }
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: !["disabled", "ignore"].includes(ip.method)
             title: "Routing"
             icon: "󰑪"
-            NetRow {
+            SettingRow {
                 first: true
                 wide: true
                 label: "Static routes"
@@ -617,25 +617,25 @@ ColumnLayout {
                     onEdited: l => ed.setList(ip.fam + ".routes", l)
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: ip.dhcp
                 label: "Ignore routes from DHCP"
                 changed: ed.changed(ip.fam + ".ignore-auto-routes")
                 Toggle { key: ip.fam + ".ignore-auto-routes" }
             }
-            NetRow {
+            SettingRow {
                 label: "Never use as default route"
                 desc: "Only reach its own networks through it (VPNs, lab / management networks)"
                 changed: ed.changed(ip.fam + ".never-default")
                 Toggle { key: ip.fam + ".never-default" }
             }
-            NetRow {
+            SettingRow {
                 label: "Route metric"
                 desc: "Lower is preferred, -1 = default"
                 changed: ed.changed(ip.fam + ".route-metric")
                 Field { key: ip.fam + ".route-metric"; Layout.preferredWidth: 90 }
             }
-            NetRow {
+            SettingRow {
                 label: "Required"
                 desc: "The connection only counts as up once " + (ip.v4 ? "IPv4" : "IPv6") + " works"
                 changed: ed.changed(ip.fam + ".may-fail")
@@ -643,11 +643,11 @@ ColumnLayout {
             }
         }
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: !ip.v4 && !["disabled", "ignore"].includes(ip.method)
             title: "Privacy"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Temporary addresses"
                 desc: "RFC 4941 privacy extensions"
@@ -659,7 +659,7 @@ ColumnLayout {
                     onEdited: v => ed.set("ipv6.ip6-privacy", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Address generation"
                 changed: ed.changed("ipv6.addr-gen-mode")
                 Segmented {
@@ -676,7 +676,7 @@ ColumnLayout {
     IpPane { fam: "ipv6" }
 
     // ── Link ────────────────────────────────────────────────────────────────
-    component MacRow: NetRow {
+    component MacRow: SettingRow {
         id: macRow
         required property string key
         label: "MAC address"
@@ -684,7 +684,7 @@ ColumnLayout {
         changed: ed.changed(key)
         readonly property string cur: ed.val(key)
         readonly property bool custom: /^([0-9a-fA-F]{2}:){5}/.test(cur)
-        DropdownControl {
+        Dropdown {
             implicitWidth: 170
             options: [{ label: "Default", value: "" }, { label: "Keep current", value: "preserve" },
                       { label: "Hardware", value: "permanent" }, { label: "Random", value: "random" },
@@ -708,11 +708,11 @@ ColumnLayout {
         key: "link"
 
         // Ethernet
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: ed.type === "802-3-ethernet"
             title: "Ethernet"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "MTU"
                 desc: "auto or bytes (1500, 9000 for jumbo frames)"
@@ -720,7 +720,7 @@ ColumnLayout {
                 Field { key: "802-3-ethernet.mtu"; Layout.preferredWidth: 90 }
             }
             MacRow { key: "802-3-ethernet.cloned-mac-address" }
-            NetRow {
+            SettingRow {
                 label: "Wake on LAN"
                 changed: ed.changed("802-3-ethernet.wake-on-lan")
                 Segmented {
@@ -730,12 +730,12 @@ ColumnLayout {
                     onEdited: v => ed.set("802-3-ethernet.wake-on-lan", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Auto-negotiate speed"
                 changed: ed.changed("802-3-ethernet.auto-negotiate")
                 Toggle { key: "802-3-ethernet.auto-negotiate" }
             }
-            NetRow {
+            SettingRow {
                 sub: true
                 visible: !ed.yes("802-3-ethernet.auto-negotiate")
                 label: "Speed / duplex"
@@ -752,17 +752,17 @@ ColumnLayout {
         }
 
         // Wi-Fi
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: ed.type === "802-11-wireless"
             title: "Wi-Fi"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Network name (SSID)"
                 changed: ed.changed("802-11-wireless.ssid")
                 Field { key: "802-11-wireless.ssid" }
             }
-            NetRow {
+            SettingRow {
                 label: "Mode"
                 desc: ed.val("802-11-wireless.mode") === "ap" ? "Hotspot: set IPv4 to Shared so others get addresses" : ""
                 changed: ed.changed("802-11-wireless.mode")
@@ -773,7 +773,7 @@ ColumnLayout {
                     onEdited: v => ed.set("802-11-wireless.mode", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Band"
                 changed: ed.changed("802-11-wireless.band")
                 Segmented {
@@ -783,33 +783,33 @@ ColumnLayout {
                     onEdited: v => ed.set("802-11-wireless.band", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Access point (BSSID)"
                 desc: "Lock to one access point, empty for any"
                 changed: ed.changed("802-11-wireless.bssid")
                 Field { key: "802-11-wireless.bssid"; placeholderText: "any" }
             }
-            NetRow {
+            SettingRow {
                 label: "Hidden network"
                 changed: ed.changed("802-11-wireless.hidden")
                 Toggle { key: "802-11-wireless.hidden" }
             }
             MacRow { key: "802-11-wireless.cloned-mac-address" }
-            NetRow {
+            SettingRow {
                 label: "MTU"
                 changed: ed.changed("802-11-wireless.mtu")
                 Field { key: "802-11-wireless.mtu"; Layout.preferredWidth: 90 }
             }
         }
 
-        NetCard {
+        Section {
             id: secCard
             Layout.fillWidth: true
             visible: ed.type === "802-11-wireless"
             title: "Security"
             icon: "󰌾"
             readonly property string mgmt: "remove" in ed.edits ? "none" : ed.val("802-11-wireless-security.key-mgmt") || "none"
-            NetRow {
+            SettingRow {
                 first: true
                 wide: true
                 label: "Security"
@@ -828,7 +828,7 @@ ColumnLayout {
                     }
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: ["wpa-psk", "sae"].includes(ed.val("802-11-wireless-security.key-mgmt")) && !("remove" in ed.edits)
                 label: "Password"
                 changed: ed.changed("802-11-wireless-security.psk")
@@ -857,7 +857,7 @@ ColumnLayout {
                     }
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: ed.val("802-11-wireless-security.key-mgmt") === "wpa-eap"
                 label: "802.1X"
                 desc: "EAP method, identity and certificates are in All settings (802-1x.*)"
@@ -866,30 +866,30 @@ ColumnLayout {
         }
 
         // Bridge
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: ed.type === "bridge"
             title: "Bridge"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Spanning tree (STP)"
                 changed: ed.changed("bridge.stp")
                 Toggle { key: "bridge.stp" }
             }
-            NetRow {
+            SettingRow {
                 sub: true
                 visible: ed.yes("bridge.stp")
                 label: "Priority"
                 changed: ed.changed("bridge.priority")
                 Field { key: "bridge.priority"; Layout.preferredWidth: 90 }
             }
-            NetRow {
+            SettingRow {
                 label: "Forward delay"
                 desc: "Seconds"
                 changed: ed.changed("bridge.forward-delay")
                 Field { key: "bridge.forward-delay"; Layout.preferredWidth: 90 }
             }
-            NetRow {
+            SettingRow {
                 label: "VLAN filtering"
                 changed: ed.changed("bridge.vlan-filtering")
                 Toggle { key: "bridge.vlan-filtering" }
@@ -898,16 +898,16 @@ ColumnLayout {
         }
 
         // Bond
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: ed.type === "bond"
             title: "Bond"
             readonly property var opts: ed.val("bond.options").split(",").map(x => x.trim()).filter(x => x)
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Mode"
                 changed: ed.changed("bond.options")
-                DropdownControl {
+                Dropdown {
                     implicitWidth: 220
                     options: ["balance-rr", "active-backup", "balance-xor", "broadcast", "802.3ad", "balance-tlb", "balance-alb"]
                         .map(m => ({ label: m, value: m, hint: m === "802.3ad" ? "LACP" : m === "active-backup" ? "failover" : "" }))
@@ -918,7 +918,7 @@ ColumnLayout {
                     }
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Options"
                 desc: "e.g. miimon=100, lacp_rate=fast"
                 changed: ed.changed("bond.options")
@@ -928,22 +928,22 @@ ColumnLayout {
         }
 
         // VLAN
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: ed.type === "vlan"
             title: "VLAN"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Parent interface"
                 changed: ed.changed("vlan.parent")
-                DropdownControl {
+                Dropdown {
                     implicitWidth: 200
                     options: Network.devices.filter(d => ["ethernet", "bond", "bridge"].includes(d.type)).map(d => ({ label: d.name, value: d.name }))
                     value: ed.val("vlan.parent")
                     onEdited: v => ed.set("vlan.parent", v)
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "VLAN ID"
                 desc: "1–4094"
                 changed: ed.changed("vlan.id")
@@ -952,23 +952,23 @@ ColumnLayout {
         }
 
         // WireGuard
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: ed.type === "wireguard"
             title: "WireGuard"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Listen port"
                 desc: "0 = random"
                 changed: ed.changed("wireguard.listen-port")
                 Field { key: "wireguard.listen-port"; Layout.preferredWidth: 90 }
             }
-            NetRow {
+            SettingRow {
                 label: "MTU"
                 changed: ed.changed("wireguard.mtu")
                 Field { key: "wireguard.mtu"; Layout.preferredWidth: 90 }
             }
-            NetRow {
+            SettingRow {
                 label: "Peers & keys"
                 desc: "Import a .conf on the Profiles tab, or edit wireguard.* in All settings"
                 ActionButton { icon: "󰒓"; text: "All settings"; onClicked: ed.setTab("all") }
@@ -977,7 +977,7 @@ ColumnLayout {
     }
 
     // add a port (bridge / bond member) from an interface
-    component PortRow: NetRow {
+    component PortRow: SettingRow {
         id: port
         required property string portType
         wide: true
@@ -985,8 +985,8 @@ ColumnLayout {
         desc: "Creates a profile that puts an interface into this " + portType
         property string pick: ""
         RowLayout {
-            spacing: 8
-            DropdownControl {
+            spacing: Tokens.space.s8
+            Dropdown {
                 implicitWidth: 200
                 options: Network.devices.filter(d => d.type === "ethernet" && d.managed).map(d => ({ label: d.name, value: d.name }))
                 value: port.pick
@@ -1012,7 +1012,7 @@ ColumnLayout {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             SearchField {
                 Layout.fillWidth: true
                 placeholderText: "Filter " + Object.keys(ed.orig).length + " settings (name or value)"
@@ -1021,7 +1021,7 @@ ColumnLayout {
             Text {
                 text: allPane.keys.length + " shown"
                 color: Colors.fade(0.45)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
         }
@@ -1029,7 +1029,7 @@ ColumnLayout {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: allCol.implicitHeight + 8
-            radius: 14
+            radius: Tokens.radius.card
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
@@ -1056,25 +1056,25 @@ ColumnLayout {
                             y: 10
                             text: prop.section
                             color: Colors.color6
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.bold: true
                             font.family: Properties.fontFamily
                         }
                         RowLayout {
-                            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 16; rightMargin: 10 }
+                            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: Tokens.space.s16; rightMargin: Tokens.space.s10 }
                             height: 36
-                            spacing: 8
+                            spacing: Tokens.space.s8
                             Rectangle {
                                 width: 6; height: 6; radius: 3
                                 color: Colors.color6
                                 opacity: ed.changed(prop.modelData) ? 1 : 0
-                                Behavior on opacity { NumberAnimation { duration: 150 } }
+                                Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                             }
                             Text {
                                 Layout.preferredWidth: Math.min(260, allCol.width * 0.42)
                                 text: prop.modelData.slice(prop.section.length + 1)
                                 color: Colors.fade(ed.raw(prop.modelData) === "" && !ed.changed(prop.modelData) ? 0.45 : 0.85)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideMiddle
                             }
@@ -1083,7 +1083,7 @@ ColumnLayout {
                                 implicitHeight: 28
                                 icon: ""
                                 clearable: false
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 readonly property bool secret: ed.isSecret(prop.modelData)
                                 password: secret && !ed.changed(prop.modelData)
                                 placeholderText: secret ? "hidden, type to replace" : ""
@@ -1101,7 +1101,7 @@ ColumnLayout {
                                 tooltip: "Undo"
                                 opacity: ed.changed(prop.modelData) ? 1 : 0
                                 visible: opacity > 0
-                                Behavior on opacity { NumberAnimation { duration: 150 } }
+                                Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                                 onClicked: { const e = Object.assign({}, ed.edits); delete e[prop.modelData]; ed.edits = e }
                             }
                         }
@@ -1120,23 +1120,23 @@ ColumnLayout {
         Layout.topMargin: Layout.preferredHeight > 0 ? 8 : 0
         visible: Layout.preferredHeight > 0.5
         clip: Math.abs(Layout.preferredHeight - (barRow.implicitHeight + 22)) > 0.5   // only while sliding
-        radius: 14
-        color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12)
+        radius: Tokens.radius.card
+        color: Colors.alpha(Colors.color6, 0.12)
         border.width: Properties.panelBorderWidth
-        border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4)
-        Behavior on Layout.preferredHeight { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+        border.color: Colors.alpha(Colors.color6, 0.4)
+        Behavior on Layout.preferredHeight { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
 
         RowLayout {
             id: barRow
-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 11 }
-            spacing: 8
+            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s14; rightMargin: 11 }
+            spacing: Tokens.space.s8
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 1
+                spacing: Tokens.space.s1
                 Text {
                     text: ed.changeCount + (ed.changeCount === 1 ? " change" : " changes") + " to " + (ed.val("connection.id") || "this profile")
                     color: Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -1147,7 +1147,7 @@ ColumnLayout {
                         : ed.isActive ? "Applied live to " + ed.device
                         : "Saved to the profile, used next time it connects"
                     color: ed.problems.length > 0 ? Colors.red : Colors.fade(0.55)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }

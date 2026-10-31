@@ -17,24 +17,24 @@ Rectangle {
 
     Layout.fillWidth: true
     implicitHeight: col.implicitHeight + 24
-    radius: 12
-    color: target ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.08) : Colors.shade(0.1)
+    radius: Tokens.radius.xl
+    color: target ? Colors.alpha(Colors.color6, 0.08) : Colors.shade(0.1)
     border.width: 1
-    border.color: target ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6) : Colors.fade(0.06)
-    Behavior on color { ColorAnimation { duration: 120 } }
-    Behavior on border.color { ColorAnimation { duration: 120 } }
+    border.color: target ? Colors.alpha(Colors.color6, 0.6) : Colors.fade(0.06)
+    Behavior on color { ColorAnimation { duration: Anim.fast } }
+    Behavior on border.color { ColorAnimation { duration: Anim.fast } }
 
     ColumnLayout {
         id: col
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-        spacing: 8
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
+        spacing: Tokens.space.s8
 
         RowLayout {
-            spacing: 8
+            spacing: Tokens.space.s8
             Text {
                 text: zoneBox.title
                 color: Colors.fade(0.75)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -42,7 +42,7 @@ Rectangle {
                 Layout.fillWidth: true
                 text: zoneBox.hint
                 color: Colors.fade(0.4)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
             }
@@ -57,7 +57,7 @@ Rectangle {
                 visible: zoneBox.ids.length === 0
                 text: zoneBox.page.editable ? "Drop here" : "empty"
                 color: Colors.fade(0.3)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.italic: true
                 font.family: Properties.fontFamily
             }
@@ -65,7 +65,7 @@ Rectangle {
             Flow {
                 id: flow
                 width: parent.width
-                spacing: 6
+                spacing: Tokens.space.s6
                 Repeater {
                     id: rep
                     model: zoneBox.ids

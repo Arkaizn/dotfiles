@@ -10,22 +10,22 @@ import "../desktop"
 // rotating and resizing happen in the live editor ("Edit on desktop").
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string expanded: ""        // the widget whose options are open
     ConfirmArm { id: arm }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Desktop widgets"
         icon: "󰕮"
-        NetRow {
+        SettingRow {
             first: true
             label: "Show desktop widgets"
             desc: "On the wallpaper, below your windows: a window over a widget always gets the click"
             ToggleSwitch { checked: DesktopWidgets.enabled; onToggled: v => DesktopWidgets.setEnabled(v) }
         }
-        NetRow {
+        SettingRow {
             label: "Live editor"
             desc: "Drag, rotate and resize on the desktop (hold Ctrl to snap). Or long-press a widget"
             ActionButton {
@@ -36,7 +36,7 @@ ColumnLayout {
                 onClicked: DesktopWidgets.startEdit("")
             }
         }
-        NetRow {
+        SettingRow {
             label: "Show all widgets on"
             desc: "Each widget can also choose its own monitors below"
             wide: true
@@ -48,17 +48,17 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Add a widget"
         icon: "󰐕"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "Click one to put it in the middle of the screen; place it with the live editor"
             Flow {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: Tokens.space.s8
                 Repeater {
                     model: DesktopWidgets.types
                     ActionButton {
@@ -74,7 +74,7 @@ ColumnLayout {
 
     Repeater {
         model: DesktopWidgets.instances
-        NetCard {
+        Section {
             id: card
             required property var modelData
             readonly property var info: DesktopWidgets.typeInfo(modelData.type)
@@ -82,7 +82,7 @@ ColumnLayout {
             Layout.fillWidth: true
             title: info.name + "  ·  " + modelData.id
             icon: info.icon
-            NetRow {
+            SettingRow {
                 first: true
                 label: card.open ? "Options" : card.info.desc
                 desc: Math.round(card.modelData.x * 100) + " % / " + Math.round(card.modelData.y * 100) + " % of the screen"
@@ -100,7 +100,7 @@ ColumnLayout {
                     onClicked: if (arm.confirm(card.modelData.id)) DesktopWidgets.remove(card.modelData.id)
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: card.open
                 label: "Monitors"
                 wide: true

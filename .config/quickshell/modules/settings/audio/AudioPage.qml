@@ -12,7 +12,7 @@ import "../../controlcenter"
 // step and max volume. Every slider has a live level meter (LevelMeter).
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     Component.onCompleted: Audio.loadCards()
 
@@ -29,21 +29,21 @@ ColumnLayout {
         desc: "Every device, stream and port in detail"
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Volume"
-        NetRow {
+        SettingRow {
             first: true
             label: "Scroll step"
             desc: "% per wheel notch on the bar's volume button"
-            NumberControl { from: 1; to: 20; value: Math.round(Audio.step * 100); onEdited: v => Settings.set("audio", "step", Math.round(v)) }
+            NumberField { from: 1; to: 20; value: Math.round(Audio.step * 100); onEdited: v => Settings.set("audio", "step", Math.round(v)) }
         }
-        NetRow {
+        SettingRow {
             label: "Maximum volume"
             desc: Audio.maxVolume > 1 ? "above 100% can distort" : "sliders and scrolling stop at 100%"
-            NumberControl { from: 100; to: 150; step: 5; value: Math.round(Audio.maxVolume * 100); onEdited: v => Settings.set("audio", "maxVolume", Math.round(v / 5) * 5) }
+            NumberField { from: 100; to: 150; step: 5; value: Math.round(Audio.maxVolume * 100); onEdited: v => Settings.set("audio", "maxVolume", Math.round(v / 5) * 5) }
         }
-        NetRow {
+        SettingRow {
             label: "Scroll on volume sliders"
             desc: Audio.sliderScroll ? "the mouse wheel over a slider changes the volume (here and in the control center)"
                                      : "off: the mouse wheel scrolls the page; drag the sliders to change the volume"
@@ -51,11 +51,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Output devices"
         icon: "󰓃"
-        NetRow { first: true; visible: Audio.sinks.length === 0; label: "No output devices"; desc: "is PipeWire running?" }
+        SettingRow { first: true; visible: Audio.sinks.length === 0; label: "No output devices"; desc: "is PipeWire running?" }
         Repeater {
             model: Audio.sinks
             AudioDeviceRow {
@@ -70,11 +70,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Input devices"
         icon: "󰍬"
-        NetRow { first: true; visible: Audio.sources.length === 0; label: "No input devices" }
+        SettingRow { first: true; visible: Audio.sources.length === 0; label: "No input devices" }
         Repeater {
             model: Audio.sources
             AudioDeviceRow {
@@ -89,14 +89,14 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Apps"
         icon: "󰎆"
-        NetRow { first: true; visible: page.streams.length === 0; label: "Nothing is playing"; desc: "apps show up here while they play sound" }
+        SettingRow { first: true; visible: page.streams.length === 0; label: "Nothing is playing"; desc: "apps show up here while they play sound" }
         Repeater {
             model: page.streams
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 readonly property var props: modelData.properties ?? {}
@@ -109,20 +109,20 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Sound cards"
         header: ActionButton { icon: "󰑓"; text: "Reload"; onClicked: Audio.loadCards() }
-        NetRow { first: true; visible: Audio.cardError !== ""; label: "Can't read the cards"; desc: Audio.cardError }
+        SettingRow { first: true; visible: Audio.cardError !== ""; label: "Can't read the cards"; desc: Audio.cardError }
         Repeater {
             model: Audio.cards
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 first: index === 0 && Audio.cardError === ""
                 label: modelData.description
                 desc: "profile: what the card offers (outputs, inputs, channels); Off frees it"
-                DropdownControl {
+                Dropdown {
                     options: modelData.profiles.filter(p => p.available || p.name === modelData.active)
                                                .map(p => ({ label: p.description, value: p.name }))
                     value: modelData.active

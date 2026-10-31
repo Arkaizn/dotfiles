@@ -16,24 +16,24 @@ Rectangle {
     signal activated()
 
     implicitHeight: Math.max(52, rowLayout.implicitHeight + 18)
-    radius: 10
-    color: selected ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12)
+    radius: Tokens.radius.lg
+    color: selected ? Colors.alpha(Colors.color6, 0.12)
          : hover.hovered ? Colors.fade(0.05) : "transparent"
     border.width: selected ? 1 : 0
-    border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45)
-    Behavior on color { ColorAnimation { duration: 120 } }
+    border.color: Colors.alpha(Colors.color6, 0.45)
+    Behavior on color { ColorAnimation { duration: Anim.fast } }
 
     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
     TapHandler { onTapped: row.activated() }
 
     RowLayout {
         id: rowLayout
-        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 12 }
-        spacing: 12
+        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s14; rightMargin: Tokens.space.s12 }
+        spacing: Tokens.space.s12
 
         Rectangle {
-            width: 30; height: 30; radius: 8
-            color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, row.selected ? 0.2 : 0.1)
+            width: 30; height: 30; radius: Tokens.radius.md
+            color: Colors.alpha(Colors.color6, row.selected ? 0.2 : 0.1)
             Text {
                 anchors.centerIn: parent
                 text: row.entry.icon ?? "󰍉"
@@ -45,13 +45,13 @@ Rectangle {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 2
+            spacing: Tokens.space.s2
             Text {
                 Layout.fillWidth: true
                 text: SI.highlight(row.entry.label ?? "", row.query, Colors.color6.toString())
                 textFormat: Text.StyledText
                 color: Colors.ink
-                font.pixelSize: 13
+                font.pixelSize: Tokens.font.body
                 font.bold: true
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
@@ -61,7 +61,7 @@ Rectangle {
                 visible: text !== ""
                 text: [row.entry.crumb, row.entry.desc].filter(x => x).join("  ·  ")
                 color: Colors.fade(0.5)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
             }
@@ -80,9 +80,9 @@ Rectangle {
         Text {
             text: row.entry.kind === "action" ? "󰐊" : "󰅂"
             color: Colors.fade(row.selected || hover.hovered ? 0.8 : 0.3)
-            font.pixelSize: 14
+            font.pixelSize: Tokens.font.label
             font.family: Properties.fontFamily
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Anim.fast } }
         }
     }
 }

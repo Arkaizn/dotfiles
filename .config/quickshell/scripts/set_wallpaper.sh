@@ -49,8 +49,11 @@ fi
 # Niri
 bash ~/.config/niri/niri-colors.sh
 
-# OpenRGB - use pywal color directly
-export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-}"
-source "$HOME/.cache/wal/colors.sh"
-openrgb --color "${color11#\#}" 2>/dev/null || true
+# OpenRGB - use pywal color directly. Read from colors.json, checked as
+# #rrggbb — not `source colors.sh`: pywal writes its values unchecked, so a
+# crafted theme would run as code here
+color11=$(jq -r '.colors.color11 // empty' "$HOME/.cache/wal/colors.json" 2>/dev/null)
+if [[ "$color11" =~ ^#[0-9a-fA-F]{6}$ ]]; then
+    openrgb --color "${color11#\#}" 2>/dev/null || true
+fi
 

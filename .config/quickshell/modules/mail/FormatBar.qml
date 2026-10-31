@@ -18,7 +18,7 @@ RowLayout {
 
     property TextArea editor
     property string composeDir: ""
-    spacing: 2
+    spacing: Tokens.space.s2
 
     // what the cursor / selection has now (refresh() when it moves)
     property bool bold: false
@@ -239,13 +239,13 @@ RowLayout {
     IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰊇"; active: root.underline; tooltip: "Underline  (Ctrl+U)"; onClicked: root.toggle("underline") }
     IconButton { implicitWidth: 28; implicitHeight: 28; iconSize: 13; icon: "󰊀"; active: root.strikeout; tooltip: "Strikethrough"; onClicked: root.toggle("strikeout") }
     Item { implicitWidth: 6 }
-    DropdownControl {
+    Dropdown {
         implicitWidth: 100
         options: [{ label: "Small", value: "small" }, { label: "Normal", value: "normal" }, { label: "Large", value: "large" }, { label: "Huge", value: "huge" }]
         value: root.size
         onEdited: v => root.setSize(v)
     }
-    DropdownControl {
+    Dropdown {
         implicitWidth: 92
         options: [{ label: "Sans", value: "sans" }, { label: "Serif", value: "serif" }, { label: "Mono", value: "mono" }]
         value: root.family
@@ -273,21 +273,16 @@ RowLayout {
             scale: AppZoom.at(parent)
             transformOrigin: Popup.TopLeft
             y: colorButton.height + 4
-            padding: 8
-            background: Rectangle {
-                radius: Properties.radius + 2
-                color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-                border.width: Properties.panelBorderWidth
-                border.color: Properties.panelBorder
-            }
-            enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutCubic } }
+            padding: Tokens.space.s8
+            background: PopoverBackground {}
+            enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Anim.fast; easing.type: Anim.standard } }
             contentItem: Row {
-                spacing: 6
+                spacing: Tokens.space.s6
                 Repeater {
-                    model: ["#000000", "#5f6368", "#d93025", "#e8710a", "#188038", "#1a73e8", "#9334e6"]
+                    model: Colors.mailTextSwatches
                     Rectangle {
                         required property string modelData
-                        width: 20; height: 20; radius: 10
+                        width: 20; height: 20; radius: Tokens.radius.lg
                         color: modelData
                         border.width: swatch.containsMouse ? 2 : 1
                         border.color: Colors.fade(swatch.containsMouse ? 0.8 : 0.3)
@@ -320,17 +315,12 @@ RowLayout {
             transformOrigin: Popup.TopLeft
             y: linkButton.height + 4
             width: 320
-            padding: 8
-            background: Rectangle {
-                radius: Properties.radius + 2
-                color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-                border.width: Properties.panelBorderWidth
-                border.color: Properties.panelBorder
-            }
-            enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutCubic } }
+            padding: Tokens.space.s8
+            background: PopoverBackground {}
+            enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Anim.fast; easing.type: Anim.standard } }
             onClosed: root.editor.forceActiveFocus()
             contentItem: RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 SearchField {
                     id: linkField
                     Layout.fillWidth: true

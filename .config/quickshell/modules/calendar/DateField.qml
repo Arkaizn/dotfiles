@@ -55,7 +55,7 @@ Item {
         anchors.fill: parent
         icon: ""
         clearable: false
-        leftPadding: 12
+        leftPadding: Tokens.space.s12
         rightPadding: 36
         // weekday shown while not typing
         text: activeFocus ? root.fmt(root.day) : U.dayShort[U.weekday(root.day)] + "  " + root.fmt(root.day)
@@ -66,7 +66,7 @@ Item {
 
     IconButton {
         anchors.right: parent.right
-        anchors.rightMargin: 4
+        anchors.rightMargin: Tokens.space.s4
         anchors.verticalCenter: parent.verticalCenter
         implicitWidth: 26; implicitHeight: 26
         iconSize: 12
@@ -83,16 +83,11 @@ Item {
         y: root.height + 6
         x: Math.min(0, root.width - width)
         width: 250
-        padding: 12
+        padding: Tokens.space.s12
         closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape
-        background: Rectangle {
-            radius: Properties.popupRadius
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
-            border.width: Properties.panelBorderWidth
-            border.color: Properties.panelBorder
-        }
-        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140 } NumberAnimation { property: "scale"; from: 0.95 * AppZoom.at(root); to: AppZoom.at(root); duration: 160; easing.type: Easing.OutCubic } }
-        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 100 } }
+        background: PopoverBackground {}
+        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Anim.fast } NumberAnimation { property: "scale"; from: 0.95 * AppZoom.at(root); to: AppZoom.at(root); duration: Anim.normal; easing.type: Anim.standard } }
+        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: Anim.fast } }
         contentItem: MiniMonth {
             selected: root.day
             showDots: false

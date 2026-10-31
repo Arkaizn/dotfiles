@@ -40,10 +40,10 @@ PanelWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.32)
+        color: Colors.dim(0.32)
         opacity: 0
         Component.onCompleted: opacity = 1
-        Behavior on opacity { NumberAnimation { duration: 180 } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
     }
 
     // empty spot: deselect, take the keyboard
@@ -230,14 +230,14 @@ PanelWindow {
                 visible: it.manip
                 x: it.cx - width / 2
                 y: Math.min(ed.height - height - 8, it.cy + body.height * it.sc / 2 + 18)
-                width: readout.implicitWidth + 16; height: 24; radius: 12
+                width: readout.implicitWidth + 16; height: 24; radius: Tokens.radius.xl
                 color: Properties.panelColor
                 Text {
                     id: readout
                     anchors.centerIn: parent
                     text: Math.round(it.liveX) + ", " + Math.round(it.liveY) + "   " + Math.round(it.liveRot) + "°   " + Math.round(it.liveScale * 100) + " %"
                     color: Colors.ink
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -274,11 +274,11 @@ PanelWindow {
         RowLayout {
             id: tbRow
             anchors.centerIn: parent
-            spacing: 10
+            spacing: Tokens.space.s10
             Text {
                 text: "󰕮  Desktop widgets"
                 color: Colors.ink
-                font.pixelSize: 13
+                font.pixelSize: Tokens.font.body
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -297,7 +297,7 @@ PanelWindow {
                 visible: ed.width >= 1400
                 text: "drag · Ctrl snaps · double-click: to front · Del · Ctrl+D"
                 color: Colors.fade(0.5)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
             ActionButton {
@@ -314,24 +314,24 @@ PanelWindow {
         z: 10
         property bool open: false
         visible: open
-        anchors { top: toolbar.bottom; horizontalCenter: toolbar.horizontalCenter; topMargin: 8 }
+        anchors { top: toolbar.bottom; horizontalCenter: toolbar.horizontalCenter; topMargin: Tokens.space.s8 }
         width: Math.min(560, ed.width - 40)
         height: monCol.implicitHeight + 28
-        radius: 18
+        radius: Tokens.radius.dialog
         color: Properties.panelColor
         border.width: 1
         border.color: Properties.cardBorder
         MouseArea { anchors.fill: parent }
         ColumnLayout {
             id: monCol
-            anchors { fill: parent; margins: 14 }
-            spacing: 8
-            Text { text: "Show all widgets on"; color: Colors.ink; font.pixelSize: 13; font.bold: true; font.family: Properties.fontFamily }
+            anchors { fill: parent; margins: Tokens.space.s14 }
+            spacing: Tokens.space.s8
+            Text { text: "Show all widgets on"; color: Colors.ink; font.pixelSize: Tokens.font.body; font.bold: true; font.family: Properties.fontFamily }
             Text {
                 Layout.fillWidth: true
                 wrapMode: Text.Wrap
                 text: "A widget can choose its own monitors in its options. \"All monitors\" puts each widget on every monitor at the same place."
-                color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily
+                color: Colors.fade(0.55); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
             }
             MonitorChips {
                 Layout.fillWidth: true
@@ -347,20 +347,20 @@ PanelWindow {
         z: 10
         property bool open: false
         visible: open
-        anchors { top: toolbar.bottom; horizontalCenter: toolbar.horizontalCenter; topMargin: 8 }
+        anchors { top: toolbar.bottom; horizontalCenter: toolbar.horizontalCenter; topMargin: Tokens.space.s8 }
         width: Math.min(640, ed.width - 40)
         height: palGrid.implicitHeight + 24
-        radius: 18
+        radius: Tokens.radius.dialog
         color: Properties.panelColor
         border.width: 1
         border.color: Properties.cardBorder
         MouseArea { anchors.fill: parent }
         GridLayout {
             id: palGrid
-            anchors { fill: parent; margins: 12 }
+            anchors { fill: parent; margins: Tokens.space.s12 }
             columns: 3
-            rowSpacing: 8
-            columnSpacing: 8
+            rowSpacing: Tokens.space.s8
+            columnSpacing: Tokens.space.s8
             Repeater {
                 model: DesktopWidgets.types
                 Rectangle {
@@ -368,17 +368,17 @@ PanelWindow {
                     required property var modelData
                     Layout.fillWidth: true
                     implicitHeight: 58
-                    radius: 12
+                    radius: Tokens.radius.xl
                     color: tmouse.containsMouse ? Colors.fade(0.1) : Colors.fade(0.04)
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 12; rightMargin: 10 }
-                        spacing: 10
-                        Text { text: tcell.modelData.icon; color: Colors.color6; font.pixelSize: 20; font.family: Properties.fontFamily }
+                        anchors { fill: parent; leftMargin: Tokens.space.s12; rightMargin: Tokens.space.s10 }
+                        spacing: Tokens.space.s10
+                        Text { text: tcell.modelData.icon; color: Colors.color6; font.pixelSize: Tokens.font.titleLarge; font.family: Properties.fontFamily }
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 1
-                            Text { text: tcell.modelData.name; color: Colors.ink; font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
-                            Text { Layout.fillWidth: true; text: tcell.modelData.desc; color: Colors.fade(0.5); font.pixelSize: 10; elide: Text.ElideRight; font.family: Properties.fontFamily }
+                            spacing: Tokens.space.s1
+                            Text { text: tcell.modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily }
+                            Text { Layout.fillWidth: true; text: tcell.modelData.desc; color: Colors.fade(0.5); font.pixelSize: Tokens.font.micro; elide: Text.ElideRight; font.family: Properties.fontFamily }
                         }
                     }
                     MouseArea {
@@ -414,28 +414,28 @@ PanelWindow {
         border.color: Properties.cardBorder
         MouseArea { anchors.fill: parent; onPressed: DesktopWidgets.editScreen = ed.screenName }
         Flickable {
-            anchors { fill: parent; margins: 14 }
+            anchors { fill: parent; margins: Tokens.space.s14 }
             contentHeight: panelCol.implicitHeight
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+            ScrollBar.vertical: SlimScrollBar {}
             ColumnLayout {
                 id: panelCol
                 width: parent.width
-                spacing: 10
+                spacing: Tokens.space.s10
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: DesktopWidgets.typeInfo(ed.sel?.type ?? "").icon; color: Colors.color6; font.pixelSize: 18; font.family: Properties.fontFamily }
+                    Text { text: DesktopWidgets.typeInfo(ed.sel?.type ?? "").icon; color: Colors.color6; font.pixelSize: Tokens.font.title; font.family: Properties.fontFamily }
                     Text {
                         Layout.fillWidth: true
                         text: DesktopWidgets.typeInfo(ed.sel?.type ?? "").name + "  ·  " + (ed.sel?.id ?? "")
-                        color: Colors.ink; font.pixelSize: 13; font.bold: true; font.family: Properties.fontFamily
+                        color: Colors.ink; font.pixelSize: Tokens.font.body; font.bold: true; font.family: Properties.fontFamily
                     }
                     IconButton { icon: "󰑓"; tooltip: "Reset rotation and size (R)"; onClicked: DesktopWidgets.update(ed.sel.id, { rot: 0, scale: 1 }) }
                     IconButton { icon: "󰆏"; tooltip: "Duplicate (Ctrl+D)"; onClicked: DesktopWidgets.duplicate(ed.sel.id) }
                     IconButton { icon: "󰆴"; tooltip: "Remove (Delete)"; onClicked: DesktopWidgets.remove(ed.sel.id) }
                 }
-                Text { text: "Monitors"; color: Colors.fade(0.6); font.pixelSize: 11; font.family: Properties.fontFamily }
+                Text { text: "Monitors"; color: Colors.fade(0.6); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                 MonitorChips {
                     Layout.fillWidth: true
                     allowInherit: true
@@ -445,7 +445,7 @@ PanelWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     implicitHeight: opts.implicitHeight
-                    radius: 14
+                    radius: Tokens.radius.card
                     color: Colors.card
                     border.width: 1
                     border.color: Properties.cardBorder

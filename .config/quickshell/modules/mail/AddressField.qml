@@ -27,7 +27,7 @@ SearchField {
         x: 12
         text: root.label
         color: Colors.fade(0.45)
-        font.pixelSize: 12
+        font.pixelSize: Tokens.font.small
         font.family: Properties.fontFamily
     }
 
@@ -51,14 +51,9 @@ SearchField {
         padding: 5
         visible: root.hits.length > 0
         closePolicy: Popup.NoAutoClose
-        background: Rectangle {
-            radius: Properties.popupRadius
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
-            border.width: Properties.panelBorderWidth
-            border.color: Properties.panelBorder
-        }
+        background: PopoverBackground {}
         contentItem: Column {
-            spacing: 1
+            spacing: Tokens.space.s1
             Repeater {
                 model: root.hits
                 Rectangle {
@@ -67,22 +62,22 @@ SearchField {
                     width: parent.width
                     height: 32
                     radius: 7
-                    color: index === root.pick ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16)
+                    color: index === root.pick ? Colors.alpha(Colors.color6, 0.16)
                          : hitMouse.containsMouse ? Colors.fade(0.06) : "transparent"
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        spacing: 8
+                        anchors.leftMargin: Tokens.space.s8
+                        anchors.rightMargin: Tokens.space.s8
+                        spacing: Tokens.space.s8
                         Avatar { size: 22; person: modelData }
-                        Text { text: modelData.name || modelData.email; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily
+                        Text { text: modelData.name || modelData.email; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily
                                Layout.fillWidth: !modelData.name; elide: Text.ElideRight }
                         Text {
                             Layout.fillWidth: true
                             visible: !!modelData.name
                             text: modelData.email
                             color: Colors.fade(0.45)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -92,7 +87,7 @@ SearchField {
                             Layout.alignment: Qt.AlignRight
                             text: "󰒊"
                             color: Colors.fade(0.4)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                     }

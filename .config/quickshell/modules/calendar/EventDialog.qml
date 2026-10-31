@@ -376,23 +376,23 @@ Modal {
     ColumnLayout {
         id: body
         width: parent.width
-        spacing: 14
+        spacing: Tokens.space.s14
 
         SequentialAnimation {
             id: swap
-            NumberAnimation { target: body; property: "opacity"; from: 0; to: 1; duration: 200; easing.type: Easing.OutCubic }
+            NumberAnimation { target: body; property: "opacity"; from: 0; to: 1; duration: Anim.normal; easing.type: Anim.standard }
         }
 
         // ── Details ──────────────────────────────────────────────────────────
         ColumnLayout {
             Layout.fillWidth: true
             visible: !root.editing && root.ev !== null
-            spacing: 12
+            spacing: Tokens.space.s12
 
             // title + when + countdown
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 12
+                spacing: Tokens.space.s12
                 Rectangle {
                     Layout.preferredWidth: 5
                     Layout.fillHeight: true
@@ -402,18 +402,18 @@ Modal {
                 }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Text {
                         Layout.fillWidth: true
                         text: root.ev?.title ?? ""
                         color: Colors.ink
-                        font.pixelSize: 20
+                        font.pixelSize: Tokens.font.titleLarge
                         font.bold: true
                         font.family: Properties.fontFamily
                         wrapMode: Text.WordWrap
                     }
                     RowLayout {
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         Rectangle {
                             implicitWidth: countdown.implicitWidth + 18
                             implicitHeight: 22
@@ -426,7 +426,7 @@ Modal {
                                 anchors.centerIn: parent
                                 text: root.ev ? root.countdownText(root.ev) : ""
                                 color: Colors.ink
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
@@ -434,7 +434,7 @@ Modal {
                         Text {
                             text: root.ev ? U.fmtDate(new Date(root.ev.start)) : ""
                             color: Colors.fade(0.55)
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.family: Properties.fontFamily
                         }
                     }
@@ -451,8 +451,8 @@ Modal {
             GridLayout {
                 Layout.fillWidth: true
                 columns: 2
-                columnSpacing: 8
-                rowSpacing: 8
+                columnSpacing: Tokens.space.s8
+                rowSpacing: Tokens.space.s8
 
                 EventInfoCard {
                     icon: "󰥔"
@@ -497,26 +497,26 @@ Modal {
                 Layout.fillWidth: true
                 visible: (root.ev?.location ?? "") !== ""
                 implicitHeight: 48
-                radius: 12
+                radius: Tokens.radius.xl
                 color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 8
-                    spacing: 10
+                    anchors.leftMargin: Tokens.space.s14
+                    anchors.rightMargin: Tokens.space.s8
+                    spacing: Tokens.space.s10
                     Text {
                         text: "󰍎"
                         color: root.calColor
-                        font.pixelSize: 16
+                        font.pixelSize: Tokens.font.subtitle
                         font.family: Properties.fontFamily
                     }
                     Text {
                         Layout.fillWidth: true
                         text: root.ev?.location ?? ""
                         color: Colors.ink
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
                     }
@@ -550,18 +550,18 @@ Modal {
                 Layout.fillWidth: true
                 visible: (root.ev?.description ?? "") !== ""
                 implicitHeight: Math.min(notesText.implicitHeight + 20, 220)
-                radius: 12
+                radius: Tokens.radius.xl
                 color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
                 Flickable {
                     id: notesFlick
                     anchors.fill: parent
-                    anchors.margins: 10
+                    anchors.margins: Tokens.space.s10
                     contentHeight: notesText.implicitHeight
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: CalScrollBar {}
+                    ScrollBar.vertical: SlimScrollBar {}
                     TextEdit {
                         id: notesText
                         width: parent.width - 8
@@ -571,7 +571,7 @@ Modal {
                         text: root.linkify(root.ev?.description)
                         color: Colors.fade(0.8)
                         selectionColor: Colors.fade(0.28)
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.family: Properties.fontFamily
                         wrapMode: TextEdit.Wrap
                         onLinkActivated: link => Qt.openUrlExternally(link)
@@ -593,7 +593,7 @@ Modal {
                 visible: notesText.visible && /\b(?:https?:\/\/|www\.)/.test(root.ev?.description ?? "")
                 text: root.linkCopied ? "󰄬  Link copied" : "Click a link to open it, right-click to copy it"
                 color: root.linkCopied ? Colors.color6 : Colors.fade(0.4)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
                 horizontalAlignment: Text.AlignRight
             }
@@ -603,7 +603,7 @@ Modal {
                 visible: root.error !== ""
                 text: root.error
                 color: Colors.red
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
             }
@@ -611,7 +611,7 @@ Modal {
             RowLayout {
                 Layout.fillWidth: true
                 visible: root.writable
-                spacing: 8
+                spacing: Tokens.space.s8
                 ActionButton {
                     visible: !root.confirmDelete
                     icon: "󰆴"
@@ -663,7 +663,7 @@ Modal {
         ColumnLayout {
             Layout.fillWidth: true
             visible: root.editing
-            spacing: 12
+            spacing: Tokens.space.s12
 
             RowLayout {
                 Layout.fillWidth: true
@@ -672,7 +672,7 @@ Modal {
                     text: !root.ev ? "New event" : root.editScope === "this" ? "Edit this event"
                         : root.editScope === "all" ? "Edit series" : "Edit event"
                     color: Colors.ink
-                    font.pixelSize: 17
+                    font.pixelSize: Tokens.font.title
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -699,7 +699,7 @@ Modal {
                 text: root.editScope === "this" ? "󰑖  Only this occurrence changes — the rest of the series stays as it is."
                     : "󰑖  Changes apply to every event of the series."
                 color: Colors.fade(0.55)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
             }
@@ -707,7 +707,7 @@ Modal {
             Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: form.implicitHeight
-                radius: 14
+                radius: Tokens.radius.card
                 color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
@@ -719,7 +719,7 @@ Modal {
 
                     FormRow {
                         label: "Calendar"
-                        DropdownControl {
+                        Dropdown {
                             implicitWidth: 240
                             options: CalendarStore.writableCalendars.map(c => ({ label: c.name, value: c.id, hint: c.accountName, color: c.color }))
                             value: root.fCalendar
@@ -760,15 +760,15 @@ Modal {
                     Rectangle {
                         visible: root.editScope !== "this"
                         Layout.fillWidth: true
-                        Layout.leftMargin: 16
-                        Layout.rightMargin: 16
+                        Layout.leftMargin: Tokens.space.s16
+                        Layout.rightMargin: Tokens.space.s16
                         implicitHeight: 1
                         color: Colors.fade(0.06)
                     }
                     FormRow {
                         visible: root.editScope !== "this"      // this occurrence only: no repeat options
                         label: "Repeat"
-                        DropdownControl {
+                        Dropdown {
                             implicitWidth: 200
                             options: [{ label: "Never", value: "none" }, { label: "Every day", value: "daily" },
                                       { label: "Every week", value: "weekly" }, { label: "Every month", value: "monthly" },
@@ -790,7 +790,7 @@ Modal {
                             Layout.preferredWidth: 56
                             text: root.unit + (root.rInterval > 1 ? "s" : "")
                             color: Colors.fade(0.7)
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.family: Properties.fontFamily
                         }
                     }
@@ -810,12 +810,12 @@ Modal {
                                 color: on ? Colors.color6 : dMouse.containsMouse ? Colors.fade(0.1) : Colors.fade(0.04)
                                 border.width: 1
                                 border.color: on ? Colors.color6 : Colors.fade(0.15)
-                                Behavior on color { ColorAnimation { duration: 100 } }
+                                Behavior on color { ColorAnimation { duration: Anim.fast } }
                                 Text {
                                     anchors.centerIn: parent
                                     text: U.dayShort[dchip.index].slice(0, 2)
                                     color: dchip.on ? U.onColor(Colors.color6) : Colors.ink
-                                    font.pixelSize: 10
+                                    font.pixelSize: Tokens.font.micro
                                     font.bold: true
                                     font.family: Properties.fontFamily
                                 }
@@ -832,7 +832,7 @@ Modal {
                     FormRow {
                         visible: root.rFreq !== "none" && root.rFreq !== "custom" && root.editScope !== "this"
                         label: "Until"
-                        ChoiceControl {
+                        Segmented {
                             options: ["never", "after", "until"]
                             value: root.rEnd
                             onEdited: v => root.rEnd = v
@@ -847,7 +847,7 @@ Modal {
                             visible: root.rEnd === "after"
                             text: root.rCount === 1 ? "time" : "times"
                             color: Colors.fade(0.7)
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.family: Properties.fontFamily
                         }
                         DateField {
@@ -879,18 +879,18 @@ Modal {
             RowLayout {
                 Layout.fillWidth: true
                 visible: root.canInvite && !root.foreign && root.guests.list.length > 0
-                spacing: 8
+                spacing: Tokens.space.s8
                 Text {
                     Layout.fillWidth: true
                     text: root.graphCal ? "Outlook sends the invitations"
                         : root.inviting ? "Sending the invitations…"
                         : "Invitations (and later updates) are sent from"
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     wrapMode: Text.Wrap
                 }
-                DropdownControl {
+                Dropdown {
                     visible: !root.graphCal
                     implicitWidth: 230
                     options: MailStore.activeAccounts.map(a => ({ label: a.email, value: a.id }))
@@ -904,7 +904,7 @@ Modal {
                 text: root.foreign ? "󰡉  Invitation from " + MailUtil.displayName(root.ev.organizer) + " — its guests are managed by them"
                     : "󰡉  To invite people, add a mail account in the Mail app"
                 color: Colors.fade(0.4)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap
             }
@@ -921,17 +921,12 @@ Modal {
                     color: Properties.color
                     placeholderTextColor: Colors.fade(0.35)
                     selectionColor: Colors.fade(0.28)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
-                    leftPadding: 14
-                    rightPadding: 14
-                    topPadding: 10
-                    background: Rectangle {
-                        radius: Properties.radius + 2
-                        color: notes.activeFocus ? Colors.shade(0.23) : Colors.shade(0.27)
-                        border.width: Properties.panelBorderWidth
-                        border.color: notes.activeFocus ? Colors.fade(0.16) : Properties.cardBorder
-                    }
+                    leftPadding: Tokens.space.s14
+                    rightPadding: Tokens.space.s14
+                    topPadding: Tokens.space.s10
+                    background: FieldBackground { focused: notes.activeFocus }
                 }
             }
 
@@ -940,7 +935,7 @@ Modal {
                 visible: root.error !== ""
                 text: root.error
                 color: Colors.red
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
             }
@@ -950,21 +945,21 @@ Modal {
                 Layout.fillWidth: true
                 visible: root.askScope
                 implicitHeight: scopeRow.implicitHeight + 20
-                radius: 12
-                color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.1)
+                radius: Tokens.radius.xl
+                color: Colors.alpha(Colors.color6, 0.1)
                 border.width: 1
-                border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.35)
+                border.color: Colors.alpha(Colors.color6, 0.35)
                 RowLayout {
                     id: scopeRow
                     anchors.fill: parent
-                    anchors.margins: 10
-                    anchors.leftMargin: 14
-                    spacing: 8
+                    anchors.margins: Tokens.space.s10
+                    anchors.leftMargin: Tokens.space.s14
+                    spacing: Tokens.space.s8
                     Text {
                         Layout.fillWidth: true
                         text: "󰑖  This event repeats. Save the changes for…"
                         color: Colors.ink
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.family: Properties.fontFamily
                         wrapMode: Text.WordWrap
                     }
@@ -976,7 +971,7 @@ Modal {
             RowLayout {
                 Layout.fillWidth: true
                 visible: !root.askScope
-                spacing: 8
+                spacing: Tokens.space.s8
                 Item { Layout.fillWidth: true }
                 ActionButton {
                     text: "Cancel"
@@ -999,13 +994,13 @@ Modal {
         property bool link: false
         property color dot: "transparent"
         Layout.fillWidth: true
-        spacing: 10
+        spacing: Tokens.space.s10
         Text {
             Layout.preferredWidth: 18
             horizontalAlignment: Text.AlignHCenter
             text: parent.icon
             color: Colors.fade(0.5)
-            font.pixelSize: 14
+            font.pixelSize: Tokens.font.label
             font.family: Properties.fontFamily
         }
         Text {
@@ -1013,7 +1008,7 @@ Modal {
             text: parent.link ? "<a href=\"" + parent.text + "\" style=\"color: white\">" + parent.text + "</a>" : parent.text
             textFormat: parent.link ? Text.RichText : Text.PlainText
             color: Colors.fade(0.8)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
             wrapMode: Text.WrapAnywhere
             onLinkActivated: link => Qt.openUrlExternally(link)
@@ -1034,20 +1029,20 @@ Modal {
         implicitHeight: 50
         Text {
             anchors.left: parent.left
-            anchors.leftMargin: 16
+            anchors.leftMargin: Tokens.space.s16
             anchors.verticalCenter: parent.verticalCenter
             text: parent.label
             color: Colors.ink
-            font.pixelSize: 13
+            font.pixelSize: Tokens.font.body
             font.bold: true
             font.family: Properties.fontFamily
         }
         RowLayout {
             id: slot
             anchors.right: parent.right
-            anchors.rightMargin: 12
+            anchors.rightMargin: Tokens.space.s12
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 8
+            spacing: Tokens.space.s8
         }
     }
 }

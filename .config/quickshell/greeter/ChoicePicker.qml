@@ -18,20 +18,20 @@ ColumnLayout {
     signal picked(var choice)
 
     Layout.fillWidth: true
-    spacing: 4
+    spacing: Tokens.space.s4
 
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: Properties.buttonHeight
-        radius: Properties.radius + 2
+        radius: Tokens.radius.lg
         color: head.containsMouse || root.open ? Colors.fade(0.10) : Colors.fade(0.05)
         border.width: Properties.panelBorderWidth
         border.color: root.open ? Colors.fade(0.16) : Properties.cardBorder
-        Behavior on color { ColorAnimation { duration: Anim.hover } }
+        Behavior on color { ColorAnimation { duration: Anim.fast } }
 
         RowLayout {
-            anchors { fill: parent; leftMargin: 13; rightMargin: 12 }
-            spacing: 10
+            anchors { fill: parent; leftMargin: 13; rightMargin: Tokens.space.s12 }
+            spacing: Tokens.space.s10
             Text {
                 text: root.icon
                 color: Colors.fade(0.6)
@@ -42,14 +42,14 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: root.current ? root.label(root.current) : ""
                 color: Colors.ink
-                font.pixelSize: 13
+                font.pixelSize: Tokens.font.body
                 elide: Text.ElideRight
             }
             Text {
                 visible: root.model.length > 1
                 text: root.open ? "󰅃" : "󰅀"
                 color: Colors.fade(0.5)
-                font.pixelSize: 13
+                font.pixelSize: Tokens.font.body
                 font.family: Properties.fontFamily
             }
         }
@@ -72,24 +72,24 @@ ColumnLayout {
             // by label: the same entry read twice from a var list isn't the same object
             readonly property bool chosen: root.current !== null && root.label(modelData) === root.label(root.current)
             Layout.fillWidth: true
-            Layout.leftMargin: 12
+            Layout.leftMargin: Tokens.space.s12
             implicitHeight: Properties.buttonHeight - 4
-            radius: Properties.radius
+            radius: Tokens.radius.md
             color: entryMouse.containsMouse ? Colors.fade(0.12) : chosen ? Colors.fade(0.07) : "transparent"
             Row {
-                anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
-                spacing: 8
+                anchors { left: parent.left; leftMargin: Tokens.space.s12; verticalCenter: parent.verticalCenter }
+                spacing: Tokens.space.s8
                 Text {
                     width: 14
                     text: entry.chosen ? "󰄬" : ""
                     color: Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                 }
                 Text {
                     text: root.label(entry.modelData)
                     color: entry.chosen ? Colors.ink : Colors.fade(0.75)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                 }
             }
             MouseArea {

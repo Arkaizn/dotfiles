@@ -63,18 +63,18 @@ Item {
     Rectangle {
         id: flashRect
         anchors.fill: parent
-        anchors.margins: 2
-        radius: 10
-        color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.22)
+        anchors.margins: Tokens.space.s2
+        radius: Tokens.radius.lg
+        color: Colors.alpha(Colors.color6, 0.22)
         border.width: 1.5
         border.color: Colors.color6
         opacity: 0
         SequentialAnimation {
             id: flashAnim
-            NumberAnimation { target: flashRect; property: "opacity"; to: 1; duration: 200; easing.type: Easing.OutCubic }
+            NumberAnimation { target: flashRect; property: "opacity"; to: 1; duration: Anim.normal; easing.type: Anim.standard }
             PauseAnimation { duration: 350 }
-            NumberAnimation { target: flashRect; property: "opacity"; to: 0.35; duration: 250 }
-            NumberAnimation { target: flashRect; property: "opacity"; to: 1; duration: 250 }
+            NumberAnimation { target: flashRect; property: "opacity"; to: 0.35; duration: Anim.medium }
+            NumberAnimation { target: flashRect; property: "opacity"; to: 1; duration: Anim.medium }
             PauseAnimation { duration: 500 }
             NumberAnimation { target: flashRect; property: "opacity"; to: 0; duration: 900; easing.type: Easing.InOutQuad }
         }
@@ -84,22 +84,22 @@ Item {
     Rectangle {
         anchors.fill: parent
         anchors.margins: 3
-        radius: 10
-        color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, root.selected ? 0.1 : 0)
+        radius: Tokens.radius.lg
+        color: Colors.alpha(Colors.color6, root.selected ? 0.1 : 0)
         border.width: root.selected ? 1 : 0
-        border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45)
-        Behavior on color { ColorAnimation { duration: 120 } }
+        border.color: Colors.alpha(Colors.color6, 0.45)
+        Behavior on color { ColorAnimation { duration: Anim.fast } }
     }
     opacity: parentOn ? 1 : 0.4
     enabled: parentOn
-    Behavior on opacity { NumberAnimation { duration: 150 } }
+    Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
     RowLayout {
         id: row
         anchors.fill: parent
         anchors.leftMargin: root.sub ? 30 : 16
-        anchors.rightMargin: 12
-        spacing: 12
+        anchors.rightMargin: Tokens.space.s12
+        spacing: Tokens.space.s12
 
         // sub-options hang off the toggle above with a little line
         Rectangle {
@@ -112,17 +112,21 @@ Item {
         }
 
         ColumnLayout {
+            // takes what the controls leave (preferred ≈ 0 + fill): the controls
+            // keep their size in a narrow window, long labels wrap instead
             Layout.fillWidth: true
-            spacing: 2
+            Layout.preferredWidth: 1
+            Layout.minimumWidth: 60
+            spacing: Tokens.space.s2
 
             // search results: "Page › Section ›", click to go there
             Text {
                 visible: root.crumb !== ""
                 text: root.crumb + "  󰅂"
                 color: crumbMouse.containsMouse ? Colors.color6 : Colors.fade(0.4)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
-                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on color { ColorAnimation { duration: Anim.fast } }
                 MouseArea {
                     id: crumbMouse
                     anchors.fill: parent
@@ -133,12 +137,16 @@ Item {
                 }
             }
             RowLayout {
-                spacing: 6
+                Layout.fillWidth: true
+                spacing: Tokens.space.s6
                 Text {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 1
+                    wrapMode: Text.Wrap
                     text: root.query !== "" ? SI.highlight(root.spec.label, root.query, Colors.color6.toString()) : root.spec.label
                     textFormat: root.query !== "" ? Text.StyledText : Text.PlainText
                     color: Colors.ink
-                    font.pixelSize: 13
+                    font.pixelSize: Tokens.font.body
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -154,7 +162,7 @@ Item {
                 visible: text !== ""
                 text: root.spec.desc ?? ""
                 color: Colors.fade(0.5)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
             }
@@ -168,7 +176,7 @@ Item {
             tooltip: root.wm ? "Back to your " + (root.store === "hyprland" ? "Hyprland" : "niri") + " config" : "Back to default"
             opacity: root.changed ? 1 : 0
             visible: opacity > 0
-            Behavior on opacity { NumberAnimation { duration: 150 } }
+            Behavior on opacity { NumberAnimation { duration: Anim.normal } }
             onClicked: root.reset()
         }
 
@@ -198,7 +206,7 @@ Item {
     }
     Component {
         id: number
-        NumberControl {
+        NumberField {
             from: root.spec.min ?? 0
             to: root.spec.max ?? 100
             step: root.spec.type === "int" ? 1 : (root.spec.step ?? 0.1)
@@ -226,7 +234,7 @@ Item {
     }
     Component {
         id: choice
-        ChoiceControl {
+        Segmented {
             options: root.spec.options
             value: root.current
             onEdited: v => root.set(v)
@@ -235,7 +243,7 @@ Item {
     // a long list (App zoom's steps): a dropdown, "unit" after each value
     Component {
         id: choiceList
-        DropdownControl {
+        Dropdown {
             implicitWidth: 120
             options: root.spec.options.map(x => ({ label: x + (root.spec.unit ?? ""), value: x }))
             value: root.current
@@ -245,7 +253,7 @@ Item {
     // installed Nerd Fonts (the icons need one), plus the current value
     Component {
         id: fontPicker
-        DropdownControl {
+        Dropdown {
             implicitWidth: 240
             options: {
                 const f = Qt.fontFamilies().filter(x => /Nerd Font|\bNF[MP]?\b/.test(x))

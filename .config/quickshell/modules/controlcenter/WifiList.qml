@@ -14,7 +14,7 @@ ColumnLayout {
     property bool active: false        // scan only while the list is shown
     readonly property int maxListHeight: 260
 
-    spacing: 6
+    spacing: Tokens.space.s6
 
     // keep scanning while open
     Binding {
@@ -52,7 +52,7 @@ ColumnLayout {
                 : root.networks.length === 0 ? "Scanning…"
                 : root.networks.length + " networks"
             color: Colors.fade(0.55)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
         }
         IconButton {
             implicitWidth: 26; implicitHeight: 26
@@ -68,12 +68,12 @@ ColumnLayout {
         contentHeight: list.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: SlimScrollBar {}
 
         ColumnLayout {
             id: list
             width: parent.width
-            spacing: 4
+            spacing: Tokens.space.s4
 
             Repeater {
                 model: Networking.wifiEnabled ? root.networks : []
@@ -88,10 +88,10 @@ ColumnLayout {
 
                     Layout.fillWidth: true
                     implicitHeight: rowCol.implicitHeight + 12
-                    radius: 10
+                    radius: Tokens.radius.lg
                     color: net.connected ? Colors.fade(0.12)
                          : rowMouse.containsMouse ? Colors.fade(0.07) : "transparent"
-                    Behavior on color { ColorAnimation { duration: 80 } }
+                    Behavior on color { ColorAnimation { duration: Anim.instant } }
 
                     function activate() {
                         if (net.connected || busy) return
@@ -124,12 +124,12 @@ ColumnLayout {
 
                     ColumnLayout {
                         id: rowCol
-                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 6 }
-                        spacing: 6
+                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s6 }
+                        spacing: Tokens.space.s6
 
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 8
+                            spacing: Tokens.space.s8
 
                             Text {
                                 text: root.signalIcon(row.net)
@@ -144,7 +144,7 @@ ColumnLayout {
                                     Layout.fillWidth: true
                                     text: row.net.name
                                     color: Colors.ink
-                                    font.pixelSize: 12
+                                    font.pixelSize: Tokens.font.small
                                     font.bold: row.net.connected
                                     elide: Text.ElideRight
                                 }
@@ -156,14 +156,14 @@ ColumnLayout {
                                         : row.net.connected ? "Connected"
                                         : row.net.known ? "Saved" : ""
                                     color: root.errorFor === row.net.name && !row.busy ? Colors.red : Colors.fade(0.5)
-                                    font.pixelSize: 10
+                                    font.pixelSize: Tokens.font.micro
                                 }
                             }
                             Text {
                                 visible: row.secured
                                 text: "󰌾"
                                 color: Colors.fade(0.45)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                             }
                             IconButton {
@@ -186,7 +186,7 @@ ColumnLayout {
                         RowLayout {
                             Layout.fillWidth: true
                             visible: row.askingPassword
-                            spacing: 6
+                            spacing: Tokens.space.s6
 
                             SearchField {
                                 id: pw
@@ -195,7 +195,7 @@ ColumnLayout {
                                 placeholderText: "Password"
                                 icon: "󰌾"
                                 password: !showPw.on
-                                font.pixelSize: 12
+                                font.pixelSize: Tokens.font.small
                                 onAccepted: connectBtn.clicked()
                                 Keys.onEscapePressed: root.passwordFor = ""
                             }

@@ -15,15 +15,15 @@ Rectangle {
     signal editRequested(var item)
     readonly property bool stacked: compact && (bind.combos.length > 1 || bind.combos.some(c => c.length > 2))
     implicitHeight: Math.max(compact ? 26 : 30, rowLayout.implicitHeight + 8)
-    radius: 8
+    radius: Tokens.radius.md
     color: rowHover.hovered ? Colors.fade(0.05) : "transparent"
-    Behavior on color { ColorAnimation { duration: 100 } }
+    Behavior on color { ColorAnimation { duration: Anim.fast } }
 
     HoverHandler { id: rowHover }
 
     GridLayout {
         id: rowLayout
-        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 6; rightMargin: 4 }
+        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s6; rightMargin: Tokens.space.s4 }
         columns: row.stacked ? 1 : 2
         columnSpacing: row.compact ? 6 : 10
         rowSpacing: 3
@@ -40,10 +40,10 @@ Rectangle {
 
         RowLayout {
             Layout.alignment: Qt.AlignRight
-            spacing: 4
+            spacing: Tokens.space.s4
 
             ColumnLayout {
-                spacing: 4
+                spacing: Tokens.space.s4
                 Repeater {
                     model: row.bind.combos
                     RowLayout {
@@ -58,8 +58,8 @@ Rectangle {
                             text: "󰏫"
                             color: editMouse.containsMouse ? Colors.color6 : Colors.fade(0.6)
                             opacity: rowHover.hovered ? 1 : 0
-                            Behavior on opacity { NumberAnimation { duration: 120 } }
-                            font.pixelSize: 13
+                            Behavior on opacity { NumberAnimation { duration: Anim.fast } }
+                            font.pixelSize: Tokens.font.body
                             font.family: Properties.fontFamily
                             MouseArea {
                                 id: editMouse

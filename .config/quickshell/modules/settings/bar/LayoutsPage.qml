@@ -11,7 +11,7 @@ import "../network"
 // barlayout / dashlayout / cclayout) opens that tab.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string anchor: ""
     signal anchorConsumed()

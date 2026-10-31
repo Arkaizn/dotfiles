@@ -11,7 +11,7 @@ import "../network"
 // Read-only.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property var stages: []                 // [{ name, secs }]
     property real total: 0
@@ -49,12 +49,12 @@ ColumnLayout {
 
     readonly property var colors: ({ firmware: Colors.blue, loader: Colors.teal, kernel: Colors.yellow, initrd: Colors.orange, userspace: Colors.color6 })
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Last boot"
         icon: "󰑮"
         header: ActionButton { icon: "󰑓"; text: "Reload"; onClicked: page.load() }
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: page.error !== "" ? page.error : page.total.toFixed(1) + " s from power on to the desktop"
@@ -82,10 +82,10 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "What made you wait (critical chain)"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "Each line waited for the one below it; +time = how long that unit took"
@@ -93,10 +93,10 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Slowest system units"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "Most run in parallel or after login"
@@ -104,35 +104,35 @@ ColumnLayout {
         }
         Repeater {
             model: page.blame
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: (page.chain.includes(modelData.unit) ? "󰔛 " : "") + modelData.unit
                 RowLayout {
-                    spacing: 8
+                    spacing: Tokens.space.s8
                     Rectangle {
                         implicitWidth: 120 * Math.min(1, modelData.secs / Math.max(0.1, page.blame[0]?.secs ?? 1))
                         implicitHeight: 6; radius: 3
                         color: page.chain.includes(modelData.unit) ? Colors.yellow : Colors.color6
                     }
-                    Text { Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight; text: modelData.secs.toFixed(2) + " s"; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { Layout.preferredWidth: 64; horizontalAlignment: Text.AlignRight; text: modelData.secs.toFixed(2) + " s"; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                 }
             }
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.userBlame.length > 0
         title: "Slowest user units (after login)"
         Repeater {
             model: page.userBlame
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 first: index === 0
                 label: modelData.unit
-                Text { text: modelData.secs.toFixed(2) + " s"; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                Text { text: modelData.secs.toFixed(2) + " s"; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
             }
         }
     }

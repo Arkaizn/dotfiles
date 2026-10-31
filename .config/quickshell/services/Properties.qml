@@ -35,6 +35,11 @@ Singleton {
     property double onExitedButtonScale: 1.0
     property double onPressedButtonScale: 0.92   // while a button is held down
 
+    // Motion everywhere (Anim.qml): a factor on every duration, and a switch
+    // that makes them instant and stops the looping ones
+    property real animSpeed: 1.0
+    property bool reduceMotion: false
+
     // Panels — the bar and every popup attached to it (BarPopup)
     // (defaults follow the pywal colors and light / dark: see themeDefaults below)
     property color panelColor: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
@@ -61,6 +66,7 @@ Singleton {
         "pixelSize", "fontFamily", "fontBold",
         "barMarginLeft", "barMarginRight",
         "onEnteredTextScale", "onEnteredButtonScale", "onPressedButtonScale",
+        "animSpeed", "reduceMotion",
         "panelColor", "panelBorder", "panelBorderWidth", "cardBorder",
         "barRadius", "popupRadius", "panelRadius", "flareRadius", "barInset",
         "buttonHeight", "buttonWidth", "buttonradius"

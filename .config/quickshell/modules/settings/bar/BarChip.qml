@@ -23,13 +23,11 @@ Rectangle {
     opacity: dragged ? 0.3 : 1
     color: mouse.containsMouse && page.editable ? Colors.fade(0.10) : Colors.fade(0.05)
     border.width: 1
-    border.color: zone === "" ? Colors.fade(0.10) : Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.35)
-    Behavior on color { ColorAnimation { duration: 120 } }
-    Behavior on opacity { NumberAnimation { duration: 120 } }
+    border.color: zone === "" ? Colors.fade(0.10) : Colors.alpha(Colors.color6, 0.35)
+    Behavior on color { ColorAnimation { duration: Anim.fast } }
+    Behavior on opacity { NumberAnimation { duration: Anim.fast } }
 
-    ToolTip.visible: mouse.containsMouse && page.dragId === "" && mod.desc !== ""
-    ToolTip.text: mod.desc
-    ToolTip.delay: 500
+    HoverTip { shown: mouse.containsMouse && page.dragId === "" && mod.desc !== ""; text: mod.desc }
 
     MouseArea {
         id: mouse
@@ -53,13 +51,13 @@ Rectangle {
         Text {
             text: chip.mod.icon
             color: chip.zone === "" ? Colors.fade(0.5) : Colors.color6
-            font.pixelSize: 14
+            font.pixelSize: Tokens.font.label
             font.family: Properties.fontFamily
         }
         Text {
             text: chip.mod.name
             color: chip.zone === "" ? Colors.fade(0.6) : Colors.ink
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
         }
         // take off the bar / put on the bar (right end)
@@ -67,7 +65,7 @@ Rectangle {
             visible: chip.page.editable
             text: chip.zone === "" ? "󰐕" : "󰅖"
             color: xMouse.containsMouse ? (chip.zone === "" ? Colors.color6 : Colors.red) : Colors.fade(0.4)
-            font.pixelSize: 13
+            font.pixelSize: Tokens.font.body
             font.family: Properties.fontFamily
             MouseArea {
                 id: xMouse

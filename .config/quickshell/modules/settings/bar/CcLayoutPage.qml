@@ -17,10 +17,10 @@ Item {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: 16
+        spacing: Tokens.space.s16
 
         // ── cards ───────────────────────────────────────────────────────────
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Cards"
             header: [
@@ -40,7 +40,7 @@ Item {
             ChipBoard {
                 id: cards
                 Layout.fillWidth: true
-                Layout.margins: 12
+                Layout.margins: Tokens.space.s12
                 info: id => PanelLayout.ccCard(id)
                 place: (id, zone, index) => zone === "add" ? PanelLayout.ccAdd(id)
                                           : zone === "" ? PanelLayout.ccRemove(id)
@@ -51,7 +51,7 @@ Item {
                     text: "Drag to reorder  ·  × hides a card  ·  Reset brings the default order back (own cards stay, hidden)"
                     wrapMode: Text.Wrap
                     color: Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
                 BarZone {
@@ -66,7 +66,7 @@ Item {
         }
 
         // ── buttons ─────────────────────────────────────────────────────────
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Buttons"
             header: [
@@ -86,7 +86,7 @@ Item {
             ChipBoard {
                 id: buttons
                 Layout.fillWidth: true
-                Layout.margins: 12
+                Layout.margins: Tokens.space.s12
                 info: id => PanelLayout.item(id)
                 addZone: "connectivity"
                 addIndex: 999
@@ -97,7 +97,7 @@ Item {
                     text: "Drag buttons between cards  ·  × hides one  ·  the clock card shows them as small icon buttons, the others as tiles"
                     wrapMode: Text.Wrap
                     color: Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
                 Repeater {
@@ -119,7 +119,7 @@ Item {
         }
 
         // ── own cards ───────────────────────────────────────────────────────
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Own cards"
             header: ActionButton {
@@ -131,17 +131,17 @@ Item {
             Text {
                 visible: PanelLayout.ccCustomIds.length === 0
                 Layout.fillWidth: true
-                Layout.margins: 16
+                Layout.margins: Tokens.space.s16
                 text: "None yet. A new card goes to the bottom of the control center; drag buttons into it above, or live there."
                 wrapMode: Text.Wrap
                 color: Colors.fade(0.45)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
             }
 
             Repeater {
                 model: PanelLayout.ccCustomIds
-                NetRow {
+                SettingRow {
                     id: own
                     required property string modelData
                     required property int index
@@ -151,7 +151,7 @@ Item {
                     desc: count + (count === 1 ? " button" : " buttons")
                           + (PanelLayout.ccOrder.includes(modelData) ? "" : "  ·  hidden")
                     RowLayout {
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         TextControl {
                             implicitWidth: 200
                             value: PanelLayout.ccCustom[own.modelData]?.title ?? ""

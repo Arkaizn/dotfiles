@@ -11,7 +11,7 @@ import "../network"
 // mirrorlist.bak).
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property string file: "/etc/pacman.d/mirrorlist"
     property var servers: []
@@ -60,12 +60,12 @@ ColumnLayout {
             "bash", countries.trim(), latest, sort])
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Mirror list"
         icon: "󰒍"
         header: ActionButton { icon: "󰑓"; text: "Reload"; onClicked: page.load() }
-        NetRow {
+        SettingRow {
             first: true
             label: page.servers.length + " servers  ·  " + (page.ageDays < 0 ? "?" : page.ageDays === 0 ? "updated today" : "updated " + page.ageDays + " days ago")
             desc: (page.generated ? "generated " + page.generated + "  ·  " : "") + page.file
@@ -73,14 +73,14 @@ ColumnLayout {
         }
         Repeater {
             model: page.servers.slice(0, 8)
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 sub: true
                 label: (index + 1) + ". " + modelData.replace(/\/\$repo.*$/, "")
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.hasPacnew
             wide: true
             label: "mirrorlist.pacnew is waiting"
@@ -88,10 +88,10 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Refresh with reflector"
-        NetRow {
+        SettingRow {
             first: true
             label: "Countries"
             desc: page.error !== "" ? page.error : "names or codes, separated by commas"
@@ -103,11 +103,11 @@ ColumnLayout {
                 onTextEdited: page.countries = text
             }
         }
-        NetRow {
+        SettingRow {
             label: "Keep the"
             desc: "most recently synced mirrors, then sorted"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField { Layout.preferredWidth: 60; icon: ""; clearable: false; text: page.latest; onTextEdited: page.latest = text }
                 Segmented {
                     small: true
@@ -117,7 +117,7 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Refresh"
             desc: "opens a terminal: sudo reflector (takes ~30 s for \"fastest\"); the current list is copied to mirrorlist.bak first"
             ActionButton { icon: "󰑓"; text: "Refresh…"; primary: true; onClicked: page.refresh() }

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 
 // Calendar app settings, one page each (list on the left): reminders, view,

@@ -10,17 +10,17 @@ ColumnLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 8
+    spacing: Tokens.space.s8
     implicitWidth: 280
 
     readonly property var upcoming: {
-        const now = Time.date.getTime(), until = now + (opts.days ?? 14) * 86400000
+        const now = Time.minuteDate.getTime(), until = now + (opts.days ?? 14) * 86400000
         return CalendarStore.visibleEvents.filter(e => e.end > now && e.start < until)
             .sort((a, b) => a.start - b.start).slice(0, opts.count ?? 5)
     }
     function when(e) {
-        const d = new Date(e.start), today = Format.day(Time.date)
-        const tomorrow = Format.day(new Date(Time.date.getFullYear(), Time.date.getMonth(), Time.date.getDate() + 1))
+        const d = new Date(e.start), today = Format.day(Time.minuteDate)
+        const tomorrow = Format.day(new Date(Time.minuteDate.getFullYear(), Time.minuteDate.getMonth(), Time.minuteDate.getDate() + 1))
         const day = Format.day(d) === today ? "Today" : Format.day(d) === tomorrow ? "Tomorrow" : Qt.formatDate(d, "ddd d MMM")
         return day + (e.allDay ? "" : "  " + Format.hm(e.start))
     }
@@ -45,15 +45,15 @@ ColumnLayout {
             id: ev
             required property var modelData
             Layout.fillWidth: true
-            spacing: 10
+            spacing: Tokens.space.s10
             Rectangle {
                 Layout.fillHeight: true
-                implicitWidth: 3; radius: 2
+                implicitWidth: 3; radius: Tokens.radius.xs
                 color: CalendarStore.calendarMap[ev.modelData.calendar]?.color ?? Colors.color6
             }
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 1
+                spacing: Tokens.space.s1
                 Text { Layout.fillWidth: true; text: ev.modelData.title; color: Colors.ink; font.pixelSize: 13; elide: Text.ElideRight; font.family: Properties.fontFamily }
                 Text { text: root.when(ev.modelData); color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
             }

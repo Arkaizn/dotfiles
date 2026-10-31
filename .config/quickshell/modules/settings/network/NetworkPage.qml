@@ -38,7 +38,7 @@ ColumnLayout {
     property string editing: ""          // uuid open in the editor
     property bool showHidden: false
 
-    spacing: 14
+    spacing: Tokens.space.s14
 
     Component.onCompleted: {
         Network.watchers++
@@ -133,7 +133,7 @@ ColumnLayout {
     // ── Top bar ─────────────────────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
-        spacing: 10
+        spacing: Tokens.space.s10
         Segmented {
             options: [{ label: "Interfaces", value: "interfaces", icon: "󰈀" },
                       { label: "Wi-Fi", value: "wifi", icon: "󰖩" },
@@ -151,11 +151,11 @@ ColumnLayout {
             implicitHeight: 26
             radius: 13
             readonly property bool ok: Network.connectivity === "full"
-            color: ok ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.14) : Qt.rgba(0.98, 0.89, 0.69, 0.14)
+            color: ok ? Colors.alpha(Colors.color6, 0.14) : Colors.alpha(Colors.warning, 0.14)
             RowLayout {
                 id: connRow
                 anchors.centerIn: parent
-                spacing: 6
+                spacing: Tokens.space.s6
                 Rectangle {
                     width: 7; height: 7; radius: 3.5
                     color: parent.parent.ok ? Colors.color6 : Colors.yellow
@@ -167,7 +167,7 @@ ColumnLayout {
                         : Network.connectivity === "portal" ? "Captive portal · log in"
                         : Network.connectivity === "none" ? "Offline" : "…"
                     color: Colors.ink
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -184,7 +184,7 @@ ColumnLayout {
             icon: "󰑓"
             tooltip: "Refresh"
             onClicked: { spin.restart(); Network.refresh() }
-            RotationAnimation on rotation { id: spin; running: false; from: 0; to: 360; duration: 600; easing.type: Easing.OutCubic }
+            RotationAnimation on rotation { id: spin; running: false; from: 0; to: 360; duration: Anim.theme; easing.type: Anim.standard }
         }
     }
 
@@ -205,15 +205,15 @@ ColumnLayout {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: toastRow.implicitHeight + 16
-            radius: 12
-            readonly property color tint: toast.msg?.error ? Qt.rgba(0.95, 0.55, 0.66, 1) : Colors.color6
+            radius: Tokens.radius.xl
+            readonly property color tint: toast.msg?.error ? Colors.alpha(Colors.danger, 1) : Colors.color6
             color: Qt.rgba(tint.r, tint.g, tint.b, 0.12)
             border.width: 1
             border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.4)
             RowLayout {
                 id: toastRow
-                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 6 }
-                spacing: 8
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s12; rightMargin: Tokens.space.s6 }
+                spacing: Tokens.space.s8
                 Text {
                     text: toast.msg?.error ? "󰀦" : "󰄬"
                     color: toast.msg?.error ? Colors.red : Colors.color6
@@ -224,7 +224,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     text: toast.msg?.text ?? ""
                     color: Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
                 }
@@ -243,7 +243,7 @@ ColumnLayout {
         id: tv
         property string key
         Layout.fillWidth: true
-        spacing: 14
+        spacing: Tokens.space.s14
         visible: netPage.tab === key
         property real slide: 0
         transform: Translate { x: tv.slide }
@@ -255,8 +255,8 @@ ColumnLayout {
         }
         ParallelAnimation {
             id: tvIn
-            NumberAnimation { target: tv; property: "opacity"; from: 0; to: 1; duration: 220 }
-            NumberAnimation { target: tv; property: "slide"; from: 40 * netPage.tabDir; to: 0; duration: 300; easing.type: Easing.OutCubic }
+            NumberAnimation { target: tv; property: "opacity"; from: 0; to: 1; duration: Anim.medium }
+            NumberAnimation { target: tv; property: "slide"; from: 40 * netPage.tabDir; to: 0; duration: Anim.slow; easing.type: Anim.standard }
         }
     }
 
@@ -269,8 +269,8 @@ ColumnLayout {
         Component.onCompleted: apIn.start()
         ParallelAnimation {
             id: apIn
-            NumberAnimation { target: ap; property: "opacity"; to: 1; duration: 220 }
-            NumberAnimation { target: ap; property: "lift"; to: 0; duration: 280; easing.type: Easing.OutCubic }
+            NumberAnimation { target: ap; property: "opacity"; to: 1; duration: Anim.medium }
+            NumberAnimation { target: ap; property: "lift"; to: 0; duration: Anim.medium; easing.type: Anim.standard }
         }
     }
 
@@ -280,20 +280,20 @@ ColumnLayout {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: Tokens.space.s10
             Text {
                 Layout.fillWidth: true
                 text: deviceModel.count + (deviceModel.count === 1 ? " interface" : " interfaces")
                       + (netPage.hiddenCount > 0 && !netPage.showHidden ? "  ·  " + netPage.hiddenCount + " hidden" : "")
                 color: Colors.fade(0.55)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.bold: true
                 font.family: Properties.fontFamily
             }
             Text {
                 text: "Hide virtual"
                 color: Colors.fade(0.6)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
             ToggleSwitch {
@@ -313,7 +313,7 @@ ColumnLayout {
             visible: netPage.hideVirtual
             text: "Virtual = Docker, bridges, veth, VMware / VirtualBox, tunnels, loopback. Hide or always show single ones from their card."
             color: Colors.fade(0.35)
-            font.pixelSize: 10
+            font.pixelSize: Tokens.font.micro
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
         }
@@ -339,28 +339,28 @@ ColumnLayout {
         }
 
         // networking switches
-        NetCard {
+        Section {
             Layout.fillWidth: true
-            Layout.topMargin: 6
+            Layout.topMargin: Tokens.space.s6
             title: "Switches"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Networking"
                 desc: "Everything NetworkManager handles, off = offline"
                 ToggleSwitch { checked: Network.networking; onToggled: v => Network.setNetworking(v) }
             }
-            NetRow {
+            SettingRow {
                 visible: Network.wifiHardware || Network.devices.some(d => d.type === "wifi")
                 label: "Wi-Fi"
                 ToggleSwitch { checked: Network.wifiEnabled; onToggled: v => Network.setWifi(v) }
             }
-            NetRow {
+            SettingRow {
                 label: "Wi-Fi off while wired"
                 desc: WiredWifi.turnedOff ? "Wi-Fi is off now because a cable / the dock is connected; it comes back when it's unplugged"
                     : "Turn Wi-Fi off while a cable or the dock's ethernet is connected, back on when it's unplugged (never a Wi-Fi you switched off yourself)"
                 ToggleSwitch { checked: Settings.network.wifiOffWhenWired ?? false; onToggled: v => Settings.set("network", "wifiOffWhenWired", v) }
             }
-            NetRow {
+            SettingRow {
                 label: "Safe apply"
                 desc: "Changes to an active connection revert after 20s unless you keep them"
                 ToggleSwitch { checked: netPage.safeApply; onToggled: v => Settings.set("network", "safeApply", v) }
@@ -385,7 +385,7 @@ ColumnLayout {
         ColumnLayout {
             id: profileList
             Layout.fillWidth: true
-            spacing: 14
+            spacing: Tokens.space.s14
             visible: netPage.editing === ""
             property real slide: 0
             transform: Translate { x: profileList.slide }
@@ -396,13 +396,13 @@ ColumnLayout {
             }
             ParallelAnimation {
                 id: listIn
-                NumberAnimation { target: profileList; property: "opacity"; from: 0; to: 1; duration: 220 }
-                NumberAnimation { target: profileList; property: "slide"; from: -40; to: 0; duration: 320; easing.type: Easing.OutCubic }
+                NumberAnimation { target: profileList; property: "opacity"; from: 0; to: 1; duration: Anim.medium }
+                NumberAnimation { target: profileList; property: "slide"; from: -40; to: 0; duration: Anim.slow; easing.type: Anim.standard }
             }
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField {
                     Layout.fillWidth: true
                     placeholderText: "Filter profiles"
@@ -417,7 +417,7 @@ ColumnLayout {
                 ActionButton {
                     icon: "󰋺"
                     text: "Import"
-                    onClicked: importPick.running = true
+                    onClicked: netPage.importProfile()
                 }
             }
 
@@ -455,11 +455,11 @@ ColumnLayout {
                     })
                 }
 
-                NetCard {
+                Section {
                     Layout.fillWidth: true
                     title: "New profile"
                     icon: "󰐕"
-                    NetRow {
+                    SettingRow {
                         first: true
                         wide: true
                         label: "Type"
@@ -469,7 +469,7 @@ ColumnLayout {
                             onEdited: v => { newPanel.type = v; newPanel.ifname = "" }
                         }
                     }
-                    NetRow {
+                    SettingRow {
                         label: "Name"
                         SearchField {
                             implicitWidth: 240
@@ -480,11 +480,11 @@ ColumnLayout {
                             onTextEdited: newPanel.name = text
                         }
                     }
-                    NetRow {
+                    SettingRow {
                         visible: ["ethernet", "wifi"].includes(newPanel.type)
                         label: "Interface"
                         desc: "Empty: any matching interface"
-                        DropdownControl {
+                        Dropdown {
                             implicitWidth: 240
                             options: [{ label: "Any", value: "" }].concat(Network.devices
                                 .filter(d => d.type === (newPanel.type === "wifi" ? "wifi" : "ethernet") && !netPage.isVirtual(d))
@@ -493,7 +493,7 @@ ColumnLayout {
                             onEdited: v => newPanel.ifname = v
                         }
                     }
-                    NetRow {
+                    SettingRow {
                         visible: newPanel.type === "wifi"
                         label: "Network name (SSID)"
                         SearchField {
@@ -504,10 +504,10 @@ ColumnLayout {
                             onTextEdited: newPanel.ssid = text
                         }
                     }
-                    NetRow {
+                    SettingRow {
                         visible: newPanel.type === "vlan"
                         label: "Parent / ID"
-                        DropdownControl {
+                        Dropdown {
                             implicitWidth: 160
                             options: Network.devices.filter(d => ["ethernet", "bond", "bridge"].includes(d.type) && !netPage.isVirtual(d))
                                 .map(d => ({ label: d.name, value: d.name }))
@@ -523,7 +523,7 @@ ColumnLayout {
                             onTextEdited: newPanel.vlanId = text
                         }
                     }
-                    NetRow {
+                    SettingRow {
                         visible: newPanel.needsIfname
                         label: "Interface name"
                         desc: "The new interface"
@@ -537,11 +537,11 @@ ColumnLayout {
                             onTextEdited: newPanel.ifname = text
                         }
                     }
-                    NetRow {
+                    SettingRow {
                         Text {
                             text: newPanel.problem
                             color: Colors.fade(0.45)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                         ActionButton {
@@ -559,7 +559,7 @@ ColumnLayout {
             Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: profCol.implicitHeight + 8
-                radius: 14
+                radius: Tokens.radius.card
                 color: Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
@@ -585,15 +585,15 @@ ColumnLayout {
                             Rectangle {
                                 anchors.fill: parent
                                 anchors.margins: 3
-                                anchors.leftMargin: 6
-                                anchors.rightMargin: 6
-                                radius: 10
+                                anchors.leftMargin: Tokens.space.s6
+                                anchors.rightMargin: Tokens.space.s6
+                                radius: Tokens.radius.lg
                                 color: rowHover.hovered ? Colors.fade(0.05) : "transparent"
-                                Behavior on color { ColorAnimation { duration: 120 } }
+                                Behavior on color { ColorAnimation { duration: Anim.fast } }
                             }
                             Rectangle {
                                 visible: prow.index > 0
-                                anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 16; rightMargin: 16 }
+                                anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: Tokens.space.s16; rightMargin: Tokens.space.s16 }
                                 height: 1
                                 color: Colors.fade(0.06)
                             }
@@ -605,29 +605,29 @@ ColumnLayout {
                             }
 
                             RowLayout {
-                                anchors { fill: parent; leftMargin: 16; rightMargin: 10 }
-                                spacing: 12
+                                anchors { fill: parent; leftMargin: Tokens.space.s16; rightMargin: Tokens.space.s10 }
+                                spacing: Tokens.space.s12
                                 Rectangle {
                                     width: 32; height: 32; radius: 16
-                                    color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, prow.c?.active ? 0.18 : 0.05)
+                                    color: Colors.alpha(Colors.color6, prow.c?.active ? 0.18 : 0.05)
                                     border.width: 1.5
                                     border.color: prow.c?.active ? Colors.color6 : Colors.fade(0.15)
                                     Text {
                                         anchors.centerIn: parent
                                         text: Network.typeIcon(prow.c?.type ?? "")
                                         color: prow.c?.active ? Colors.color6 : Colors.fade(0.65)
-                                        font.pixelSize: 14
+                                        font.pixelSize: Tokens.font.label
                                         font.family: Properties.fontFamily
                                     }
                                 }
                                 ColumnLayout {
                                     Layout.fillWidth: true
-                                    spacing: 1
+                                    spacing: Tokens.space.s1
                                     Text {
                                         Layout.fillWidth: true
                                         text: prow.c?.name ?? ""
                                         color: Colors.ink
-                                        font.pixelSize: 13
+                                        font.pixelSize: Tokens.font.body
                                         font.bold: true
                                         font.family: Properties.fontFamily
                                         elide: Text.ElideRight
@@ -642,16 +642,16 @@ ColumnLayout {
                                                     c.autoconnect ? null : "manual"].filter(x => x).join("  ·  ")
                                         }
                                         color: Colors.fade(0.5)
-                                        font.pixelSize: 11
+                                        font.pixelSize: Tokens.font.caption
                                         font.family: Properties.fontFamily
                                         elide: Text.ElideRight
                                     }
                                 }
                                 // quick actions, fade in on hover
                                 RowLayout {
-                                    spacing: 4
+                                    spacing: Tokens.space.s4
                                     opacity: rowHover.hovered || prow.armed ? 1 : 0
-                                    Behavior on opacity { NumberAnimation { duration: 140 } }
+                                    Behavior on opacity { NumberAnimation { duration: Anim.fast } }
                                     IconButton {
                                         icon: prow.c?.active ? "󰌙" : "󰌘"
                                         tooltip: prow.c?.active ? "Disconnect" : "Connect"
@@ -674,14 +674,14 @@ ColumnLayout {
                                     visible: prow.c?.active ?? false
                                     implicitWidth: actText.implicitWidth + 16
                                     implicitHeight: 20
-                                    radius: 10
-                                    color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.14)
+                                    radius: Tokens.radius.lg
+                                    color: Colors.alpha(Colors.color6, 0.14)
                                     Text {
                                         id: actText
                                         anchors.centerIn: parent
                                         text: "active"
                                         color: Colors.color6
-                                        font.pixelSize: 10
+                                        font.pixelSize: Tokens.font.micro
                                         font.bold: true
                                         font.family: Properties.fontFamily
                                     }
@@ -689,18 +689,18 @@ ColumnLayout {
                                 Text {
                                     text: "󰅂"
                                     color: Colors.fade(rowHover.hovered ? 0.7 : 0.3)
-                                    font.pixelSize: 14
+                                    font.pixelSize: Tokens.font.label
                                     font.family: Properties.fontFamily
                                 }
                             }
                         }
                     }
                     Text {
-                        Layout.margins: 16
+                        Layout.margins: Tokens.space.s16
                         visible: profileModel.count === 0
                         text: netPage.profileFilter !== "" ? "No profile matches" : "No profiles"
                         color: Colors.fade(0.45)
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.family: Properties.fontFamily
                     }
                 }
@@ -717,8 +717,8 @@ ColumnLayout {
             onLoaded: edIn.restart()
             ParallelAnimation {
                 id: edIn
-                NumberAnimation { target: editorLoader; property: "opacity"; from: 0; to: 1; duration: 220 }
-                NumberAnimation { target: editorLoader; property: "slide"; from: 40; to: 0; duration: 320; easing.type: Easing.OutCubic }
+                NumberAnimation { target: editorLoader; property: "opacity"; from: 0; to: 1; duration: Anim.medium }
+                NumberAnimation { target: editorLoader; property: "slide"; from: 40; to: 0; duration: Anim.slow; easing.type: Anim.standard }
             }
             sourceComponent: ProfileEditor {
                 uuid: netPage.editing
@@ -729,18 +729,12 @@ ColumnLayout {
     }
 
     // VPN / WireGuard import: pick a file, the type follows from it
-    Process {
-        id: importPick
-        command: ["zenity", "--file-selection", "--title=Import a VPN or WireGuard profile",
-                  "--file-filter=VPN / WireGuard | *.ovpn *.conf *.pcf *.vpnc", "--file-filter=All files | *"]
-        stdout: StdioCollector { id: importOut }
-        onExited: code => {
-            const f = importOut.text.trim()
-            if (code !== 0 || f === "") return
+    function importProfile() {
+        Jobs.pickFile({ title: "Import a VPN or WireGuard profile", filters: ["VPN / WireGuard | *.ovpn *.conf *.pcf *.vpnc"] }, f => {
+            if (f === "") return
             // a WireGuard .conf has [Interface] + PrivateKey; anything else is tried as OpenVPN
-            Network.run(["grep", "-qi", "^\\s*PrivateKey", f], c =>
-                Network.importFile(c === 0 ? "wireguard" : "openvpn", f))
-        }
+            Network.run(["grep", "-qi", "^\\s*PrivateKey", f], c => Network.importFile(c === 0 ? "wireguard" : "openvpn", f))
+        })
     }
 
     // ── Wi-Fi ──────────────────────────────────────────────────────────────
@@ -766,7 +760,7 @@ ColumnLayout {
     TabView {
         key: "dns"
 
-        NetCard {
+        Section {
             id: globalCard
             Layout.fillWidth: true
             title: "Global DNS"
@@ -781,9 +775,9 @@ ColumnLayout {
                 target: Network
                 function onGlobalDnsChanged() { if (!globalCard.dirty) globalCard.reset() }
             }
-            tint: isOn ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.08) : "transparent"
+            tint: isOn ? Colors.alpha(Colors.color6, 0.08) : "transparent"
 
-            NetRow {
+            SettingRow {
                 first: true
                 label: globalCard.isOn ? "On — overrides every network" : "Off — each network uses its own DNS"
                 desc: "Set per network in a profile's IPv4 / IPv6 tab. Changing this asks for your password."
@@ -791,19 +785,19 @@ ColumnLayout {
                     implicitWidth: gs.implicitWidth + 18
                     implicitHeight: 22
                     radius: 11
-                    color: globalCard.isOn ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.18) : Colors.fade(0.07)
+                    color: globalCard.isOn ? Colors.alpha(Colors.color6, 0.18) : Colors.fade(0.07)
                     Text {
                         id: gs
                         anchors.centerIn: parent
                         text: globalCard.isOn ? "global" : "per network"
                         color: globalCard.isOn ? Colors.color6 : Colors.fade(0.6)
-                        font.pixelSize: 10
+                        font.pixelSize: Tokens.font.micro
                         font.bold: true
                         font.family: Properties.fontFamily
                     }
                 }
             }
-            NetRow {
+            SettingRow {
                 wide: true
                 label: "Servers"
                 changed: globalCard.dirty
@@ -817,7 +811,7 @@ ColumnLayout {
                     onEdited: l => { globalCard.servers = l; globalCard.dirty = true }
                 }
             }
-            NetRow {
+            SettingRow {
                 wide: true
                 label: "Search domains"
                 ListField {
@@ -828,7 +822,7 @@ ColumnLayout {
                     onEdited: l => { globalCard.searches = l; globalCard.dirty = true }
                 }
             }
-            NetRow {
+            SettingRow {
                 ActionButton {
                     visible: globalCard.isOn
                     icon: "󰅖"
@@ -851,14 +845,14 @@ ColumnLayout {
             }
         }
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Resolvers in use"
             icon: "󰒍"
             Repeater {
                 model: Network.resolved.filter(r => r.servers.length > 0 || r.link === "Global")
                     .filter(r => { const d = Network.devices.find(x => x.name === r.link); return !d || netPage.showHidden || !netPage.isHidden(d) })
-                NetRow {
+                SettingRow {
                     required property var modelData
                     required property int index
                     first: index === 0
@@ -866,18 +860,18 @@ ColumnLayout {
                     desc: modelData.link === "Global" ? "Used for everything not tied to a network" : ""
                     Flow {
                         Layout.maximumWidth: 360
-                        spacing: 6
+                        spacing: Tokens.space.s6
                         layoutDirection: Qt.RightToLeft
                         Repeater {
                             // reversed: right-to-left would flip the order, which matters for DNS
                             model: modelData.servers.slice().reverse()
-                            Chip { required property string modelData; text: modelData }
+                            ValueChip { required property string modelData; text: modelData }
                         }
                         Text {
                             visible: modelData.servers.length === 0
                             text: "none"
                             color: Colors.fade(0.4)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                     }
@@ -885,7 +879,7 @@ ColumnLayout {
             }
         }
 
-        NetCard {
+        Section {
             id: lookupCard
             Layout.fillWidth: true
             title: "Lookup"
@@ -898,17 +892,17 @@ ColumnLayout {
                 running = true
                 Network.lookup(name.trim(), (ok, text) => { lookupCard.running = false; lookupCard.ok = ok; lookupCard.result = text })
             }
-            NetRow {
+            SettingRow {
                 first: true
                 wide: true
                 label: "Test a name"
                 desc: "Asks systemd-resolved, like apps do"
                 ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: Tokens.space.s8
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 8
+                    spacing: Tokens.space.s8
                     SearchField {
                         id: lookupField
                         Layout.fillWidth: true
@@ -933,14 +927,14 @@ ColumnLayout {
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: resText.implicitHeight + 16
-                        radius: 10
-                        color: Qt.rgba(0, 0, 0, 0.25)
+                        radius: Tokens.radius.lg
+                        color: Colors.shade(0.25)
                         Text {
                             id: resText
-                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 10 }
+                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Tokens.space.s10 }
                             text: lookupCard.result
                             color: lookupCard.ok ? Colors.ink : Colors.red
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             wrapMode: Text.WrapAnywhere
                             textFormat: Text.PlainText
@@ -951,11 +945,11 @@ ColumnLayout {
             }
         }
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Host"
             icon: "󰒋"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Hostname"
                 desc: "Sent to DHCP servers, shown on the network. Asks for your password."
@@ -1008,16 +1002,16 @@ ColumnLayout {
 
         Text {
             Layout.fillWidth: true
-            Layout.leftMargin: 6
+            Layout.leftMargin: Tokens.space.s6
             text: "Like the hosts file on Windows: these names resolve to the IP you set, only on this computer (/etc/hosts). "
                   + "Browsers with secure DNS (DNS over HTTPS) can skip it."
             color: Colors.fade(0.5)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
         }
 
-        NetCard {
+        Section {
             id: hostsCard
             Layout.fillWidth: true
             title: "Your entries" + (hostsTab.draft.length > 0 ? "  ·  " + hostsTab.draft.length : "")
@@ -1027,7 +1021,7 @@ ColumnLayout {
                     visible: !hostsTab.dirty
                     text: hostsTab.inSync ? "in /etc/hosts" : "not applied"
                     color: hostsTab.inSync ? Colors.color6 : Colors.yellow
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -1045,10 +1039,10 @@ ColumnLayout {
                     property bool testOk: true
                     Layout.fillWidth: true
                     spacing: 0
-                    NetRow {
+                    SettingRow {
                         first: hrow.index === 0
                         opacity: hrow.e.enabled === false ? 0.5 : 1
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                         SearchField {
                             implicitWidth: 150
                             implicitHeight: Properties.buttonHeight
@@ -1059,7 +1053,7 @@ ColumnLayout {
                             error: (hrow.e.ip ?? "") !== "" && Net.ip(hrow.e.ip) !== ""
                             onEditingFinished: if (text.trim() !== hrow.e.ip) hostsTab.update(hrow.e.id, { ip: text.trim() })
                         }
-                        Text { text: "→"; color: Colors.fade(0.4); font.pixelSize: 13; font.family: Properties.fontFamily }
+                        Text { text: "→"; color: Colors.fade(0.4); font.pixelSize: Tokens.font.body; font.family: Properties.fontFamily }
                         SearchField {
                             Layout.fillWidth: true
                             implicitWidth: 240
@@ -1093,24 +1087,24 @@ ColumnLayout {
                     }
                     Text {
                         Layout.fillWidth: true
-                        Layout.leftMargin: 16
-                        Layout.bottomMargin: 8
+                        Layout.leftMargin: Tokens.space.s16
+                        Layout.bottomMargin: Tokens.space.s8
                         visible: hrow.err !== "" && ((hrow.e.ip ?? "") !== "" || (hrow.e.names ?? "") !== "")
                         text: "󰀦  " + hrow.err
                         color: Colors.red
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                     }
                     Reveal {
                         open: hrow.testResult !== ""
                         Text {
                             Layout.fillWidth: true
-                            Layout.leftMargin: 16
-                            Layout.rightMargin: 16
-                            Layout.bottomMargin: 8
+                            Layout.leftMargin: Tokens.space.s16
+                            Layout.rightMargin: Tokens.space.s16
+                            Layout.bottomMargin: Tokens.space.s8
                             text: hrow.testResult
                             color: hrow.testOk ? Colors.fade(0.7) : Colors.red
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             wrapMode: Text.WrapAnywhere
                         }
@@ -1118,7 +1112,7 @@ ColumnLayout {
                 }
             }
 
-            NetRow {
+            SettingRow {
                 first: hostsTab.draft.length === 0
                 ActionButton {
                     icon: "󰐕"
@@ -1148,26 +1142,26 @@ ColumnLayout {
 
         Text {
             Layout.fillWidth: true
-            Layout.leftMargin: 6
+            Layout.leftMargin: Tokens.space.s6
             text: "Apply asks for your password (it writes /etc/hosts; the previous file is kept as /etc/hosts.quickshell.bak)."
             color: Colors.fade(0.4)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
         }
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Already in /etc/hosts  ·  read-only"
             icon: "󰈙"
             Repeater {
                 model: Network.hostsOther
-                NetRow {
+                SettingRow {
                     required property var modelData
                     required property int index
                     first: index === 0
                     label: modelData.names
-                    Chip { text: modelData.ip }
+                    ValueChip { text: modelData.ip }
                 }
             }
         }
@@ -1181,23 +1175,23 @@ ColumnLayout {
         Layout.topMargin: Layout.preferredHeight > 0 ? 8 : 0
         visible: Layout.preferredHeight > 0.5
         clip: Math.abs(Layout.preferredHeight - (keepRow.implicitHeight + 26)) > 0.5   // only while sliding
-        radius: 14
-        color: Qt.rgba(0.98, 0.89, 0.69, 0.12)
+        radius: Tokens.radius.card
+        color: Colors.alpha(Colors.warning, 0.12)
         border.width: Properties.panelBorderWidth
-        border.color: Qt.rgba(0.98, 0.89, 0.69, 0.45)
-        Behavior on Layout.preferredHeight { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+        border.color: Colors.alpha(Colors.warning, 0.45)
+        Behavior on Layout.preferredHeight { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
 
         RowLayout {
             id: keepRow
-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 11 }
-            spacing: 8
+            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s14; rightMargin: 11 }
+            spacing: Tokens.space.s8
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 5
                 Text {
                     text: "Keep the new settings of " + (Network.pending?.name ?? "") + "?  Reverting in " + Network.countdown + "s"
                     color: Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.bold: true
                     font.family: Properties.fontFamily
                 }

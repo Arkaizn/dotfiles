@@ -11,7 +11,7 @@ import "../network"
 // itself, block, rename, forget). Pairing new devices: control center.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property var adapter: Bluetooth.defaultAdapter
     readonly property var paired: (adapter?.devices.values ?? []).filter(d => d.paired || d.bonded)
@@ -26,12 +26,12 @@ ColumnLayout {
         desc: "Bluetooth manager: pairing, file transfer, device services"
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: !page.adapter
         title: "No Bluetooth adapter"
         icon: "󰂲"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "BlueZ doesn't report an adapter"
@@ -39,18 +39,18 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: !!page.adapter
         title: "Adapter"
         icon: "󰂯"
-        NetRow {
+        SettingRow {
             first: true
             label: "Bluetooth"
             desc: BluetoothPower.blocked ? "blocked by rfkill: turning it on unblocks it" : (page.adapter?.enabled ? "on" : "off")
             ToggleSwitch { checked: BluetoothPower.enabled; onToggled: v => BluetoothPower.setEnabled(v) }
         }
-        NetRow {
+        SettingRow {
             label: "Name"
             desc: "what other devices see"
             TextControl {
@@ -58,7 +58,7 @@ ColumnLayout {
                 onEdited: v => { const n = v.trim(); if (n !== "" && n.length <= 60 && page.adapter) page.adapter.name = n }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Visible to other devices"
             desc: page.adapter?.discoverable ? "discoverable for " + Math.round((page.adapter?.discoverableTimeout ?? 0) / 60) + " min (0 = until turned off)" : "only paired devices can find it"
             ToggleSwitch {
@@ -67,7 +67,7 @@ ColumnLayout {
                 onToggled: v => { if (page.adapter) page.adapter.discoverable = v }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Accept pairing"
             ToggleSwitch {
                 checked: page.adapter?.pairable ?? false
@@ -77,11 +77,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: !!page.adapter
         title: "Paired devices"
-        NetRow {
+        SettingRow {
             first: true
             visible: page.paired.length === 0
             label: "No paired devices"
@@ -89,7 +89,7 @@ ColumnLayout {
         }
         Repeater {
             model: page.paired
-            NetRow {
+            SettingRow {
                 id: row
                 required property var modelData
                 required property int index
@@ -104,7 +104,7 @@ ColumnLayout {
                       + (dev.blocked ? "  ·  blocked" : "")
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     ActionButton {
                         text: dev.connected ? "Disconnect" : dev.state === BluetoothDeviceState.Connecting ? "Connecting…" : "Connect"
                         interactive: (page.adapter?.enabled ?? false) && !dev.blocked

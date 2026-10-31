@@ -13,19 +13,19 @@ Rectangle {
     height: 18
     radius: 9
     z: 50
-    color: mouse.containsMouse ? (add ? Colors.color6 : Colors.red) : Qt.rgba(0.1, 0.1, 0.1, 0.92)
+    color: mouse.containsMouse ? (add ? Colors.color6 : Colors.red) : Colors.surfacePopover
     border.width: 1
     border.color: Colors.fade(0.35)
     scale: mouse.pressed ? 0.85 : mouse.containsMouse ? 1.12 : 1
-    Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
-    Behavior on color { ColorAnimation { duration: Anim.color } }
+    Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+    Behavior on color { ColorAnimation { duration: Anim.fast } }
 
     Text {
         anchors.centerIn: parent
         anchors.verticalCenterOffset: -0.5
         text: root.add ? "+" : "−"
-        color: mouse.containsMouse ? Colors.background : "#ffffff"
-        font.pixelSize: 14
+        color: mouse.containsMouse ? Colors.background : Colors.ink
+        font.pixelSize: Tokens.font.label
         font.bold: true
     }
 

@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import qs.services.lib
 
 // The part being dragged while editing a layout live: a live picture of it
@@ -53,8 +54,8 @@ ShaderEffectSource {
         _sx = sx; _sy = sy
     }
     onSourceChanged: { _glide = false; _sx = NaN; _sy = NaN }
-    Timer { id: glideEnd; interval: 120; onTriggered: ghost._glide = false }
-    Behavior on x { enabled: ghost._glide; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
-    Behavior on y { enabled: ghost._glide; NumberAnimation { duration: 110; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+    Timer { id: glideEnd; interval: Anim.fast; onTriggered: ghost._glide = false }
+    Behavior on x { enabled: ghost._glide; NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+    Behavior on y { enabled: ghost._glide; NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+    Behavior on scale { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
 }

@@ -116,7 +116,7 @@ Singleton {
         function toggle(): void { root.current?.togglePlaying() }
         function next(): void { root.current?.next() }
         function previous(): void { root.current?.previous() }
-        function seek(seconds: real): void { if (root.current?.canSeek) root.current.seek(seconds) }
+        function seek(seconds: real): void { if (Number.isFinite(seconds) && root.current?.canSeek) root.current.seek(seconds) }
         function selectNext(): void { root.selectNext() }
         function select(id: string): void { MediaSync.select(id) }
         function status(): string {

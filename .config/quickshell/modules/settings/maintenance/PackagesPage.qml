@@ -23,7 +23,7 @@ import "../network"
 // Packages without programs (fonts, themes, libraries) can't be rated by use.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     // [{ name, size, explicit, date, aur, bins, used, changed, service, app, requiredBy, groups }]
     //   bins: programs in /usr/bin · used: last run (unix s, 0 = not since it
@@ -155,29 +155,29 @@ ColumnLayout {
         selected = s
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Installed"
         icon: "󰏗"
         header: ActionButton { icon: "󰑓"; text: page.loading ? "Reading…" : "Reload"; onClicked: page.load() }
-        NetRow {
+        SettingRow {
             first: true
             label: page.loading ? "Reading the package database…" : page.pkgs.length + " packages  ·  " + Format.bytes(page.totalSize)
             desc: page.pkgs.filter(p => p.explicit).length + " installed by you, " + page.pkgs.filter(p => !p.explicit).length
                   + " as dependencies, " + page.pkgs.filter(p => p.aur).length + " from the AUR / not in the repos"
         }
-        NetRow {
+        SettingRow {
             label: page.orphans.length === 0 ? "No orphans" : page.orphans.length + " orphans"
             desc: page.orphans.length === 0 ? "every dependency is still needed by something"
                   : "dependencies nothing needs any more: review and remove them in the Free space tab"
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Unused programs"
         icon: "󰒡"
-        NetRow {
+        SettingRow {
             first: true
             label: "Not used for"
             desc: page.loading ? "reading…"
@@ -186,7 +186,7 @@ ColumnLayout {
                     + "  ·  ones with an enabled / running service count as in use"
                     + (page.keep.length > 0 ? "  ·  " + page.keep.length + " kept" : "")
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 Segmented {
                     small: true
                     options: [{ label: "30 days", value: 30 }, { label: "90 days", value: 90 }, { label: "1 year", value: 365 }, { label: "All", value: 0 }]
@@ -201,14 +201,14 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             sub: true
             label: "Command-line tools too"
             desc: page.cliToo ? "also programs without a launcher (wget, arp-scan, …): only remove ones you're sure about"
                               : "off: only apps with a launcher; command-line tools stay, even if rarely run"
             ToggleSwitch { checked: page.cliToo; onToggled: v => page.cliToo = v }
         }
-        NetRow {
+        SettingRow {
             sub: true
             visible: page.keep.length > 0
             label: page.keep.length + " kept (never suggested)"
@@ -217,7 +217,7 @@ ColumnLayout {
         }
         Repeater {
             model: page.unused.slice(0, 40)
-            NetRow {
+            SettingRow {
                 required property var modelData
                 readonly property bool isPicked: !!page.selected[modelData.name]
                 sub: true
@@ -226,8 +226,8 @@ ColumnLayout {
                 desc: page.usageText(modelData) + "  ·  " + modelData.bins + (modelData.bins === 1 ? " program" : " programs")
                       + (needed ? "\nneeded by " + modelData.requiredBy.slice(0, 4).join(", ") + (modelData.requiredBy.length > 4 ? ", …" : "") + ": can't be removed alone" : "")
                 RowLayout {
-                    spacing: 8
-                    Text { Layout.preferredWidth: 72; horizontalAlignment: Text.AlignRight; text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    spacing: Tokens.space.s8
+                    Text { Layout.preferredWidth: 72; horizontalAlignment: Text.AlignRight; text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                     IconButton {
                         icon: "󰐃"
                         tooltip: "Keep: never suggest it here"
@@ -244,18 +244,18 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.unused.length > 40
             sub: true
             label: "… and " + (page.unused.length - 40) + " more (pick a shorter time to narrow it)"
         }
-        NetRow {
+        SettingRow {
             visible: page.picked.length > 0
             label: page.picked.length + " picked  ·  " + Format.bytes(page.picked.reduce((a, p) => a + p.size, 0))
             desc: page.picked.map(p => p.name).join(", ")
                   + "\nOnes other packages still need are skipped; pacman -Rns also removes what only these needed. The terminal lists everything and asks first."
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 ActionButton { text: "Clear"; onClicked: page.selected = ({}) }
                 ActionButton {
                     icon: "󰆴"
@@ -270,14 +270,14 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Biggest packages"
-        NetRow {
+        SettingRow {
             first: true
             label: "Show"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 Segmented {
                     small: true
                     options: [{ label: "All", value: "all" }, { label: "Yours", value: "explicit" }, { label: "Dependencies", value: "deps" }, { label: "AUR / local", value: "aur" }]
@@ -289,52 +289,52 @@ ColumnLayout {
         }
         Repeater {
             model: page.shown.slice(0, 30)
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: modelData.name + (modelData.aur ? "  ·  AUR / not in repos" : "") + (modelData.explicit ? "" : "  ·  dependency")
                 desc: "installed " + modelData.date + (modelData.bins > 0 ? "  ·  " + page.usageText(modelData) : "")
                 RowLayout {
-                    spacing: 8
+                    spacing: Tokens.space.s8
                     Rectangle {
                         implicitWidth: 120 * Math.min(1, modelData.size / Math.max(1, page.shown[0]?.size ?? 1))
                         implicitHeight: 6; radius: 3; color: Colors.color6
                     }
-                    Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.shown.length > 30
             sub: true
             label: "… and " + (page.shown.length - 30) + " more (search to find one)"
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Recently changed"
-        NetRow {
+        SettingRow {
             first: true
             visible: page.history.length === 0
             label: "Nothing in /var/log/pacman.log"
         }
         Repeater {
             model: page.history
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 first: index === 0
                 label: modelData.name
                 desc: modelData.version
                 RowLayout {
-                    spacing: 10
+                    spacing: Tokens.space.s10
                     Text {
                         text: modelData.action
                         color: modelData.action === "removed" ? Colors.red : modelData.action === "installed" ? Colors.green : Colors.fade(0.6)
-                        font.pixelSize: 11; font.family: Properties.fontFamily
+                        font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
                     }
-                    Text { text: modelData.time; color: Colors.fade(0.45); font.pixelSize: 11; font.family: Properties.fontFamily }
+                    Text { text: modelData.time; color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                 }
             }
         }

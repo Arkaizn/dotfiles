@@ -18,6 +18,9 @@ import QtQuick
 //   Jobs.which(bins, cb)                  cb({ bin: true/false }) — which tools are installed
 //   Jobs.detached(argv, env, cwd)         start a program that outlives the shell
 //   Jobs.later(ms, fn)                    run fn once after ms
+//   Jobs.pickFile({ title, save, start, filters: ["JSON | *.json", …] }, cb)
+//                                         the desktop's file dialog (zenity): cb(path), cb("") when
+//                                         cancelled, cb("", error) when it couldn't open
 //
 // A job whose program isn't installed ends with `missing: "<program>"`, so the
 // UI can show "install …" instead of an empty failure.
@@ -141,6 +144,7 @@ Singleton {
     function start(id, argv, opts) {
         cancel(id)
         opts = opts ?? {}
+        delete _pending[id]          // lines of an earlier run that weren't written yet
         const st = { running: true, lines: [], code: -1, cancelled: false, timedOut: false, missing: "", started: Date.now() }
         _set(id, st)
         // a missing program gives exit 127 from the shell, but Process runs it
@@ -173,6 +177,11 @@ Singleton {
 
     function _set(id, st) { const j = Object.assign({}, jobs); j[id] = st; jobs = j }
 
+    // Lines are collected and written into `jobs` at most every 50 ms: one
+    // copy of the map per batch instead of per line (a fast stream — an
+    // upgrade log — copied the whole map and re-ran every binding on it per
+    // line). onLine / lineAdded still get each line right away.
+    property var _pending: ({})        // id → [{ text, err }] not in `jobs` yet (plain JS, no bindings)
     function _line(id, text, isErr) {
         const st = jobs[id]
         if (!st) return
@@ -182,16 +191,32 @@ Singleton {
             if (cb0) cb0(text, isErr)
             return
         }
-        const max = _procs[id]?.opts?.maxLines ?? 400
-        const lines = st.lines.concat([{ text: text, err: isErr }])
-        if (lines.length > max) lines.splice(0, lines.length - max)
-        _set(id, Object.assign({}, st, { lines: lines }))
+        if (!_pending[id]) _pending[id] = []
+        _pending[id].push({ text: text, err: isErr })
+        if (!flushTimer.running) flushTimer.start()
         const cb = _procs[id]?.opts?.onLine
         if (cb) cb(text, isErr)
         lineAdded(id, text, isErr)
     }
+    function _flush() {
+        const ids = Object.keys(_pending)
+        if (ids.length === 0) return
+        const j = Object.assign({}, jobs)
+        for (const id of ids) {
+            const st = j[id]
+            if (!st) continue
+            const max = _procs[id]?.opts?.maxLines ?? 400
+            const lines = st.lines.concat(_pending[id])
+            if (lines.length > max) lines.splice(0, lines.length - max)
+            j[id] = Object.assign({}, st, { lines: lines })
+        }
+        _pending = {}
+        jobs = j
+    }
+    Timer { id: flushTimer; interval: 50; onTriggered: root._flush() }
 
     function _exit(p, code) {
+        _flush()                       // its last lines before the exit state
         const id = p.jobId
         if (_procs[id] !== p) { p.destroy(); return }   // replaced by a newer start()
         _set(id, Object.assign({}, jobs[id] ?? {}, { running: false, code: code, cancelled: p.cancelled, timedOut: p.timedOut }))
@@ -200,5 +225,19 @@ Singleton {
         p.destroy()
         if (cb) cb(code)
         jobFinished(id, code)
+    }
+
+    function pickFile(opts, cb) {
+        const argv = ["zenity", "--file-selection", "--title=" + (opts.title ?? "Choose a file")]
+        if (opts.save) argv.push("--save", "--confirm-overwrite")
+        if (opts.start) argv.push("--filename=" + opts.start)
+        for (const f of opts.filters ?? []) argv.push("--file-filter=" + f)
+        if ((opts.filters ?? []).length) argv.push("--file-filter=All files | *")
+        run(argv, (code, out) => {
+            const path = (out ?? "").trim()
+            if (code === 0 && path !== "") cb(path)
+            else if (code === 1 || code === 0) cb("")                // cancelled
+            else cb("", code === 127 ? "zenity isn't installed." : "zenity exited with code " + code + ".")
+        })
     }
 }

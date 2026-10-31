@@ -20,7 +20,7 @@ RowLayout {
     signal edited(color value)
     signal linked(string name, real alpha)
 
-    spacing: 8
+    spacing: Tokens.space.s8
 
     function hex2(x) { return Math.round(x * 255).toString(16).padStart(2, "0") }
     function toHex(c) { return "#" + (c.a < 1 ? hex2(c.a) : "") + hex2(c.r) + hex2(c.g) + hex2(c.b) }
@@ -35,9 +35,9 @@ RowLayout {
         Rectangle {
             id: frame
             anchors.fill: parent
-            radius: Properties.radius
+            radius: Tokens.radius.md
             clip: true
-            color: "#808080"
+            color: Colors.neutral(0.5)
             border.width: 1.5
             border.color: Colors.fade(swatchMouse.containsMouse || picker.visible ? 0.4 : 0.2)
 
@@ -51,7 +51,7 @@ RowLayout {
                         required property int index
                         width: frame.width / 4
                         height: frame.height / 4
-                        color: (Math.floor(index / 4) + index) % 2 ? "#9a9a9a" : "#5a5a5a"
+                        color: (Math.floor(index / 4) + index) % 2 ? Colors.checkerLight : Colors.checkerDark
                     }
                 }
             }
@@ -84,7 +84,7 @@ RowLayout {
 
         scale: swatchMouse.pressed ? Properties.onPressedButtonScale
              : swatchMouse.containsMouse ? Properties.onEnteredButtonScale : 1
-        Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
 
         MouseArea {
             id: swatchMouse
@@ -101,30 +101,25 @@ RowLayout {
             transformOrigin: Popup.TopLeft
             y: swatch.height + 6
             x: Math.min(0, -(width - swatch.width) / 2)
-            padding: 12
+            padding: Tokens.space.s12
             closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape   // the button itself toggles it
 
-            background: Rectangle {
-                radius: Properties.popupRadius
-                color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-                border.width: Properties.panelBorderWidth
-                border.color: Properties.panelBorder
-            }
+            background: PopoverBackground {}
 
             contentItem: ColumnLayout {
-                spacing: 10
+                spacing: Tokens.space.s10
 
                 Text {
                     text: root.canLink ? "Wallpaper colors (follow wallpaper changes)" : "Palette"
                     color: Colors.fade(0.55)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
 
                 Grid {
                     columns: 10
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Repeater {
                         // name = Colors property it links to; white/black are always fixed
                         model: ["foreground", "background", "#ffffff", "#000000",
@@ -143,7 +138,7 @@ RowLayout {
                             border.width: selected ? 2 : 1.5
                             border.color: selected ? Colors.ink : Colors.fade(chipMouse.containsMouse ? 0.6 : 0.18)
                             scale: chipMouse.containsMouse ? 1.12 : 1
-                            Behavior on scale { NumberAnimation { duration: 100 } }
+                            Behavior on scale { NumberAnimation { duration: Anim.fast } }
                             MouseArea {
                                 id: chipMouse
                                 anchors.fill: parent
@@ -155,23 +150,21 @@ RowLayout {
                                     else root.edited(root.withAlpha(chip.color, root.value.a))
                                 }
                             }
-                            ToolTip.visible: chip.isWal && chipMouse.containsMouse
-                            ToolTip.text: chip.modelData
-                            ToolTip.delay: 400
+                            HoverTip { shown: chip.isWal && chipMouse.containsMouse; text: chip.modelData }
                         }
                     }
                 }
 
                 RowLayout {
-                    spacing: 10
+                    spacing: Tokens.space.s10
                     Text {
                         text: "Opacity"
                         color: Colors.fade(0.55)
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.bold: true
                         font.family: Properties.fontFamily
                     }
-                    CCSlider {
+                    LevelSlider {
                         Layout.fillWidth: true
                         value: root.value.a
                         onMoved: {
@@ -185,7 +178,7 @@ RowLayout {
                         horizontalAlignment: Text.AlignRight
                         text: Math.round(root.value.a * 100) + "%"
                         color: Colors.ink
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                     }
                 }
@@ -199,8 +192,8 @@ RowLayout {
         implicitHeight: Properties.buttonHeight
         icon: ""
         clearable: false
-        leftPadding: 10
-        rightPadding: 10
+        leftPadding: Tokens.space.s10
+        rightPadding: Tokens.space.s10
         font.capitalization: Font.AllUppercase
         // a linked color shows its pywal name; typing a hex makes it fixed
         function shown() { return root.link !== "" ? root.link : root.toHex(root.value) }

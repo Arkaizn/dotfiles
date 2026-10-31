@@ -1,6 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 import ".."
 import "../network"
@@ -44,14 +45,14 @@ Item {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: 16
+        spacing: Tokens.space.s16
 
         // ── Monitor ─────────────────────────────────────────────────────────────
-        NetCard {
+        Section {
             Layout.fillWidth: true
             visible: page.screens.length > 1
             title: "Monitor"
-            NetRow {
+            SettingRow {
                 first: true
                 label: "Edit the layout of"
                 desc: "Each monitor uses the shared layout unless it has its own"
@@ -62,7 +63,7 @@ Item {
                     onEdited: v => page.screenName = v
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: page.screenName !== ""
                 label: "Own layout for " + page.screenName
                 desc: page.editable ? "Changes below only affect this monitor" : "Off: this monitor shows the shared layout"
@@ -74,7 +75,7 @@ Item {
         }
 
         // ── Preview ─────────────────────────────────────────────────────────────
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Preview"
             header: [
@@ -95,15 +96,15 @@ Item {
                 Layout.fillWidth: true
                 implicitHeight: 58
                 Rectangle {
-                    anchors { fill: parent; margins: 12 }
-                    radius: 10
+                    anchors { fill: parent; margins: Tokens.space.s12 }
+                    radius: Tokens.radius.lg
                     color: Properties.panelColor
                     border.width: 1
                     border.color: Properties.panelBorder
 
                     Row {
-                        anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
-                        spacing: 8
+                        anchors { left: parent.left; leftMargin: Tokens.space.s10; verticalCenter: parent.verticalCenter }
+                        spacing: Tokens.space.s8
                         Repeater {
                             model: page.layout.left
                             PreviewIcon { required property string modelData; modId: modelData }
@@ -112,31 +113,31 @@ Item {
                     Row {
                         id: pCenter
                         anchors.centerIn: parent
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         Repeater {
                             model: page.layout.center
                             PreviewIcon { required property string modelData; modId: modelData; strong: true }
                         }
                     }
                     Row {
-                        anchors { right: pCenter.left; rightMargin: 8; verticalCenter: parent.verticalCenter }
-                        spacing: 8
+                        anchors { right: pCenter.left; rightMargin: Tokens.space.s8; verticalCenter: parent.verticalCenter }
+                        spacing: Tokens.space.s8
                         Repeater {
                             model: page.layout.centerLeft
                             PreviewIcon { required property string modelData; modId: modelData }
                         }
                     }
                     Row {
-                        anchors { left: pCenter.right; leftMargin: 8; verticalCenter: parent.verticalCenter }
-                        spacing: 8
+                        anchors { left: pCenter.right; leftMargin: Tokens.space.s8; verticalCenter: parent.verticalCenter }
+                        spacing: Tokens.space.s8
                         Repeater {
                             model: page.layout.centerRight
                             PreviewIcon { required property string modelData; modId: modelData }
                         }
                     }
                     Row {
-                        anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
-                        spacing: 8
+                        anchors { right: parent.right; rightMargin: Tokens.space.s10; verticalCenter: parent.verticalCenter }
+                        spacing: Tokens.space.s8
                         Repeater {
                             model: page.layout.right
                             PreviewIcon { required property string modelData; modId: modelData }
@@ -147,25 +148,25 @@ Item {
         }
 
         // ── Zones ───────────────────────────────────────────────────────────────
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Layout"
             header: Text {
                 text: page.editable ? "drag to move  ·  × removes  ·  changes apply right away" : "turn on “Own layout” to edit"
                 color: Colors.fade(0.4)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
 
             ColumnLayout {
                 Layout.fillWidth: true
-                Layout.margins: 12
-                spacing: 10
+                Layout.margins: Tokens.space.s12
+                spacing: Tokens.space.s10
 
                 BarZone { zone: "left"; title: "Left"; hint: "from the left edge"; ids: page.layout.left; page: page }
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: Tokens.space.s10
                     BarZone {
                         Layout.preferredWidth: 1
                         Layout.alignment: Qt.AlignTop
@@ -205,7 +206,7 @@ Item {
         width: gRow.implicitWidth + 20
         height: 34
         radius: 9
-        color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.30)
+        color: Colors.alpha(Colors.color6, 0.30)
         border.width: 1
         border.color: Colors.color6
         Drag.active: page.dragId !== ""
@@ -216,8 +217,8 @@ Item {
             id: gRow
             anchors.centerIn: parent
             spacing: 7
-            Text { text: ghost.mod.icon; color: Colors.ink; font.pixelSize: 14; font.family: Properties.fontFamily }
-            Text { text: ghost.mod.name; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+            Text { text: ghost.mod.icon; color: Colors.ink; font.pixelSize: Tokens.font.label; font.family: Properties.fontFamily }
+            Text { text: ghost.mod.name; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
         }
     }
 }

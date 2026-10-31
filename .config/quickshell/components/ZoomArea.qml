@@ -78,28 +78,28 @@ Item {
         function show() { opacity = 1; hideTimer.restart() }
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 24
+        anchors.bottomMargin: Tokens.space.s24
         z: 1000001
         width: pillRow.implicitWidth + 28
         height: 34
         radius: 17
-        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.95)
+        color: Colors.surfacePopover
         border.width: Properties.panelBorderWidth
         border.color: Properties.panelBorder
         opacity: 0
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
         Timer { id: hideTimer; interval: 1400; onTriggered: pill.opacity = 0 }
         Row {
             id: pillRow
             anchors.centerIn: parent
-            spacing: 8
+            spacing: Tokens.space.s8
             Text { text: "󰍉"; color: Colors.color6; font.pixelSize: 15; font.family: Properties.fontFamily; anchors.verticalCenter: parent.verticalCenter }
-            Text { text: AppZoom.percent(root.app) + "%"; color: Colors.ink; font.pixelSize: 13; font.bold: true; font.family: Properties.fontFamily; anchors.verticalCenter: parent.verticalCenter }
+            Text { text: AppZoom.percent(root.app) + "%"; color: Colors.ink; font.pixelSize: Tokens.font.body; font.bold: true; font.family: Properties.fontFamily; anchors.verticalCenter: parent.verticalCenter }
             Text {
                 visible: AppZoom.percent(root.app) !== 100
                 text: "Ctrl 0 resets"
-                color: Colors.fade(0.45); font.pixelSize: 11; font.family: Properties.fontFamily
+                color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

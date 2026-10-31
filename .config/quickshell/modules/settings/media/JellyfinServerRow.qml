@@ -34,7 +34,7 @@ ColumnLayout {
 
     ConfirmArm { id: arm }
 
-    NetRow {
+    SettingRow {
         label: row.server.name + "  ·  " + (row.server.url ?? "")
         desc: !row.remoteOn ? "remote discovery is off"
             : (row.stateLabels[row.pstate] ?? row.pstate)
@@ -64,7 +64,7 @@ ColumnLayout {
     }
 
     // log in
-    NetRow {
+    SettingRow {
         visible: row.loginOpen || (row.remoteOn && row.pstate === "unauthenticated")
         sub: true
         wide: true
@@ -72,7 +72,7 @@ ColumnLayout {
         desc: "Your Jellyfin account. The password is sent once to the bridge, which keeps only an access token in your keyring."
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             SearchField {
                 id: user
                 Layout.fillWidth: true
@@ -104,7 +104,7 @@ ColumnLayout {
     }
 
     // edit / remove (only when the bridge has the API for it)
-    NetRow {
+    SettingRow {
         visible: row.canManage
         sub: true
         label: "Address"
@@ -141,7 +141,7 @@ ColumnLayout {
         }
     }
 
-    NetRow {
+    SettingRow {
         visible: row.message !== ""
         sub: true
         label: row.messageError ? "Didn't work" : "Done"

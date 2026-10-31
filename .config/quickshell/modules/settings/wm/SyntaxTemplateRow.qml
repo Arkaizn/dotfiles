@@ -8,7 +8,7 @@ import ".."
 import "../network"
 
 // Syntax page: one template, one line or several (multi-line editor).
-NetRow {
+SettingRow {
     id: tr
     required property string name
     readonly property bool multi: (Syntax.defaults[name] ?? "").includes("\n")
@@ -18,7 +18,7 @@ NetRow {
     changed: Syntax.templates[name] !== undefined
     RowLayout {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Tokens.space.s6
         // one line
         SearchField {
             visible: !tr.multi
@@ -26,27 +26,23 @@ NetRow {
             implicitHeight: Properties.buttonHeight
             icon: ""
             clearable: false
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             text: Syntax.template(tr.name)
             onEditingFinished: if (text !== Syntax.template(tr.name)) Syntax.setTemplate(tr.name, text)
         }
         // several lines
-        Rectangle {
+        FieldBackground {
+            focused: area.activeFocus
             visible: tr.multi
             Layout.fillWidth: true
             implicitHeight: area.implicitHeight + 4
-            radius: Properties.radius
-            color: Qt.rgba(0, 0, 0, 0.3)
-            border.width: 1
-            border.color: area.activeFocus ? Colors.fade(0.3) : Properties.cardBorder
-            Behavior on border.color { ColorAnimation { duration: 150 } }
             TextArea {
                 id: area
                 anchors.fill: parent
-                padding: 10
+                padding: Tokens.space.s10
                 color: Properties.color
                 selectionColor: Colors.fade(0.28)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
                 wrapMode: TextEdit.NoWrap
                 background: null
@@ -60,7 +56,7 @@ NetRow {
             tooltip: "Back to default"
             opacity: tr.changed ? 1 : 0
             visible: opacity > 0
-            Behavior on opacity { NumberAnimation { duration: 150 } }
+            Behavior on opacity { NumberAnimation { duration: Anim.normal } }
             onClicked: Syntax.setTemplate(tr.name, Syntax.defaults[tr.name])
         }
     }

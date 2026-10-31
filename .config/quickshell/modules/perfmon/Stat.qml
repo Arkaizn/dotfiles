@@ -10,14 +10,14 @@ Rectangle {
     property color labelColor: Colors.fade(0.42)
     Layout.fillWidth: true
     implicitHeight: 50
-    radius: Properties.radius
+    radius: Tokens.radius.md
     color: Colors.shade(0.12)
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
     Column {
-        anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter; right: parent.right; rightMargin: 8 }
-        spacing: 2
-        Text { text: st.label; color: st.labelColor; font.pixelSize: 10; font.bold: true; font.letterSpacing: 1; font.family: Properties.fontFamily }
+        anchors { left: parent.left; leftMargin: Tokens.space.s10; verticalCenter: parent.verticalCenter; right: parent.right; rightMargin: Tokens.space.s8 }
+        spacing: Tokens.space.s2
+        Text { text: st.label; color: st.labelColor; font.pixelSize: Tokens.font.micro; font.bold: true; font.letterSpacing: 1; font.family: Properties.fontFamily }
         Text { width: parent.width; text: st.value; color: Colors.ink; font.pixelSize: 15; font.bold: true; font.family: Properties.fontFamily; elide: Text.ElideRight }
     }
 }

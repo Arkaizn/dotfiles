@@ -11,10 +11,10 @@ Rectangle {
     readonly property color accent: Colors.color6
     visible: opacity > 0
     opacity: shown ? 1 : 0
-    radius: 10
+    radius: Tokens.radius.lg
     color: Qt.rgba(accent.r, accent.g, accent.b, hot ? 0.22 : 0.10)
     border.width: hot ? 2 : 1
     border.color: Qt.rgba(accent.r, accent.g, accent.b, hot ? 0.95 : 0.55)
-    Behavior on opacity { NumberAnimation { duration: 140 } }
-    Behavior on color { ColorAnimation { duration: 120 } }
+    Behavior on opacity { NumberAnimation { duration: Anim.fast } }
+    Behavior on color { ColorAnimation { duration: Anim.fast } }
 }

@@ -49,7 +49,7 @@ Rectangle {
     // a small heading in the headers panel
     component SrcTitle: Text {
         color: Colors.fade(0.5)
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.bold: true
         font.letterSpacing: 1.1
         font.family: Properties.fontFamily
@@ -87,6 +87,10 @@ Rectangle {
         const i = linkInfo(url)
         if (i.warn && !i.armed) { armedLink = url; armTimer.restart(); linkHover(linkInfo(url)); return }
         armedLink = ""
+        // web, mail and phone links only: file:, smb:, custom app handlers…
+        // could start programs from a mail (the HTML cleaner drops them, but a
+        // plain-text body is linkified as it comes) — copied instead
+        if (!/^(https?|mailto|tel):/i.test(url)) { copyText(url); MailStore.lastError = "Not opened (not a web, mail or phone link) — copied: " + url.slice(0, 80); return }
         Qt.openUrlExternally(url)
     }
     Timer { id: armTimer; interval: 6000; onTriggered: { root.armedLink = ""; if (root.hoveredLink) root.linkHover(root.linkInfo(root.hoveredLink)) } }
@@ -112,7 +116,7 @@ Rectangle {
             { icon: "󰆏", label: mail ? "Copy address" : "Copy link", run: () => root.copyText(mail ? address : l) }
         ])
     }
-    MailMenu { id: linkMenu; parent: root }
+    PopupMenu { id: linkMenu; parent: root }
 
     // ── dates in the text (links, see linkDates) → calendar events ──
     // the event: the subject, the time, who sent it, and the line of the text the date is in
@@ -128,7 +132,7 @@ Rectangle {
     }
     // a date link: bold in the accent color, not underlined (unlike a real link);
     // on the light paper (dark mode off) a blue that reads on white
-    function dateStyle(onPaper) { return "color:" + (onPaper && !dark ? "#2a62c9" : Colors.color6) + "; text-decoration:none; font-weight:bold" }
+    function dateStyle(onPaper) { return "color:" + (onPaper && !dark ? Colors.paperLightLink : Colors.color6) + "; text-decoration:none; font-weight:bold" }
     // after each date: a small calendar icon (the shell's Nerd Font; the message's own font has none)
     readonly property string dateMark: '<span style="font-family:\'' + Properties.fontFamily + '\'; font-size:small">\u00a0󰃭</span>'
     function dateLabel(d) {
@@ -258,15 +262,15 @@ Rectangle {
     }
 
     implicitHeight: col.implicitHeight + 24
-    radius: 12
+    radius: Tokens.radius.xl
     color: Colors.card
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
 
     ColumnLayout {
         id: col
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-        spacing: 10
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
+        spacing: Tokens.space.s10
 
         // ── header ──
         Item {
@@ -276,14 +280,14 @@ Rectangle {
                 id: head
                 anchors.left: parent.left
                 anchors.right: parent.right
-                spacing: 10
+                spacing: Tokens.space.s10
                 Avatar { size: 36; person: root.msg.from; Layout.alignment: Qt.AlignTop }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 1
+                    spacing: Tokens.space.s1
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 6
+                        spacing: Tokens.space.s6
                         // narrow: the address gives way first, then name and date get "…"
                         Text {
                             Layout.minimumWidth: Math.min(implicitWidth, 60)
@@ -291,7 +295,7 @@ Rectangle {
                             Layout.fillWidth: true
                             text: MailUtil.displayName(root.msg.from)
                             color: Colors.ink
-                            font.pixelSize: 13
+                            font.pixelSize: Tokens.font.body
                             font.bold: true
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
@@ -301,7 +305,7 @@ Rectangle {
                             Layout.preferredWidth: 1000
                             text: root.msg.from?.email ?? ""
                             color: Colors.fade(0.45)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -311,7 +315,7 @@ Rectangle {
                             Layout.fillWidth: true
                             text: MailUtil.longDate(root.msg.date)
                             color: Colors.fade(0.45)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -323,7 +327,7 @@ Rectangle {
                               + ((root.msg.cc ?? []).length ? "  ·  cc " + root.msg.cc.map(a => MailUtil.displayName(a)).join(", ") : "")
                             : (root.msg.preview || "")
                         color: Colors.fade(0.5)
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
                     }
@@ -342,17 +346,17 @@ Rectangle {
             visible: root.expanded && (root.body?.remoteBlocked ?? 0) > 0 && !root.remote && !root.asText
             implicitHeight: bar.implicitHeight + 12
             radius: 9
-            color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.1)
+            color: Colors.alpha(Colors.color6, 0.1)
             RowLayout {
                 id: bar
-                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 6 }
-                spacing: 8
-                Text { text: I.shield; color: Colors.color6; font.pixelSize: 14; font.family: Properties.fontFamily }
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s6 }
+                spacing: Tokens.space.s8
+                Text { text: I.shield; color: Colors.color6; font.pixelSize: Tokens.font.label; font.family: Properties.fontFamily }
                 Text {
                     Layout.fillWidth: true
                     text: "Remote content blocked (" + (root.body?.remoteBlocked ?? 0) + ") — it can tell the sender you opened this"
                     color: Colors.fade(0.7)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -367,14 +371,14 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             visible: root.expanded && root.body !== null
-            spacing: 6
+            spacing: Tokens.space.s6
             Item { Layout.fillWidth: true }
             Text {
                 visible: root.unsubscribeUrl !== ""
                 text: '<a href="x">Unsubscribe</a>'
                 textFormat: Text.StyledText
                 linkColor: Colors.fade(0.55)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
                 onLinkActivated: Qt.openUrlExternally(root.unsubscribeUrl)
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -384,7 +388,7 @@ Rectangle {
                 text: '<a href="x">' + (root.asText ? "Show as HTML" : "Show as text") + '</a>'
                 textFormat: Text.StyledText
                 linkColor: Colors.fade(0.55)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
                 onLinkActivated: root.asText = !root.asText
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -393,7 +397,7 @@ Rectangle {
                 text: '<a href="x">' + (root.showSource ? "Hide headers" : "Show headers") + '</a>'
                 textFormat: Text.StyledText
                 linkColor: Colors.fade(0.55)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
                 onLinkActivated: root.showSource = !root.showSource
                 HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -412,20 +416,20 @@ Rectangle {
             ColumnLayout {
                 id: srcCol
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 11 }
-                spacing: 10
+                spacing: Tokens.space.s10
                 Repeater {
                     model: root.sourceFields
                     RowLayout {
                         id: field
                         required property var modelData
                         Layout.fillWidth: true
-                        spacing: 12
+                        spacing: Tokens.space.s12
                         Text {
                             Layout.preferredWidth: 84
                             Layout.alignment: Qt.AlignTop
                             text: field.modelData.k
                             color: Colors.fade(0.45)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                         TextEdit {
@@ -436,7 +440,7 @@ Rectangle {
                             text: field.modelData.v
                             color: field.modelData.warn ? Colors.orange : Colors.fade(0.88)
                             selectionColor: Colors.fade(0.28)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                     }
@@ -444,7 +448,7 @@ Rectangle {
                 SrcTitle { text: "CHECKS BY THE RECEIVING SERVER" }
                 Flow {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Repeater {
                         model: ["spf", "dkim", "dmarc"]
                         Rectangle {
@@ -463,7 +467,7 @@ Rectangle {
                                 anchors.centerIn: parent
                                 text: chip.modelData.toUpperCase() + "  " + (chip.r || "not checked")
                                 color: chip.tint
-                                font.pixelSize: 10
+                                font.pixelSize: Tokens.font.micro
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
@@ -474,14 +478,14 @@ Rectangle {
                     Layout.fillWidth: true
                     text: "SPF: the sending server may send for the domain · DKIM: the message is signed by it and unchanged · DMARC: the domain's own rule for both. A fail on a known sender: be careful."
                     color: Colors.fade(0.4)
-                    font.pixelSize: 10
+                    font.pixelSize: Tokens.font.micro
                     font.family: Properties.fontFamily
                     wrapMode: Text.Wrap
                 }
                 SrcTitle { text: "STRUCTURE" }
                 Column {
                     Layout.fillWidth: true
-                    spacing: 2
+                    spacing: Tokens.space.s2
                     Repeater {
                         model: root.source?.parts ?? []
                         Text {
@@ -494,7 +498,7 @@ Rectangle {
                                   + (modelData.size ? "  ·  " + Format.bytes(modelData.size) : "")
                                   + (modelData.charset ? "  ·  " + modelData.charset : "")
                             color: Colors.fade(modelData.type.startsWith("multipart/") ? 0.55 : 0.8)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -513,7 +517,7 @@ Rectangle {
                     text: root.showSource ? (root.source?.header ?? "") : ""
                     color: Colors.fade(0.75)
                     selectionColor: Colors.fade(0.28)
-                    font.pixelSize: 10
+                    font.pixelSize: Tokens.font.micro
                     font.family: Properties.fontFamily
                 }
             }
@@ -525,11 +529,11 @@ Rectangle {
             visible: root.expanded && root.invites.length > 0
             implicitHeight: invRow.implicitHeight + 14
             radius: 9
-            color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.1)
+            color: Colors.alpha(Colors.color6, 0.1)
             RowLayout {
                 id: invRow
-                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 10; rightMargin: 6 }
-                spacing: 8
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s6 }
+                spacing: Tokens.space.s8
                 Text { text: "󰃭"; color: Colors.color6; font.pixelSize: 15; font.family: Properties.fontFamily }
                 Text {
                     id: invNote
@@ -537,7 +541,7 @@ Rectangle {
                     property string state: ""
                     text: state || "Calendar invitation"
                     color: Colors.fade(0.75)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -555,12 +559,12 @@ Rectangle {
         RowLayout {
             visible: root.expanded && (root.loading || root.error !== "")
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             Text {
                 Layout.fillWidth: true
                 text: root.loading ? "Loading…" : "󰀦  " + root.error
                 color: root.error ? Colors.red : Colors.fade(0.5)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap
             }
@@ -586,8 +590,8 @@ Rectangle {
             readonly property int reflowAt: layout && design * 0.85 > room || !layout ? Math.max(200, Math.floor(room / 40) * 40) : 0
             readonly property real textWidth: !layout ? room : fit < 1 ? design : Math.min(design, room)
             implicitHeight: htmlView.implicitHeight * fit + (root.dark && !root.darkPaper ? 4 : 28)
-            radius: 10
-            color: root.darkPaper ? "#1c1c21" : root.dark ? "transparent" : "#fbfaf8"
+            radius: Tokens.radius.lg
+            color: root.darkPaper ? Colors.paperDark : root.dark ? "transparent" : Colors.paperLight
             clip: true
             TextEdit {
                 id: htmlView
@@ -605,10 +609,10 @@ Rectangle {
                       + MailUtil.linkDates(paper.reflowAt === 0 ? root.body.html
                          : paper.layout ? root.stackCells(root.fitWidths(root.body.html, paper.reflowAt))
                          : root.fitWidths(root.body.html, paper.reflowAt), Date.now(), root.dateStyle(true), root.dateMark) : ""
-                color: root.darkPaper ? "#e2e2e6" : root.dark ? Colors.fade(0.88) : "#1d1d1f"
-                selectionColor: root.darkPaper ? "#4a5568" : root.dark ? Colors.fade(0.28) : "#a8c7fa"
-                selectedTextColor: root.darkPaper ? "#ffffff" : root.dark ? Colors.ink : "#1d1d1f"
-                font.pixelSize: 13
+                color: root.darkPaper ? Colors.paperDarkText : root.dark ? Colors.fade(0.88) : Colors.paperLightText
+                selectionColor: root.darkPaper ? Colors.paperDarkSelection : root.dark ? Colors.fade(0.28) : Colors.paperLightSelection
+                selectedTextColor: root.darkPaper ? Colors.neutral(1) : root.dark ? Colors.ink : Colors.paperLightText
+                font.pixelSize: Tokens.font.body
                 onLinkActivated: link => root.openLink(link)
                 LinkHover { view: htmlView; onLinkChanged: root.hoverLinkAt(link) }
                 TapHandler { acceptedButtons: Qt.RightButton; onTapped: (p, b) => root.linkMenuAt(htmlView, p.position.x, p.position.y) }
@@ -627,7 +631,7 @@ Rectangle {
             text: visible ? MailUtil.linkDates(root.textHtml(root.body.text), Date.now(), root.dateStyle(false), root.dateMark) : ""
             color: Colors.fade(0.88)
             selectionColor: Colors.fade(0.28)
-            font.pixelSize: 13
+            font.pixelSize: Tokens.font.body
             font.family: Properties.fontFamily
             onLinkActivated: link => root.openLink(link)
             LinkHover { view: textView; onLinkChanged: root.hoverLinkAt(link) }
@@ -638,7 +642,7 @@ Rectangle {
             text: '<a href="x">' + (root.showQuote ? "Hide quoted text" : "Show quoted text (" + root.quotedLines + " lines)") + '</a>'
             textFormat: Text.StyledText
             linkColor: Colors.fade(0.5)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             onLinkActivated: root.showQuote = !root.showQuote
             HoverHandler { cursorShape: Qt.PointingHandCursor }
@@ -648,7 +652,7 @@ Rectangle {
         Flow {
             Layout.fillWidth: true
             visible: root.expanded && (root.body?.attachments ?? []).length > 0
-            spacing: 6
+            spacing: Tokens.space.s6
             Repeater {
                 model: root.body?.attachments ?? []
                 Rectangle {
@@ -665,17 +669,17 @@ Rectangle {
                         id: attRow
                         anchors.verticalCenter: parent.verticalCenter
                         x: 8
-                        spacing: 6
-                        Text { text: I.clip; color: Colors.fade(0.5); font.pixelSize: 12; font.family: Properties.fontFamily }
+                        spacing: Tokens.space.s6
+                        Text { text: I.clip; color: Colors.fade(0.5); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                         Text {
                             Layout.maximumWidth: 220
                             text: att.note || att.modelData.name
                             color: att.note ? Colors.color6 : Colors.fade(0.85)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             elide: Text.ElideMiddle
                         }
-                        Text { text: Format.bytes(att.modelData.size); color: Colors.fade(0.4); font.pixelSize: 10; font.family: Properties.fontFamily }
+                        Text { text: Format.bytes(att.modelData.size); color: Colors.fade(0.4); font.pixelSize: Tokens.font.micro; font.family: Properties.fontFamily }
                         IconButton {
                             implicitWidth: 22; implicitHeight: 22; iconSize: 11
                             icon: I.download
@@ -692,8 +696,7 @@ Rectangle {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.viewAttachment(root.msg, root.atts, att.modelData.index)
-                        ToolTip.visible: containsMouse
-                        ToolTip.text: "View " + att.modelData.name
+                        HoverTip { shown: attMouse.containsMouse; text: "View " + att.modelData.name }
                     }
                 }
             }
@@ -711,7 +714,10 @@ Rectangle {
                 fillMode: Image.PreserveAspectFit
                 asynchronous: true
                 smooth: true
-                mipmap: true
+                // at most 1600 px wide (a 12 MP photo would be ~48 MB decoded, +⅓
+                // for mipmaps); smaller images keep their size (Qt never scales up).
+                // Opening it (Viewer) shows the full resolution.
+                sourceSize.width: 1600
                 Component.onCompleted: MailStore.view(root.msg, modelData.index, res => { if (res.ok && res.kind === "image") inl.source = "file://" + res.path })
                 MouseArea {
                     anchors.fill: parent
@@ -725,7 +731,7 @@ Rectangle {
         RowLayout {
             Layout.fillWidth: true
             visible: root.expanded
-            spacing: 6
+            spacing: Tokens.space.s6
             ActionButton { icon: I.reply; text: "Reply"; onClicked: root.reply(root.msg, false) }
             ActionButton { icon: I.replyAll; text: "Reply all"; visible: (root.msg.to ?? []).length + (root.msg.cc ?? []).length > 1
                            onClicked: root.reply(root.msg, true) }
@@ -735,7 +741,7 @@ Rectangle {
                 id: emlNote
                 Layout.maximumWidth: 260
                 color: Colors.color6
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
                 elide: Text.ElideMiddle
             }

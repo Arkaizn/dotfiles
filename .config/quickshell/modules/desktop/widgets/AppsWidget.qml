@@ -12,8 +12,8 @@ GridLayout {
     property bool active: true
 
     columns: Math.max(1, Math.min(opts.columns ?? 4, apps.length))
-    rowSpacing: 10
-    columnSpacing: 10
+    rowSpacing: Tokens.space.s10
+    columnSpacing: Tokens.space.s10
 
     // the same command text the app picker stores
     function cmdOf(e) { return (e.command ?? []).map(c => /^[\w@%+=:,./-]+$/.test(c) ? c : "'" + c.replace(/'/g, "'\\''") + "'").join(" ") }
@@ -42,9 +42,9 @@ GridLayout {
             implicitHeight: root.size + 12 + (root.opts.labels !== false ? 18 : 0)
             Rectangle {
                 anchors.fill: parent
-                radius: 12
+                radius: Tokens.radius.xl
                 color: mouse.containsMouse ? Colors.fade(0.1) : "transparent"
-                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on color { ColorAnimation { duration: Anim.fast } }
             }
             Text {
                 visible: app.modelData.icon === ""
@@ -56,12 +56,12 @@ GridLayout {
             }
             IconImage {
                 id: icon
-                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 6 }
+                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: Tokens.space.s6 }
                 implicitSize: root.size
                 visible: app.modelData.icon !== ""
                 source: app.modelData.icon
                 scale: mouse.pressed ? 0.92 : 1
-                Behavior on scale { NumberAnimation { duration: 90 } }
+                Behavior on scale { NumberAnimation { duration: Anim.instant } }
             }
             Text {
                 visible: root.opts.labels !== false

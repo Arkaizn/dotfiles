@@ -27,13 +27,13 @@ Rectangle {
     visible: opacity > 0
     opacity: shown ? 1 : 0
     scale: shown ? 1 : 0.94
-    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+    Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
+    Behavior on scale { NumberAnimation { duration: Anim.medium; easing.type: Anim.pop } }
 
     implicitWidth: row.implicitWidth + 24
     implicitHeight: Properties.buttonHeight + 20
     radius: height / 2
-    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+    color: Colors.surfacePopover
     border.width: Properties.panelBorderWidth
     border.color: Colors.color6
 
@@ -43,25 +43,25 @@ Rectangle {
     RowLayout {
         id: row
         anchors.centerIn: parent
-        spacing: 6
+        spacing: Tokens.space.s6
 
         Text {
-            Layout.leftMargin: 6
+            Layout.leftMargin: Tokens.space.s6
             text: root.count + " selected"
             color: Colors.ink
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.bold: true
             font.family: Properties.fontFamily
         }
-        Rectangle { implicitWidth: 1; implicitHeight: 18; color: Colors.fade(0.12); Layout.leftMargin: 4; Layout.rightMargin: 4 }
+        Rectangle { implicitWidth: 1; implicitHeight: 18; color: Colors.fade(0.12); Layout.leftMargin: Tokens.space.s4; Layout.rightMargin: Tokens.space.s4 }
 
         // normal actions
         RowLayout {
             visible: !root.confirming
-            spacing: 6
+            spacing: Tokens.space.s6
             IconButton { icon: "󰅁"; tooltip: "One day earlier"; interactive: !root.anyReadOnly; onClicked: root.shiftDays(-1) }
             IconButton { icon: "󰅂"; tooltip: "One day later"; interactive: !root.anyReadOnly; onClicked: root.shiftDays(1) }
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 170
                 visible: CalendarStore.writableCalendars.length > 1
                 options: [{ label: "Move to…", value: "" }].concat(CalendarStore.writableCalendars.map(c => ({ label: c.name, value: c.id, color: c.color, hint: c.accountName })))
@@ -74,11 +74,11 @@ Rectangle {
         // delete: once more
         RowLayout {
             visible: root.confirming
-            spacing: 6
+            spacing: Tokens.space.s6
             Text {
                 text: "Delete " + root.count + (root.count === 1 ? " event?" : " events?")
                 color: Colors.red
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
             }
             ActionButton { text: "Cancel"; onClicked: root.confirming = false }

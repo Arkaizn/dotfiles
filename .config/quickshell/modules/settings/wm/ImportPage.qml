@@ -18,7 +18,7 @@ import "../network"
 // stay in the file and are listed as such.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property string home: Quickshell.env("HOME")
     readonly property string niriFile: home + "/.config/custom/niri/custom.kdl"
@@ -31,7 +31,7 @@ ColumnLayout {
     property var picked: ({})              // item id → bool
 
     Component.onCompleted: reload()
-    function reload() { niriRead.reload(); hyprProc.running = true }
+    function reload() { niriRead.reload(); readHypr() }
 
     // ── niri: line by line ──────────────────────────────────────────────────
     FileView {
@@ -92,13 +92,10 @@ ColumnLayout {
     }
 
     // ── Hyprland: the Lua reader, items from custom.lua ─────────────────────
-    Process {
-        id: hyprProc
-        command: ["lua", Quickshell.shellDir + "/scripts/hypr-binds.lua", HyprSettings.mainConfig]
-        stdout: StdioCollector { id: hyprOut }
-        onExited: {
+    function readHypr() {
+        Jobs.run(["lua", Quickshell.shellDir + "/scripts/hypr-binds.lua", HyprSettings.mainConfig], (code, out) => {
             let d = {}
-            try { d = JSON.parse(hyprOut.text) } catch (e) {}
+            try { d = JSON.parse(out ?? "") } catch (e) {}
             const f = page.hyprFile
             const items = []
             for (const a of d.autostart ?? []) if (a.file === f)
@@ -121,7 +118,7 @@ ColumnLayout {
             for (const r of rules) counts[r.kind] = (counts[r.kind] ?? 0) + 1
             page.hypr = { items: items, other: Object.keys(counts).map(k => counts[k] + " × " + k), text: "", found: d.binds !== undefined }
             hyprText.reload()
-        }
+        })
     }
     FileView {
         id: hyprText
@@ -175,20 +172,15 @@ ColumnLayout {
             }
             if (changed) {
                 const file = wm === "niri" ? niriFile : hyprFile
-                writer.command = ["sh", "-c",
+                Jobs.run(["sh", "-c",
                     'mkdir -p "$3" && cp -f "$2" "$3/$(basename "$2").$(date +%Y%m%d-%H%M%S)" && printf "%s" "$1" > "$2"',
-                    "sh", lines.join("\n"), file, backupDir]
-                writer.running = true
+                    "sh", lines.join("\n"), file, backupDir], () => page.reload())
             }
         }
         Network.say("Imported " + chosen.length + (chosen.length === 1 ? " item" : " items") + " from " + (wm === "niri" ? "custom.kdl" : "custom.lua"))
         picked = {}
     }
 
-    Process {
-        id: writer
-        onExited: page.reload()
-    }
 
     // ── Deleting a custom file (and the line that loads it) ─────────────────
     // the main config without the lines that load the custom file
@@ -224,39 +216,31 @@ ColumnLayout {
         const main = wm === "niri" ? NiriSettings.mainConfig : HyprSettings.mainConfig
         const text = Files.read(main)
         if (text === "") { Network.say("Couldn't read " + main, true); return }
-        deleter.wm = wm
-        deleter.command = ["sh", "-c", deleteScript, "sh", file, main, withoutInclude(text, wm), backupDir, wm]
-        deleter.running = true
+        Jobs.run(["sh", "-c", deleteScript, "sh", file, main, withoutInclude(text, wm), backupDir, wm], (code, out, err) => {
+            const name = wm === "niri" ? "custom.kdl" : "custom.lua"
+            Network.say(code === 0 ? "Deleted " + name + " and the line loading it (backups in ~/.local/state/quickshell/custom-backups)"
+                                   : "Nothing changed, the config didn't validate without it: " + (err ?? "").trim(), code !== 0)
+            page.reload()
+        })
     }
 
-    Process {
-        id: deleter
-        property string wm: ""
-        stderr: StdioCollector { id: delErr }
-        onExited: code => {
-            const name = deleter.wm === "niri" ? "custom.kdl" : "custom.lua"
-            Network.say(code === 0 ? "Deleted " + name + " and the line loading it (backups in ~/.local/state/quickshell/custom-backups)"
-                                   : "Nothing changed, the config didn't validate without it: " + delErr.text.trim(), code !== 0)
-            page.reload()
-        }
-    }
 
     // ── UI ──────────────────────────────────────────────────────────────────
     Text {
         Layout.fillWidth: true
-        Layout.leftMargin: 6
+        Layout.leftMargin: Tokens.space.s6
         text: "Moves autostart entries and keybinds from your per-device custom configs into the settings, where they can be switched on / off "
               + "and are part of an export. Commented-out lines come in switched off."
         color: Colors.fade(0.5)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Options"
-        NetRow {
+        SettingRow {
             first: true
             label: "Comment out what's imported"
             desc: "In the custom file, so nothing starts twice. A backup goes to ~/.local/state/quickshell/custom-backups"
@@ -264,7 +248,7 @@ ColumnLayout {
         }
     }
 
-    component Source: NetCard {
+    component Source: Section {
         id: srcCard
         required property var src
         required property string wm
@@ -293,16 +277,16 @@ ColumnLayout {
         ]
 
         Text {
-            Layout.margins: 16
+            Layout.margins: Tokens.space.s16
             visible: !srcCard.src.found || srcCard.src.items.length === 0
             text: !srcCard.src.found ? "No file here." : "Nothing to import (no autostart or keybinds)."
             color: Colors.fade(0.45)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
         }
         Repeater {
             model: srcCard.src.items
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 readonly property var it: modelData
@@ -321,13 +305,13 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: srcCard.src.found
             label: "Done importing?"
             desc: "Delete file removes the line that loads it from " + (srcCard.wm === "niri" ? "config.kdl" : "hyprland.lua")
                   + " and deletes the file. Anything not imported (e.g. rules) goes with it; both files are backed up first."
         }
-        NetRow {
+        SettingRow {
             visible: srcCard.src.other.length > 0
             label: "Stays in the file"
             desc: srcCard.src.other.join(", ") + " (not part of the settings)"

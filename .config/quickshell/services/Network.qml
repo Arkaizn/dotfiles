@@ -237,20 +237,35 @@ Singleton {
     // changes: { key: value }. With `device` (the connection is active there)
     // the change is re-applied right away: `device reapply` keeps the link up
     // when it can, otherwise the connection is brought up again.
+    // $1 uuid, $2 device ("" = don't reapply), then key value pairs; secrets
+    // come on stdin as "key value" lines (never argv: /proc/*/cmdline is
+    // readable by every user) and go in through `nmcli connection edit`
     readonly property string modifyScript:
         'uuid=$1; dev=$2; shift 2\n'
-        + 'out=$(nmcli connection modify "$uuid" "$@" 2>&1) || { printf "%s\\n" "$out" >&2; exit 1; }\n'
+        + 'if [ $# -gt 0 ]; then out=$(nmcli connection modify "$uuid" "$@" 2>&1) || { printf "%s\\n" "$out" >&2; exit 1; }; fi\n'
+        + 'secrets=$(cat)\n'
+        + 'if [ -n "$secrets" ]; then\n'
+        + '  out=$( { printf "%s\\n" "$secrets" | sed "s/^/set /"; printf "save\\nquit\\n"; } | nmcli connection edit "$uuid" 2>&1)\n'
+        + '  if printf "%s" "$out" | grep -qi "^error"; then printf "%s\\n" "$out" | grep -i "^error" | head -3 >&2; exit 1; fi\n'
+        + 'fi\n'
         + 'if [ -n "$dev" ]; then\n'
         + '  nmcli device reapply "$dev" >/dev/null 2>&1 && exit 0\n'
         + '  out=$(nmcli --wait 20 connection up "$uuid" 2>&1) || { printf "Saved, but activating failed: %s\\n" "$out" >&2; exit 2; }\n'
         + 'fi'
 
+    // keys whose value is a secret: PSK, passwords, WEP keys, WireGuard private keys, PINs
+    function isSecretKey(k) { return /(^|[.-])(psk|password|wep-key\d|private-key|preshared-key|secrets?|pin)$/i.test(k) }
     function modify(uuid, changes, device, cb) {
-        const args = []
-        for (const k of Object.keys(changes)) args.push(k, String(changes[k]))
-        if (args.length === 0) { if (cb) cb(true, ""); return }
+        const args = [], secrets = []
+        for (const k of Object.keys(changes)) {
+            const v = String(changes[k])
+            if (!isSecretKey(k)) { args.push(k, v); continue }
+            if (/[\n\r]/.test(v)) { if (cb) cb(false, "A password can't contain a line break"); return }
+            secrets.push(k + " " + v)
+        }
+        if (args.length === 0 && secrets.length === 0) { if (cb) cb(true, ""); return }
         root.busy = true
-        run(["sh", "-c", modifyScript, "sh", uuid, device ?? ""].concat(args), (code, out, err) => {
+        Jobs.runInput(["sh", "-c", modifyScript, "sh", uuid, device ?? ""].concat(args), secrets.length ? secrets.join("\n") + "\n" : "", (code, out, err) => {
             root.busy = false
             refreshTimer.restart()
             if (cb) cb(code === 0, code === 0 ? "" : errorText(err))

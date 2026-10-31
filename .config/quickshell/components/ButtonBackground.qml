@@ -21,15 +21,15 @@ Item {
     
     Behavior on scale {
         NumberAnimation {
-            duration: Properties.bDuration
-            easing.type: Easing.OutCubic
+            duration: Anim.button
+            easing.type: Anim.standard
         } 
     }
 
     Rectangle {
         anchors.fill: parent
-        radius: Properties.radius
-        color: Colors.light ? Qt.rgba(1, 1, 1, 0.35) : Qt.rgba(0, 0, 0, 0.18)
+        radius: Tokens.radius.md
+        color: Colors.light ? Colors.neutral(1, 0.35) : Colors.dim(0.18)
         border.color: Colors.fade(root.hovered ? 0.28 : 0.18)
         border.width: 1.5
 

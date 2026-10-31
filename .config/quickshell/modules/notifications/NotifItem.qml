@@ -27,7 +27,7 @@ Item {
     Component.onCompleted: reveal = Qt.binding(() => root.shown ? 1 : 0)
 
     Behavior on reveal {
-        NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Anim.medium; easing.type: Anim.standard }
     }
 
     Rectangle {
@@ -42,8 +42,8 @@ Item {
         opacity: root.reveal
         x: root.closing ? root.width * 0.5 : 0
 
-        Behavior on color { ColorAnimation { duration: Anim.color } }
-        Behavior on x { NumberAnimation { duration: 220; easing.type: Easing.InCubic } }
+        Behavior on color { ColorAnimation { duration: Anim.fast } }
+        Behavior on x { NumberAnimation { duration: Anim.medium; easing.type: Anim.exit } }
 
         HoverHandler { id: hover }
 
@@ -56,19 +56,19 @@ Item {
 
         ColumnLayout {
             id: content
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
-            spacing: 6
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s10 }
+            spacing: Tokens.space.s6
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: Tokens.space.s10
 
                 Rectangle {
                     visible: root.model.image !== ""
                     Layout.preferredWidth: 38
                     Layout.preferredHeight: 38
                     Layout.alignment: Qt.AlignTop
-                    radius: 8
+                    radius: Tokens.radius.md
                     clip: true
                     color: "transparent"
 
@@ -82,23 +82,23 @@ Item {
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 2
+                    spacing: Tokens.space.s2
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 6
+                        spacing: Tokens.space.s6
                         Text {
                             text: root.model.summary
                             textFormat: Text.PlainText
                             color: Colors.fade(0.88)
-                            font { bold: true; pixelSize: 13 }
+                            font { bold: true; pixelSize: Tokens.font.body }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
                         Text {
                             text: Notifs.relativeTime(root.model.time)
                             color: Colors.fade(0.33)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                         }
                     }
 
@@ -107,7 +107,7 @@ Item {
                         text: root.model.body
                         textFormat: Text.StyledText
                         color: Colors.fade(0.66)
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         wrapMode: Text.Wrap
                         maximumLineCount: 3
                         elide: Text.ElideRight
@@ -129,7 +129,7 @@ Item {
             RowLayout {
                 visible: root.actions.length > 0
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Tokens.space.s6
 
                 Repeater {
                     model: root.actions

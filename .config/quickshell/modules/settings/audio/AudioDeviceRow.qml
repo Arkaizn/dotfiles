@@ -8,7 +8,7 @@ import "../../controlcenter"
 
 // One output / input device on the audio page: default, mute, volume, test
 // sound, hide from the control center, and your own name for it.
-NetRow {
+SettingRow {
     id: row
     required property var node
     property bool isDefault: false
@@ -24,7 +24,7 @@ NetRow {
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Tokens.space.s6
         IconButton {
             icon: row.isDefault ? "󰄬" : "󰄱"
             tooltip: row.isDefault ? "Default device" : "Make default"
@@ -37,7 +37,7 @@ NetRow {
             tooltip: row.audio?.muted ? "Unmute" : "Mute"
             onClicked: if (row.audio) row.audio.muted = !row.audio.muted
         }
-        CCSlider {
+        LevelSlider {
             id: volSlider
             Layout.fillWidth: true
             visible: !row.renaming
@@ -62,7 +62,7 @@ NetRow {
             Layout.preferredWidth: 42
             text: Math.round((row.audio?.volume ?? 0) * 100) + "%"
             color: Colors.fade(0.7)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
             horizontalAlignment: Text.AlignRight
         }

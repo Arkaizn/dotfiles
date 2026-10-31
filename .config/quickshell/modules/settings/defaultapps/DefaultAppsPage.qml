@@ -9,18 +9,18 @@ import "../network"
 // the installed apps that say they can open it.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     Component.onCompleted: DefaultApps.refresh()
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Open with"
         header: ActionButton { icon: "󰑓"; text: DefaultApps.loading ? "Loading…" : "Reload"; onClicked: DefaultApps.refresh() }
-        NetRow { first: true; visible: DefaultApps.error !== ""; label: "Problem"; desc: DefaultApps.error }
+        SettingRow { first: true; visible: DefaultApps.error !== ""; label: "Problem"; desc: DefaultApps.error }
         Repeater {
             model: DefaultApps.categories
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 readonly property var apps: DefaultApps.candidates[modelData.id] ?? []
@@ -29,7 +29,7 @@ ColumnLayout {
                 label: modelData.icon + "  " + modelData.name
                 desc: apps.length === 0 ? (DefaultApps.loading ? "…" : "no installed app opens these")
                       : (cur === "" ? "not set" : cur) + "  ·  " + modelData.types.length + (modelData.types.length === 1 ? " type" : " types")
-                DropdownControl {
+                Dropdown {
                     visible: apps.length > 0
                     options: (cur === "" ? [{ label: "— not set —", value: "" }] : [])
                              .concat(apps.map(a => ({ label: DefaultApps.name(a), value: a, hint: a })))
@@ -39,10 +39,10 @@ ColumnLayout {
             }
         }
     }
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Note"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "Written to ~/.config/mimeapps.list"

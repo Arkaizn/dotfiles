@@ -8,7 +8,7 @@ import qs.services
 
 // Volume: output device picker, output + mic volume, and a mixer with
 // every app that is currently playing audio.
-CCCard {
+Card {
     id: root
 
     implicitHeight: col.implicitHeight + 24
@@ -79,8 +79,8 @@ CCCard {
 
     ColumnLayout {
         id: col
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-        spacing: 8
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
+        spacing: Tokens.space.s8
 
         // ── Output ──
         DeviceHeader {
@@ -129,7 +129,7 @@ CCCard {
         }
 
         // ── Apps ──
-        Rectangle { Layout.fillWidth: true; Layout.topMargin: 2; height: 1; color: Colors.fade(0.13) }
+        Rectangle { Layout.fillWidth: true; Layout.topMargin: Tokens.space.s2; height: 1; color: Colors.fade(0.13) }
 
         Item {
             Layout.fillWidth: true
@@ -145,11 +145,11 @@ CCCard {
 
             RowLayout {
                 anchors.fill: parent
-                spacing: 8
+                spacing: Tokens.space.s8
                 Text {
                     text: "Apps"
                     color: Colors.fade(0.55)
-                    font { bold: true; pixelSize: 12 }
+                    font { bold: true; pixelSize: Tokens.font.small }
                 }
                 Rectangle {
                     visible: root.streams.length > 0
@@ -160,7 +160,7 @@ CCCard {
                         anchors.centerIn: parent
                         text: root.streams.length
                         color: Colors.fade(0.87)
-                        font { bold: true; pixelSize: 10 }
+                        font { bold: true; pixelSize: Tokens.font.micro }
                     }
                 }
                 // collapsed: which apps are playing
@@ -170,10 +170,10 @@ CCCard {
                         : [...new Set(root.streams.map(n => root.appName(n)))].join(", ")
                     opacity: root.appsOpen ? 0 : 1
                     color: appsMouse.containsMouse ? Colors.ink : Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     elide: Text.ElideRight
                     horizontalAlignment: Text.AlignRight
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                    Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                 }
                 Chevron { open: root.appsOpen }
                 IconButton {
@@ -195,12 +195,12 @@ CCCard {
                 contentHeight: appsCol.implicitHeight
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                ScrollBar.vertical: SlimScrollBar {}
 
                 ColumnLayout {
                     id: appsCol
                     width: parent.width
-                    spacing: 8
+                    spacing: Tokens.space.s8
 
                     Repeater {
                         model: root.streams
@@ -209,11 +209,11 @@ CCCard {
                             id: app
                             required property var modelData
                             Layout.fillWidth: true
-                            spacing: 2
+                            spacing: Tokens.space.s2
 
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 8
+                                spacing: Tokens.space.s8
 
                                 Image {
                                     readonly property string src: root.appIcon(app.modelData)
@@ -226,14 +226,14 @@ CCCard {
                                 Text {
                                     text: root.appName(app.modelData)
                                     color: Colors.ink
-                                    font.pixelSize: 12
+                                    font.pixelSize: Tokens.font.small
                                     font.bold: true
                                 }
                                 Text {
                                     Layout.fillWidth: true
                                     text: app.modelData.properties?.["media.name"] ?? ""
                                     color: Colors.fade(0.45)
-                                    font.pixelSize: 11
+                                    font.pixelSize: Tokens.font.caption
                                     elide: Text.ElideRight
                                 }
                             }
@@ -268,17 +268,17 @@ CCCard {
         }
         RowLayout {
             anchors.fill: parent
-            spacing: 8
+            spacing: Tokens.space.s8
             Text {
                 text: dh.label
                 color: Colors.fade(0.55)
-                font { bold: true; pixelSize: 12 }
+                font { bold: true; pixelSize: Tokens.font.small }
             }
             Text {
                 Layout.fillWidth: true
                 text: dh.current
                 color: dhMouse.containsMouse ? Colors.ink : Colors.fade(0.87)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 horizontalAlignment: Text.AlignRight
                 elide: Text.ElideRight
             }
@@ -296,7 +296,7 @@ CCCard {
         signal picked(var node)
 
         Layout.fillWidth: true
-        spacing: 2
+        spacing: Tokens.space.s2
 
         Repeater {
             model: dp.nodes
@@ -306,7 +306,7 @@ CCCard {
                 readonly property bool isCurrent: modelData === dp.current
                 Layout.fillWidth: true
                 implicitHeight: 30
-                radius: 8
+                radius: Tokens.radius.md
                 color: isCurrent ? Colors.fade(0.14)
                      : optMouse.containsMouse ? Colors.fade(0.07) : "transparent"
 
@@ -318,12 +318,12 @@ CCCard {
                     onClicked: dp.picked(opt.modelData)
                 }
                 RowLayout {
-                    anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
+                    anchors { fill: parent; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s10 }
                     Text {
                         Layout.fillWidth: true
                         text: dp.nameOf(opt.modelData)
                         color: Colors.ink
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.bold: opt.isCurrent
                         elide: Text.ElideRight
                     }
@@ -331,7 +331,7 @@ CCCard {
                         visible: opt.isCurrent
                         text: "󰄬"
                         color: Colors.ink
-                        font.pixelSize: 13
+                        font.pixelSize: Tokens.font.body
                         font.family: Properties.fontFamily
                     }
                 }

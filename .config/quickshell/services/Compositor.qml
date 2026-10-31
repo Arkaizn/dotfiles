@@ -35,7 +35,9 @@ Singleton {
 
     // a string as a Lua literal, for `hyprctl dispatch` / `hyprctl eval`
     function luaString(s) {
-        return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n") + '"'
+        // \r and other control characters as \ddd: a raw one ends the Lua string
+        return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")
+            .replace(/[\x00-\x1f\x7f]/g, c => "\\" + String(c.charCodeAt(0)).padStart(3, "0")) + '"'
     }
 
     function escapeRegex(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") }
@@ -69,6 +71,11 @@ Singleton {
 
     function focusedOutput(cb) {
         if (!isNiri && !isHyprland) { cb(""); return }
+        // niri: the event stream already knows it (no process, no delay before the popup animates)
+        if (isNiri) {
+            const o = NiriIpc.focusedOutput()
+            if (o !== "") { cb(o); return }
+        }
         _outputCallbacks.push(cb)
         if (!outputProc.running) {
             outputProc.command = isHyprland ? ["hyprctl", "-j", "monitors"] : ["niri", "msg", "-j", "focused-output"]

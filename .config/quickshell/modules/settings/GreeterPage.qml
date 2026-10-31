@@ -16,7 +16,7 @@ import "network"
 //                       avatar, batteries, power, blur, monitors }
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property var cfg: Settings.greeter
     readonly property var show: LockItems.resolveGreeter(Settings.lockscreen, cfg)
@@ -26,7 +26,7 @@ ColumnLayout {
     property string builtVersion: ""
     readonly property string installedVersion: GreeterSync.installedVersion
     function checkVersion() {
-        const out = (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/quickshell-greeter-check"
+        const out = (Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.cachePath("run")) + "/quickshell-greeter-check"
         Jobs.run(["bash", Quickshell.shellDir + "/greeter/build.sh", out], (code, o) => page.builtVersion = code === 0 ? o.trim() : "")
         GreeterSync.readVersion()
     }
@@ -68,12 +68,12 @@ ColumnLayout {
 
     Component.onCompleted: { checkVersion(); readMode(); loadSessions(); Monitors.refresh() }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Login screen"
         icon: "󰍂"
 
-        NetRow {
+        SettingRow {
             first: true
             label: "Installed"
             desc: GreeterSync.installed
@@ -84,14 +84,14 @@ ColumnLayout {
                 : "Not yet. greetd still logs you in straight away"
             descError: GreeterSync.installed && page.builtVersion !== "" && page.installedVersion !== "" && page.builtVersion !== page.installedVersion
         }
-        NetRow {
+        SettingRow {
             label: "Logging in"
             desc: page.mode === "greeter" ? "The login screen at boot and after logging out; no lockscreen after it"
                 : page.mode === "autologin-boot" ? "At boot greetd logs you in and the lockscreen comes up (e.g. for VNC after a reboot); the login screen after logging out"
                 : page.mode === "autologin" ? "greetd logs you in, then the lockscreen comes up (not switched to the login screen yet)"
                 : "Own greetd setup (/etc/greetd/config.toml): the lockscreen comes up at login"
             changed: page.mode !== "greeter"
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 260
                 enabled: !page.busy
                 options: [{ label: "Login screen", value: "greeter" },
@@ -102,7 +102,7 @@ ColumnLayout {
                 onEdited: v => { if (v !== page.mode && (v === "greeter" || v === "autologin-boot")) page.runInstall(["--switch", v]) }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Install / update"
             desc: "Copies the login screen's code from this config (asks for your password). In a terminal: " + page.installCmd
                   + " (from a TTY: greeter/RECOVERY.md)"
@@ -121,14 +121,14 @@ ColumnLayout {
                 onClicked: page.runInstall([])
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.result !== ""
             sub: true
             label: "Result"
             desc: page.result
             descError: page.resultError
         }
-        NetRow {
+        SettingRow {
             label: "Theme copy"
             desc: GreeterSync.status === "up to date" ? "Up to date (last written " + GreeterSync.lastSync + ")"
                 : GreeterSync.status === "off" ? "Not kept up to date (switched off below)"
@@ -144,12 +144,12 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "What it shows"
         icon: "󰈈"
 
-        NetRow {
+        SettingRow {
             readonly property var item: LockItems.greeterItems.find(i => i.key === "follow")
             first: true
             label: item.label
@@ -164,7 +164,7 @@ ColumnLayout {
         // its own items (follow off): the lockscreen's, minus what needs a session
         Repeater {
             model: page.show.follow ? [] : LockItems.items.filter(it => LockItems.greeterShared.includes(it.key))
-            NetRow {
+            SettingRow {
                 id: ownRow
                 required property var modelData
                 sub: true
@@ -177,19 +177,19 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: !page.show.follow
             sub: true
             label: "Monitor"
             desc: "The others show the blurred wallpaper"
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 260
                 options: [{ label: "All monitors", value: "" }].concat(Monitors.outputs.map(o => ({ label: o.ident.replace(/ Unknown$/, "") + "  (" + o.name + ")", value: o.ident })))
                 value: page.show.monitors[0] ?? ""
                 onEdited: v => v === "" ? Settings.reset("greeter", "monitors") : Settings.set("greeter", "monitors", [v])
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.show.follow
             sub: true
             label: "Monitor"
@@ -198,7 +198,7 @@ ColumnLayout {
         }
         Repeater {
             model: LockItems.greeterItems.filter(i => i.key !== "follow")
-            NetRow {
+            SettingRow {
                 id: itemRow
                 required property var modelData
                 label: modelData.label
@@ -209,7 +209,7 @@ ColumnLayout {
                     checked: page.show[itemRow.modelData.key] === true
                     onToggled: v => page.setKey(itemRow.modelData.key, v, itemRow.modelData.def)
                 }
-                DropdownControl {
+                Dropdown {
                     visible: itemRow.modelData.kind === "choice"
                     implicitWidth: 160
                     options: itemRow.modelData.choices ?? []
@@ -220,28 +220,28 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Defaults"
         icon: "󰀄"
 
-        NetRow {
+        SettingRow {
             first: true
             label: "User"
             desc: "Who's picked when the login screen starts"
             changed: page.show.defaultUser !== ""
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 220
                 options: [{ label: "The last one (else you)", value: "" }].concat(page.users.map(u => ({ label: u.gecos ? u.gecos + " (" + u.name + ")" : u.name, value: u.name })))
                 value: page.show.defaultUser
                 onEdited: v => page.setKey("defaultUser", v, "")
             }
         }
-        NetRow {
+        SettingRow {
             label: "Session"
             desc: "Started after logging in, unless you pick another one"
             changed: page.show.defaultSession !== ""
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 220
                 options: [{ label: "The last one used", value: "" }].concat(page.sessions.map(s => ({ label: s.name, value: s.id })))
                 value: page.show.defaultSession

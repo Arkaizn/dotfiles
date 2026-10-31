@@ -11,7 +11,7 @@ import "../network"
 // server (services/VncServer.qml) with its firewall rule.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string editing: ""            // connection id, "new" or ""
     property bool importing: false
@@ -47,19 +47,19 @@ ColumnLayout {
 
     readonly property var missing: Object.keys(have).filter(b => !have[b])
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.missing.length > 0
         title: "Missing programs"
         icon: "󰀦"
-        NetRow {
+        SettingRow {
             first: true
             label: page.missing.join(", ")
             desc: page.missing.map(b => Jobs.installHint(b)).join("   ·   ")
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Saved connections"
         header: [
@@ -77,7 +77,7 @@ ColumnLayout {
             }
         }
 
-        NetRow {
+        SettingRow {
             first: true
             visible: RemoteConnections.list.length === 0 && page.editing !== "new"
             label: "No connections yet"
@@ -95,16 +95,16 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
 
-                NetRow {
+                SettingRow {
                     first: entry.index === 0 && page.editing !== "new"
                     label: RemoteConnections.types[entry.c.type].icon + "  " + entry.c.name
                     desc: RemoteConnections.types[entry.c.type].name + "  ·  " + (entry.c.user ? entry.c.user + "@" : "") + entry.c.host + ":" + entry.c.port
                           + (entry.c.password === "keyring" ? "  ·  password in keyring" : entry.c.password === "ask" ? "  ·  asks for the password" : "")
                           + (entry.reach === "up" ? "  ·  reachable" : entry.reach === "down" ? "  ·  not reachable" : "")
                     RowLayout {
-                        spacing: 6
+                        spacing: Tokens.space.s6
                         Rectangle {
-                            implicitWidth: 8; implicitHeight: 8; radius: 4
+                            implicitWidth: 8; implicitHeight: 8; radius: Tokens.radius.sm
                             visible: entry.reach !== ""
                             color: entry.reach === "up" ? Colors.green : entry.reach === "down" ? Colors.red : Colors.fade(0.3)
                         }
@@ -140,7 +140,7 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.exporting !== null
         title: "Export"
@@ -151,7 +151,7 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.importing
         title: "Import"
@@ -162,11 +162,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "This device (VNC server)"
         icon: "󰢹"
-        NetRow {
+        SettingRow {
             first: true
             label: VncServer.starting ? "Starting…"
                  : VncServer.running ? "On  ·  " + (VncServer.lanAddress || "all addresses") + ":" + VncServer.port
@@ -178,7 +178,7 @@ ColumnLayout {
                 onToggled: v => v ? VncServer.start() : VncServer.stop()
             }
         }
-        NetRow {
+        SettingRow {
             sub: true
             visible: VncServer.running
             label: "Connect from another computer"
@@ -187,45 +187,45 @@ ColumnLayout {
         }
         Repeater {
             model: VncServer.clients
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: "󰀄  " + (modelData.username || "connected") + (modelData.address ? "  ·  " + modelData.address : "")
                 ActionButton { icon: "󰅖"; text: "Disconnect"; onClicked: VncServer.disconnect(modelData.id) }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Monitor"
             desc: "the one it shows (one at a time)"
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 200
                 options: [{ label: "Focused when started", value: "" }].concat(Quickshell.screens.map(s => ({ label: s.name, value: s.name, hint: s.width + "×" + s.height })))
                 value: VncServer.output
                 onEdited: v => page.setServer("output", v)
             }
         }
-        NetRow {
+        SettingRow {
             label: "View only"
             desc: "the other side sees the screen but can't use mouse or keyboard"
             ToggleSwitch { checked: VncServer.viewOnly; onToggled: v => page.setServer("viewOnly", v) }
         }
-        NetRow {
+        SettingRow {
             label: "Port"
-            NumberControl { from: 1024; to: 65535; value: VncServer.port; onEdited: v => page.setServer("port", Math.round(v)) }
+            NumberField { from: 1024; to: 65535; value: VncServer.port; onEdited: v => page.setServer("port", Math.round(v)) }
         }
-        NetRow {
+        SettingRow {
             label: "Start with the shell"
             desc: "turns it on at login (only while you're logged in: it shares your session)"
             ToggleSwitch { checked: VncServer.autostart; onToggled: v => VncServer.setOpt("autostart", v) }
         }
-        NetRow {
+        SettingRow {
             label: "Firewall"
             desc: page.firewall === "active"
                   ? "ufw is on: the port has to be allowed. Your network only (" + (VncServer.lanNet || "LAN") + ") is safest; never open it to the internet."
                   : page.firewall === "inactive" ? "ufw is installed but off: nothing blocks the port"
                   : "no ufw: nothing here blocks the port"
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 visible: page.firewall !== ""
                 ActionButton {
                     icon: "󰒃"
@@ -244,7 +244,7 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Smartcards"
         icon: "󰌋"
@@ -256,7 +256,7 @@ ColumnLayout {
                 onClicked: page.checkCards()
             }
         ]
-        NetRow {
+        SettingRow {
             first: true
             label: "Smartcards for RDP"
             desc: "A smartcard or YubiKey (PIV): pass it into the session, or log in with it and its PIN. Chosen per connection (Edit → Smartcard)."
@@ -265,7 +265,7 @@ ColumnLayout {
                 onToggled: v => { Settings.set("connections", "smartcard", v); if (v) page.checkCards() }
             }
         }
-        NetRow {
+        SettingRow {
             sub: true
             visible: RemoteConnections.smartcardOn && page.cardSetup !== null
             label: (page.cardSetup?.pcscd === "active" ? "󰄬" : "󰀦") + "  Card service (pcscd)"
@@ -276,7 +276,7 @@ ColumnLayout {
                 onClicked: page.terminal("Smartcards: pcscd", 'sudo systemctl enable --now pcscd.socket && systemctl --no-pager status pcscd.socket')
             }
         }
-        NetRow {
+        SettingRow {
             sub: true
             visible: RemoteConnections.smartcardOn && page.cardSetup !== null
             label: (page.cardSetup?.ccid ? "󰄬" : "󰀦") + "  Reader driver (ccid)"
@@ -287,7 +287,7 @@ ColumnLayout {
                 onClicked: page.terminal("Smartcards: install ccid", 'sudo pacman -S --needed ccid')
             }
         }
-        NetRow {
+        SettingRow {
             sub: true
             visible: RemoteConnections.smartcardOn && page.cardSetup !== null
             label: (page.cardSetup?.opensc ? "󰄬" : "󰀦") + "  OpenSC"
@@ -299,7 +299,7 @@ ColumnLayout {
                 onClicked: page.terminal("Smartcards: install opensc", 'sudo pacman -S --needed opensc')
             }
         }
-        NetRow {
+        SettingRow {
             sub: true
             visible: RemoteConnections.smartcardOn
             label: "Card"
@@ -311,10 +311,10 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "How passwords are kept"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "Never in the settings file"

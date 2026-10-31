@@ -78,7 +78,7 @@ Scope {
             anchors.fill: parent
             color: Colors.shade(0.5)
             opacity: root.shown ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on opacity { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
             MouseArea { anchors.fill: parent; onClicked: {} }   // swallow clicks
         }
 
@@ -88,27 +88,27 @@ Scope {
             width: 420
             height: col.implicitHeight + 44
             radius: Properties.panelRadius
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.94)
+            color: Colors.alpha(Colors.background, 0.94)
             border.width: Properties.panelBorderWidth
             border.color: Properties.panelBorder
 
             opacity: root.shown ? 1 : 0
             scale: root.shown ? 1 : 0.9
-            Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-            Behavior on scale { NumberAnimation { duration: 280; easing.type: Easing.OutBack; easing.overshoot: 1.4 } }
+            Behavior on opacity { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
+            Behavior on scale { NumberAnimation { duration: Anim.medium; easing.type: Anim.pop; easing.overshoot: 1.4 } }
 
             ColumnLayout {
                 id: col
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 22 }
-                spacing: 12
+                spacing: Tokens.space.s12
 
                 // lock icon in a soft circle
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
                     width: 56; height: 56; radius: 28
-                    color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.15)
+                    color: Colors.alpha(Colors.color6, 0.15)
                     border.width: 1
-                    border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4)
+                    border.color: Colors.alpha(Colors.color6, 0.4)
                     Text {
                         anchors.centerIn: parent
                         text: "󰌾"
@@ -123,7 +123,7 @@ Scope {
                     horizontalAlignment: Text.AlignHCenter
                     text: "Authentication required"
                     color: Colors.ink
-                    font.pixelSize: 17
+                    font.pixelSize: Tokens.font.title
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -132,7 +132,7 @@ Scope {
                     horizontalAlignment: Text.AlignHCenter
                     text: root.flow?.message ?? ""
                     color: Colors.fade(0.7)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
                 }
@@ -146,14 +146,14 @@ Scope {
                         return n !== "" ? "as " + n : ""
                     }
                     color: Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
 
                 SearchField {
                     id: field
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
+                    Layout.topMargin: Tokens.space.s4
                     icon: "󰌋"
                     password: !(root.flow?.responseVisible ?? false)
                     placeholderText: (root.flow?.inputPrompt ?? "").replace(/:\s*$/, "") || "Password"
@@ -170,15 +170,15 @@ Scope {
                     visible: msg !== "" || root.failedOnce
                     text: msg !== "" ? msg : "Wrong password, try again"
                     color: (root.flow?.supplementaryIsError ?? false) || root.failedOnce ? Colors.red : Colors.fade(0.6)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
                 }
 
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
-                    spacing: 8
+                    Layout.topMargin: Tokens.space.s4
+                    spacing: Tokens.space.s8
                     ActionButton {
                         Layout.fillWidth: true
                         icon: "󰅖"

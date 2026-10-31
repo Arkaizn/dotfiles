@@ -21,14 +21,14 @@ Rectangle {
     radius: 5
     color: filled ? Qt.rgba(calColor.r, calColor.g, calColor.b, hover.hovered ? 0.95 : 0.8)
                   : Qt.rgba(calColor.r, calColor.g, calColor.b, hover.hovered ? 0.32 : 0.2)
-    Behavior on color { ColorAnimation { duration: 100 } }
+    Behavior on color { ColorAnimation { duration: Anim.fast } }
     border.width: picked ? 2 : 0
     border.color: Colors.color6
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 6
-        anchors.rightMargin: 6
+        anchors.leftMargin: Tokens.space.s6
+        anchors.rightMargin: Tokens.space.s6
         spacing: 5
 
         Rectangle {
@@ -42,14 +42,14 @@ Rectangle {
             visible: root.showTime && !root.filled
             text: U.fmtTime(root.ev.start)
             color: Colors.fade(0.6)
-            font.pixelSize: 10
+            font.pixelSize: Tokens.font.micro
             font.family: Properties.fontFamily
         }
         Text {
             Layout.fillWidth: true
             text: root.ev.title
             color: root.filled ? U.onColor(root.calColor) : Colors.ink
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.bold: root.filled
             font.family: Properties.fontFamily
             elide: Text.ElideRight

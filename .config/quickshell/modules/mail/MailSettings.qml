@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 import "../calendar"
 import "MailIcons.js" as I

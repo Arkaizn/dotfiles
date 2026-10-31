@@ -1,4 +1,5 @@
 import QtQuick
+import qs.services
 import QtQuick.Layouts
 
 // The content of one tab of a page (Layouts, Cleanup & packages): a Loader
@@ -15,7 +16,7 @@ Loader {
     onLoaded: if (from !== 0) slide.restart()
     ParallelAnimation {
         id: slide
-        NumberAnimation { target: shift; property: "x"; from: root.from * 56; to: 0; duration: 360; easing.type: Easing.OutCubic }
-        NumberAnimation { target: root; property: "opacity"; from: 0; to: 1; duration: 260; easing.type: Easing.OutCubic }
+        NumberAnimation { target: shift; property: "x"; from: root.from * 56; to: 0; duration: Anim.slow; easing.type: Anim.standard }
+        NumberAnimation { target: root; property: "opacity"; from: 0; to: 1; duration: Anim.medium; easing.type: Anim.standard }
     }
 }

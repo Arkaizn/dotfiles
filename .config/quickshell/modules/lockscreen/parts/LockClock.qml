@@ -19,12 +19,12 @@ Column {
     scale: stage.auth ? 0.6 : 1
     transformOrigin: Item.Top
     spacing: 0
-    Behavior on y { enabled: root.stage.settled; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
-    Behavior on scale { enabled: root.stage.settled; NumberAnimation { duration: 450; easing.type: Easing.OutCubic } }
+    Behavior on y { enabled: root.stage.settled; NumberAnimation { duration: 450; easing.type: Anim.standard } }
+    Behavior on scale { enabled: root.stage.settled; NumberAnimation { duration: 450; easing.type: Anim.standard } }
 
     Row {
         anchors.horizontalCenter: parent.horizontalCenter
-        spacing: 4
+        spacing: Tokens.space.s4
         Text {
             id: hours
             text: Time.format("HH")
@@ -35,13 +35,13 @@ Column {
         }
         Text {
             text: ":"
-            color: Qt.rgba(1, 1, 1, 0.45)
+            color: Colors.onWallpaper(0.45)
             font.pixelSize: 168
             font.family: Properties.fontFamily
         }
         Text {
             text: Time.format("mm")
-            color: Qt.rgba(1, 1, 1, 0.55)
+            color: Colors.onWallpaper(0.55)
             font.pixelSize: 168
             font.bold: true
             font.family: Properties.fontFamily
@@ -50,7 +50,7 @@ Column {
             visible: root.seconds
             anchors.baseline: hours.baseline
             text: Time.format("ss")
-            color: Qt.rgba(1, 1, 1, 0.35)
+            color: Colors.onWallpaper(0.35)
             font.pixelSize: 40
             font.family: Properties.fontFamily
         }
@@ -59,7 +59,7 @@ Column {
         visible: root.date
         anchors.horizontalCenter: parent.horizontalCenter
         text: Time.format("dddd, d. MMMM")
-        color: Qt.rgba(1, 1, 1, 0.8)
+        color: Colors.onWallpaper(0.8)
         font.pixelSize: 26
     }
 }

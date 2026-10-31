@@ -10,7 +10,7 @@ Rectangle {
     property string icon: ""
     property color iconColor: Colors.color6
     property string note: ""
-    property int padding: 14
+    property int padding: Tokens.space.s14
     default property alias content: body.data
     property alias actions: actionsRow.data
 
@@ -23,16 +23,16 @@ Rectangle {
     ColumnLayout {
         id: col
         anchors { fill: parent; margins: root.padding }
-        spacing: 12
+        spacing: Tokens.space.s12
         RowLayout {
             Layout.fillWidth: true
             Layout.minimumHeight: 22
-            spacing: 8
+            spacing: Tokens.space.s8
             Text { visible: root.icon !== ""; text: root.icon; color: root.iconColor; font.pixelSize: 15; font.family: Properties.fontFamily }
-            Text { text: root.title; color: Colors.ink; font.pixelSize: 13; font.bold: true; font.family: Properties.fontFamily; elide: Text.ElideRight; Layout.maximumWidth: col.width * 0.6 }
-            Text { Layout.fillWidth: true; text: root.note; color: Colors.fade(0.42); font.pixelSize: 11; font.family: Properties.fontFamily; elide: Text.ElideRight }
-            RowLayout { id: actionsRow; spacing: 6 }
+            Text { text: root.title; color: Colors.ink; font.pixelSize: Tokens.font.body; font.bold: true; font.family: Properties.fontFamily; elide: Text.ElideRight; Layout.maximumWidth: col.width * 0.6 }
+            Text { Layout.fillWidth: true; text: root.note; color: Colors.fade(0.42); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; elide: Text.ElideRight }
+            RowLayout { id: actionsRow; spacing: Tokens.space.s6 }
         }
-        ColumnLayout { id: body; Layout.fillWidth: true; Layout.fillHeight: true; spacing: 8 }
+        ColumnLayout { id: body; Layout.fillWidth: true; Layout.fillHeight: true; spacing: Tokens.space.s8 }
     }
 }

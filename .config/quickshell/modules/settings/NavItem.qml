@@ -26,27 +26,27 @@ Item {
     implicitHeight: Properties.buttonHeight + 4
     // with the sliding highlight only the content reacts to a press (the highlight stays put)
     scale: slideHighlight ? 1 : mouse.pressed ? Properties.onPressedButtonScale : mouse.containsMouse ? 1.02 : 1
-    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
 
     Rectangle {
         id: face
         readonly property bool own: root.selected && !root.slideHighlight
         anchors.fill: parent
-        radius: Properties.radius + 2
+        radius: Tokens.radius.lg
         border.width: face.own || mouse.containsMouse ? 1.5 : 0
         border.color: Colors.fade(face.own ? 0.24 : 0.14)
         gradient: ButtonGradient { hovered: face.own }
         opacity: face.own ? 1 : mouse.containsMouse && !root.selected ? 0.6 : 0
-        Behavior on opacity { NumberAnimation { duration: 140 } }
+        Behavior on opacity { NumberAnimation { duration: Anim.fast } }
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.leftMargin: 10
+        anchors.leftMargin: Tokens.space.s10
         scale: root.slideHighlight && mouse.pressed ? 0.96 : 1
-        Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-        anchors.rightMargin: 10
-        spacing: 10
+        Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+        anchors.rightMargin: Tokens.space.s10
+        spacing: Tokens.space.s10
 
         Text {
             Layout.preferredWidth: 20
@@ -55,13 +55,13 @@ Item {
             color: root.tint !== "" ? root.tint : root.selected ? Colors.color6 : Colors.fade(root.dim ? 0.45 : 0.6)
             font.pixelSize: root.small ? 14 : 16
             font.family: Properties.fontFamily
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Anim.fast } }
         }
         Text {
             Layout.fillWidth: true
             text: root.label
             color: root.selected ? Colors.ink : Colors.fade(root.dim ? 0.5 : 0.75)
-            Behavior on color { ColorAnimation { duration: 160 } }
+            Behavior on color { ColorAnimation { duration: Anim.normal } }
             font.pixelSize: root.small ? 12 : 13
             font.bold: root.selected
             font.family: Properties.fontFamily
@@ -78,7 +78,7 @@ Item {
                 anchors.centerIn: parent
                 text: root.changes
                 color: Colors.color6
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -88,10 +88,10 @@ Item {
             visible: root.arrow >= 0
             text: "󰅂"
             color: Colors.fade(0.45)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
             rotation: root.arrow === 1 ? 90 : 0
-            Behavior on rotation { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+            Behavior on rotation { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
         }
     }
 

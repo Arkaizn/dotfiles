@@ -46,17 +46,12 @@ SearchField {
         y: root.height + 4
         width: root.width
         height: Math.min(view.contentHeight + 12, 220)
-        padding: 6
+        padding: Tokens.space.s6
         visible: false
         closePolicy: Popup.CloseOnPressOutside
         onOpened: view.currentIndex = -1
 
-        background: Rectangle {
-            radius: Properties.radius + 2
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-            border.width: Properties.panelBorderWidth
-            border.color: Properties.panelBorder
-        }
+        background: PopoverBackground {}
 
         ListView {
             id: view
@@ -70,13 +65,13 @@ SearchField {
                 required property int index
                 width: ListView.view.width
                 height: 28
-                radius: Properties.radius
+                radius: Tokens.radius.md
                 color: entry.index === view.currentIndex || hover.hovered ? Colors.fade(0.08) : "transparent"
                 Text {
-                    anchors { left: parent.left; leftMargin: 10; right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
+                    anchors { left: parent.left; leftMargin: Tokens.space.s10; right: parent.right; rightMargin: Tokens.space.s10; verticalCenter: parent.verticalCenter }
                     text: entry.modelData
                     color: entry.modelData === root.value ? Colors.color6 : Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: entry.modelData
                     elide: Text.ElideRight
                 }

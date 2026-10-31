@@ -94,6 +94,45 @@ Scope {
         function editKeybind(keys: string): void { root.api.editKeybind(keys) }
     }
 
+    // Custom pages (spec `custom: "<id>"`) shown by one Loader: id → file, relative to
+    // this one. A new page = its file + an entry in `pages` + one line here. Pages
+    // that need extra wiring (accounts, network, keybinds, …) have their own Loader below.
+    readonly property var customPages: ({
+        "monitors": "MonitorsPage.qml",
+        "accounts": "AccountsPage.qml",
+        "autostart": "wm/AutostartPage.qml",
+        "lockscreen": "LockscreenPage.qml",
+        "greeter": "GreeterPage.qml",
+        "panelEditor": "PanelEditorPage.qml",
+        "desktopWidgets": "DesktopWidgetsPage.qml",
+        "import": "wm/ImportPage.qml",
+        "syntax": "wm/SyntaxPage.qml",
+        "bluetooth": "bluetooth/BluetoothPage.qml",
+        "diskusage": "maintenance/DiskUsagePage.qml",
+        "services": "maintenance/ServicesPage.qml",
+        "errorlog": "maintenance/ErrorLogPage.qml",
+        "boottime": "maintenance/BootTimePage.qml",
+        "diskhealth": "maintenance/DiskHealthPage.qml",
+        "mirrors": "maintenance/MirrorsPage.qml",
+        "profiles": "profiles/ProfilesPage.qml",
+        "updates": "updates/UpdatesPage.qml",
+        "icons": "icons/IconsPage.qml",
+        "keys": "keys/KeysPage.qml",
+        "yubikey": "yubikey/YubikeyPage.qml",
+        "diagnostics": "diagnostics/DiagnosticsPage.qml",
+        "clipboard": "clipboard/ClipboardPage.qml",
+        "defaultapps": "defaultapps/DefaultAppsPage.qml",
+        "power": "power/PowerPage.qml",
+        "audio": "audio/AudioPage.qml",
+        "media": "media/MediaPage.qml",
+        "theme": "theme/ThemePage.qml",
+        "notifications": "notifications/NotificationsPage.qml",
+        "dotfiles": "dotfiles/DotfilesPage.qml",
+        "connections": "connections/ConnectionsPage.qml",
+        "health": "HealthPage.qml",
+        "profile": "ProfilePage.qml"
+    })
+
     // ── Pages ────────────────────────────────────────────────────────────────
     // "properties" items are complete here; "niri" / "hyprland" items only name
     // a key of NiriSettings.schema / HyprSettings.schema and add layout hints
@@ -205,11 +244,16 @@ Scope {
                 { key: "buttonWidth", type: "int", min: 12, max: 48, label: "Bar button padding", desc: "Extra width around bar button content" } ] },
             { title: "Corners", items: [
                 { key: "radius", type: "int", min: 0, max: 20, label: "Buttons & fields" },
-                { key: "buttonradius", type: "int", min: 0, max: 20, label: "Bar stats" } ] } ] },
+                { key: "buttonradius", type: "int", min: 0, max: 20, label: "Bar stat modules", desc: "CPU, memory, temperature … in the bar" } ] } ] },
 
         { id: "motion", group: "Shell", icon: "󰑮", title: "Motion", store: "properties",
-          desc: "Hover and press feedback",
+          desc: "Animation speed, reduce motion, hover and press feedback",
           sections: [
+            { title: "Everywhere", items: [
+                { key: "reduceMotion", keywords: "accessibility animation off instant still calm motion sickness", type: "bool",
+                  label: "Reduce motion", desc: "Every animation becomes instant; pulsing and scrolling effects stop" },
+                { key: "animSpeed", keywords: "speed animation slower faster duration length", type: "real", min: 0.25, max: 2, step: 0.05,
+                  label: "Duration factor", desc: "1 = normal, 0.5 = twice as fast, 2 = twice as slow" } ] },
             { title: "Buttons", items: [
                 { key: "bDuration", keywords: "speed animation time duration", type: "int", min: 0, max: 600, step: 10, label: "Animation length (ms)" },
                 { key: "onEnteredButtonScale", keywords: "hover grow bigger animation", type: "real", min: 1, max: 1.3, step: 0.01, label: "Hover zoom" },
@@ -833,13 +877,13 @@ Scope {
                     id: bg
                     anchors.fill: parent
                     radius: Compositor.appRadius / zoomArea.zoom          // same corners as the compositor's windows
-                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
+                    color: Colors.alpha(Colors.background, 0.86)
                     // no own border: the compositor draws the window's border (one inside got clipped at the corners)
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 14
-                        spacing: 14
+                        anchors.margins: Tokens.space.s14
+                        spacing: Tokens.space.s14
 
                         // ── Sidebar ───────────────────────────────────────────────
                         Rectangle {
@@ -852,54 +896,31 @@ Scope {
 
                             ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 6
+                                anchors.margins: Tokens.space.s12
+                                spacing: Tokens.space.s6
 
                                 // title, also the drag handle for the window
-                                Item {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 44
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: 4
-                                        spacing: 10
-                                        Text {
-                                            text: "󰒓"
-                                            color: Colors.color6
-                                            font.pixelSize: 22
-                                            font.family: Properties.fontFamily
-                                        }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: "Settings"
-                                            color: Colors.ink
-                                            font.pixelSize: 18
-                                            font.bold: true
-                                            font.family: Properties.fontFamily
-                                        }
-                                        IconButton {
-                                            icon: "󰈝"
-                                            tooltip: "Export settings to a file (pick what goes in: settings, monitors, accounts)"
-                                            interactive: transfer.mode !== "busy"
-                                            onClicked: exportDialog.start()
-                                        }
-                                        IconButton {
-                                            icon: "󰋺"
-                                            tooltip: "Import settings from a file"
-                                            interactive: transfer.mode !== "busy"
-                                            onClicked: transfer.importSettings()
-                                        }
+                                AppTitle {
+                                    icon: "󰒓"
+                                    title: "Settings"
+                                    IconButton {
+                                        icon: "󰈝"
+                                        tooltip: "Export settings to a file (pick what goes in: settings, monitors, accounts)"
+                                        interactive: transfer.mode !== "busy"
+                                        onClicked: exportDialog.start()
                                     }
-                                    DragHandler {
-                                        target: null
-                                        onActiveChanged: if (active) bg.Window.window.startSystemMove()
+                                    IconButton {
+                                        icon: "󰋺"
+                                        tooltip: "Import settings from a file"
+                                        interactive: transfer.mode !== "busy"
+                                        onClicked: transfer.importSettings()
                                     }
                                 }
 
                                 SearchField {
                                     id: searchField
                                     Layout.fillWidth: true
-                                    Layout.bottomMargin: 6
+                                    Layout.bottomMargin: Tokens.space.s6
                                     implicitHeight: Properties.buttonHeight + 2
                                     placeholderText: "Search  (Ctrl+F)"
                                     onTextChanged: win.query = text
@@ -942,28 +963,28 @@ Scope {
                                         y: at.y
                                         width: target?.width ?? 0
                                         height: target?.height ?? 0
-                                        radius: Properties.radius + 2
+                                        radius: Tokens.radius.lg
                                         border.width: 1.5
                                         border.color: Colors.fade(0.24)
                                         gradient: ButtonGradient { hovered: true }
                                         opacity: on ? 1 : 0
                                         scale: travel.running ? 0.97 : 1
                                         onTargetChanged: if (opacity > 0) travel.restart()
-                                        Timer { id: travel; interval: 180 }
+                                        Timer { id: travel; interval: Anim.normal }   // the squash while the highlight travels
                                         readonly property bool slides: opacity > 0
-                                        Behavior on x { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
-                                        Behavior on y { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
-                                        Behavior on width { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
-                                        Behavior on height { enabled: navGlow.slides; NumberAnimation { duration: 340; easing.type: Easing.OutQuint } }
-                                        Behavior on opacity { NumberAnimation { duration: 160 } }
-                                        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                                        Behavior on x { enabled: navGlow.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+                                        Behavior on y { enabled: navGlow.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+                                        Behavior on width { enabled: navGlow.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+                                        Behavior on height { enabled: navGlow.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+                                        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
+                                        Behavior on scale { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
                                     }
 
                                     ColumnLayout {
                                         id: nav
                                         x: 4
                                         width: navFlick.width - 8
-                                        spacing: 6
+                                        spacing: Tokens.space.s6
 
                                         Repeater {
                                             // Maintenance tools sit under the Maintenance overview (System), profiles at the bottom
@@ -975,12 +996,12 @@ Scope {
                                                 spacing: 3
 
                                                 Text {
-                                                    Layout.topMargin: 6
-                                                    Layout.leftMargin: 8
-                                                    Layout.bottomMargin: 2
+                                                    Layout.topMargin: Tokens.space.s6
+                                                    Layout.leftMargin: Tokens.space.s8
+                                                    Layout.bottomMargin: Tokens.space.s2
                                                     text: group.modelData.toUpperCase()
                                                     color: Colors.fade(0.4)
-                                                    font.pixelSize: 10
+                                                    font.pixelSize: Tokens.font.micro
                                                     font.bold: true
                                                     font.letterSpacing: 1.2
                                                     font.family: Properties.fontFamily
@@ -1018,14 +1039,14 @@ Scope {
                                                             implicitHeight: navEntry.expanded ? subCol.implicitHeight : 0
                                                             visible: implicitHeight > 0
                                                             clip: true
-                                                            Behavior on implicitHeight { NumberAnimation { duration: 320; easing.type: Easing.OutQuint } }
+                                                            Behavior on implicitHeight { NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
                                                             // a thin line along them, left of their highlight
                                                             Rectangle { x: 6; y: 2; width: 1.5; height: parent.height - 4; radius: 1; color: Colors.fade(0.1) }
                                                             ColumnLayout {
                                                                 id: subCol
                                                                 x: 14
                                                                 width: parent.width - 14
-                                                                spacing: 2
+                                                                spacing: Tokens.space.s2
                                                                 Repeater {
                                                                     model: navEntry.subs
                                                                     NavItem {
@@ -1050,8 +1071,8 @@ Scope {
                                                                         // in one after another when they fold out
                                                                         opacity: navEntry.expanded ? 1 : 0
                                                                         transform: Translate { x: navEntry.expanded ? 0 : -10
-                                                                            Behavior on x { NumberAnimation { duration: 260 + subItem.index * 30; easing.type: Easing.OutCubic } } }
-                                                                        Behavior on opacity { NumberAnimation { duration: 200 + subItem.index * 30; easing.type: Easing.OutCubic } }
+                                                                            Behavior on x { NumberAnimation { duration: 260 + subItem.index * 30; easing.type: Anim.standard } } }
+                                                                        Behavior on opacity { NumberAnimation { duration: 200 + subItem.index * 30; easing.type: Anim.standard } }
                                                                     }
                                                                 }
                                                             }
@@ -1076,7 +1097,7 @@ Scope {
                         ColumnLayout {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            spacing: 10
+                            spacing: Tokens.space.s10
 
                             // header (drag handle too); taller when the description wraps (narrow window)
                             Item {
@@ -1093,8 +1114,8 @@ Scope {
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.verticalCenter: parent.verticalCenter
-                                    anchors.leftMargin: 6
-                                    spacing: 8
+                                    anchors.leftMargin: Tokens.space.s6
+                                    spacing: Tokens.space.s8
 
                                     IconButton {
                                         // not for the apps' settings pages (Mail ›, Calendar ›): those switch in the sidebar
@@ -1117,7 +1138,7 @@ Scope {
                                             Layout.fillWidth: true
                                             text: (win.hub?.title ?? "") + "  ›"
                                             color: Colors.fade(0.45)
-                                            font.pixelSize: 11
+                                            font.pixelSize: Tokens.font.caption
                                             font.family: Properties.fontFamily
                                             elide: Text.ElideRight
                                         }
@@ -1125,7 +1146,7 @@ Scope {
                                             Layout.fillWidth: true
                                             text: win.query !== "" ? "Search" : win.page.title
                                             color: Colors.ink
-                                            font.pixelSize: 24
+                                            font.pixelSize: Tokens.font.page
                                             font.bold: true
                                             font.family: Properties.fontFamily
                                             elide: Text.ElideRight
@@ -1136,7 +1157,7 @@ Scope {
                                                 ? (win.results.length > 0 ? "Results for \"" + win.query.trim() + "\", best first" : "Nothing matches \"" + win.query.trim() + "\"")
                                                 : win.page.desc
                                             color: Colors.fade(0.5)
-                                            font.pixelSize: 12
+                                            font.pixelSize: Tokens.font.small
                                             font.family: Properties.fontFamily
                                             wrapMode: Text.Wrap
                                         }
@@ -1179,21 +1200,21 @@ Scope {
                                 visible: win.query === "" && root.isWm(win.page.store)
                                          && (!svc.included || svc.error !== "" || (hypr && !svc.available))
                                 implicitHeight: banner.implicitHeight + 20
-                                radius: 14
-                                color: Qt.rgba(0.95, 0.55, 0.66, 0.12)
+                                radius: Tokens.radius.card
+                                color: Colors.alpha(Colors.danger, 0.12)
                                 border.width: Properties.panelBorderWidth
-                                border.color: Qt.rgba(0.95, 0.55, 0.66, 0.35)
+                                border.color: Colors.alpha(Colors.danger, 0.35)
 
                                 RowLayout {
                                     id: banner
                                     anchors.fill: parent
-                                    anchors.margins: 10
-                                    anchors.leftMargin: 14
-                                    spacing: 10
+                                    anchors.margins: Tokens.space.s10
+                                    anchors.leftMargin: Tokens.space.s14
+                                    spacing: Tokens.space.s10
                                     Text {
                                         text: "󰀦"
                                         color: Colors.red
-                                        font.pixelSize: 18
+                                        font.pixelSize: Tokens.font.title
                                         font.family: Properties.fontFamily
                                     }
                                     Text {
@@ -1210,7 +1231,7 @@ Scope {
                                                   + " needs the line\n" + wmBanner.svc.includeLine)
                                             : Compositor.name + " rejected the change, nothing was written:\n" + wmBanner.svc.error
                                         color: Colors.ink
-                                        font.pixelSize: 11
+                                        font.pixelSize: Tokens.font.caption
                                         font.family: Properties.fontFamily
                                         wrapMode: Text.WordWrap
                                     }
@@ -1267,10 +1288,10 @@ Scope {
                                         id: contentIn
                                         property int dir: 0             // 1: from below, -1: from above, 0: only fades
                                         property int last: -1           // the page before, in the sidebar's order
-                                        NumberAnimation { target: content; property: "opacity"; from: 0; to: 1; duration: 240; easing.type: Easing.OutCubic }
-                                        NumberAnimation { target: contentShift; property: "y"; from: contentIn.dir * 26; to: 0; duration: 380; easing.type: Easing.OutQuint }
-                                        NumberAnimation { target: titleBlock; property: "opacity"; from: 0; to: 1; duration: 240; easing.type: Easing.OutCubic }
-                                        NumberAnimation { target: titleShift; property: "x"; from: contentIn.dir === 0 ? 0 : 10; to: 0; duration: 320; easing.type: Easing.OutQuint }
+                                        NumberAnimation { target: content; property: "opacity"; from: 0; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+                                        NumberAnimation { target: contentShift; property: "y"; from: contentIn.dir * 26; to: 0; duration: Anim.slow; easing.type: Anim.emphasized }
+                                        NumberAnimation { target: titleBlock; property: "opacity"; from: 0; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+                                        NumberAnimation { target: titleShift; property: "x"; from: contentIn.dir === 0 ? 0 : 10; to: 0; duration: Anim.slow; easing.type: Anim.emphasized }
                                     }
 
                                     // a mail / calendar app settings page (the same pages as the app's settings dialog)
@@ -1295,19 +1316,16 @@ Scope {
                                         }
                                     }
 
+                                    // every page from `customPages` (one file each, loaded when shown: a
+                                    // mistake in one page only breaks that page, not the settings window)
                                     Loader {
                                         Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "monitors"
+                                        readonly property string file: win.query === "" ? (root.customPages[win.page.custom] ?? "") : ""
+                                        active: file !== ""
                                         visible: active
-                                        sourceComponent: MonitorsPage {}
+                                        source: file
                                     }
 
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "accounts"
-                                        visible: active
-                                        sourceComponent: AccountsPage {}
-                                    }
 
                                     Loader {
                                         Layout.fillWidth: true
@@ -1320,55 +1338,7 @@ Scope {
                                             onAnchorConsumed: root.pendingAnchor = ""
                                         }
                                     }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "autostart"
-                                        visible: active
-                                        sourceComponent: AutostartPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "lockscreen"
-                                        visible: active
-                                        sourceComponent: LockscreenPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "greeter"
-                                        visible: active
-                                        sourceComponent: GreeterPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "panelEditor"
-                                        visible: active
-                                        sourceComponent: PanelEditorPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "desktopWidgets"
-                                        visible: active
-                                        sourceComponent: DesktopWidgetsPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "import"
-                                        visible: active
-                                        sourceComponent: ImportPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "syntax"
-                                        visible: active
-                                        sourceComponent: SyntaxPage {}
-                                    }
 
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "bluetooth"
-                                        visible: active
-                                        sourceComponent: BluetoothPage {}
-                                    }
                                     Loader {
                                         Layout.fillWidth: true
                                         active: win.query === "" && win.page.custom === "maintenance"
@@ -1391,132 +1361,6 @@ Scope {
                                     }
                                     Loader {
                                         Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "diskusage"
-                                        visible: active
-                                        sourceComponent: DiskUsagePage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "services"
-                                        visible: active
-                                        sourceComponent: ServicesPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "errorlog"
-                                        visible: active
-                                        sourceComponent: ErrorLogPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "boottime"
-                                        visible: active
-                                        sourceComponent: BootTimePage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "diskhealth"
-                                        visible: active
-                                        sourceComponent: DiskHealthPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "mirrors"
-                                        visible: active
-                                        sourceComponent: MirrorsPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "profiles"
-                                        visible: active
-                                        sourceComponent: ProfilesPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "updates"
-                                        visible: active
-                                        sourceComponent: UpdatesPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "icons"
-                                        visible: active
-                                        sourceComponent: IconsPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "keys"
-                                        visible: active
-                                        sourceComponent: KeysPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "yubikey"
-                                        visible: active
-                                        sourceComponent: YubikeyPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "diagnostics"
-                                        visible: active
-                                        sourceComponent: DiagnosticsPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "clipboard"
-                                        visible: active
-                                        sourceComponent: ClipboardPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "defaultapps"
-                                        visible: active
-                                        sourceComponent: DefaultAppsPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "power"
-                                        visible: active
-                                        sourceComponent: PowerPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "audio"
-                                        visible: active
-                                        sourceComponent: AudioPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "media"
-                                        visible: active
-                                        sourceComponent: MediaPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "theme"
-                                        visible: active
-                                        sourceComponent: ThemePage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "notifications"
-                                        visible: active
-                                        sourceComponent: NotificationsPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "dotfiles"
-                                        visible: active
-                                        sourceComponent: DotfilesPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "connections"
-                                        visible: active
-                                        sourceComponent: ConnectionsPage {}
-                                    }
-                                    Loader {
-                                        Layout.fillWidth: true
                                         active: win.query === "" && win.page.custom === "layouts"
                                         visible: active
                                         sourceComponent: LayoutsPage {
@@ -1524,19 +1368,7 @@ Scope {
                                             onAnchorConsumed: root.pendingAnchor = ""
                                         }
                                     }
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "health"
-                                        visible: active
-                                        sourceComponent: HealthPage {}
-                                    }
 
-                                    Loader {
-                                        Layout.fillWidth: true
-                                        active: win.query === "" && win.page.custom === "profile"
-                                        visible: active
-                                        sourceComponent: ProfilePage {}
-                                    }
 
                                     Loader {
                                         Layout.fillWidth: true
@@ -1572,13 +1404,13 @@ Scope {
                                             id: section
                                             required property var modelData
                                             Layout.fillWidth: true
-                                            spacing: 8
+                                            spacing: Tokens.space.s8
 
                                             Text {
-                                                Layout.leftMargin: 6
+                                                Layout.leftMargin: Tokens.space.s6
                                                 text: section.modelData.title
                                                 color: Colors.fade(0.55)
-                                                font.pixelSize: 12
+                                                font.pixelSize: Tokens.font.small
                                                 font.bold: true
                                                 font.family: Properties.fontFamily
                                             }
@@ -1586,7 +1418,7 @@ Scope {
                                             Rectangle {
                                                 Layout.fillWidth: true
                                                 implicitHeight: items.implicitHeight
-                                                radius: 14
+                                                radius: Tokens.radius.card
                                                 color: Colors.card
                                                 border.width: Properties.panelBorderWidth
                                                 border.color: Properties.cardBorder
@@ -1608,8 +1440,8 @@ Scope {
                                                             Rectangle {
                                                                 visible: entry.index > 0
                                                                 Layout.fillWidth: true
-                                                                Layout.leftMargin: 16
-                                                                Layout.rightMargin: 16
+                                                                Layout.leftMargin: Tokens.space.s16
+                                                                Layout.rightMargin: Tokens.space.s16
                                                                 implicitHeight: 1
                                                                 color: Colors.fade(0.06)
                                                             }

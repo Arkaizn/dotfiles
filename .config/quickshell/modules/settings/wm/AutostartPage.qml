@@ -12,7 +12,7 @@ import "../network"
 // What your own config starts is listed below, read-only.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property var items: Settings.autostart.items ?? []
     readonly property string wm: Compositor.isHyprland ? "hyprland" : "niri"
@@ -23,7 +23,7 @@ ColumnLayout {
     function remove(id) { save(items.filter(a => a.id !== id)) }
 
     // ── Add ─────────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         id: addCard
         Layout.fillWidth: true
         title: "Add a program"
@@ -32,7 +32,7 @@ ColumnLayout {
         property string cmd: ""
         property string name: ""
 
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "What to start"
@@ -42,7 +42,7 @@ ColumnLayout {
                 onEdited: v => { addCard.kind = v; addCard.cmd = ""; addCard.name = "" }
             }
         }
-        NetRow {
+        SettingRow {
             visible: addCard.kind === "app"
             label: "App"
             // search + full list
@@ -52,7 +52,7 @@ ColumnLayout {
                 onPicked: (v, name) => { addCard.cmd = v; addCard.name = name }
             }
         }
-        NetRow {
+        SettingRow {
             visible: addCard.kind === "command"
             label: "Command"
             desc: "Runs through sh, so pipes and && work"
@@ -65,7 +65,7 @@ ColumnLayout {
                 onTextEdited: addCard.cmd = text
             }
         }
-        NetRow {
+        SettingRow {
             label: "Name"
             desc: "Shown in this list"
             SearchField {
@@ -77,7 +77,7 @@ ColumnLayout {
                 onTextEdited: addCard.name = text
             }
         }
-        NetRow {
+        SettingRow {
             ActionButton {
                 icon: "󰐕"
                 text: "Add"
@@ -94,17 +94,17 @@ ColumnLayout {
     }
 
     // ── Started by the shell ────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Started at login" + (page.items.length > 0 ? "  ·  " + page.items.length : "")
         icon: "󰐊"
 
         Text {
-            Layout.margins: 16
+            Layout.margins: Tokens.space.s16
             visible: page.items.length === 0
             text: "Nothing added yet."
             color: Colors.fade(0.45)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
         }
 
@@ -119,12 +119,12 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
 
-                NetRow {
+                SettingRow {
                     first: entry.index === 0
                     label: entry.a.name
                     desc: entry.a.cmd
                     opacity: entry.a.enabled === false ? 0.5 : 1
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                    Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                     Segmented {
                         small: true
                         options: [{ label: "Both", value: "both" }, { label: "niri", value: "niri" }, { label: "Hyprland", value: "hyprland" }]
@@ -159,7 +159,7 @@ ColumnLayout {
                 }
                 Reveal {
                     open: entry.open
-                    NetRow {
+                    SettingRow {
                         sub: true
                         label: "Name"
                         SearchField {
@@ -170,7 +170,7 @@ ColumnLayout {
                             onEditingFinished: if (text.trim() !== "" && text !== entry.a.name) page.update(entry.a.id, { name: text.trim() })
                         }
                     }
-                    NetRow {
+                    SettingRow {
                         sub: true
                         label: "Command"
                         SearchField {
@@ -187,21 +187,21 @@ ColumnLayout {
     }
 
     // ── From the config ─────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "From your " + (Compositor.name || "niri") + " config  ·  read-only"
         icon: "󰈙"
         Text {
-            Layout.margins: 16
+            Layout.margins: Tokens.space.s16
             visible: Keybinds.autostart.length === 0
             text: "Your config doesn't start anything."
             color: Colors.fade(0.45)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
         }
         Repeater {
             model: Keybinds.autostart
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 first: index === 0
@@ -212,11 +212,11 @@ ColumnLayout {
     }
 
     Text {
-        Layout.leftMargin: 6
+        Layout.leftMargin: Tokens.space.s6
         Layout.fillWidth: true
         text: "Added programs start at your next login (niri: spawn-sh-at-startup, Hyprland: hl.on(\"hyprland.start\")). Edit the read-only ones in the file shown under them."
         color: Colors.fade(0.4)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap
     }

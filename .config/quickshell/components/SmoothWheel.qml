@@ -1,5 +1,6 @@
 import QtQuick
 
+import qs.services
 // Wheel scrolling for a Flickable (calendar, settings app): a fixed step per
 // notch, eased, and notches add up while it's still moving.
 //   Flickable { id: f; SmoothWheel { flick: f; step: 52 } }
@@ -27,7 +28,7 @@ WheelHandler {
     property NumberAnimation anim: NumberAnimation {
         target: root.flick
         property: "contentY"
-        duration: 320
-        easing.type: Easing.OutCubic
+        duration: Anim.slow
+        easing.type: Anim.standard
     }
 }

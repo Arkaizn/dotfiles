@@ -2,28 +2,31 @@ import QtQuick
 import qs.components
 import qs.services
 
-// Clickable button in the shared button look (ButtonGradient + soft border),
-// used for all notification buttons: close, actions, expand, clear.
-Rectangle {
+// Notification buttons (close, actions, expand, clear): a compact label button
+// in the shared button look. Keyboard, focus ring and tooltip from Pressable.
+//   NotifActionButton { label: "Reply"; onClicked: … }
+Pressable {
     id: root
 
     property string label: ""
-    property int fontSize: 12
+    property int fontSize: Tokens.font.small
     property bool active: false      // persistent "on" look, e.g. an expanded group
-    readonly property bool hovered: mouse.containsMouse
-
-    signal clicked()
 
     implicitWidth: text.implicitWidth + 20
     implicitHeight: 30
-    radius: 8
-    border.width: 1
-    border.color: Colors.fade(hovered || active ? 0.28 : 0.14)
-    gradient: ButtonGradient { hovered: root.hovered || root.active }
-    scale: mouse.pressed ? 0.94 : hovered ? 1.04 : 1
+    accessibleName: tooltip !== "" ? tooltip : label
+    focusRadius: Tokens.radius.md
+    scale: pressed ? 0.94 : hovered ? 1.04 : 1
+    Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
 
-    Behavior on scale { NumberAnimation { duration: Anim.hover; easing.type: Easing.OutCubic } }
-    Behavior on border.color { ColorAnimation { duration: Anim.color } }
+    Rectangle {
+        anchors.fill: parent
+        radius: Tokens.radius.md
+        border.width: Tokens.border.thin
+        border.color: Colors.fade(root.hovered || root.active ? 0.28 : 0.14)
+        gradient: ButtonGradient { hovered: root.hovered || root.active }
+        Behavior on border.color { ColorAnimation { duration: Anim.fast } }
+    }
 
     Text {
         id: text
@@ -32,13 +35,5 @@ Rectangle {
         color: root.hovered || root.active ? Colors.ink : Colors.fade(0.87)
         font.pixelSize: root.fontSize
         font.family: Properties.fontFamily
-    }
-
-    MouseArea {
-        id: mouse
-        anchors.fill: parent
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: root.clicked()
     }
 }

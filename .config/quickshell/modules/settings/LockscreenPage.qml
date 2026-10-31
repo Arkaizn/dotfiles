@@ -18,7 +18,7 @@ import "network"
 //   Settings.lockscreen.monitors: ["<make model serial>" | "<output>", …] in priority order
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property var chosen: Settings.lockscreen.monitors ?? []
     function save(list) { Settings.set("lockscreen", "monitors", list) }
@@ -55,20 +55,20 @@ ColumnLayout {
         return hit ? connectedName(hit) : ""
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Show the lockscreen on"
         icon: "󰌾"
 
         // what each connected monitor shows right now
-        NetRow {
+        SettingRow {
             first: true
             label: "Now"
             wide: page.width < 620
             Flow {
                 Layout.fillWidth: page.width < 620
                 Layout.preferredWidth: page.width < 620 ? -1 : Math.min(implicitWidth, page.width * 0.55)
-                spacing: 6
+                spacing: Tokens.space.s6
                 Repeater {
                     model: Quickshell.screens
                     Rectangle {
@@ -78,7 +78,7 @@ ColumnLayout {
                                                    || (page.usedNow === "" && Quickshell.screens.length === 1)
                         implicitWidth: chip.implicitWidth + 16
                         implicitHeight: 24
-                        radius: 12
+                        radius: Tokens.radius.xl
                         color: lock ? Colors.fade(0.14) : Colors.fade(0.05)
                         border.width: 1
                         border.color: lock ? Colors.color6 : Colors.fade(0.12)
@@ -87,7 +87,7 @@ ColumnLayout {
                             anchors.centerIn: parent
                             text: chipRect.modelData.name + "  ·  " + (chipRect.lock ? "󰌾 lockscreen" : page.usedNow === "" ? "the one you used" : "󰸉 wallpaper")
                             color: chipRect.lock ? Colors.ink : Colors.fade(0.6)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                     }
@@ -95,7 +95,7 @@ ColumnLayout {
             }
         }
 
-        NetRow {
+        SettingRow {
             visible: page.chosen.length === 0
             label: "All monitors"
             desc: "Add a monitor below to show the lockscreen on that one only; the others then show the blurred wallpaper"
@@ -103,7 +103,7 @@ ColumnLayout {
 
         Repeater {
             model: page.chosen
-            NetRow {
+            SettingRow {
                 id: monRow
                 required property var modelData
                 required property int index
@@ -111,7 +111,7 @@ ColumnLayout {
                 desc: page.connectedName(modelData) === "" ? "not connected"
                     : "connected (" + page.connectedName(modelData) + ")" + (page.usedNow === page.connectedName(modelData) ? "  ·  used now" : "")
                 RowLayout {
-                    spacing: 4
+                    spacing: Tokens.space.s4
                     IconButton {
                         icon: "󰁝"
                         tooltip: "Higher"
@@ -133,20 +133,20 @@ ColumnLayout {
             }
         }
 
-        NetRow {
+        SettingRow {
             visible: page.chosen.length > 0
             label: "None of them connected"
             desc: "The lockscreen shows on the monitor you were using when it locked, and moves over as soon as one of the monitors above is plugged in"
         }
 
-        NetRow {
+        SettingRow {
             id: addRow
             readonly property var free: page.known.filter(id => !page.chosen.includes(id))
             visible: free.length > 0
             label: "Add a monitor"
             desc: "Connected now or saved on the Monitors page"
             wide: page.width < 620
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 300
                 Layout.fillWidth: page.width < 620
                 options: addRow.free.map(id => ({ label: page.label(id) + (page.connectedName(id) !== "" ? "  (" + page.connectedName(id) + ")" : ""), value: id }))
@@ -158,13 +158,13 @@ ColumnLayout {
 
     // ── what it shows ──
     readonly property var shown: LockItems.resolve(Settings.lockscreen)
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Show on the lockscreen"
         icon: "󰈈"
         Repeater {
             model: LockItems.items
-            NetRow {
+            SettingRow {
                 id: itemRow
                 required property var modelData
                 required property int index
@@ -180,7 +180,7 @@ ColumnLayout {
                     onToggled: v => v === itemRow.modelData.def ? Settings.reset("lockscreen", itemRow.modelData.key)
                                                                 : Settings.set("lockscreen", itemRow.modelData.key, v)
                 }
-                DropdownControl {
+                Dropdown {
                     visible: itemRow.modelData.kind === "choice"
                     implicitWidth: 160
                     options: itemRow.modelData.choices ?? []

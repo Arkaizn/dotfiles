@@ -11,7 +11,7 @@ import "../network"
 // and asks for your password once (pkexec + smartctl for all disks).
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property var disks: []                  // lsblk: [{ name, model, size, tran }]
     property var smart: ({})                // name → parsed smartctl JSON
@@ -69,7 +69,7 @@ ColumnLayout {
         return f
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Disk health (SMART)"
         icon: "󰋊"
@@ -80,7 +80,7 @@ ColumnLayout {
             interactive: !page.reading && page.disks.length > 0
             onClicked: page.read()
         }
-        NetRow {
+        SettingRow {
             first: true
             label: page.error !== "" ? "Problem" : page.disks.length + " disks"
             desc: page.error !== "" ? page.error : "the disk's own records: errors, wear, temperature. Reading needs root (smartctl), nothing is changed."
@@ -89,15 +89,15 @@ ColumnLayout {
 
     Repeater {
         model: page.disks
-        NetCard {
+        Section {
             id: card
             required property var modelData
             readonly property var j: page.smart[modelData.name]
             readonly property bool ok: j?.smart_status?.passed === true
             Layout.fillWidth: true
             title: modelData.model + "  ·  " + modelData.size + "  ·  /dev/" + modelData.name + (modelData.tran ? "  ·  " + modelData.tran : "")
-            tint: card.j === undefined ? "transparent" : card.ok ? "transparent" : Qt.rgba(0.95, 0.55, 0.66, 0.08)
-            NetRow {
+            tint: card.j === undefined ? "transparent" : card.ok ? "transparent" : Colors.alpha(Colors.danger, 0.08)
+            SettingRow {
                 first: true
                 label: card.j === undefined ? "Not read yet" : card.j === null ? "No SMART data"
                      : card.j.smart_status === undefined ? "No health status (USB adapters often hide it)"
@@ -106,11 +106,11 @@ ColumnLayout {
             }
             Repeater {
                 model: page.facts(card.j)
-                NetRow {
+                SettingRow {
                     required property var modelData
                     sub: true
                     label: modelData[0]
-                    Text { text: modelData[1]; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { text: modelData[1]; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                 }
             }
         }

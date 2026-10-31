@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Widgets
 import Quickshell
 import qs.components
 import qs.services
@@ -6,7 +7,6 @@ import QtQuick.Shapes
 import QtQuick.Controls
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import Quickshell.Io
 
 
 ColumnLayout {
@@ -16,54 +16,25 @@ ColumnLayout {
 
         // display name from the settings app (Profile), else the user name
         property string whoami: ""
-        Process {
-            id: usernameProc
-            command: ["whoami"]
-            running: true
-            stdout: SplitParser {
-                onRead: data => whoami = data
-            }
-        }
-
-        Process {
-            id: kernelProc
-            command: ["bash", "-c", "uname -r | cut -d'-' -f1"]
-            running: true
-            stdout: SplitParser {
-                onRead: data => kernelRect.iconText = "󰣇 " + data
-            }
-        }
-
-        Process {
-            id: pkgProc
-            command: ["bash", "-c", "pacman -Q | wc -l"]
-            running: true
-            stdout: SplitParser {
-                onRead: data => pkgRect.iconText = data + " "
-            }
+        // asked once when the card is created (argv only, the pipes are done here)
+        Component.onCompleted: {
+            Jobs.run(["whoami"], (c, out) => whoami = (out ?? "").trim())
+            Jobs.run(["uname", "-r"], (c, out) => kernelRect.iconText = "󰣇 " + (out ?? "").trim().split("-")[0])
+            Jobs.run(["pacman", "-Q"], (c, out) => pkgRect.iconText = (out ?? "").split("\n").filter(l => l !== "").length + " ")
         }
 
     spacing: 50
 
-    // Avatar
-    Rectangle {
+    // Avatar — rounded by clipping (was an OpacityMask layer: an extra
+    // offscreen texture just for the corners)
+    ClippingRectangle {
         id: faceRect
         Layout.alignment: Qt.AlignHCenter
         width: 160
         height: 160
-        radius: 10
-        color: "#1a1a2e"
+        radius: 22          // the hero avatar's own corner (DESIGN.md → Exceptions: dashboard)
+        color: Colors.surfaceWell
         property bool hovered: false
-        
-        
-        layer.enabled: true
-        layer.effect: OpacityMask {
-            maskSource: Rectangle {
-                width: 160
-                height: 160
-                radius: 22
-            }
-        }
 
         Image {
             anchors.fill: parent

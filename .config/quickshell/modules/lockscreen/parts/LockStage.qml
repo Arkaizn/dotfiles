@@ -1,5 +1,6 @@
 import Quickshell
 import QtQuick
+import qs.services
 import QtQuick.Effects
 
 // One monitor of the lockscreen or the login screen (greeter): the wallpaper
@@ -33,14 +34,14 @@ Item {
     // 0 → 1 when shown, 1 → 0 when leaving (blur, dim, content fade)
     property real shown: 0
     Component.onCompleted: { enterAnim.start(); settleTimer.start(); root.forceActiveFocus() }
-    NumberAnimation { id: enterAnim; target: root; property: "shown"; from: 0; to: 1; duration: 500; easing.type: Easing.OutCubic }
+    NumberAnimation { id: enterAnim; target: root; property: "shown"; from: 0; to: 1; duration: 500; easing.type: Anim.standard }
 
     // The surface gets its real size a moment after it's created; position
     // Behaviors would animate that (the clock slid down from the top), so they
     // only switch on once the layout has settled.
     property bool settled: false
     Timer { id: settleTimer; interval: 120; onTriggered: root.settled = true }
-    NumberAnimation { id: exitAnim; target: root; property: "shown"; to: 0; duration: 320; easing.type: Easing.InCubic }
+    NumberAnimation { id: exitAnim; target: root; property: "shown"; to: 0; duration: 320; easing.type: Anim.exit }
     Connections {
         target: root.lock
         function onUnlockingChanged() { if (root.lock.unlocking) { enterAnim.stop(); exitAnim.start() } }

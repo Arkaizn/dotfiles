@@ -12,35 +12,35 @@ ColumnLayout {
     // stderr is only shown in red when the command failed (nc reports success on stderr)
     readonly property bool failed: !st.running && st.code > 0
     visible: st.lines.length > 0 || st.running || st.missing !== undefined && st.missing !== ""
-    spacing: 4
+    spacing: Tokens.space.s4
 
     Rectangle {
         Layout.fillWidth: true
-        Layout.leftMargin: 14
-        Layout.rightMargin: 14
+        Layout.leftMargin: Tokens.space.s14
+        Layout.rightMargin: Tokens.space.s14
         implicitHeight: out.implicitHeight + 16
-        radius: 8
-        color: Qt.rgba(0, 0, 0, 0.3)
+        radius: Tokens.radius.md
+        color: Colors.shade(0.3)
         Text {
             id: out
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s8 }
             textFormat: Text.StyledText
             text: root.st.missing ? "<font color='#f9e2af'>" + root.st.missing + " isn't installed: " + Jobs.installHint(root.st.missing) + "</font>"
                 : root.st.lines.slice(-root.maxLines).map(l => (l.err && root.failed ? "<font color='#f38ba8'>" : "") + l.text.replace(/&/g, "&amp;").replace(/</g, "&lt;") + (l.err && root.failed ? "</font>" : "")).join("<br>")
                   + (root.st.running ? "<br><font color='#888888'>…</font>" : "")
             color: Colors.fade(0.8)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: "monospace"
             wrapMode: Text.WrapAnywhere
         }
     }
     Text {
-        Layout.leftMargin: 16
-        Layout.bottomMargin: 10
+        Layout.leftMargin: Tokens.space.s16
+        Layout.bottomMargin: Tokens.space.s10
         visible: !root.st.running && root.st.code !== -1 && !root.st.missing
         text: root.st.cancelled ? "cancelled" : root.st.timedOut ? "stopped: took too long" : "exit " + root.st.code
         color: root.st.code === 0 ? Colors.fade(0.4) : Colors.yellow
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.family: Properties.fontFamily
     }
 }

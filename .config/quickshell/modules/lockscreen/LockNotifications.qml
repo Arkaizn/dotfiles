@@ -13,22 +13,22 @@ ColumnLayout {
     // private: only the app and how many, no text (Settings → Lockscreen)
     property bool privateMode: false
 
-    spacing: 8
+    spacing: Tokens.space.s8
     visible: Notifs.count > 0
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: Tokens.space.s8
         Text {
             text: "󰂚"
-            color: Qt.rgba(1, 1, 1, 0.6)
-            font.pixelSize: 14
+            color: Colors.onWallpaper(0.6)
+            font.pixelSize: Tokens.font.label
             font.family: Properties.fontFamily
         }
         Text {
             text: Notifs.count === 1 ? "1 notification" : Notifs.count + " notifications"
-            color: Qt.rgba(1, 1, 1, 0.7)
-            font.pixelSize: 12
+            color: Colors.onWallpaper(0.7)
+            font.pixelSize: Tokens.font.small
             font.bold: true
         }
     }
@@ -38,17 +38,17 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: contentHeight
         interactive: false
-        spacing: 8
+        spacing: Tokens.space.s8
         model: Notifs.groupModel
 
         add: Transition {
             ParallelAnimation {
                 NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250 }
-                NumberAnimation { property: "x"; from: 40; to: 0; duration: 300; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "x"; from: 40; to: 0; duration: 300; easing.type: Anim.standard }
             }
         }
         displaced: Transition {
-            NumberAnimation { property: "y"; duration: 250; easing.type: Easing.OutCubic }
+            NumberAnimation { property: "y"; duration: 250; easing.type: Anim.standard }
         }
 
         delegate: Rectangle {
@@ -66,19 +66,19 @@ ColumnLayout {
             width: list.width
             height: visible ? col.implicitHeight + 20 : 0
             visible: index < root.maxGroups && !closing
-            radius: 14
+            radius: Tokens.radius.card
             color: Properties.panelColor
             border.width: Properties.panelBorderWidth
             border.color: Properties.panelBorder
 
             ColumnLayout {
                 id: col
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
-                spacing: 2
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s10 }
+                spacing: Tokens.space.s2
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Image {
                         visible: card.appIcon !== ""
                         source: card.appIcon
@@ -89,14 +89,14 @@ ColumnLayout {
                     Text {
                         Layout.fillWidth: true
                         text: card.appName + (card.items.count > 1 ? "  ·  " + card.items.count : "")
-                        color: Qt.rgba(1, 1, 1, 0.6)
-                        font.pixelSize: 11
+                        color: Colors.onWallpaper(0.6)
+                        font.pixelSize: Tokens.font.caption
                         elide: Text.ElideRight
                     }
                     Text {
                         text: Notifs.relativeTime(card.time)
-                        color: Qt.rgba(1, 1, 1, 0.4)
-                        font.pixelSize: 10
+                        color: Colors.onWallpaper(0.4)
+                        font.pixelSize: Tokens.font.micro
                     }
                 }
                 Text {
@@ -104,7 +104,7 @@ ColumnLayout {
                     visible: !root.privateMode
                     text: card.latest?.summary ?? ""
                     color: "white"
-                    font.pixelSize: 13
+                    font.pixelSize: Tokens.font.body
                     font.bold: true
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
@@ -113,8 +113,8 @@ ColumnLayout {
                     Layout.fillWidth: true
                     visible: text !== "" && !root.privateMode
                     text: (card.latest?.body ?? "").replace(/<[^>]*>/g, "")
-                    color: Qt.rgba(1, 1, 1, 0.7)
-                    font.pixelSize: 12
+                    color: Colors.onWallpaper(0.7)
+                    font.pixelSize: Tokens.font.small
                     elide: Text.ElideRight
                     maximumLineCount: 2
                     wrapMode: Text.Wrap

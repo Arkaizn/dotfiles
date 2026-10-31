@@ -9,16 +9,16 @@ import "../network"
 // and the password manager protection (KeePassXC).
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     ConfirmArm { id: wipeArm; timeout: 4000 }
     readonly property bool confirmWipe: wipeArm.armed !== ""
     Component.onCompleted: Clipboard.refresh()
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "History"
-        NetRow {
+        SettingRow {
             first: true
             label: Clipboard.watching ? "Recording copies" : "Paused"
             desc: Clipboard.watching ? Clipboard.count + " entries  ·  open with the launcher's clipboard tab (Super+V)"
@@ -29,25 +29,25 @@ ColumnLayout {
                 onClicked: Clipboard.watching ? Clipboard.pause() : Clipboard.resume()
             }
         }
-        NetRow {
+        SettingRow {
             label: "Keep at most"
             desc: "entries (oldest go first)"
-            NumberControl {
+            NumberField {
                 from: 10; to: 5000; step: 10
                 value: Number(Clipboard.options["max-items"] ?? 750)
                 onEdited: v => Clipboard.setOption("max-items", v)
             }
         }
-        NetRow {
+        SettingRow {
             label: "Ignore copies shorter than"
             desc: "characters (0 = keep everything)"
-            NumberControl {
+            NumberField {
                 from: 0; to: 20
                 value: Number(Clipboard.options["min-store-length"] ?? 0)
                 onEdited: v => Clipboard.setOption("min-store-length", v)
             }
         }
-        NetRow {
+        SettingRow {
             label: "Clear the history"
             desc: page.confirmWipe ? "all " + Clipboard.count + " entries are deleted, click again" : "also happens at every login (startup.kdl: cliphist wipe)"
             ActionButton {
@@ -61,11 +61,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Passwords"
         icon: Clipboard.protectedPasswords ? "󰌾" : "󰀦"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: !Clipboard.loaded ? "Checking…" : Clipboard.protectedPasswords ? "Copied passwords are not stored" : "Copied passwords may end up in the history"
@@ -73,7 +73,7 @@ ColumnLayout {
                   + " passes that on and cliphist " + (Clipboard.cliphistVersion || "?") + " skips them"
                   + (Clipboard.protectedPasswords ? " (tested here: a marked copy was not stored)." : ". Needs wl-clipboard ≥ 2.2 and cliphist ≥ 0.6.")
         }
-        NetRow {
+        SettingRow {
             wide: true
             label: "In KeePassXC"
             desc: "Settings → Security → “Clear clipboard after” (e.g. 10 s), so a password doesn't stay in the clipboard itself. Browser autofill (KeePassXC-Browser) avoids the clipboard completely."

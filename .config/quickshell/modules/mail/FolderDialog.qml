@@ -50,26 +50,26 @@ Modal {
 
     ColumnLayout {
         width: parent.width
-        spacing: 16
+        spacing: Tokens.space.s16
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 12
+            spacing: Tokens.space.s12
             Rectangle {
-                implicitWidth: 38; implicitHeight: 38; radius: 12
-                color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.14)
-                Text { anchors.centerIn: parent; text: I.folder; color: Colors.color6; font.pixelSize: 18; font.family: Properties.fontFamily }
+                implicitWidth: 38; implicitHeight: 38; radius: Tokens.radius.xl
+                color: Colors.alpha(Colors.color6, 0.14)
+                Text { anchors.centerIn: parent; text: I.folder; color: Colors.color6; font.pixelSize: Tokens.font.title; font.family: Properties.fontFamily }
             }
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 1
-                Text { text: "New folder"; color: Colors.ink; font.pixelSize: 16; font.bold: true; font.family: Properties.fontFamily }
+                spacing: Tokens.space.s1
+                Text { text: "New folder"; color: Colors.ink; font.pixelSize: Tokens.font.subtitle; font.bold: true; font.family: Properties.fontFamily }
                 // where it goes: account › parent
                 Text {
                     Layout.fillWidth: true
                     text: MailStore.accountLabel(root.accObj) + (root.parentName ? "  ›  " + root.parentName : "  ›  top level")
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideMiddle
                 }
@@ -90,11 +90,11 @@ Modal {
         ColumnLayout {
             Layout.fillWidth: true
             visible: MailStore.activeAccounts.length > 1
-            spacing: 6
-            Text { text: "Account"; color: Colors.fade(0.5); font.pixelSize: 11; font.bold: true; font.family: Properties.fontFamily }
+            spacing: Tokens.space.s6
+            Text { text: "Account"; color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.bold: true; font.family: Properties.fontFamily }
             Flow {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Tokens.space.s6
                 Repeater {
                     model: MailStore.activeAccounts
                     Rectangle {
@@ -103,16 +103,16 @@ Modal {
                         width: chipRow.implicitWidth + 20
                         height: 30
                         radius: 15
-                        color: on ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16) : chipMouse.containsMouse ? Colors.fade(0.07) : Colors.fade(0.04)
+                        color: on ? Colors.alpha(Colors.color6, 0.16) : chipMouse.containsMouse ? Colors.fade(0.07) : Colors.fade(0.04)
                         border.width: 1
-                        border.color: on ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6) : Colors.fade(0.1)
-                        Behavior on color { ColorAnimation { duration: 100 } }
+                        border.color: on ? Colors.alpha(Colors.color6, 0.6) : Colors.fade(0.1)
+                        Behavior on color { ColorAnimation { duration: Anim.fast } }
                         Row {
                             id: chipRow
                             anchors.centerIn: parent
                             spacing: 7
-                            Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: 4; color: modelData.color || Colors.color6 }
-                            Text { text: MailStore.accountLabel(modelData); color: on ? Colors.ink : Colors.fade(0.75); font.pixelSize: 12; font.family: Properties.fontFamily }
+                            Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: Tokens.radius.sm; color: modelData.color || Colors.color6 }
+                            Text { text: MailStore.accountLabel(modelData); color: on ? Colors.ink : Colors.fade(0.75); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                         }
                         MouseArea {
                             id: chipMouse
@@ -128,9 +128,9 @@ Modal {
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 6
-            Text { text: "Inside"; color: Colors.fade(0.5); font.pixelSize: 11; font.bold: true; font.family: Properties.fontFamily }
-            DropdownControl {
+            spacing: Tokens.space.s6
+            Text { text: "Inside"; color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.bold: true; font.family: Properties.fontFamily }
+            Dropdown {
                 Layout.fillWidth: true
                 listWidth: 360
                 options: [{ label: "Top level", value: "" }].concat(root.folders.map(f => ({
@@ -142,12 +142,12 @@ Modal {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             Text {
                 Layout.fillWidth: true
                 text: root.error || (root.busy ? "Creating it on the server…" : "")
                 color: root.error ? Colors.red : Colors.fade(0.45)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap
             }

@@ -87,10 +87,10 @@ Item {
     }
     // pulse while waiting
     SequentialAnimation on opacity {
-        running: root.recording
+        running: root.recording && Anim.ambient
         loops: Animation.Infinite
         alwaysRunToEnd: true
-        NumberAnimation { to: 0.6; duration: 500; easing.type: Easing.InOutSine }
-        NumberAnimation { to: 1; duration: 500; easing.type: Easing.InOutSine }
+        NumberAnimation { to: 0.6; duration: 500; easing.type: Anim.loop }
+        NumberAnimation { to: 1; duration: 500; easing.type: Anim.loop }
     }
 }

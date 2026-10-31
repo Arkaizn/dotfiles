@@ -21,7 +21,7 @@ Item {
 
     implicitHeight: 3
     opacity: muted ? 0 : 1
-    Behavior on opacity { NumberAnimation { duration: 180 } }
+    Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
     PwNodePeakMonitor {
         id: mon
@@ -42,7 +42,7 @@ Item {
         if (target >= level) { fall.stop(); level = target }
         else { fall.to = target; fall.restart() }
     }
-    NumberAnimation { id: fall; target: root; property: "level"; duration: 300; easing.type: Easing.OutQuad }
+    NumberAnimation { id: fall; target: root; property: "level"; duration: Anim.slow; easing.type: Easing.OutQuad }
 
     Rectangle {
         anchors.fill: parent
@@ -56,6 +56,6 @@ Item {
         opacity: 0.9
         // loud (above about -6 dB) turns towards red
         color: root.level > 0.9 ? Colors.red : root.color
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Anim.fast } }
     }
 }

@@ -26,7 +26,7 @@ Item {
         anchors.fill: parent
         visible: frame.bg !== "none"
         radius: 22
-        color: frame.bg === "glass" ? Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.32) : Properties.panelColor
+        color: frame.bg === "glass" ? Colors.alpha(Colors.background, 0.32) : Properties.panelColor
         border.width: 1
         border.color: Properties.cardBorder
     }
@@ -43,7 +43,7 @@ Item {
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowBlur: 0.5
-            shadowColor: Qt.rgba(0, 0, 0, Colors.light ? 0.25 : 0.7)
+            shadowColor: Colors.dim(Colors.light ? 0.25 : 0.7)
             shadowVerticalOffset: 1
             autoPaddingEnabled: true
         }

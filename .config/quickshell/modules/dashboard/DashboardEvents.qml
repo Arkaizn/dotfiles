@@ -27,8 +27,8 @@ Item {
     }
     ParallelAnimation {
         id: daySlide
-        NumberAnimation { id: daySlideX; target: listShift; property: "x"; to: 0; duration: 240; easing.type: Easing.OutCubic }
-        NumberAnimation { target: content; property: "opacity"; from: 0.2; to: 1; duration: 220; easing.type: Easing.OutCubic }
+        NumberAnimation { id: daySlideX; target: listShift; property: "x"; to: 0; duration: Anim.medium; easing.type: Anim.standard }
+        NumberAnimation { target: content; property: "opacity"; from: 0.2; to: 1; duration: Anim.medium; easing.type: Anim.standard }
     }
     readonly property var events: CalendarStore.eventsOn(day).slice().sort((a, b) =>
         (b.allDay - a.allDay) || a.start - b.start)
@@ -64,14 +64,14 @@ Item {
     ColumnLayout {
         id: content
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 8
+        anchors.margins: Tokens.space.s12
+        spacing: Tokens.space.s8
         transform: Translate { id: listShift }
 
         // header
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: Tokens.space.s6
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
@@ -83,7 +83,7 @@ Item {
                     text: root.isToday ? "Today"
                         : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][root.day.getDay()]
                     color: Colors.ink
-                    font.pixelSize: 14
+                    font.pixelSize: Tokens.font.label
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -95,7 +95,7 @@ Item {
                           "Aug", "Sep", "Oct", "Nov", "Dec"][root.day.getMonth()]
                           + (root.events.length ? "  ·  " + root.events.length + (root.events.length === 1 ? " event" : " events") : "")
                     color: Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -123,14 +123,14 @@ Item {
         ListView {
             anchors.fill: parent
             clip: true
-            spacing: 4
+            spacing: Tokens.space.s4
             boundsBehavior: Flickable.StopAtBounds
             model: root.events
             // rows grow a little on hover: keep them off the clipping edges
-            leftMargin: 4
-            rightMargin: 4
-            topMargin: 2
-            bottomMargin: 2
+            leftMargin: Tokens.space.s4
+            rightMargin: Tokens.space.s4
+            topMargin: Tokens.space.s2
+            bottomMargin: Tokens.space.s2
 
             delegate: Rectangle {
                 id: row
@@ -145,18 +145,18 @@ Item {
                      : live ? Qt.rgba(calColor.r, calColor.g, calColor.b, 0.14) : Colors.fade(0.03)
                 opacity: past ? 0.45 : 1
                 scale: mouse.pressed ? Properties.onPressedButtonScale : mouse.containsMouse ? 1.02 : 1
-                Behavior on color { ColorAnimation { duration: 100 } }
-                Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                Behavior on color { ColorAnimation { duration: Anim.fast } }
+                Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 8
-                    anchors.rightMargin: 8
-                    spacing: 8
+                    anchors.leftMargin: Tokens.space.s8
+                    anchors.rightMargin: Tokens.space.s8
+                    spacing: Tokens.space.s8
                     Rectangle {
                         Layout.preferredWidth: 3
                         Layout.preferredHeight: 24
-                        radius: 2
+                        radius: Tokens.radius.xs
                         color: row.calColor
                     }
                     ColumnLayout {
@@ -166,7 +166,7 @@ Item {
                             Layout.fillWidth: true
                             text: row.modelData.title
                             color: Colors.ink
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.bold: true
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
@@ -175,7 +175,7 @@ Item {
                             Layout.fillWidth: true
                             text: root.timeText(row.modelData) + (row.modelData.location ? "  ·  " + row.modelData.location : "")
                             color: Colors.fade(0.5)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
@@ -184,7 +184,7 @@ Item {
                         visible: row.live
                         text: "now"
                         color: row.calColor
-                        font.pixelSize: 10
+                        font.pixelSize: Tokens.font.micro
                         font.bold: true
                         font.family: Properties.fontFamily
                     }
@@ -204,25 +204,13 @@ Item {
         }
 
             // empty state
-            ColumnLayout {
+            EmptyState {
                 anchors.centerIn: parent
                 width: parent.width
                 visible: root.events.length === 0
-                spacing: 4
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "󰃮"
-                    color: Colors.fade(0.25)
-                    font.pixelSize: 26
-                    font.family: Properties.fontFamily
-                }
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "Nothing planned"
-                    color: Colors.fade(0.45)
-                    font.pixelSize: 12
-                    font.family: Properties.fontFamily
-                }
+                compact: true
+                icon: "󰃮"
+                text: "Nothing planned"
             }
         }
 
@@ -235,13 +223,13 @@ Item {
             color: nextMouse.containsMouse ? Colors.fade(0.07) : Colors.fade(0.03)
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
-                spacing: 8
+                anchors.leftMargin: Tokens.space.s10
+                anchors.rightMargin: Tokens.space.s10
+                spacing: Tokens.space.s8
                 Text {
                     text: "Next"
                     color: Colors.color6
-                    font.pixelSize: 10
+                    font.pixelSize: Tokens.font.micro
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -259,7 +247,7 @@ Item {
                         return e.title + "  ·  " + when + (e.allDay ? "" : " " + root.hm(e.start))
                     }
                     color: Colors.fade(0.75)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }

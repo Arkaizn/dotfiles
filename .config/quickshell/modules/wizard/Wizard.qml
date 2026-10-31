@@ -54,7 +54,7 @@ Scope {
             implicitWidth: 760
             implicitHeight: 600
             // opaque: nothing of the desktop (or the compositor's blur) shows through
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 1)
+            color: Colors.alpha(Colors.background, 1)
             onClosed: root.open = false
 
             // Ctrl +/−/0, Ctrl + wheel: the whole window bigger or smaller (AppZoom)
@@ -68,19 +68,19 @@ Scope {
 
                     // step dots
                     RowLayout {
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         Repeater {
                             model: root.steps
                             RowLayout {
                                 required property string modelData
                                 required property int index
-                                spacing: 6
+                                spacing: Tokens.space.s6
                                 Rectangle {
                                     implicitWidth: 22; implicitHeight: 22; radius: 11
                                     color: index <= root.step ? Colors.color6 : Colors.fade(0.1)
-                                    Text { anchors.centerIn: parent; text: index < root.step ? "󰄬" : index + 1; color: index <= root.step ? "black" : Colors.ink; font.pixelSize: 11; font.family: Properties.fontFamily }
+                                    Text { anchors.centerIn: parent; text: index < root.step ? "󰄬" : index + 1; color: index <= root.step ? "black" : Colors.ink; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                                 }
-                                Text { text: modelData; color: index === root.step ? Colors.ink : Colors.fade(0.45); font.pixelSize: 12; font.family: Properties.fontFamily }
+                                Text { text: modelData; color: index === root.step ? Colors.ink : Colors.fade(0.45); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                             }
                         }
                     }
@@ -92,23 +92,23 @@ Scope {
 
                         // ── 0 welcome ──
                         ColumnLayout {
-                            spacing: 14
+                            spacing: Tokens.space.s14
                             Text { text: "Welcome to your shell"; color: Colors.ink; font.pixelSize: 24; font.bold: true; font.family: Properties.fontFamily }
                             Text {
                                 Layout.fillWidth: true; wrapMode: Text.Wrap
                                 text: "A few choices to get started; everything can be changed later in the settings app. First, a check of what the shell needs:"
-                                color: Colors.fade(0.7); font.pixelSize: 13; font.family: Properties.fontFamily
+                                color: Colors.fade(0.7); font.pixelSize: Tokens.font.body; font.family: Properties.fontFamily
                             }
-                            NetCard {
+                            Section {
                                 Layout.fillWidth: true
-                                NetRow {
+                                SettingRow {
                                     first: true
                                     label: Health.running ? "Checking…" : Health.errors > 0 ? Health.errors + " problem(s)" : Health.warnings > 0 ? "Works, " + Health.warnings + " warning(s)" : "Everything is there"
                                     desc: Health.results.filter(r => r.status === "error" || r.status === "warn").map(r => r.title + ": " + r.detail).join("\n") || "all checks ok"
                                 }
                                 Repeater {
                                     model: Health.results.filter(r => r.fix !== "" && (r.status === "error" || r.status === "warn"))
-                                    NetRow {
+                                    SettingRow {
                                         required property var modelData
                                         wide: true
                                         label: "Fix: " + modelData.title
@@ -122,11 +122,11 @@ Scope {
 
                         // ── 1 you ──
                         ColumnLayout {
-                            spacing: 14
-                            Text { text: "About you"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
-                            NetCard {
+                            spacing: Tokens.space.s14
+                            Text { text: "About you"; color: Colors.ink; font.pixelSize: Tokens.font.titleLarge; font.bold: true; font.family: Properties.fontFamily }
+                            Section {
                                 Layout.fillWidth: true
-                                NetRow {
+                                SettingRow {
                                     first: true
                                     label: "Your name"
                                     desc: "the dashboard and lock screen greet you with it"
@@ -135,12 +135,12 @@ Scope {
                                         onEdited: v => Settings.set("profile", "name", v.trim().slice(0, 40))
                                     }
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "Picture"
                                     desc: "shown next to the greeting"
                                     ActionButton { icon: "󰀄"; text: "Choose…"; onClicked: Panels.call("settings", "openPage", "profile") }
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "Compositor"
                                     desc: Compositor.isNiri ? "niri: keybinds, monitors and settings edit your niri config (validated before saving)"
                                         : Compositor.isHyprland ? "Hyprland: keybinds, monitors and settings edit your Hyprland config" : "not detected"
@@ -151,9 +151,9 @@ Scope {
 
                         // ── 2 bar ──
                         ColumnLayout {
-                            spacing: 14
-                            Text { text: "Your bar"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
-                            Text { text: "Pick a starting point; the bar at the top changes right away. Fine-tune it later in Settings → Bar layout."; color: Colors.fade(0.7); font.pixelSize: 13; font.family: Properties.fontFamily; Layout.fillWidth: true; wrapMode: Text.Wrap }
+                            spacing: Tokens.space.s14
+                            Text { text: "Your bar"; color: Colors.ink; font.pixelSize: Tokens.font.titleLarge; font.bold: true; font.family: Properties.fontFamily }
+                            Text { text: "Pick a starting point; the bar at the top changes right away. Fine-tune it later in Settings → Bar layout."; color: Colors.fade(0.7); font.pixelSize: Tokens.font.body; font.family: Properties.fontFamily; Layout.fillWidth: true; wrapMode: Text.Wrap }
                             Repeater {
                                 model: root.presets
                                 Rectangle {
@@ -164,16 +164,16 @@ Scope {
                                     readonly property bool selected: JSON.stringify(BarLayout.globalLayout) === JSON.stringify(BarLayout.sanitize(layout))
                                     Layout.fillWidth: true
                                     implicitHeight: 64
-                                    radius: 12
-                                    color: selected ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16) : pm.containsMouse ? Colors.fade(0.07) : Colors.fade(0.03)
+                                    radius: Tokens.radius.xl
+                                    color: selected ? Colors.alpha(Colors.color6, 0.16) : pm.containsMouse ? Colors.fade(0.07) : Colors.fade(0.03)
                                     border.width: 1
                                     border.color: selected ? Colors.color6 : Colors.fade(0.1)
                                     MouseArea { id: pm; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: BarLayout.save("", parent.layout) }
                                     ColumnLayout {
-                                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 16 }
-                                        spacing: 2
-                                        Text { text: (parent.parent.selected ? "󰄬  " : "") + parent.parent.modelData.name; color: Colors.ink; font.pixelSize: 14; font.bold: true; font.family: Properties.fontFamily }
-                                        Text { text: parent.parent.modelData.desc; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                                        anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Tokens.space.s16 }
+                                        spacing: Tokens.space.s2
+                                        Text { text: (parent.parent.selected ? "󰄬  " : "") + parent.parent.modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.label; font.bold: true; font.family: Properties.fontFamily }
+                                        Text { text: parent.parent.modelData.desc; color: Colors.fade(0.55); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                                     }
                                 }
                             }
@@ -182,11 +182,11 @@ Scope {
 
                         // ── 3 notifications & updates ──
                         ColumnLayout {
-                            spacing: 14
-                            Text { text: "Notifications and updates"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
-                            NetCard {
+                            spacing: Tokens.space.s14
+                            Text { text: "Notifications and updates"; color: Colors.ink; font.pixelSize: Tokens.font.titleLarge; font.bold: true; font.family: Properties.fontFamily }
+                            Section {
                                 Layout.fillWidth: true
-                                NetRow {
+                                SettingRow {
                                     first: true
                                     label: "Quiet at night"
                                     desc: "do not disturb from 22:00 to 07:00 (critical ones still show)"
@@ -195,21 +195,21 @@ Scope {
                                         onToggled: v => Settings.set("notifications", "scheduleOn", v)
                                     }
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "Popups appear"
-                                    DropdownControl {
+                                    Dropdown {
                                         options: [{ label: "Top right", value: "top-right" }, { label: "Top centre", value: "top-center" },
                                                   { label: "Top left", value: "top-left" }, { label: "Bottom right", value: "bottom-right" }, { label: "Bottom left", value: "bottom-left" }]
                                         value: Notifs.position
                                         onEdited: v => Settings.set("notifications", "position", v)
                                     }
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "Tell me about new updates"
                                     desc: "a notification when packages can be updated (checked every 30 min)"
                                     ToggleSwitch { checked: Settings.updates.notify ?? false; onToggled: v => Settings.set("updates", "notify", v) }
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "Include the AUR"
                                     ToggleSwitch { checked: Updates.withAur; onToggled: v => Settings.set("updates", "aur", v) }
                                 }
@@ -219,26 +219,26 @@ Scope {
 
                         // ── 4 look & keys ──
                         ColumnLayout {
-                            spacing: 14
-                            Text { text: "Look and keys"; color: Colors.ink; font.pixelSize: 20; font.bold: true; font.family: Properties.fontFamily }
-                            NetCard {
+                            spacing: Tokens.space.s14
+                            Text { text: "Look and keys"; color: Colors.ink; font.pixelSize: Tokens.font.titleLarge; font.bold: true; font.family: Properties.fontFamily }
+                            Section {
                                 Layout.fillWidth: true
-                                NetRow {
+                                SettingRow {
                                     first: true
                                     label: "Wallpaper and colors"
                                     desc: "pick a wallpaper; the colors of the whole shell follow it (pywal)"
                                     ActionButton { icon: "󰸉"; text: "Pick a wallpaper"; onClicked: Panels.toggle("wallpapers") }
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "Light or dark, saved themes"
                                     desc: "Settings → Shell → Theme"
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "All keybinds"
                                     desc: "the launcher's keyboard tab lists them; record and change them in Settings → Keybinds"
                                     ActionButton { icon: "󰌌"; text: "Show keybinds"; onClicked: Panels.toggle("keybinds") }
                                 }
-                                NetRow {
+                                SettingRow {
                                     label: "Screenshots"
                                     desc: "Print: capture menu · Ctrl+Print: whole screen · Shift+Print: start / stop recording"
                                 }
@@ -248,12 +248,12 @@ Scope {
 
                         // ── 5 done ──
                         ColumnLayout {
-                            spacing: 14
+                            spacing: Tokens.space.s14
                             Text { text: "All set"; color: Colors.ink; font.pixelSize: 24; font.bold: true; font.family: Properties.fontFamily }
                             Text {
                                 Layout.fillWidth: true; wrapMode: Text.Wrap
                                 text: "Everything else lives in the settings app: network, audio, Bluetooth, default apps, connections, profiles and more. This setup can be run again from Settings → Maintenance → Health."
-                                color: Colors.fade(0.7); font.pixelSize: 13; font.family: Properties.fontFamily
+                                color: Colors.fade(0.7); font.pixelSize: Tokens.font.body; font.family: Properties.fontFamily
                             }
                             ActionButton { icon: "󰒓"; text: "Open the settings app"; onClicked: { root.finish(); Panels.open("settings") } }
                             Item { Layout.fillHeight: true }
@@ -262,7 +262,7 @@ Scope {
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         ActionButton { text: "Skip setup"; visible: root.step < root.steps.length - 1; onClicked: root.finish() }
                         Item { Layout.fillWidth: true }
                         ActionButton { icon: "󰁍"; text: "Back"; visible: root.step > 0; onClicked: root.step-- }

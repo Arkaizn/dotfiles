@@ -13,6 +13,9 @@ Singleton {
     property int hours: date.getHours()
     property int minutes: date.getMinutes()
     property int seconds: date.getSeconds()
+    // the same date, but changing only once a minute: for views that show
+    // minutes or days (a binding on `date` re-runs every second)
+    property date minuteDate: new Date()
 
     function format(fmt: string): string {
         return Qt.formatDateTime(date, fmt);
@@ -21,6 +24,10 @@ Singleton {
     SystemClock {
         id: clock
         precision: SystemClock.Seconds
-        onDateChanged: if (date) root.date = date
+        onDateChanged: {
+            if (!date) return
+            root.date = date
+            if (Math.floor(date.getTime() / 60000) !== Math.floor(root.minuteDate.getTime() / 60000)) root.minuteDate = date
+        }
     }
 }

@@ -78,7 +78,7 @@ PerfCard {
         + (filter !== "all" ? "  ·  top " + limit + " by " + (filter === "cpu" ? "CPU" : "memory") : "")
 
     actions: [
-        ChoiceControl {
+        Segmented {
             options: ["All", "Top CPU", "Top memory"]
             value: ({ all: "All", cpu: "Top CPU", memory: "Top memory" })[root.filter]
             onEdited: v => root.filter = ({ "All": "all", "Top CPU": "cpu", "Top memory": "memory" })[v]
@@ -103,15 +103,15 @@ PerfCard {
     // ── header ──────────────────────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
-        Layout.leftMargin: 10
-        Layout.rightMargin: 10
-        spacing: 12
+        Layout.leftMargin: Tokens.space.s10
+        Layout.rightMargin: Tokens.space.s10
+        spacing: Tokens.space.s12
         SortHeader { key: "name"; label: "Name"; Layout.fillWidth: !root.showCmd; Layout.preferredWidth: root.showCmd ? 190 : 1 }
         SortHeader { key: "pid"; label: "PID"; numeric: true; Layout.preferredWidth: root.wPid }
         HeaderText { visible: root.showUser; text: "User"; Layout.preferredWidth: root.wUser }
         SortHeader { key: "cpu"; label: "CPU"; numeric: true; Layout.preferredWidth: root.wCpu }
         SortHeader { key: "memory"; label: "Memory"; numeric: true; Layout.preferredWidth: root.wMem }
-        HeaderText { visible: root.showCmd; text: "Command"; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.leftMargin: 6 }
+        HeaderText { visible: root.showCmd; text: "Command"; Layout.fillWidth: true; Layout.preferredWidth: 1; Layout.leftMargin: Tokens.space.s6 }
     }
     Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Colors.fade(0.08); Layout.topMargin: -4 }
 
@@ -126,7 +126,7 @@ PerfCard {
         model: procModel
         boundsBehavior: Flickable.StopAtBounds
         reuseItems: true
-        ScrollBar.vertical: ScrollBar { policy: list.contentHeight > list.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff }
+        ScrollBar.vertical: SlimScrollBar {}
 
         delegate: Rectangle {
             id: row
@@ -139,13 +139,13 @@ PerfCard {
             required property string cmd
             width: ListView.view.width
             height: 30
-            radius: Properties.radius
+            radius: Tokens.radius.md
             color: rowHover.hovered ? Colors.fade(0.06) : index % 2 ? Colors.fade(0.022) : "transparent"
             HoverHandler { id: rowHover }
 
             RowLayout {
-                anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
-                spacing: 12
+                anchors { fill: parent; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s10 }
+                spacing: Tokens.space.s12
                 // elided cells sit in plain Items: a long text's implicit width would skew the row
                 Item {
                     Layout.fillWidth: !root.showCmd
@@ -166,12 +166,12 @@ PerfCard {
                     implicitHeight: memText.implicitHeight
                     Row {
                         anchors.right: parent.right
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         Text {
                             id: memText
                             text: Format.ibytes(row.mem)
                             color: row.mem < 1048576 ? Colors.fade(0.4) : Colors.ink
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.family: Properties.fontFamily
                         }
                         Text {
@@ -180,7 +180,7 @@ PerfCard {
                             horizontalAlignment: Text.AlignRight
                             text: PerfMon.memTotal > 0 ? (100 * row.mem / (PerfMon.memTotal * 1024)).toFixed(1) + "%" : ""
                             color: Colors.fade(0.4)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                     }
@@ -189,7 +189,7 @@ PerfCard {
                     visible: root.showCmd
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
-                    Layout.leftMargin: 6
+                    Layout.leftMargin: Tokens.space.s6
                     implicitHeight: cmdCell.implicitHeight
                     Cell { id: cmdCell; width: parent.width; text: row.cmd; dim: true }
                 }
@@ -200,7 +200,7 @@ PerfCard {
         Column {
             anchors.centerIn: parent
             visible: list.count === 0
-            spacing: 6
+            spacing: Tokens.space.s6
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: PerfMon.procs.length === 0 ? "󰉹" : "󰍉"
@@ -212,7 +212,7 @@ PerfCard {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: PerfMon.procs.length === 0 ? "Reading processes…" : "No process matches “" + root.query.trim() + "”"
                 color: Colors.fade(0.45)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
             }
         }
@@ -228,21 +228,21 @@ PerfCard {
         x: optionsButton.width - width
         y: optionsButton.height + 6
         width: 330
-        padding: 14
+        padding: Tokens.space.s14
         closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape   // the button itself toggles it
 
         background: Rectangle {
-            radius: Properties.radius + 4
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 1)
+            radius: Tokens.radius.xl
+            color: Colors.alpha(Colors.background, 1)
             border.width: Properties.panelBorderWidth
             border.color: Properties.panelBorder
         }
 
         contentItem: ColumnLayout {
-            spacing: 10
+            spacing: Tokens.space.s10
             RowLayout {
                 Layout.fillWidth: true
-                Text { Layout.fillWidth: true; text: "Process table"; color: Colors.ink; font.pixelSize: 13; font.bold: true; font.family: Properties.fontFamily }
+                Text { Layout.fillWidth: true; text: "Process table"; color: Colors.ink; font.pixelSize: Tokens.font.body; font.bold: true; font.family: Properties.fontFamily }
                 IconButton {
                     implicitWidth: 26; implicitHeight: 26; iconSize: 12
                     icon: "󰦛"
@@ -252,7 +252,7 @@ PerfCard {
             }
 
             OptionLabel { text: "SORT BY DEFAULT" }
-            ChoiceControl {
+            Segmented {
                 options: ["CPU", "Memory", "Name", "PID"]
                 value: ({ cpu: "CPU", memory: "Memory", name: "Name", pid: "PID" })[root.defaultSort]
                 onEdited: v => {
@@ -261,7 +261,7 @@ PerfCard {
                     root.sortKey = k
                 }
             }
-            ChoiceControl {
+            Segmented {
                 options: ["Descending", "Ascending"]
                 value: root.defaultDesc ? "Descending" : "Ascending"
                 onEdited: v => {
@@ -272,7 +272,7 @@ PerfCard {
 
             OptionLabel { text: "TOP CPU / MEMORY SHOW" }
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 IconButton { icon: "󰍴"; implicitWidth: 28; implicitHeight: 28; iconSize: 12; interactive: root.limit > 5
                              onClicked: root.setPref("procLimit", Math.max(5, root.limit - 5), 15) }
                 Text {
@@ -280,7 +280,7 @@ PerfCard {
                     horizontalAlignment: Text.AlignHCenter
                     text: root.limit + " processes"
                     color: Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                 }
                 IconButton { icon: "󰐕"; implicitWidth: 28; implicitHeight: 28; iconSize: 12; interactive: root.limit < 100
@@ -298,7 +298,7 @@ PerfCard {
     // ── pieces ──────────────────────────────────────────────────────────────
     component HeaderText: Text {
         color: Colors.fade(0.45)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.bold: true
         font.family: Properties.fontFamily
         elide: Text.ElideRight
@@ -313,18 +313,18 @@ PerfCard {
         Row {
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: sh.numeric ? parent.right : undefined
-            spacing: 4
+            spacing: Tokens.space.s4
             Text {
                 text: sh.label
                 color: sh.current ? Colors.color6 : shMouse.containsMouse ? Colors.fade(0.75) : Colors.fade(0.45)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.bold: true
                 font.family: Properties.fontFamily
             }
             Text {
                 text: sh.current ? (root.desc ? "󰅀" : "󰅃") : ""
                 color: Colors.color6
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
             }
         }
@@ -341,15 +341,15 @@ PerfCard {
         property bool dim: false
         horizontalAlignment: numeric ? Text.AlignRight : Text.AlignLeft
         color: dim ? Colors.fade(0.5) : Colors.ink
-        font.pixelSize: 12
+        font.pixelSize: Tokens.font.small
         font.family: Properties.fontFamily
         elide: Text.ElideRight
         maximumLineCount: 1
     }
     component OptionLabel: Text {
-        Layout.topMargin: 4
+        Layout.topMargin: Tokens.space.s4
         color: Colors.fade(0.4)
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.bold: true
         font.letterSpacing: 1.2
         font.family: Properties.fontFamily
@@ -360,7 +360,7 @@ PerfCard {
         property bool checked
         signal toggled(bool value)
         Layout.fillWidth: true
-        Text { Layout.fillWidth: true; text: ot.label; color: Colors.fade(0.8); font.pixelSize: 12; font.family: Properties.fontFamily }
+        Text { Layout.fillWidth: true; text: ot.label; color: Colors.fade(0.8); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
         ToggleSwitch { checked: ot.checked; onToggled: v => ot.toggled(v) }
     }
 }

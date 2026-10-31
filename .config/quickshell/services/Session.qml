@@ -13,5 +13,6 @@ Singleton {
     function poweroff() { run("systemctl poweroff || loginctl poweroff") }
     function logout() { run(Compositor.quitCommand) }
 
+    // only the fixed commands above (and the compositor's quit command)
     function run(cmd) { Quickshell.execDetached(["sh", "-c", cmd]) }
 }

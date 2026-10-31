@@ -1,10 +1,11 @@
 import QtQuick
+import qs.components
 import qs.services
 import "network"
 
 // Panel editor page: where a panel sits — start / middle / end of the bar, or
 // floating. The live editor also sets places in between (then none is picked).
-NetRow {
+SettingRow {
     id: row
     property string pid
     readonly property var p: PanelGeometry.panel(pid)

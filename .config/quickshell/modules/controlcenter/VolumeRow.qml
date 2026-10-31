@@ -19,7 +19,7 @@ RowLayout {
     readonly property var audio: node?.audio ?? null
     readonly property bool muted: audio?.muted ?? false
 
-    spacing: 8
+    spacing: Tokens.space.s8
     enabled: audio !== null
 
     IconButton {
@@ -31,7 +31,7 @@ RowLayout {
         onClicked: if (root.audio) root.audio.muted = !root.audio.muted
     }
 
-    CCSlider {
+    LevelSlider {
         id: slider
         Layout.fillWidth: true
         to: Audio.maxVolume            // 1.0, or more if allowed in Settings → Audio
@@ -56,7 +56,7 @@ RowLayout {
         horizontalAlignment: Text.AlignRight
         text: Math.round((root.audio?.volume ?? 0) * 100) + "%"
         color: Colors.fade(root.muted ? 0.4 : 0.75)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
     }
 }

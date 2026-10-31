@@ -18,7 +18,7 @@ Singleton {
     id: root
 
     readonly property string home: Quickshell.env("HOME")
-    readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
+    readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.cachePath("run")   // never /tmp: fixed names there are anyone's
     readonly property string previewDir: runtime + "/quickshell-theme-preview"
     readonly property string savedDir: home + "/.local/share/quickshell/themes"
     readonly property string undoFile: home + "/.local/state/quickshell/theme-undo.json"
@@ -91,11 +91,17 @@ Singleton {
         if (applying) return
         applying = true
         error = ""
-        // the file may be the preview (in the runtime dir); keep a stable copy
+        // the file may be the preview (in the runtime dir); keep a stable copy —
+        // rebuilt, not copied: pywal pastes the values into colors.sh, which
+        // scripts `source` (ThemeCheck.js says why and what passes)
         const src = runtime + "/quickshell-theme-apply.json"
+        let parsed = null
+        try { parsed = JSON.parse(Files.read(file)) } catch (e) {}
+        const checked = ThemeCheck.clean(parsed)
+        if (!checked.ok) return done(false, "not applied: " + checked.error)
         Jobs.run(["mkdir", "-p", "--", home + "/.local/state/quickshell"], () =>
-        Jobs.run(["cp", "--", file, src], c0 => {
-            if (c0 !== 0) return done(false, "can't read " + file)
+        Jobs.runInput(["sh", "-c", 'umask 077; cat > "$1"', "sh", src], JSON.stringify(checked.theme), c0 => {
+            if (c0 !== 0) return done(false, "can't write " + src)
             Jobs.run(["cp", "--", currentFile, undoFile], () =>
             Jobs.run(["wal", "--theme", src, "-n", "-q"], (code, out, err) => {
                 if (code !== 0) return done(false, err.trim().split("\n").slice(-1)[0] || "wal failed (exit " + code + ")")

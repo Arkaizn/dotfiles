@@ -71,8 +71,8 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 14
+        anchors.margins: Tokens.space.s14
+        spacing: Tokens.space.s14
 
         // album art
         Item {
@@ -82,13 +82,13 @@ Rectangle {
             Rectangle {
                 id: artBg
                 anchors.fill: parent
-                radius: 14
-                color: "#45000000"
+                radius: Tokens.radius.card
+                color: Colors.dim(0.27)
                 Text {
                     anchors.centerIn: parent
                     visible: art.status !== Image.Ready
                     text: "󰝚"
-                    color: Qt.rgba(1, 1, 1, 0.4)
+                    color: Colors.onWallpaper(0.4)
                     font.pixelSize: 30
                     font.family: Properties.fontFamily
                 }
@@ -105,43 +105,43 @@ Rectangle {
                 anchors.fill: parent
                 visible: art.status === Image.Ready
                 source: art
-                maskSource: Rectangle { width: 84; height: 84; radius: 14 }
+                maskSource: Rectangle { width: 84; height: 84; radius: Tokens.radius.card }
             }
         }
 
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: Tokens.space.s4
 
             Text {
                 Layout.fillWidth: true
                 text: root.player?.trackTitle || "Unknown title"
                 color: "white"
-                font.pixelSize: 14
+                font.pixelSize: Tokens.font.label
                 font.bold: true
                 elide: Text.ElideRight
             }
             Text {
                 Layout.fillWidth: true
                 text: root.player?.trackArtist || root.player?.identity || ""
-                color: Qt.rgba(1, 1, 1, 0.6)
-                font.pixelSize: 12
+                color: Colors.onWallpaper(0.6)
+                font.pixelSize: Tokens.font.small
                 elide: Text.ElideRight
             }
 
             // progress
             Rectangle {
                 Layout.fillWidth: true
-                Layout.topMargin: 4
+                Layout.topMargin: Tokens.space.s4
                 implicitHeight: 3
-                radius: 2
-                color: "#33ffffff"
+                radius: Tokens.radius.xs
+                color: Colors.onWallpaper(0.2)
                 visible: root.player?.lengthSupported ?? false
                 Rectangle {
                     width: parent.width * root.progress
                     height: parent.height
-                    radius: 2
-                    color: "#ddffffff"
+                    radius: Tokens.radius.xs
+                    color: Colors.onWallpaper(0.867)
                     Behavior on width { NumberAnimation { duration: 900 } }
                 }
 
@@ -162,8 +162,8 @@ Rectangle {
 
             RowLayout {
                 visible: root.controls
-                Layout.topMargin: 2
-                spacing: 6
+                Layout.topMargin: Tokens.space.s2
+                spacing: Tokens.space.s6
                 IconButton {
                     implicitWidth: 30; implicitHeight: 30
                     icon: "󰒝"

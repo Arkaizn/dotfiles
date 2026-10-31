@@ -23,7 +23,7 @@ ColumnLayout {
 
     Repeater {
         model: root.specs
-        NetRow {
+        SettingRow {
             id: row
             required property var modelData
             required property int index
@@ -39,7 +39,7 @@ ColumnLayout {
                 checked: row.val === true
                 onToggled: v => root.set(row.spec.key, v)
             }
-            NumberControl {
+            NumberField {
                 visible: row.spec.kind === "number"
                 from: row.spec.min ?? 0
                 to: row.spec.max ?? 100
@@ -47,7 +47,7 @@ ColumnLayout {
                 value: typeof row.val === "number" ? row.val : 0
                 onEdited: v => root.set(row.spec.key, v)
             }
-            DropdownControl {
+            Dropdown {
                 visible: row.spec.kind === "choice"
                 implicitWidth: 180
                 options: row.spec.choices ?? []
@@ -84,22 +84,17 @@ ColumnLayout {
                 wrapMode: TextEdit.Wrap
                 color: Colors.ink
                 selectionColor: Colors.fade(0.28)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
-                leftPadding: 10; rightPadding: 10; topPadding: 8; bottomPadding: 8
-                background: Rectangle {
-                    radius: 10
-                    color: Colors.fade(0.05)
-                    border.width: 1
-                    border.color: area.activeFocus ? Colors.color6 : Colors.fade(0.12)
-                }
+                leftPadding: Tokens.space.s10; rightPadding: Tokens.space.s10; topPadding: Tokens.space.s8; bottomPadding: Tokens.space.s8
+                background: FieldBackground { focused: area.activeFocus }
                 Timer { id: saveText; interval: 500; onTriggered: root.set(row.spec.key, area.text) }
             }
             // list of apps / folders
             ColumnLayout {
                 visible: row.spec.kind === "list"
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Tokens.space.s6
                 readonly property var items: Array.isArray(row.val) ? row.val : []
                 Repeater {
                     model: parent.items
@@ -113,7 +108,7 @@ ColumnLayout {
                             text: modelData
                             elide: Text.ElideRight
                             color: Colors.ink
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.family: Properties.fontFamily
                         }
                         TextControl {

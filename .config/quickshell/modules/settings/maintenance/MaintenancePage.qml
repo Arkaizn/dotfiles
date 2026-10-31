@@ -17,7 +17,7 @@ import ".."
 // status() below if there's a cheap way to tell.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property var tools: []
     signal openPage(string id)
@@ -168,14 +168,14 @@ ColumnLayout {
     // ── Summary ─────────────────────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
-        Layout.leftMargin: 6
-        spacing: 10
+        Layout.leftMargin: Tokens.space.s6
+        spacing: Tokens.space.s10
         Text {
             id: sumIcon
             text: page.busy && page.attention === 0 ? "󰑓" : page.attention === 0 ? "󰄬" : "󰀦"
             color: page.busy && page.attention === 0 ? Colors.fade(0.5)
                  : page.attention === 0 ? Colors.green : page.levels.includes("error") ? Colors.red : Colors.yellow
-            font.pixelSize: 18
+            font.pixelSize: Tokens.font.title
             font.family: Properties.fontFamily
             Behavior on color { ColorAnimation { duration: 250 } }
             // spin while checking, back upright when done
@@ -186,7 +186,7 @@ ColumnLayout {
                 onRunningChanged: if (!running) sumIcon.rotation = 0
             }
             onTextChanged: iconPop.restart()
-            NumberAnimation { id: iconPop; target: sumIcon; property: "scale"; from: 0.4; to: 1; duration: 380; easing.type: Easing.OutBack }
+            NumberAnimation { id: iconPop; target: sumIcon; property: "scale"; from: 0.4; to: 1; duration: Anim.slow; easing.type: Anim.pop }
         }
         Text {
             id: sumText
@@ -194,14 +194,14 @@ ColumnLayout {
             text: page.busy && page.attention === 0 ? "Checking…"
                   : page.attention === 0 ? "Nothing needs attention" : page.attention + (page.attention === 1 ? " tool needs" : " tools need") + " a look"
             color: Colors.ink
-            font.pixelSize: 14
+            font.pixelSize: Tokens.font.label
             font.bold: true
             font.family: Properties.fontFamily
             onTextChanged: textIn.restart()
             ParallelAnimation {
                 id: textIn
-                NumberAnimation { target: sumText; property: "opacity"; from: 0; to: 1; duration: 260 }
-                NumberAnimation { target: sumShift; property: "x"; from: -8; to: 0; duration: 320; easing.type: Easing.OutCubic }
+                NumberAnimation { target: sumText; property: "opacity"; from: 0; to: 1; duration: Anim.medium }
+                NumberAnimation { target: sumShift; property: "x"; from: -8; to: 0; duration: Anim.slow; easing.type: Anim.standard }
             }
             transform: Translate { id: sumShift }
         }
@@ -221,8 +221,8 @@ ColumnLayout {
         id: grid
         Layout.fillWidth: true
         columns: Math.max(1, Math.floor((width + columnSpacing) / (250 + columnSpacing)))
-        columnSpacing: 10
-        rowSpacing: 10
+        columnSpacing: Tokens.space.s10
+        rowSpacing: Tokens.space.s10
 
         Repeater {
             id: tileRep
@@ -239,15 +239,15 @@ ColumnLayout {
                 readonly property real need: tileCol.implicitHeight + 24
                 onNeedChanged: Qt.callLater(page.measureTiles)
                 implicitHeight: Math.max(need, page.tileHeight)
-                radius: 14
+                radius: Tokens.radius.card
                 clip: true
                 color: alert ? Qt.tint(Colors.card, Qt.rgba(accent.r, accent.g, accent.b, 0.06)) : Colors.card
                 border.width: Properties.panelBorderWidth
                 border.color: hover.hovered ? Colors.fade(0.2) : alert ? Qt.rgba(accent.r, accent.g, accent.b, 0.3) : Properties.cardBorder
                 scale: tap.pressed ? Properties.onPressedButtonScale : hover.hovered ? 1.015 : 1
-                Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
-                Behavior on color { ColorAnimation { duration: 300 } }
-                Behavior on border.color { ColorAnimation { duration: 200 } }
+                Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
+                Behavior on color { ColorAnimation { duration: Anim.slow } }
+                Behavior on border.color { ColorAnimation { duration: Anim.normal } }
 
                 // entrance: fade + rise, staggered by position
                 opacity: 0
@@ -261,55 +261,55 @@ ColumnLayout {
                     PropertyAction { target: rise; property: "y"; value: 16 }
                     PauseAnimation { duration: tile.index * 40 }
                     ParallelAnimation {
-                        NumberAnimation { target: tile; property: "opacity"; to: 1; duration: 280; easing.type: Easing.OutCubic }
-                        NumberAnimation { target: rise; property: "y"; to: 0; duration: 380; easing.type: Easing.OutCubic }
+                        NumberAnimation { target: tile; property: "opacity"; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+                        NumberAnimation { target: rise; property: "y"; to: 0; duration: Anim.slow; easing.type: Anim.standard }
                     }
                 }
 
                 // accent stripe on the left: grows in when the tile needs a look
                 Rectangle {
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 12; bottomMargin: 12 }
+                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: Tokens.space.s12; bottomMargin: Tokens.space.s12 }
                     width: 3
                     radius: 1.5
                     color: tile.accent
                     opacity: tile.alert ? 1 : 0
                     scale: tile.alert ? 1 : 0.2
-                    Behavior on opacity { NumberAnimation { duration: 250 } }
-                    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutBack } }
+                    Behavior on opacity { NumberAnimation { duration: Anim.medium } }
+                    Behavior on scale { NumberAnimation { duration: Anim.slow; easing.type: Anim.pop } }
                 }
 
                 ColumnLayout {
                     id: tileCol
-                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; leftMargin: 14 }
-                    spacing: 4
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12; leftMargin: Tokens.space.s14 }
+                    spacing: Tokens.space.s4
                     RowLayout {
                         spacing: 9
                         Text {
                             text: tile.modelData.icon
                             color: Colors.color6
-                            font.pixelSize: 17
+                            font.pixelSize: Tokens.font.title
                             font.family: Properties.fontFamily
                             // a little nudge on hover
                             rotation: hover.hovered ? -8 : 0
-                            Behavior on rotation { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+                            Behavior on rotation { NumberAnimation { duration: Anim.medium; easing.type: Anim.pop } }
                         }
                         Text {
                             Layout.fillWidth: true
                             text: tile.modelData.title
                             color: Colors.ink
-                            font.pixelSize: 13
+                            font.pixelSize: Tokens.font.body
                             font.bold: true
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }
                         Rectangle {
                             id: dot
-                            implicitWidth: 8; implicitHeight: 8; radius: 4
+                            implicitWidth: 8; implicitHeight: 8; radius: Tokens.radius.sm
                             color: tile.accent
                             visible: tile.st.level !== "info"
                             Behavior on color { ColorAnimation { duration: 300 } }
                             SequentialAnimation on opacity {
-                                running: tile.st.level === "busy"
+                                running: tile.st.level === "busy" && Anim.ambient
                                 loops: Animation.Infinite
                                 alwaysRunToEnd: true
                                 NumberAnimation { to: 0.3; duration: 600 }
@@ -318,7 +318,7 @@ ColumnLayout {
                             // the result is in: pop
                             readonly property string level: tile.st.level
                             onLevelChanged: if (level !== "busy") dotPop.restart()
-                            NumberAnimation { id: dotPop; target: dot; property: "scale"; from: 2; to: 1; duration: 450; easing.type: Easing.OutBack }
+                            NumberAnimation { id: dotPop; target: dot; property: "scale"; from: 2; to: 1; duration: Anim.slower; easing.type: Anim.pop }
                         }
                     }
                     Text {
@@ -326,25 +326,25 @@ ColumnLayout {
                         Layout.fillWidth: true
                         text: tile.st.text
                         color: tile.alert ? tile.accent : Colors.fade(0.75)
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.family: Properties.fontFamily
                         wrapMode: Text.WordWrap
-                        Behavior on color { ColorAnimation { duration: 300 } }
+                        Behavior on color { ColorAnimation { duration: Anim.slow } }
                         onTextChanged: statusIn.restart()
-                        NumberAnimation { id: statusIn; target: statusText; property: "opacity"; from: 0.15; to: 1; duration: 320; easing.type: Easing.OutCubic }
+                        NumberAnimation { id: statusIn; target: statusText; property: "opacity"; from: 0.15; to: 1; duration: Anim.slow; easing.type: Anim.standard }
                     }
                     Text {
                         Layout.fillWidth: true
                         text: tile.modelData.desc
                         color: Colors.fade(0.42)
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                         wrapMode: Text.WordWrap
                     }
                     // a fix right here (yellow / red tiles that have one)
                     ActionButton {
                         visible: !!tile.st.action
-                        Layout.topMargin: 4
+                        Layout.topMargin: Tokens.space.s4
                         icon: "󰁔"
                         text: tile.st.action?.label ?? ""
                         onClicked: tile.st.action.run()

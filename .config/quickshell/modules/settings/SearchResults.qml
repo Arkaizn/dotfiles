@@ -19,7 +19,7 @@ ColumnLayout {
     signal activate(var entry)
     signal suggestionPicked(string text)
 
-    spacing: 14
+    spacing: Tokens.space.s14
 
     function ensureVisible(i) {
         const it = rep.itemAt(i)
@@ -35,13 +35,13 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         visible: root.results.length > 0
-        spacing: 10
+        spacing: Tokens.space.s10
         Text {
             Layout.fillWidth: true
-            Layout.leftMargin: 6
+            Layout.leftMargin: Tokens.space.s6
             text: root.results.length + (root.results.length === 1 ? " result" : " results")
             color: Colors.fade(0.55)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.bold: true
             font.family: Properties.fontFamily
         }
@@ -57,9 +57,9 @@ ColumnLayout {
                     color: Colors.fade(0.08)
                     border.width: 1
                     border.color: Colors.fade(0.14)
-                    Text { id: kt; anchors.centerIn: parent; text: modelData[0]; color: Colors.ink; font.pixelSize: 10; font.bold: true; font.family: Properties.fontFamily }
+                    Text { id: kt; anchors.centerIn: parent; text: modelData[0]; color: Colors.ink; font.pixelSize: Tokens.font.micro; font.bold: true; font.family: Properties.fontFamily }
                 }
-                Text { text: modelData[1]; color: Colors.fade(0.45); font.pixelSize: 10; font.family: Properties.fontFamily }
+                Text { text: modelData[1]; color: Colors.fade(0.45); font.pixelSize: Tokens.font.micro; font.family: Properties.fontFamily }
             }
         }
     }
@@ -69,7 +69,7 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.results.length > 0
         implicitHeight: list.implicitHeight + 8
-        radius: 14
+        radius: Tokens.radius.card
         color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
@@ -100,16 +100,16 @@ ColumnLayout {
                         id: inAnim
                         PauseAnimation { duration: Math.min(res.index, 10) * 18 }
                         ParallelAnimation {
-                            NumberAnimation { target: res; property: "opacity"; to: 1; duration: 160 }
-                            NumberAnimation { target: res; property: "lift"; to: 0; duration: 220; easing.type: Easing.OutCubic }
+                            NumberAnimation { target: res; property: "opacity"; to: 1; duration: Anim.normal }
+                            NumberAnimation { target: res; property: "lift"; to: 0; duration: Anim.medium; easing.type: Anim.standard }
                         }
                     }
 
                     Rectangle {
                         visible: res.index > 0
                         Layout.fillWidth: true
-                        Layout.leftMargin: 16
-                        Layout.rightMargin: 16
+                        Layout.leftMargin: Tokens.space.s16
+                        Layout.rightMargin: Tokens.space.s16
                         implicitHeight: 1
                         color: Colors.fade(0.06)
                     }
@@ -154,7 +154,7 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.topMargin: 30
         visible: root.results.length === 0
-        spacing: 14
+        spacing: Tokens.space.s14
 
         Text {
             Layout.alignment: Qt.AlignHCenter
@@ -174,8 +174,8 @@ ColumnLayout {
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
             visible: root.suggestion !== ""
-            spacing: 8
-            Text { text: "Did you mean"; color: Colors.fade(0.55); font.pixelSize: 12; font.family: Properties.fontFamily }
+            spacing: Tokens.space.s8
+            Text { text: "Did you mean"; color: Colors.fade(0.55); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
             ActionButton {
                 icon: "󰍉"
                 text: root.suggestion
@@ -185,17 +185,17 @@ ColumnLayout {
         }
         Text {
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 10
+            Layout.topMargin: Tokens.space.s10
             text: "Or go to a page"
             color: Colors.fade(0.45)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
         }
         Flow {
             Layout.fillWidth: true
             Layout.leftMargin: 40
             Layout.rightMargin: 40
-            spacing: 6
+            spacing: Tokens.space.s6
             Repeater {
                 model: root.pages
                 ActionButton {

@@ -13,10 +13,10 @@ ColumnLayout {
     required property string lg
     required property var groups        // [{ title, icon, names }]
     Layout.fillWidth: true
-    spacing: 16
+    spacing: Tokens.space.s16
     Repeater {
         model: tg.groups
-        NetCard {
+        Section {
             required property var modelData
             Layout.fillWidth: true
             title: modelData.title

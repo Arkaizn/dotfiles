@@ -52,21 +52,21 @@ ColumnLayout {
         id: scrollAnim
         target: root
         property: "pos"
-        duration: 380
-        easing.type: Easing.OutCubic
+        duration: Anim.slow
+        easing.type: Anim.standard
     }
 
     onCursorChanged: reveal(cursor)
     onShownMonthChanged: CalendarStore.ensureRange(shownMonth)
 
-    spacing: 6
+    spacing: Tokens.space.s6
 
     // weekday header
     RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: root.weekNumbers ? 34 : 0
-        Layout.rightMargin: 6
-        spacing: 6
+        Layout.rightMargin: Tokens.space.s6
+        spacing: Tokens.space.s6
         Repeater {
             model: U.dayShort
             Text {
@@ -74,10 +74,10 @@ ColumnLayout {
                 required property int index
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
-                leftPadding: 8
+                leftPadding: Tokens.space.s8
                 text: modelData
                 color: index >= 5 ? Colors.fade(0.35) : Colors.fade(0.5)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -130,20 +130,20 @@ ColumnLayout {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.rightMargin: 6
-                anchors.bottomMargin: 6
-                spacing: 6
+                anchors.rightMargin: Tokens.space.s6
+                anchors.bottomMargin: Tokens.space.s6
+                spacing: Tokens.space.s6
 
                 // week number
                 Text {
                     visible: root.weekNumbers
                     Layout.preferredWidth: 28
                     Layout.alignment: Qt.AlignTop
-                    Layout.topMargin: 8
+                    Layout.topMargin: Tokens.space.s8
                     horizontalAlignment: Text.AlignRight
                     text: U.weekNumber(week.start)
                     color: Colors.fade(0.25)
-                    font.pixelSize: 10
+                    font.pixelSize: Tokens.font.micro
                     font.family: Properties.fontFamily
                 }
 
@@ -165,17 +165,17 @@ ColumnLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         Layout.preferredWidth: 1
-                        radius: 12
+                        radius: Tokens.radius.xl
                         clip: true
                         // weekend: a shade darker
                         color: isSel ? Colors.fade(0.09)
                              : inMonth ? (weekend ? Colors.shade(0.23) : Colors.card)
                              : (weekend ? Colors.shade(0.13) : Colors.shade(0.08))
                         border.width: Properties.panelBorderWidth
-                        border.color: isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.6)
+                        border.color: isSel ? Colors.alpha(Colors.color6, 0.6)
                                     : hover.hovered ? Colors.fade(0.16) : Properties.cardBorder
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Anim.normal } }
+                        Behavior on border.color { ColorAnimation { duration: Anim.normal } }
 
                         HoverHandler { id: hover }
                         TapHandler {
@@ -188,20 +188,20 @@ ColumnLayout {
                             x: 6; y: 5
                             width: Math.max(22, num.implicitWidth + 12)
                             height: 20
-                            radius: 10
+                            radius: Tokens.radius.lg
                             color: cell.today ? Colors.color6 : numHover.hovered ? Colors.fade(0.1) : "transparent"
                             scale: numHover.pressed ? Properties.onPressedButtonScale : numHover.hovered ? Properties.onEnteredButtonScale : 1
-                            Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                            Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                             Text {
                                 id: num
                                 anchors.centerIn: parent
                                 text: cell.day.getDate() === 1 ? cell.day.getDate() + ". " + U.monthNames[cell.day.getMonth()].slice(0, 3) : cell.day.getDate()
                                 color: cell.today ? U.onColor(Colors.color6)
                                      : cell.inMonth ? (cell.weekend ? Colors.fade(0.6) : Colors.ink) : Colors.fade(0.3)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.bold: cell.today || cell.day.getDate() === 1
                                 font.family: Properties.fontFamily
-                                Behavior on color { ColorAnimation { duration: 200 } }
+                                Behavior on color { ColorAnimation { duration: Anim.normal } }
                             }
                             MouseArea {
                                 id: numHover
@@ -215,9 +215,9 @@ ColumnLayout {
 
                         Column {
                             anchors { left: parent.left; right: parent.right; top: parent.top; margins: 5; topMargin: 29 }
-                            spacing: 2
+                            spacing: Tokens.space.s2
                             opacity: cell.inMonth ? 1 : 0.55
-                            Behavior on opacity { NumberAnimation { duration: 200 } }
+                            Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
                             Repeater {
                                 model: cell.evs.slice(0, cell.shown)
@@ -231,10 +231,10 @@ ColumnLayout {
                             }
                             Text {
                                 visible: cell.evs.length > cell.shown
-                                leftPadding: 6
+                                leftPadding: Tokens.space.s6
                                 text: "+" + (cell.evs.length - cell.shown) + " more"
                                 color: moreHover.hovered ? Colors.ink : Colors.fade(0.5)
-                                font.pixelSize: 10
+                                font.pixelSize: Tokens.font.micro
                                 font.bold: true
                                 font.family: Properties.fontFamily
                                 MouseArea {

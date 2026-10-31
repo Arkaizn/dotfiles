@@ -18,7 +18,7 @@ ColumnLayout {
     signal edited(var values)
 
     property string problem: ""
-    spacing: 8
+    spacing: Tokens.space.s8
 
     function addFrom(text) {
         const parts = text.split(root.separators).map(x => x.trim()).filter(x => x !== "")
@@ -37,11 +37,11 @@ ColumnLayout {
 
     Flow {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Tokens.space.s6
         visible: root.values.length > 0
         Repeater {
             model: root.values
-            Chip {
+            ValueChip {
                 required property string modelData
                 required property int index
                 text: modelData
@@ -58,7 +58,7 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Tokens.space.s6
         SearchField {
             id: input
             Layout.fillWidth: true
@@ -78,17 +78,17 @@ ColumnLayout {
                 required property var modelData
                 implicitWidth: pl.implicitWidth + 16
                 implicitHeight: Properties.buttonHeight - 4
-                radius: Properties.radius
+                radius: Tokens.radius.md
                 color: Colors.fade(pm.containsMouse ? 0.12 : 0.06)
                 border.width: 1
                 border.color: Colors.fade(0.1)
-                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on color { ColorAnimation { duration: Anim.fast } }
                 Text {
                     id: pl
                     anchors.centerIn: parent
                     text: parent.modelData.label
                     color: Colors.fade(0.75)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
                 MouseArea {
@@ -107,7 +107,7 @@ ColumnLayout {
         visible: root.problem !== ""
         text: root.problem
         color: Colors.red
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
         wrapMode: Text.WordWrap
     }

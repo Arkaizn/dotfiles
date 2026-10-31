@@ -64,16 +64,16 @@ Item {
         spacing: 0
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 1
+            spacing: Tokens.space.s1
             Text { id: valueText; text: root.text; color: root.value < 0 ? Colors.fade(0.35) : Colors.ink; font.pixelSize: 24; font.bold: true; font.family: Properties.fontFamily }
-            Text { anchors.baseline: valueText.baseline; text: root.unit; color: Colors.fade(0.5); font.pixelSize: 12; font.bold: true; font.family: Properties.fontFamily }
+            Text { anchors.baseline: valueText.baseline; text: root.unit; color: Colors.fade(0.5); font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily }
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             visible: text !== ""
             text: root.sub
             color: Colors.fade(0.55)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
         }
     }

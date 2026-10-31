@@ -7,7 +7,7 @@ Grid {
     property var colors: ({})              // { color0 … color15 }
     property int size: 14
     rows: 1
-    spacing: 2
+    spacing: Tokens.space.s2
     Repeater {
         model: 16
         Rectangle {

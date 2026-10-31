@@ -24,7 +24,7 @@ TextField {
     rightPadding: clearBtn.visible ? 34 : 14
     verticalAlignment: TextInput.AlignVCenter
     color: Properties.color
-    font.pixelSize: 13
+    font.pixelSize: Tokens.font.body
     font.family: Properties.fontFamily
     selectionColor: Colors.fade(0.28)
     selectedTextColor: Colors.ink
@@ -47,31 +47,7 @@ TextField {
         NumberAnimation { target: root; property: "shakeX"; to: 0; duration: 40 }
     }
 
-    background: Rectangle {
-        radius: Properties.radius + 2
-        // focus only nudges things: fill a touch lighter, border a touch brighter
-        color: Colors.light ? (root.activeFocus ? Qt.rgba(1, 1, 1, 0.9) : Qt.rgba(1, 1, 1, 0.65))
-                            : (root.activeFocus ? Colors.shade(0.23) : Colors.shade(0.27))
-        border.width: Properties.panelBorderWidth
-        border.color: root.error ? Colors.red
-                    : root.activeFocus ? Colors.fade(0.16)
-                    : hover.hovered ? Colors.fade(0.13)
-                    : Properties.cardBorder
-        Behavior on color { ColorAnimation { duration: 150 } }
-        Behavior on border.color { ColorAnimation { duration: 150 } }
-
-        // thin highlight that grows from the centre when focused
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 1
-            anchors.horizontalCenter: parent.horizontalCenter
-            height: 1.5
-            radius: 1
-            width: root.activeFocus ? parent.width - parent.radius * 2 : 0
-            color: root.error ? Colors.red : Colors.fade(0.14)
-            Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-        }
-    }
+    background: FieldBackground { focused: root.activeFocus; hovered: hover.hovered; error: root.error }
 
     HoverHandler { id: hover; cursorShape: Qt.IBeamCursor }
 
@@ -84,8 +60,8 @@ TextField {
         font.pixelSize: 15
         font.family: Properties.fontFamily
         scale: root.activeFocus ? 1.05 : 1
-        Behavior on color { ColorAnimation { duration: 150 } }
-        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+        Behavior on color { ColorAnimation { duration: Anim.normal } }
+        Behavior on scale { NumberAnimation { duration: Anim.normal; easing.type: Anim.pop } }
     }
 
     // clear button, pops in once there's text
@@ -94,13 +70,13 @@ TextField {
         visible: root.clearable && opacity > 0
         opacity: root.clearable && root.text.length > 0 ? 1 : 0
         scale: root.text.length > 0 ? 1 : 0.6
-        anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
+        anchors { right: parent.right; rightMargin: Tokens.space.s12; verticalCenter: parent.verticalCenter }
         text: "󰅖"
         color: clearMouse.containsMouse ? Colors.ink : Colors.fade(0.5)
-        font.pixelSize: 14
+        font.pixelSize: Tokens.font.label
         font.family: Properties.fontFamily
-        Behavior on opacity { NumberAnimation { duration: 150 } }
-        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
+        Behavior on scale { NumberAnimation { duration: Anim.normal; easing.type: Anim.pop } }
 
         MouseArea {
             id: clearMouse

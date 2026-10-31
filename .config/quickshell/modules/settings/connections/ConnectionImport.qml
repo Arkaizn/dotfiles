@@ -57,7 +57,7 @@ ColumnLayout {
 
     spacing: 0
 
-    NetRow {
+    SettingRow {
         first: true
         label: imp.fileName !== "" ? "From " + imp.fileName : imp.scanning ? "Looking…" : imp.cands.length === 0 ? "Nothing found" : "Found in your scripts and ssh config"
         desc: imp.fileName !== "" ? "a file made with Export" : "~/.config/custom/scripts/*.sh and ~/.ssh/config"
@@ -66,7 +66,7 @@ ColumnLayout {
 
     Repeater {
         model: imp.cands
-        NetRow {
+        SettingRow {
             id: row
             required property var modelData
             required property int index
@@ -88,19 +88,19 @@ ColumnLayout {
 
     Text {
         Layout.fillWidth: true
-        Layout.leftMargin: 14
-        Layout.rightMargin: 14
-        Layout.topMargin: 10
+        Layout.leftMargin: Tokens.space.s14
+        Layout.rightMargin: Tokens.space.s14
+        Layout.topMargin: Tokens.space.s10
         visible: imp.anyPassword
         text: "󰀦  Your scripts keep their plain-text passwords. Once the import works, remove /p:… from them yourself"
               + " (and change any password that was ever pushed to a git repository)."
         color: Colors.yellow
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
         wrapMode: Text.Wrap
     }
 
-    NetRow {
+    SettingRow {
         visible: imp.anyExisting
         label: "Already saved"
         desc: imp.replace ? "the imported one replaces the saved connection with the same name" : "the imported one is added next to it"
@@ -113,13 +113,13 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        Layout.margins: 14
-        spacing: 8
+        Layout.margins: Tokens.space.s14
+        spacing: Tokens.space.s8
         Text {
             Layout.fillWidth: true
             text: imp.message
             color: Colors.red
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap
         }

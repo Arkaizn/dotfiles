@@ -11,7 +11,7 @@ import "../network"
 // anchor "packages" (search, qs ipc call settings openPage packages) opens the second tab.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string anchor: ""
     signal anchorConsumed()

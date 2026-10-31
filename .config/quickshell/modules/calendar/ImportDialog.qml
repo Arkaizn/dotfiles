@@ -114,26 +114,26 @@ Modal {
 
     ColumnLayout {
         width: parent.width
-        spacing: 14
+        spacing: Tokens.space.s14
 
         // ── Header ───────────────────────────────────────────────────────────
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
+            spacing: Tokens.space.s10
             Text {
                 text: "󰋺"
                 color: Colors.color6
-                font.pixelSize: 20
+                font.pixelSize: Tokens.font.titleLarge
                 font.family: Properties.fontFamily
             }
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 1
+                spacing: Tokens.space.s1
                 Text {
                     Layout.fillWidth: true
                     text: root.step === 3 ? (root.undone ? "Import undone" : "Imported") : "Import events"
                     color: Colors.ink
-                    font.pixelSize: 17
+                    font.pixelSize: Tokens.font.title
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -143,7 +143,7 @@ Modal {
                     text: root.sources.length > 0 ? root.sources.map(s => s.name || s.label).join(", ")
                         : root.paths.map(p => p.split("/").pop()).join(", ")
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -159,11 +159,11 @@ Modal {
         Text {
             visible: root.step === 0
             Layout.alignment: Qt.AlignHCenter
-            Layout.topMargin: 10
-            Layout.bottomMargin: 10
+            Layout.topMargin: Tokens.space.s10
+            Layout.bottomMargin: Tokens.space.s10
             text: "󰔟  Reading the calendar…"
             color: Colors.fade(0.5)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
             font.family: Properties.fontFamily
         }
 
@@ -172,7 +172,7 @@ Modal {
         RowLayout {
             Layout.fillWidth: true
             visible: root.step === 1 && root.info !== null
-            spacing: 8
+            spacing: Tokens.space.s8
             Stat { value: root.info?.total ?? 0; label: root.info?.total === 1 ? "event" : "events" }
             Stat { value: root.info?.recurring ?? 0; label: "repeating" }
             Stat { value: root.info?.upcoming ?? 0; label: "upcoming" }
@@ -189,15 +189,15 @@ Modal {
             Layout.fillWidth: true
             visible: root.step === 1 && notes.text !== ""
             implicitHeight: notes.implicitHeight + 20
-            radius: 12
-            color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.08)
+            radius: Tokens.radius.xl
+            color: Colors.alpha(Colors.color6, 0.08)
             border.width: Properties.panelBorderWidth
-            border.color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.25)
+            border.color: Colors.alpha(Colors.color6, 0.25)
             Text {
                 id: notes
                 anchors.fill: parent
-                anchors.margins: 10
-                anchors.leftMargin: 14
+                anchors.margins: Tokens.space.s10
+                anchors.leftMargin: Tokens.space.s14
                 text: [
                     root.invite ? "󰇮  An invitation: this only adds it to your calendar, it doesn't answer the organizer." : "",
                     root.otherItems > 0 ? "󰄱  " + root.plural(root.otherItems, "task / note", "tasks / notes") + " left out — only events are imported." : "",
@@ -205,7 +205,7 @@ Modal {
                 ].filter(x => x).join("<br>")
                 textFormat: Text.StyledText
                 color: Colors.fade(0.75)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
                 lineHeight: 1.15
@@ -217,7 +217,7 @@ Modal {
             Layout.fillWidth: true
             visible: root.step === 1 && (root.info?.preview?.length ?? 0) > 0
             implicitHeight: prevCol.implicitHeight + 8
-            radius: 14
+            radius: Tokens.radius.card
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
@@ -235,13 +235,13 @@ Modal {
                         implicitHeight: 40
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 14
-                            spacing: 12
+                            anchors.leftMargin: Tokens.space.s16
+                            anchors.rightMargin: Tokens.space.s14
+                            spacing: Tokens.space.s12
                             Rectangle {
                                 Layout.preferredWidth: 4
                                 Layout.preferredHeight: 22
-                                radius: 2
+                                radius: Tokens.radius.xs
                                 color: root.targetCal?.color
                                     ?? (root.sources.find(s => s.label === prevRow.modelData.source)?.color || Colors.color6)
                             }
@@ -252,7 +252,7 @@ Modal {
                                     Layout.fillWidth: true
                                     text: prevRow.modelData.title
                                     color: Colors.ink
-                                    font.pixelSize: 12
+                                    font.pixelSize: Tokens.font.small
                                     font.bold: true
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
@@ -261,7 +261,7 @@ Modal {
                                     Layout.fillWidth: true
                                     text: root.when(prevRow.modelData) + (prevRow.modelData.location ? "  ·  " + prevRow.modelData.location : "")
                                     color: Colors.fade(0.5)
-                                    font.pixelSize: 10
+                                    font.pixelSize: Tokens.font.micro
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
                                 }
@@ -270,7 +270,7 @@ Modal {
                                 visible: prevRow.modelData.recurring
                                 text: "󰑖"
                                 color: Colors.fade(0.4)
-                                font.pixelSize: 12
+                                font.pixelSize: Tokens.font.small
                                 font.family: Properties.fontFamily
                             }
                         }
@@ -278,11 +278,11 @@ Modal {
                 }
                 Text {
                     visible: (root.info?.total ?? 0) > (root.info?.preview?.length ?? 0)
-                    Layout.leftMargin: 32
-                    Layout.bottomMargin: 8
+                    Layout.leftMargin: Tokens.space.s32
+                    Layout.bottomMargin: Tokens.space.s8
                     text: "and " + ((root.info?.total ?? 0) - (root.info?.preview?.length ?? 0)) + " more"
                     color: Colors.fade(0.4)
-                    font.pixelSize: 10
+                    font.pixelSize: Tokens.font.micro
                     font.family: Properties.fontFamily
                 }
             }
@@ -293,7 +293,7 @@ Modal {
             Layout.fillWidth: true
             visible: root.step === 1 && root.info !== null
             implicitHeight: opts.implicitHeight
-            radius: 14
+            radius: Tokens.radius.card
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
@@ -303,7 +303,7 @@ Modal {
                 spacing: 0
                 FormRow {
                     label: "Into"
-                    DropdownControl {
+                    Dropdown {
                         implicitWidth: 260
                         options: CalendarStore.writableCalendars
                             .map(c => ({ label: c.name, value: c.id, hint: c.accountName, color: c.color }))
@@ -345,7 +345,7 @@ Modal {
                     label: "Already there"
                     hint: root.duplicates === "skip" ? "Leave the calendar's copy"
                         : root.duplicates === "replace" ? "Overwrite with the file's version" : "Add them a second time"
-                    ChoiceControl {
+                    Segmented {
                         options: ["skip", "replace", "copy"]
                         value: root.duplicates
                         onEdited: v => root.duplicates = v
@@ -358,24 +358,24 @@ Modal {
         ColumnLayout {
             Layout.fillWidth: true
             visible: root.step === 2
-            spacing: 8
+            spacing: Tokens.space.s8
             Text {
                 text: root.total > 0 ? "Importing " + root.done + " of " + root.total + "…" : "Importing…"
                 color: Colors.fade(0.7)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
             }
             Rectangle {
                 Layout.fillWidth: true
                 implicitHeight: 8
-                radius: 4
+                radius: Tokens.radius.sm
                 color: Colors.fade(0.08)
                 Rectangle {
                     width: parent.width * (root.total > 0 ? root.done / root.total : 0)
                     height: parent.height
-                    radius: 4
+                    radius: Tokens.radius.sm
                     color: Colors.color6
-                    Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    Behavior on width { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
                 }
             }
         }
@@ -385,7 +385,7 @@ Modal {
             Layout.fillWidth: true
             visible: root.step === 3 && root.result !== null
             implicitHeight: doneCol.implicitHeight + 28
-            radius: 14
+            radius: Tokens.radius.card
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
@@ -394,13 +394,13 @@ Modal {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                anchors.margins: 16
-                spacing: 6
+                anchors.margins: Tokens.space.s16
+                spacing: Tokens.space.s6
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: root.undone ? "󰕌" : (root.result?.failed?.length ?? 0) > 0 ? "󰀦" : "󰄬"
                     color: root.undone ? Colors.fade(0.5) : (root.result?.failed?.length ?? 0) > 0 ? Colors.color3 : Colors.color6
-                    font.pixelSize: 28
+                    font.pixelSize: Tokens.font.display
                     font.family: Properties.fontFamily
                 }
                 Text {
@@ -411,7 +411,7 @@ Modal {
                              ? " into " + root.plural(root.result.newCalendars.length, "new calendar", "new calendars")
                              : root.targetCal ? " into " + root.targetCal.name : "")
                     color: Colors.ink
-                    font.pixelSize: 14
+                    font.pixelSize: Tokens.font.label
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -424,18 +424,18 @@ Modal {
                         (root.result?.simplified ?? 0) > 0 ? root.result.simplified + " series without their exceptions" : ""
                     ].filter(x => x).join("  ·  ")
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
                 Text {
                     Layout.fillWidth: true
-                    Layout.topMargin: 4
+                    Layout.topMargin: Tokens.space.s4
                     visible: (root.result?.failed?.length ?? 0) > 0 && !root.undone
                     readonly property var f: root.result?.failed ?? []
                     text: root.plural(f.length, "event", "events") + " couldn't be imported:\n"
                         + f.slice(0, 5).join("\n") + (f.length > 5 ? "\n…and " + (f.length - 5) + " more" : "")
                     color: Colors.red
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
                     horizontalAlignment: Text.AlignHCenter
@@ -448,7 +448,7 @@ Modal {
             visible: root.error !== ""
             text: root.error
             color: Colors.red
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.WordWrap
         }
@@ -457,7 +457,7 @@ Modal {
         RowLayout {
             Layout.fillWidth: true
             visible: root.step !== 0
-            spacing: 8
+            spacing: Tokens.space.s8
             ActionButton {
                 visible: root.step === 1
                 icon: "󰈔"
@@ -509,7 +509,7 @@ Modal {
         Layout.fillWidth: true
         Layout.preferredWidth: 1
         implicitHeight: 58
-        radius: 14
+        radius: Tokens.radius.card
         color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
@@ -522,7 +522,7 @@ Modal {
                 Layout.maximumWidth: parent.width
                 text: stat.text
                 color: Colors.ink
-                font.pixelSize: 16
+                font.pixelSize: Tokens.font.subtitle
                 font.bold: true
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
@@ -531,7 +531,7 @@ Modal {
                 Layout.alignment: Qt.AlignHCenter
                 text: stat.label.toUpperCase()
                 color: Colors.fade(0.4)
-                font.pixelSize: 9
+                font.pixelSize: Tokens.font.micro
                 font.bold: true
                 font.letterSpacing: 1.2
                 font.family: Properties.fontFamily
@@ -548,15 +548,15 @@ Modal {
         implicitHeight: visible ? (hint ? 56 : 50) : 0
         ColumnLayout {
             anchors.left: parent.left
-            anchors.leftMargin: 16
+            anchors.leftMargin: Tokens.space.s16
             anchors.right: slot.left
-            anchors.rightMargin: 12
+            anchors.rightMargin: Tokens.space.s12
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 1
+            spacing: Tokens.space.s1
             Text {
                 text: formRow.label
                 color: Colors.ink
-                font.pixelSize: 13
+                font.pixelSize: Tokens.font.body
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -565,7 +565,7 @@ Modal {
                 visible: text !== ""
                 text: formRow.hint
                 color: Colors.fade(0.45)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
             }
@@ -573,9 +573,9 @@ Modal {
         RowLayout {
             id: slot
             anchors.right: parent.right
-            anchors.rightMargin: 12
+            anchors.rightMargin: Tokens.space.s12
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 8
+            spacing: Tokens.space.s8
         }
     }
 }

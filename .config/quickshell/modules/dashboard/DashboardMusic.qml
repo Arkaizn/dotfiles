@@ -103,7 +103,10 @@ Item {
         fillMode: Image.PreserveAspectCrop
         visible: false
         smooth: true
-        mipmap: true
+        // it's blurred with radius 72: a small decode looks the same and keeps
+        // the track change (synchronous, so no blank frame) and the blur cheap
+        sourceSize.width: 128
+        sourceSize.height: 128
         asynchronous: false
     }
 
@@ -129,13 +132,13 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color: Qt.rgba(0, 0, 0, 0.5)
+            color: Colors.dim(0.5)
         }
     }
 
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.3)
+        color: Colors.dim(0.3)
         visible: bgArt.source === "" || bgArt.status !== Image.Ready
         radius: root.parent ? (root.parent.radius ?? 12) : 12
     }
@@ -150,21 +153,21 @@ Item {
     }
 
     // ── No player state ──────────────────────────────────────────────────────
-    Text {
+    EmptyState {
         anchors.centerIn: parent
         visible: root.player === null
+        compact: true
+        icon: "󰝛"
         text: "No media playing"
-        color: Colors.fade(0.4)
-        font.pixelSize: 14
     }
 
     // ── Main layout ──────────────────────────────────────────────────────────
     RowLayout {
         anchors {
             fill: parent
-            margins: 12
+            margins: Tokens.space.s12
         }
-        spacing: 12
+        spacing: Tokens.space.s12
         visible: root.player !== null
 
         // Album art
@@ -172,7 +175,7 @@ Item {
             id: artBox
             width: 130
             height: 130
-            radius: 18
+            radius: Tokens.radius.dialog
             color: Colors.fade(0.06)
             clip: true
 
@@ -181,7 +184,7 @@ Item {
                 maskSource: Rectangle {
                     width: 130
                     height: 130
-                    radius: 18
+                    radius: Tokens.radius.dialog
                 }
             }
 
@@ -191,7 +194,9 @@ Item {
                 source: root.player ? root.player.trackArtUrl : ""
                 fillMode: Image.PreserveAspectCrop
                 smooth: true
-                mipmap: true
+                // decoded at twice the card's size, not the art's (remote art can be 1280 px+)
+                sourceSize.width: 320
+                sourceSize.height: 320
                 asynchronous: false
                 visible: status === Image.Ready
             }
@@ -231,17 +236,17 @@ Item {
             Timer { id: volumeShow; interval: 1200; onTriggered: artBox.pendingVolume = -1 }
             Rectangle {
                 anchors.centerIn: parent
-                width: volLabel.implicitWidth + 18; height: 26; radius: 8
-                color: Qt.rgba(0, 0, 0, 0.55)
+                width: volLabel.implicitWidth + 18; height: 26; radius: Tokens.radius.md
+                color: Colors.dim(0.55)
                 opacity: volumeShow.running ? 1 : 0
                 visible: opacity > 0
-                Behavior on opacity { NumberAnimation { duration: 180 } }
+                Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                 Text {
                     id: volLabel
                     anchors.centerIn: parent
                     text: "󰕾  " + Math.round(artBox.shownVolume * 100) + "%"
                     color: "white"
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.bold: true
                 }
             }
@@ -256,7 +261,7 @@ Item {
             // Track title + artist
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 2
+                spacing: Tokens.space.s2
 
                 Text {
                     Layout.fillWidth: true
@@ -272,7 +277,7 @@ Item {
                     Layout.fillWidth: true
                     text: root.errorText !== "" ? root.errorText : root.player ? (root.player.trackArtist || " ") : " "
                     color: root.errorText !== "" ? Colors.red : Colors.fade(0.55)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     elide: Text.ElideRight
                 }
             }
@@ -280,7 +285,7 @@ Item {
             // source pill (switches player) + jump to the player
             RowLayout {
                 Layout.alignment: Qt.AlignLeft
-                spacing: 6
+                spacing: Tokens.space.s6
 
             Rectangle {
                 id: sourcePill
@@ -288,13 +293,13 @@ Item {
                 // implicit size: the row lays it out to fit the icon + player name
                 implicitHeight: 26
                 implicitWidth: pillRow.implicitWidth + 18
-                radius: 8
+                radius: Tokens.radius.md
                 border.color: Colors.fade(sourceHover.containsMouse ? 0.28 : 0.18)
                 border.width: 0.5
                 gradient: ButtonGradient { hovered: sourceHover.containsMouse }
                 Rectangle {
                     anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
-                    radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                    radius: Tokens.radius.md; color: Colors.dim(0.1)
                 }
 
                 RowLayout {
@@ -327,7 +332,7 @@ Item {
 
                     Text {
                         text: root.player?.remote ? Icons.get("mediaRemote") : "󰝚"
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         color: root.player?.remote ? Colors.color6 : Properties.color
                         visible: appIcon.status !== Image.Ready
                     }
@@ -339,12 +344,12 @@ Item {
                             : root.player.remote ? root.player.identity + (root.player.session?.player?.device ? " · " + root.player.session.player.device : "")
                             : (root.player.identity || "Player")
                         color: Properties.color
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.bold: true
                     }
                 }
 
-                Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                 MouseArea {
                     id: sourceHover
                     anchors.fill: parent
@@ -364,21 +369,21 @@ Item {
                 id: jumpBtn
                 visible: root.player !== null && !root.player.remote
                 implicitWidth: 26; implicitHeight: 26
-                radius: 8
+                radius: Tokens.radius.md
                 border.color: Colors.fade(jumpHover.containsMouse ? 0.28 : 0.18)
                 border.width: 0.5
                 gradient: ButtonGradient { hovered: jumpHover.containsMouse }
                 Rectangle {
                     anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
-                    radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                    radius: Tokens.radius.md; color: Colors.dim(0.1)
                 }
                 Text {
                     anchors.centerIn: parent
                     text: "󰏌"
-                    font.pixelSize: 13
+                    font.pixelSize: Tokens.font.body
                     color: Properties.color
                 }
-                Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                 MouseArea {
                     id: jumpHover
                     anchors.fill: parent
@@ -400,7 +405,7 @@ Item {
                 visible: note !== ""
                 text: note
                 color: Colors.fade(0.45)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.italic: true
             }
             }
@@ -412,7 +417,7 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 transform: Translate { y: -4 }      // a touch higher, with the bar below
-                spacing: 4
+                spacing: Tokens.space.s4
 
                 Item { Layout.fillWidth: true }
 
@@ -420,13 +425,13 @@ Item {
                 Rectangle {
                     width: 34
                     height: 34
-                    radius: 8
+                    radius: Tokens.radius.md
                     border.color: Colors.fade(shuffleHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: shuffleHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
-                        radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                        radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
                         anchors.centerIn: parent
@@ -438,7 +443,7 @@ Item {
                         // remote sessions show their shuffle state but can't change it (no bridge command)
                         opacity: root.player && root.player.remote ? 0.4 : 1
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                     MouseArea {
                         id: shuffleHover
                         anchors.fill: parent
@@ -457,22 +462,22 @@ Item {
 
                 // ── Previous ─────────────────────────────────────────────────
                 Rectangle {
-                    width: 34; height: 34; radius: 8
+                    width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(prevHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: prevHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
-                        radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                        radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
                         anchors.centerIn: parent
                         text: "󰒮"
-                        font.pixelSize: 17
+                        font.pixelSize: Tokens.font.title
                         color: root.player && root.player.canGoPrevious
                                ? Properties.color : Colors.fade(0.25)
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                     MouseArea {
                         id: prevHover
                         anchors.fill: parent
@@ -489,25 +494,25 @@ Item {
 
                 // ── Play / Pause ─────────────────────────────────────────────
                 Rectangle {
-                    width: 34; height: 34; radius: 8
+                    width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(playHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: playHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
-                        radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                        radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
                         anchors.centerIn: parent
                         text: root.player && root.player.isPlaying ? "󰏤" : "󰐊"
-                        font.pixelSize: 20
+                        font.pixelSize: Tokens.font.titleLarge
                         color: !root.player || root.player.mpris || root.player.canTogglePlaying
                                ? Properties.color : Colors.fade(0.25)
                         // a remote command waits for the phone to confirm (up to a few seconds)
                         opacity: root.player?.busy ? 0.5 : 1
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                     MouseArea {
                         id: playHover
                         anchors.fill: parent
@@ -528,22 +533,22 @@ Item {
 
                 // ── Next ─────────────────────────────────────────────────────
                 Rectangle {
-                    width: 34; height: 34; radius: 8
+                    width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(nextHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: nextHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
-                        radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                        radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
                         anchors.centerIn: parent
                         text: "󰒭"
-                        font.pixelSize: 17
+                        font.pixelSize: Tokens.font.title
                         color: root.player && root.player.canGoNext
                                ? Properties.color : Colors.fade(0.25)
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                     MouseArea {
                         id: nextHover
                         anchors.fill: parent
@@ -561,13 +566,13 @@ Item {
                 // ── Repeat ───────────────────────────────────────────────────
                 // Cycles: MprisLoopState.None → All → Track → None
                 Rectangle {
-                    width: 34; height: 34; radius: 8
+                    width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(repeatHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: repeatHover.containsMouse }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
-                        radius: 8; color: Qt.rgba(0, 0, 0, 0.1)
+                        radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
                         anchors.centerIn: parent
@@ -587,7 +592,7 @@ Item {
                         }
                         opacity: root.player && root.player.remote ? 0.4 : 1
                     }
-                    Behavior on scale { NumberAnimation { duration: Properties.bDuration; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                     MouseArea {
                         id: repeatHover
                         anchors.fill: parent

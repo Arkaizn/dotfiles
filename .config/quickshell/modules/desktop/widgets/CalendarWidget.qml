@@ -12,11 +12,11 @@ ColumnLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 8
+    spacing: Tokens.space.s8
     property int offset: 0                       // months from now
-    readonly property date month: { const d = Time.date; return new Date(d.getFullYear(), d.getMonth() + offset, 1) }
+    readonly property date month: { const d = Time.minuteDate; return new Date(d.getFullYear(), d.getMonth() + offset, 1) }
     readonly property int firstDay: opts.sunday ? 0 : 1
-    readonly property string today: Format.day(Time.date)
+    readonly property string today: Format.day(Time.minuteDate)
     // 42 days from the start of the first week
     readonly property var days: {
         const start = new Date(month)
@@ -65,8 +65,8 @@ ColumnLayout {
 
     GridLayout {
         columns: 7
-        rowSpacing: 2
-        columnSpacing: 2
+        rowSpacing: Tokens.space.s2
+        columnSpacing: Tokens.space.s2
         Repeater {
             model: root.names
             Text {
@@ -104,8 +104,8 @@ ColumnLayout {
                 }
                 Rectangle {
                     visible: cell.events > 0
-                    anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 1 }
-                    width: 4; height: 4; radius: 2
+                    anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Tokens.space.s1 }
+                    width: 4; height: 4; radius: Tokens.radius.xs
                     color: cell.isToday ? Colors.ink : Colors.color6
                     opacity: cell.modelData.inMonth ? 1 : 0.4
                 }

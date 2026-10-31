@@ -12,46 +12,9 @@ ColumnLayout {
     id: root
 
     // (first: the account pages' delegates use them)
-    component Hint: Text {
-        Layout.fillWidth: true
-        Layout.leftMargin: 6
-        color: Colors.fade(0.42)
-        font.pixelSize: 11
-        font.family: Properties.fontFamily
-        wrapMode: Text.Wrap
-    }
 
-    component SectionTitle: Text {
-        Layout.leftMargin: 6
-        Layout.topMargin: 6
-        color: Colors.fade(0.55)
-        font.pixelSize: 12
-        font.bold: true
-        font.family: Properties.fontFamily
-    }
 
-    component Card: Rectangle {
-        default property alias content: col.data
-        Layout.fillWidth: true
-        implicitHeight: col.implicitHeight
-        radius: 14
-        color: Colors.card
-        border.width: Properties.panelBorderWidth
-        border.color: Properties.cardBorder
-        ColumnLayout {
-            id: col
-            width: parent.width
-            spacing: 0
-        }
-    }
 
-    component Divider: Rectangle {
-        Layout.fillWidth: true
-        Layout.leftMargin: 16
-        Layout.rightMargin: 16
-        implicitHeight: 1
-        color: Colors.fade(0.06)
-    }
 
     property string page: ""
     property bool showAll: false            // every page laid out (the dialog's search)
@@ -66,15 +29,15 @@ ColumnLayout {
         return "#" + h(c.r) + h(c.g) + h(c.b)
     }
 
-    spacing: 8
+    spacing: Tokens.space.s8
 
     // ── Reminders ──
     ColumnLayout {
         readonly property string pageId: "reminders"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Reminders"
@@ -88,7 +51,7 @@ ColumnLayout {
                 opacity: enabled ? 1 : 0.4
                 label: "Default reminder"
                 desc: "Minutes before, for events without their own"
-                ChoiceControl { options: ["off", "5", "10", "15", "30", "60"]; value: root.opt("defaultReminder", "10"); onEdited: v => root.setOpt("defaultReminder", v) }
+                Segmented { options: ["off", "5", "10", "15", "30", "60"]; value: root.opt("defaultReminder", "10"); onEdited: v => root.setOpt("defaultReminder", v) }
             }
             Divider {}
             PlainRow {
@@ -116,7 +79,7 @@ ColumnLayout {
                 label: "Sound"
                 desc: "Played with the notification (not with do not disturb)"
                 RowLayout {
-                    spacing: 4
+                    spacing: Tokens.space.s4
                     IconButton {
                         implicitWidth: 26; implicitHeight: 26; iconSize: 11
                         icon: "󰐊"
@@ -124,7 +87,7 @@ ColumnLayout {
                         visible: root.opt("reminderSound", "message") !== "off"
                         onClicked: CalendarStore.playSound(root.opt("reminderSound", "message"))
                     }
-                    ChoiceControl {
+                    Segmented {
                         options: ["off", "message", "bell", "alarm", "complete"]
                         value: root.opt("reminderSound", "message")
                         onEdited: v => { root.setOpt("reminderSound", v); CalendarStore.playSound(v) }
@@ -140,13 +103,13 @@ ColumnLayout {
         readonly property string pageId: "view"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Open in"
                 desc: "View when the app starts"
-                ChoiceControl { options: ["day", "week", "month", "agenda"]; value: root.opt("defaultView", "month"); onEdited: v => root.setOpt("defaultView", v) }
+                Segmented { options: ["day", "week", "month", "agenda"]; value: root.opt("defaultView", "month"); onEdited: v => root.setOpt("defaultView", v) }
             }
             Divider {}
             PlainRow {
@@ -156,19 +119,19 @@ ColumnLayout {
             }
         }
         SectionTitle { text: "Day and week" }
-        Card {
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Day starts at"
                 desc: "Where the day and week views scroll to"
-                ChoiceControl { options: ["6", "7", "8", "9", "10"]; value: root.opt("dayStart", "7"); onEdited: v => root.setOpt("dayStart", v) }
+                Segmented { options: ["6", "7", "8", "9", "10"]; value: root.opt("dayStart", "7"); onEdited: v => root.setOpt("dayStart", v) }
             }
             Divider {}
             PlainRow {
                 Layout.fillWidth: true
                 label: "Zoom"
                 desc: "Hour height in the day and week views, %  (also Ctrl + wheel over the hours, Ctrl Alt +/−)"
-                ChoiceControl { options: CalendarStore.zoomSteps.map(String); value: String(CalendarStore.zoom); onEdited: v => root.setOpt("zoom", v) }
+                Segmented { options: CalendarStore.zoomSteps.map(String); value: String(CalendarStore.zoom); onEdited: v => root.setOpt("zoom", v) }
             }
         }
     }
@@ -178,20 +141,20 @@ ColumnLayout {
         readonly property string pageId: "sync"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Sync every"
                 desc: "Minutes, also in the background for the dashboard and reminders"
-                ChoiceControl { options: ["5", "15", "30", "60"]; value: root.opt("syncMinutes", "15"); onEdited: v => root.setOpt("syncMinutes", v) }
+                Segmented { options: ["5", "15", "30", "60"]; value: root.opt("syncMinutes", "15"); onEdited: v => root.setOpt("syncMinutes", v) }
             }
             Divider {}
             PlainRow {
                 Layout.fillWidth: true
                 label: "Save moves after"
                 desc: "Seconds after the last drag in the day / week view; moves made meanwhile are saved together"
-                ChoiceControl { options: ["0", "5", "10", "30", "60"]; value: root.opt("moveDelay", "10"); onEdited: v => root.setOpt("moveDelay", v) }
+                Segmented { options: ["0", "5", "10", "30", "60"]; value: root.opt("moveDelay", "10"); onEdited: v => root.setOpt("moveDelay", v) }
             }
         }
     }
@@ -201,8 +164,8 @@ ColumnLayout {
         readonly property string pageId: "transfer"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Export"
@@ -230,10 +193,10 @@ ColumnLayout {
             readonly property string pageId: "acc:" + a.id
             visible: root.shows(pageId)
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             ConfirmArm { id: accArm }
 
-            Card {
+            ListCard {
                 PlainRow {
                     Layout.fillWidth: true
                     label: "Name"
@@ -248,12 +211,12 @@ ColumnLayout {
                     Layout.fillWidth: true
                     label: "Kind"
                     desc: accPage.a.type === "ics" ? accPage.a.url : accPage.a.type === "local" ? "Kept on this computer" : (accPage.a.url ?? "")
-                    Text { text: root.kindOf(accPage.a); color: Colors.fade(0.55); font.pixelSize: 12; font.family: Properties.fontFamily }
+                    Text { text: root.kindOf(accPage.a); color: Colors.fade(0.55); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                 }
             }
 
             SectionTitle { text: "Calendars" }
-            Card {
+            ListCard {
                 Repeater {
                     model: accPage.a.calendars
                     ColumnLayout {
@@ -268,9 +231,9 @@ ColumnLayout {
                             implicitHeight: 52
                             RowLayout {
                                 anchors.fill: parent
-                                anchors.leftMargin: 16
-                                anchors.rightMargin: 12
-                                spacing: 10
+                                anchors.leftMargin: Tokens.space.s16
+                                anchors.rightMargin: Tokens.space.s12
+                                spacing: Tokens.space.s10
                                 ColorControl {
                                     value: calRow.modelData.color
                                     onEdited: v => CalendarStore.setCalendar(calRow.modelData.id, { color: root.hex(v) })
@@ -285,7 +248,7 @@ ColumnLayout {
                                     visible: calRow.modelData.readOnly || accPage.a.type === "ics"
                                     text: "󰌾"
                                     color: Colors.fade(0.3)
-                                    font.pixelSize: 12
+                                    font.pixelSize: Tokens.font.small
                                     font.family: Properties.fontFamily
                                 }
                                 IconButton {
@@ -308,7 +271,7 @@ ColumnLayout {
             Hint { text: "Color square: palette, opacity and hex  ·  󰂚 reminders from that calendar  ·  switch: show / hide" }
 
             SectionTitle { text: "Remove" }
-            Card {
+            ListCard {
                 PlainRow {
                     Layout.fillWidth: true
                     label: accArm.armed !== "" ? "Click again to remove" : "Remove this account"

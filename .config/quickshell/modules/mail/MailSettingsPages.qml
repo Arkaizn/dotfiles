@@ -15,39 +15,6 @@ ColumnLayout {
     id: root
 
     // (first: the account pages' delegates use them)
-    component Hint: Text {
-        Layout.fillWidth: true
-        Layout.leftMargin: 6
-        color: Colors.fade(0.42)
-        font.pixelSize: 11
-        font.family: Properties.fontFamily
-        wrapMode: Text.Wrap
-    }
-    component SectionTitle: Text {
-        Layout.leftMargin: 6
-        Layout.topMargin: 6
-        color: Colors.fade(0.55)
-        font.pixelSize: 12
-        font.bold: true
-        font.family: Properties.fontFamily
-    }
-    component Card: Rectangle {
-        default property alias content: col.data
-        Layout.fillWidth: true
-        implicitHeight: col.implicitHeight
-        radius: 14
-        color: Colors.card
-        border.width: Properties.panelBorderWidth
-        border.color: Properties.cardBorder
-        ColumnLayout { id: col; width: parent.width; spacing: 0 }
-    }
-    component Divider: Rectangle {
-        Layout.fillWidth: true
-        Layout.leftMargin: 16
-        Layout.rightMargin: 16
-        implicitHeight: 1
-        color: Colors.fade(0.06)
-    }
 
     property string page: ""
     property bool showAll: false            // every page laid out (the dialog's search)
@@ -60,7 +27,7 @@ ColumnLayout {
     function setOpt(key, v) { Settings.set("mail", key, v) }
     Component.onCompleted: DefaultApps.refresh()
 
-    spacing: 8
+    spacing: Tokens.space.s8
     ConfirmArm { id: removeArm }
 
     // ── New mail ──
@@ -68,13 +35,13 @@ ColumnLayout {
         readonly property string pageId: "new"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Check every"
                 desc: "Minutes, also with the app closed"
-                ChoiceControl { options: ["2", "5", "10", "15", "30"]; value: root.opt("checkMinutes", "5"); onEdited: v => root.setOpt("checkMinutes", v) }
+                Segmented { options: ["2", "5", "10", "15", "30"]; value: root.opt("checkMinutes", "5"); onEdited: v => root.setOpt("checkMinutes", v) }
             }
             Divider {}
             PlainRow {
@@ -91,10 +58,10 @@ ColumnLayout {
                 label: "Sound"
                 desc: "Not with do not disturb on"
                 RowLayout {
-                    spacing: 4
+                    spacing: Tokens.space.s4
                     IconButton { implicitWidth: 26; implicitHeight: 26; iconSize: 11; icon: "󰐊"; tooltip: "Play it"
                                  visible: root.opt("sound", "message") !== "off"; onClicked: MailStore.playSound(root.opt("sound", "message")) }
-                    ChoiceControl { options: ["off", "message", "bell", "complete"]; value: root.opt("sound", "message")
+                    Segmented { options: ["off", "message", "bell", "complete"]; value: root.opt("sound", "message")
                                     onEdited: v => { root.setOpt("sound", v); MailStore.playSound(v) } }
                 }
             }
@@ -107,13 +74,13 @@ ColumnLayout {
         readonly property string pageId: "reading"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Mark as read"
                 desc: "Seconds after opening a message"
-                ChoiceControl { options: ["0", "2", "5", "never"]; value: root.opt("markRead", "2"); onEdited: v => root.setOpt("markRead", v) }
+                Segmented { options: ["0", "2", "5", "never"]; value: root.opt("markRead", "2"); onEdited: v => root.setOpt("markRead", v) }
             }
             Divider {}
             PlainRow {
@@ -124,12 +91,12 @@ ColumnLayout {
             }
         }
         SectionTitle { text: "Messages" }
-        Card {
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Show messages as"
                 desc: "When a message has both"
-                ChoiceControl { options: ["html", "text"]; value: root.opt("format", "html"); onEdited: v => root.setOpt("format", v) }
+                Segmented { options: ["html", "text"]; value: root.opt("format", "html"); onEdited: v => root.setOpt("format", v) }
             }
             Divider {}
             PlainRow {
@@ -154,7 +121,7 @@ ColumnLayout {
             }
         }
         SectionTitle { text: "Privacy" }
-        Card {
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Load remote content"
@@ -177,8 +144,8 @@ ColumnLayout {
         readonly property string pageId: "writing"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Attachment reminder"
@@ -187,7 +154,7 @@ ColumnLayout {
             }
         }
         SectionTitle { text: "Signatures"; visible: MailStore.accounts.length > 0 }
-        Card {
+        ListCard {
             visible: MailStore.accounts.length > 0
             Repeater {
                 model: MailStore.accounts
@@ -213,13 +180,13 @@ ColumnLayout {
         readonly property string pageId: "actions"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Undo archive / delete for"
                 desc: "Seconds; the server only gets the change after that (Ctrl+Z)"
-                ChoiceControl { options: ["0", "5", "10", "20"]; value: root.opt("undo", "5"); onEdited: v => root.setOpt("undo", v) }
+                Segmented { options: ["0", "5", "10", "20"]; value: root.opt("undo", "5"); onEdited: v => root.setOpt("undo", v) }
             }
             Divider {}
             PlainRow {
@@ -241,8 +208,8 @@ ColumnLayout {
         readonly property string pageId: "sidebar"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             Repeater {
                 model: [["inbox", "All inboxes", ""], ["unread", "Unread", "Unread messages of all inboxes"],
                         ["flagged", "Starred", "Starred messages anywhere"], ["sent", "All sent", "Every account's sent folder together"],
@@ -274,8 +241,8 @@ ColumnLayout {
         readonly property string pageId: "transfer"
         visible: root.shows(pageId)
         Layout.fillWidth: true
-        spacing: 8
-        Card {
+        spacing: Tokens.space.s8
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Export"
@@ -303,9 +270,9 @@ ColumnLayout {
             readonly property string pageId: "acc:" + a.id
             visible: root.shows(pageId)
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
 
-            Card {
+            ListCard {
                 PlainRow {
                     Layout.fillWidth: true
                     label: "Checked"
@@ -321,7 +288,7 @@ ColumnLayout {
             }
 
             SectionTitle { text: "Names" }
-            Card {
+            ListCard {
                 PlainRow {
                     Layout.fillWidth: true
                     label: "Name in the sidebar"
@@ -356,7 +323,7 @@ ColumnLayout {
                             Rectangle {
                                 required property string modelData
                                 readonly property bool on: (accPage.a.color ?? "").toLowerCase() === modelData
-                                width: 20; height: 20; radius: 10
+                                width: 20; height: 20; radius: Tokens.radius.lg
                                 color: modelData
                                 border.width: on ? 2 : swatchMouse.containsMouse ? 1.5 : 0
                                 border.color: Colors.ink
@@ -374,18 +341,15 @@ ColumnLayout {
             }
 
             SectionTitle { text: "Signature" }
-            Card {
+            ListCard {
                 ColumnLayout {
                     Layout.fillWidth: true
-                    Layout.margins: 14
-                    spacing: 6
-                    Rectangle {
+                    Layout.margins: Tokens.space.s14
+                    spacing: Tokens.space.s6
+                    FieldBackground {
+                        focused: sigArea.activeFocus
                         Layout.fillWidth: true
                         implicitHeight: 96
-                        radius: 10
-                        color: Colors.fade(0.04)
-                        border.width: 1
-                        border.color: sigArea.activeFocus ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45) : Colors.fade(0.08)
                         TextArea {
                             id: sigArea
                             anchors.fill: parent
@@ -394,7 +358,7 @@ ColumnLayout {
                             wrapMode: TextEdit.Wrap
                             color: Properties.color
                             placeholderTextColor: Colors.fade(0.35)
-                            font.pixelSize: 12
+                            font.pixelSize: Tokens.font.small
                             font.family: Properties.fontFamily
                             background: null
                             onActiveFocusChanged: if (!activeFocus && text !== (accPage.a.signature ?? "")) MailStore.setAccount(accPage.a.id, { signature: text })
@@ -403,14 +367,14 @@ ColumnLayout {
                     Text {
                         text: "Saved when you click elsewhere"
                         color: Colors.fade(0.35)
-                        font.pixelSize: 10
+                        font.pixelSize: Tokens.font.micro
                         font.family: Properties.fontFamily
                     }
                 }
             }
 
             SectionTitle { text: "Server" }
-            Card {
+            ListCard {
                 PlainRow {
                     Layout.fillWidth: true
                     label: "Servers & password"

@@ -9,7 +9,7 @@ import "../network"
 // SSH & GPG overview (services/CryptoKeys.qml). Never shows or copies a private key.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string forgetHost: ""
     property string forgetMsg: ""
@@ -21,19 +21,19 @@ ColumnLayout {
     Component.onCompleted: CryptoKeys.refresh()
 
     // ── SSH ─────────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "SSH keys"
         icon: "󰣀"
         header: ActionButton { icon: "󰑓"; text: "Reload"; onClicked: CryptoKeys.refresh() }
-        NetRow {
+        SettingRow {
             first: true
             visible: CryptoKeys.sshKeys.length === 0
             label: CryptoKeys.loading ? "Looking…" : "No keys in ~/.ssh"
         }
         Repeater {
             model: CryptoKeys.sshKeys
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 readonly property var k: modelData
@@ -47,33 +47,33 @@ ColumnLayout {
                 label: k.name + "  ·  " + k.type + " " + k.bits + (CryptoKeys.agentKeys.includes(k.fingerprint) ? "  ·  in the agent" : "")
                 desc: k.fingerprint + "  ·  " + k.comment + (warn.length ? "\n󰀦 " + warn.join("\n󰀦 ") : "")
                 RowLayout {
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Item { Layout.fillWidth: true }
                     ActionButton { icon: "󰆏"; text: "Copy public key"; onClicked: CryptoKeys.copyPublicSsh(k) }
                 }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Agent"
             desc: CryptoKeys.agentSock === "" ? "no SSH agent for the shell (SSH_AUTH_SOCK isn't set): keys with a passphrase ask every time. e.g. systemctl --user enable --now gcr-ssh-agent.socket, then set SSH_AUTH_SOCK=$XDG_RUNTIME_DIR/gcr/ssh in niri's environment"
                 : CryptoKeys.agentUp ? CryptoKeys.agentKeys.length + " key(s) loaded" : "SSH_AUTH_SOCK is set but the agent doesn't answer"
         }
-        NetRow {
+        SettingRow {
             label: "~/.ssh"
             desc: (CryptoKeys.sshDirMode === "700" ? "permissions ok (700)" : "permissions " + CryptoKeys.sshDirMode + ", should be 700")
                   + "  ·  " + CryptoKeys.knownHosts + " known hosts  ·  " + CryptoKeys.sshHosts.length + " hosts in config" + (CryptoKeys.sshHosts.length ? " (" + CryptoKeys.sshHosts.join(", ") + ")" : "")
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "SSH tools"
-        NetRow {
+        SettingRow {
             first: true
             label: "Forget a host key"
             desc: page.forgetMsg !== "" ? page.forgetMsg : "after a server was reinstalled (\"REMOTE HOST IDENTIFICATION HAS CHANGED\"): name, IP or [name]:port"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField {
                     Layout.preferredWidth: 220
                     icon: ""; clearable: false
@@ -92,11 +92,11 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             label: "New SSH key (ed25519)"
             desc: page.newKeyMsg !== "" ? page.newKeyMsg : "opens a terminal; ssh-keygen asks for the passphrase there"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField { Layout.preferredWidth: 150; icon: ""; clearable: false; text: page.keyName; onTextEdited: page.keyName = text }
                 SearchField { Layout.preferredWidth: 170; icon: ""; clearable: false; text: page.keyComment; placeholderText: "comment"; onTextEdited: page.keyComment = text }
                 ActionButton {
@@ -108,7 +108,7 @@ ColumnLayout {
     }
 
     // ── GPG ─────────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "GPG keys"
         icon: "󰌆"
@@ -117,14 +117,14 @@ ColumnLayout {
             text: page.showAllGpg ? "Only mine" : "Show " + CryptoKeys.gpgKeys.filter(k => !k.secret).length + " others"
             onClicked: page.showAllGpg = !page.showAllGpg
         }
-        NetRow {
+        SettingRow {
             first: true
             label: CryptoKeys.gpgKeys.filter(k => k.secret).length + " own (secret) keys, " + CryptoKeys.gpgKeys.filter(k => !k.secret).length + " others' keys"
             desc: "git signing: " + (CryptoKeys.gitSigningKey || "no user.signingkey") + (CryptoKeys.gitSign ? " · commits are signed" : " · commit.gpgsign off")
         }
         Repeater {
             model: CryptoKeys.gpgKeys.filter(k => k.secret || page.showAllGpg)
-            NetRow {
+            SettingRow {
                 required property var modelData
                 readonly property var k: modelData
                 label: (k.secret ? "󰌆 " : "") + (k.uid || k.keyid)

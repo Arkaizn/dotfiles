@@ -103,7 +103,9 @@ BarPopup {
 
     function runTool(cmd) {
         root.close()
-        Quickshell.execDetached(["bash", "-c", "sleep 0.35; " + cmd])
+        // after the panel has closed (it would be in the screenshot / colour pick);
+        // `cmd` is always a fixed script from CCItem, never anything typed
+        Jobs.later(350, () => Quickshell.execDetached(["bash", "-c", cmd]))
     }
 
     // log out / reboot / shut down: the first click arms, a second within 3s runs
@@ -232,7 +234,7 @@ BarPopup {
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         interactive: contentHeight > height && root.dragId === ""
-        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+        ScrollBar.vertical: SlimScrollBar {}
 
         // long-press an empty spot (or a card's background): edit live
         TapHandler {
@@ -245,14 +247,14 @@ BarPopup {
             // a little inset while editing, so the − badges aren't cut off at the edge
             x: root.editing ? 6 : 0
             width: flick.width - x * 2
-            spacing: 8
+            spacing: Tokens.space.s8
 
             // ── edit bar (only while editing; dropping on it hides) ──
-            CCCard {
+            Card {
                 id: tray
                 // unrolls / rolls up instead of popping (the spacing below grows with it)
                 property real amount: root.editing ? 1 : 0
-                Behavior on amount { NumberAnimation { duration: Anim.popupIn; easing.type: Anim.easingIn } }
+                Behavior on amount { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
                 visible: amount > 0
                 opacity: amount
                 clip: true
@@ -262,12 +264,12 @@ BarPopup {
                 implicitHeight: editCol.implicitHeight + 20
                 ColumnLayout {
                     id: editCol
-                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10; leftMargin: 12 }
-                    spacing: 8
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s10; leftMargin: Tokens.space.s12 }
+                    spacing: Tokens.space.s8
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 6
-                        Text { text: "󰏫"; color: Colors.color6; font.pixelSize: 16; font.family: Properties.fontFamily }
+                        spacing: Tokens.space.s6
+                        Text { text: "󰏫"; color: Colors.color6; font.pixelSize: Tokens.font.subtitle; font.family: Properties.fontFamily }
                         // which editor
                         Repeater {
                             model: [{ t: "controlCenter", label: "Cards" }, { t: "controlCenterButtons", label: "Buttons" }]
@@ -276,8 +278,8 @@ BarPopup {
                                 readonly property bool on: EditMode.target === modelData.t
                                 implicitWidth: modeLabel.implicitWidth + 18
                                 implicitHeight: 26
-                                radius: 8
-                                color: on ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.22) : modeMouse.containsMouse ? Colors.fade(0.08) : "transparent"
+                                radius: Tokens.radius.md
+                                color: on ? Colors.alpha(Colors.color6, 0.22) : modeMouse.containsMouse ? Colors.fade(0.08) : "transparent"
                                 border.width: 1
                                 border.color: on ? Colors.color6 : Colors.fade(0.15)
                                 Text {
@@ -285,7 +287,7 @@ BarPopup {
                                     anchors.centerIn: parent
                                     text: parent.modelData.label
                                     color: parent.on ? Colors.ink : Colors.fade(0.6)
-                                    font { pixelSize: 11; bold: parent.on; family: Properties.fontFamily }
+                                    font { pixelSize: Tokens.font.caption; bold: parent.on; family: Properties.fontFamily }
                                 }
                                 MouseArea {
                                     id: modeMouse
@@ -327,12 +329,12 @@ BarPopup {
                             : (PanelLayout.ccHiddenItems.length > 0 ? "Hidden buttons — drag one into a card · drop here to hide" : "Drag buttons between cards · − or dropping here hides one")
                         wrapMode: Text.Wrap
                         color: Colors.fade(0.5)
-                        font { pixelSize: 11; family: Properties.fontFamily }
+                        font { pixelSize: Tokens.font.caption; family: Properties.fontFamily }
                     }
                     Flow {
                         Layout.fillWidth: true
                         visible: chipRep.count > 0
-                        spacing: 6
+                        spacing: Tokens.space.s6
                         Repeater {
                             id: chipRep
                             model: root.editCards ? PanelLayout.ccHidden : root.editButtons ? PanelLayout.ccHiddenItems : []
@@ -407,12 +409,12 @@ BarPopup {
             Text {
                 visible: PanelLayout.ccOrder.length === 0
                 Layout.fillWidth: true
-                Layout.topMargin: 20
-                Layout.bottomMargin: 20
+                Layout.topMargin: Tokens.space.s20
+                Layout.bottomMargin: Tokens.space.s20
                 horizontalAlignment: Text.AlignHCenter
                 text: root.editing ? "No cards — drag one in from above" : "No cards — long-press here to edit"
                 color: Colors.fade(0.4)
-                font { pixelSize: 12; italic: true; family: Properties.fontFamily }
+                font { pixelSize: Tokens.font.small; italic: true; family: Properties.fontFamily }
             }
         }
     }
@@ -438,7 +440,7 @@ BarPopup {
                 required property var modelData
                 readonly property var r: { root.pointer; return modelData.area ? root.rectOf(modelData.area) : { x: 0, y: 0, w: 0, h: 0 } }
                 x: r.x - 5; y: r.y - 5; width: r.w + 10; height: r.h + 10
-                radius: 14
+                radius: Tokens.radius.card
                 shown: modelData.area?.visible ?? false
                 hot: root.dropHolder === modelData.holderId
             }
@@ -493,13 +495,13 @@ BarPopup {
     // ── Clock + its buttons ──
     Component {
         id: headerCard
-        CCCard {
+        Card {
             implicitHeight: header.implicitHeight + 24
             CCHeader {
                 id: header
                 host: root
                 batteries: root.batteryItems
-                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: 12 }
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; margins: Tokens.space.s12 }
             }
         }
     }
@@ -528,14 +530,14 @@ BarPopup {
     // ── Notifications ──
     Component {
         id: notificationsCard
-        CCCard {
+        Card {
             implicitHeight: notifs.implicitHeight + 20
             NotificationsSection {
                 id: notifs
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s10 }
                 maxListHeight: root.liveNotifH >= 0 ? root.liveNotifH : PanelGeometry.notifications.height
                 fullHeight: root.editing
-                Behavior on maxListHeight { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                Behavior on maxListHeight { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
             }
             // its height (edit mode): a grip on the card's bottom edge
             ResizeHandle {

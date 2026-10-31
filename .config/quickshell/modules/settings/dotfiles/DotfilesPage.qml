@@ -10,7 +10,7 @@ import "../network"
 // it will overwrite. Committing and pushing stay with you.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string profile: Settings.dotfiles.profile ?? "default"
     property string confirm: ""            // "push" | "pull" | "update" | ""
@@ -25,7 +25,7 @@ ColumnLayout {
     function kindColor(k) { return k === "new" ? Colors.green : k === "deleted" ? Colors.red : Colors.yellow }
 
     // ── Repository ──────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Repository"
         header: [
@@ -37,7 +37,7 @@ ColumnLayout {
             },
             ActionButton { icon: "󰆍"; text: "Terminal"; interactive: Dotfiles.isRepo; onClicked: Dotfiles.openTerminal() }
         ]
-        NetRow {
+        SettingRow {
             first: true
             label: "Folder"
             desc: Dotfiles.isRepo ? "a git repository" : (Dotfiles.loading ? "checking…" : Dotfiles.error)
@@ -46,19 +46,19 @@ ColumnLayout {
                 onEdited: v => { Settings.set("dotfiles", "repo", v.trim() || "~/git/dotfiles"); Qt.callLater(() => { Dotfiles.refresh(); Dotfiles.check() }) }
             }
         }
-        NetRow {
+        SettingRow {
             visible: Dotfiles.isRepo
             label: Dotfiles.branch + (Dotfiles.upstream ? "  →  " + Dotfiles.upstream : "  (no upstream)")
             desc: (Dotfiles.lastCommit ? "last commit " + Dotfiles.lastCommit.hash + " " + Dotfiles.lastCommit.subject + " (" + Dotfiles.lastCommit.when + ")" : "")
                   + (Dotfiles.fetchedAt > 0 ? "  ·  fetched " + new Date(Dotfiles.fetchedAt).toLocaleTimeString(Qt.locale(), "HH:mm")
                                             : "  ·  ahead / behind as of the last fetch")
             RowLayout {
-                spacing: 6
-                Chip { text: "↑ " + Dotfiles.ahead; label: "ahead"; copyable: false; accent: Dotfiles.ahead > 0 }
-                Chip { text: "↓ " + Dotfiles.behind; label: "behind"; copyable: false; accent: Dotfiles.behind > 0 }
+                spacing: Tokens.space.s6
+                ValueChip { text: "↑ " + Dotfiles.ahead; label: "ahead"; copyable: false; accent: Dotfiles.ahead > 0 }
+                ValueChip { text: "↓ " + Dotfiles.behind; label: "behind"; copyable: false; accent: Dotfiles.behind > 0 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: Dotfiles.isRepo
             label: Dotfiles.files.length === 0 ? "No uncommitted changes" : Dotfiles.files.length + " uncommitted " + (Dotfiles.files.length === 1 ? "file" : "files")
             desc: Dotfiles.files.length === 0 ? "working tree clean"
@@ -69,7 +69,7 @@ ColumnLayout {
     }
 
     // ── ~/.config vs repo ───────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Dotfiles.isRepo
         title: "~/.config compared with the repo"
@@ -78,7 +78,7 @@ ColumnLayout {
             interactive: !Dotfiles.checking && !Dotfiles.pushing
             onClicked: Dotfiles.check()
         }
-        NetRow {
+        SettingRow {
             first: true
             label: Dotfiles.checking && !Dotfiles.checked ? "Checking…"
                  : Dotfiles.checkError !== "" ? "check.sh failed"
@@ -89,18 +89,18 @@ ColumnLayout {
         }
         Repeater {
             model: Dotfiles.diffs.slice(0, page.maxList)
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: modelData.path
                 RowLayout {
-                    spacing: 6
-                    Text { text: page.kindIcon(modelData.kind); color: page.kindColor(modelData.kind); font.pixelSize: 14; font.family: Properties.fontFamily }
-                    Text { text: modelData.kind; color: page.kindColor(modelData.kind); font.pixelSize: 11; font.family: Properties.fontFamily }
+                    spacing: Tokens.space.s6
+                    Text { text: page.kindIcon(modelData.kind); color: page.kindColor(modelData.kind); font.pixelSize: Tokens.font.label; font.family: Properties.fontFamily }
+                    Text { text: modelData.kind; color: page.kindColor(modelData.kind); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: Dotfiles.diffs.length > page.maxList
             sub: true
             label: "… and " + (Dotfiles.diffs.length - page.maxList) + " more"
@@ -108,11 +108,11 @@ ColumnLayout {
     }
 
     // ── Sync ────────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Dotfiles.isRepo
         title: "Sync"
-        NetRow {
+        SettingRow {
             first: true
             label: "Profile"
             desc: page.profile === "default" ? "per-device files (custom/, monitors, settings.json, …) are left alone"
@@ -125,7 +125,7 @@ ColumnLayout {
             }
         }
 
-        NetRow {
+        SettingRow {
             label: "Copy my config into the repo"
             desc: "push.sh " + page.profile + ": rsync ~/.config → repo working tree. Nothing is committed or pushed."
             ActionButton {
@@ -134,12 +134,12 @@ ColumnLayout {
                 onClicked: page.confirm = "push"
             }
         }
-        NetRow {
+        SettingRow {
             label: "Pull and update"
             desc: "pull.sh " + page.profile + ": git pull, then update.sh copies the repo over ~/.config. In a terminal; may ask for sudo; restarts the shell."
             ActionButton { icon: "󰇚"; text: "Pull…"; interactive: page.confirm === ""; onClicked: page.confirm = "pull" }
         }
-        NetRow {
+        SettingRow {
             label: "Update from the repo (no pull)"
             desc: "update.sh " + page.profile + ": copy the repo as it is now over ~/.config. In a terminal; restarts the shell."
             ActionButton { icon: "󰑓"; text: "Update…"; interactive: page.confirm === ""; onClicked: page.confirm = "update" }
@@ -150,21 +150,21 @@ ColumnLayout {
             open: page.confirm !== ""
             Rectangle {
                 Layout.fillWidth: true
-                Layout.margins: 12
+                Layout.margins: Tokens.space.s12
                 implicitHeight: cf.implicitHeight + 24
-                radius: 10
-                color: Qt.rgba(0.98, 0.89, 0.69, 0.07)
+                radius: Tokens.radius.lg
+                color: Colors.alpha(Colors.warning, 0.07)
                 border.width: 1
-                border.color: Qt.rgba(0.98, 0.89, 0.69, 0.4)
+                border.color: Colors.alpha(Colors.warning, 0.4)
                 ColumnLayout {
                     id: cf
-                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-                    spacing: 8
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
+                    spacing: Tokens.space.s8
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.Wrap
                         color: Colors.ink
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         font.family: Properties.fontFamily
                         text: page.confirm === "push"
                               ? "Copy ~/.config into " + Dotfiles.repo.replace(Dotfiles.home, "~") + " (" + page.profile + ")?\n"
@@ -179,7 +179,7 @@ ColumnLayout {
                     }
                     RowLayout {
                         Layout.alignment: Qt.AlignRight
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         ActionButton { text: "Cancel"; onClicked: page.confirm = "" }
                         ActionButton {
                             icon: "󰄬"
@@ -200,17 +200,17 @@ ColumnLayout {
     }
 
     // ── Output of the last copy ─────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.showLog && page.pushLog.lines.length > 0
         title: "push.sh output" + (Dotfiles.pushing ? " (running)" : page.pushLog.code === 0 ? " (done)" : page.pushLog.code > 0 ? " (exit " + page.pushLog.code + ")" : "")
         header: ActionButton { text: "Hide"; onClicked: page.showLog = false }
         Text {
             Layout.fillWidth: true
-            Layout.margins: 14
+            Layout.margins: Tokens.space.s14
             text: page.pushLog.lines.slice(-20).map(l => l.text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "")).filter(t => t.trim() !== "").join("\n")
             color: Colors.fade(0.7)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: "monospace"
             wrapMode: Text.WrapAnywhere
         }

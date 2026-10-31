@@ -27,7 +27,7 @@ Singleton {
     readonly property string home: Quickshell.env("HOME")
     readonly property string dir: home + "/.local/share/quickshell/profiles"
     readonly property string undoFile: home + "/.local/state/quickshell/profile-undo.json"
-    readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
+    readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.cachePath("run")   // never /tmp: fixed names there are anyone's
 
     // groups that describe this machine rather than taste: off by default
     readonly property var deviceGroups: ["monitors", "connections", "dotfiles", "settingsProfiles", "wizard", "health"]

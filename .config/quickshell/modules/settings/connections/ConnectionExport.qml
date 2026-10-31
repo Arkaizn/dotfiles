@@ -49,7 +49,7 @@ ColumnLayout {
 
     Repeater {
         model: RemoteConnections.list
-        NetRow {
+        SettingRow {
             id: row
             required property var modelData
             required property int index
@@ -64,7 +64,7 @@ ColumnLayout {
         }
     }
 
-    NetRow {
+    SettingRow {
         visible: exp.anyKeyring
         label: "Include passwords"
         desc: exp.withPasswords ? "󰀦  the keyring passwords go into the file as plain text: anyone with the file can read them"
@@ -75,13 +75,13 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        Layout.margins: 14
-        spacing: 8
+        Layout.margins: Tokens.space.s14
+        spacing: Tokens.space.s8
         Text {
             Layout.fillWidth: true
             text: exp.message
             color: exp.error ? Colors.red : Colors.fade(0.6)
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap
         }

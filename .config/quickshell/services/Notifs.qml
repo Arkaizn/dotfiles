@@ -25,7 +25,7 @@ Singleton {
     readonly property int popupTimeout: (cfg.timeout ?? 5) * 1000   // used when the app doesn't specify one
     readonly property int maxPopups: cfg.maxPopups ?? 5             // oldest popup gets hidden beyond this
     readonly property string position: cfg.position ?? "top-right"
-    readonly property int exitDuration: 420    // must cover the delegates' exit animations
+    readonly property int exitDuration: Anim.ms(420)    // must cover the delegates' exit animations (scaled like them)
     readonly property int clearStagger: 45     // delay between groups on "clear all"
 
     // ── Models ────────────────────────────────────────────────
@@ -287,6 +287,7 @@ Singleton {
             if (gi > 0) groupModel.move(gi, 0, 1)
         }
         _count++
+        _trim()
 
         // ── popup ──
         if (notif.lastGeneration) return
@@ -306,6 +307,39 @@ Singleton {
             if (popupModel.get(i).closing) continue
             if (++visible > maxPopups) hidePopup(popupModel.get(i).uid)
         }
+    }
+
+    // The center keeps at most `maxPerApp` per app and `maxTotal` overall (each
+    // can hold an image); the oldest go, like dismissing them by hand. A chatty
+    // app used to grow the history (and memory) without end over days.
+    readonly property int maxPerApp: 50
+    readonly property int maxTotal: 200
+    function _trim() {
+        const drop = []
+        let total = 0
+        const live = (items, i) => !items.get(i).closing       // already on its way out
+        for (let gi = 0; gi < groupModel.count; gi++) {
+            const items = groupModel.get(gi).items
+            for (let i = 0; i < items.count; i++) if (live(items, i)) total++
+        }
+        // per app (newest first in each group: the tail is the oldest)
+        for (let gi = 0; gi < groupModel.count; gi++) {
+            const items = groupModel.get(gi).items
+            let kept = 0
+            for (let i = 0; i < items.count; i++) {
+                if (!live(items, i)) continue
+                if (++kept > maxPerApp) { drop.push(items.get(i).uid); total-- }
+            }
+        }
+        // overall: the oldest group's oldest first (groups are newest first)
+        for (let gi = groupModel.count - 1; gi >= 0 && total > maxTotal; gi--) {
+            const items = groupModel.get(gi).items
+            for (let i = items.count - 1; i >= 0 && total > maxTotal; i--) {
+                const u = items.get(i).uid
+                if (live(items, i) && !drop.includes(u)) { drop.push(u); total-- }
+            }
+        }
+        for (const u of drop) dismiss(u)
     }
 
     function _removeFromCenter(uid) {

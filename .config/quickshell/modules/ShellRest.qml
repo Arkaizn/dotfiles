@@ -1,10 +1,10 @@
 import Quickshell
 import QtQuick
 import qs.services
-import "Bar"
+import "bar"
 import "notifications"
 import "dashboard"
-import "Launcher"
+import "launcher"
 import "controlcenter"
 import "settings"
 import "calendar"

@@ -72,7 +72,7 @@ ColumnLayout {
 
     spacing: 0
 
-    NetRow {
+    SettingRow {
         first: true
         label: "Name"
         desc: ed.errors.name ?? ""
@@ -84,7 +84,7 @@ ColumnLayout {
             onTextEdited: ed.name = text
         }
     }
-    NetRow {
+    SettingRow {
         label: "Type"
         Segmented {
             small: true
@@ -93,7 +93,7 @@ ColumnLayout {
             onEdited: v => ed.type = v
         }
     }
-    NetRow {
+    SettingRow {
         label: "Host"
         desc: ed.errors.host ?? (ed.type === "ssh" ? "a name, IP or an alias from ~/.ssh/config" : "name or IP address")
         SearchField {
@@ -105,7 +105,7 @@ ColumnLayout {
             onTextEdited: ed.host = text
         }
     }
-    NetRow {
+    SettingRow {
         label: "Port"
         desc: ed.errors.port ?? ("empty = " + RemoteConnections.types[ed.type].port)
         SearchField {
@@ -117,7 +117,7 @@ ColumnLayout {
             onTextEdited: ed.port = text
         }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type !== "vnc"
         label: "User"
         desc: ed.errors.user ?? (ed.type === "ssh" ? "empty = from ~/.ssh/config or your login name"
@@ -132,7 +132,7 @@ ColumnLayout {
     }
 
     // ── RDP ─────────────────────────────────────────────────────────────────
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp" && RemoteConnections.smartcardOn
         label: "Smartcard"
         desc: ed.smartcard === "logon" ? "log in with the card: the shell asks for its PIN when you connect"
@@ -145,7 +145,7 @@ ColumnLayout {
             onEdited: v => ed.smartcard = v
         }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp" && !ed.cardLogon
         label: "Password"
         desc: ed.errors.password ?? (ed.password === "keyring" ? (ed.inKeyring ? "stored in the keyring; type a new one to replace it" : "stored in the keyring (secret-tool)")
@@ -157,7 +157,7 @@ ColumnLayout {
             onEdited: v => ed.password = v
         }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp" && ed.password === "keyring" && !ed.cardLogon
         sub: true
         label: ed.inKeyring ? "New password" : "Password"
@@ -172,30 +172,30 @@ ColumnLayout {
             onTextEdited: ed.newPassword = text
         }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp"
         label: "Shared clipboard"
         ToggleSwitch { checked: ed.clipboard; onToggled: v => ed.clipboard = v }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp"
         label: "Resize with the window"
         desc: "+dynamic-resolution"
         ToggleSwitch { checked: ed.dynres; onToggled: v => ed.dynres = v }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp"
         label: "Share my home folder"
         desc: "the server sees ~ as a drive called \"home\""
         ToggleSwitch { checked: ed.shareHome; onToggled: v => ed.shareHome = v }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp"
         label: "Ignore certificate"
         desc: "/cert:ignore: no check of the server's identity (only on networks you trust)"
         ToggleSwitch { checked: ed.ignoreCert; onToggled: v => ed.ignoreCert = v }
     }
-    NetRow {
+    SettingRow {
         visible: ed.type === "rdp"
         wide: true
         label: "More xfreerdp3 arguments"
@@ -211,13 +211,13 @@ ColumnLayout {
 
     RowLayout {
         Layout.fillWidth: true
-        Layout.margins: 14
-        spacing: 8
+        Layout.margins: Tokens.space.s14
+        spacing: Tokens.space.s8
         Text {
             Layout.fillWidth: true
             text: ed.message
             color: ed.message.startsWith("Storing") ? Colors.fade(0.6) : Colors.red
-            font.pixelSize: 11
+            font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily
             wrapMode: Text.Wrap
         }

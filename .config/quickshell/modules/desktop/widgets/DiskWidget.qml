@@ -10,7 +10,7 @@ ColumnLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 10
+    spacing: Tokens.space.s10
     implicitWidth: 250
 
     property var disks: []        // [{ path, size, used, avail }]
@@ -42,7 +42,7 @@ ColumnLayout {
             readonly property real part: modelData.size > 0 ? modelData.used / modelData.size : 0
             readonly property color tint: part > 0.9 ? Colors.red : part > 0.75 ? Colors.yellow : Colors.color6
             Layout.fillWidth: true
-            spacing: 4
+            spacing: Tokens.space.s4
             RowLayout {
                 Layout.fillWidth: true
                 Text { text: "󰋊"; color: d.tint; font.pixelSize: 14; font.family: Properties.fontFamily }

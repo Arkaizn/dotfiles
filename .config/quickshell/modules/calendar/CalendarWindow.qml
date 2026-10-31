@@ -300,8 +300,8 @@ Scope {
             function slideIn(dir) { prepareSlide(dir, 0.25); runSlide() }
             ParallelAnimation {
                 id: slide
-                NumberAnimation { id: slideX; target: viewShift; property: "x"; to: 0; duration: 280; easing.type: Easing.OutCubic }
-                NumberAnimation { id: slideO; target: viewHost; property: "opacity"; to: 1; duration: 240; easing.type: Easing.OutCubic }
+                NumberAnimation { id: slideX; target: viewShift; property: "x"; to: 0; duration: Anim.medium; easing.type: Anim.standard }
+                NumberAnimation { id: slideO; target: viewHost; property: "opacity"; to: 1; duration: Anim.medium; easing.type: Anim.standard }
             }
 
             // ── several selected events (SelectionBar) ──
@@ -381,7 +381,7 @@ Scope {
                     id: bg
                     anchors.fill: parent
                     radius: Compositor.appRadius / zoomArea.zoom          // same corners as the compositor's windows
-                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
+                    color: Colors.alpha(Colors.background, 0.86)
                     // no own border: the compositor draws the window's border, and one inside got
                     // clipped at the rounded corners (looked cut off when resizing)
 
@@ -424,8 +424,8 @@ Scope {
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 14
-                        spacing: 14
+                        anchors.margins: Tokens.space.s14
+                        spacing: Tokens.space.s14
 
                         // ── Sidebar ───────────────────────────────────────────────
                         Rectangle {
@@ -438,41 +438,14 @@ Scope {
 
                             ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 10
+                                anchors.margins: Tokens.space.s12
+                                spacing: Tokens.space.s10
 
-                                // title / drag handle
-                                Item {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 40
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: 4
-                                        spacing: 10
-                                        Text {
-                                            text: "󰃭"
-                                            color: Colors.color6
-                                            font.pixelSize: 22
-                                            font.family: Properties.fontFamily
-                                        }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: "Calendar"
-                                            color: Colors.ink
-                                            font.pixelSize: 18
-                                            font.bold: true
-                                            font.family: Properties.fontFamily
-                                        }
-                                    }
-                                    DragHandler {
-                                        target: null
-                                        onActiveChanged: if (active) bg.Window.window.startSystemMove()
-                                    }
-                                }
+                                AppTitle { icon: "󰃭"; title: "Calendar" }
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: Tokens.space.s6
                                     ActionButton {
                                         Layout.fillWidth: true
                                         implicitHeight: Properties.buttonHeight + 4
@@ -492,7 +465,7 @@ Scope {
 
                                 MiniMonth {
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 4
+                                    Layout.topMargin: Tokens.space.s4
                                     selected: win.cursor
                                     onPicked: d => {
                                         const dir = d < win.cursor ? -1 : d > win.cursor ? 1 : 0
@@ -504,13 +477,13 @@ Scope {
                                 // calendars
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Layout.topMargin: 6
+                                    Layout.topMargin: Tokens.space.s6
                                     Text {
                                         Layout.fillWidth: true
-                                        Layout.leftMargin: 4
+                                        Layout.leftMargin: Tokens.space.s4
                                         text: "CALENDARS"
                                         color: Colors.fade(0.4)
-                                        font.pixelSize: 10
+                                        font.pixelSize: Tokens.font.micro
                                         font.bold: true
                                         font.letterSpacing: 1.2
                                         font.family: Properties.fontFamily
@@ -547,24 +520,24 @@ Scope {
                                         x: 4
                                         y: 4
                                         width: parent.width - 8
-                                        spacing: 8
+                                        spacing: Tokens.space.s8
 
                                         // empty state
                                         ColumnLayout {
                                             Layout.fillWidth: true
                                             visible: CalendarStore.accounts.length === 0
-                                            spacing: 8
+                                            spacing: Tokens.space.s8
                                             Text {
                                                 Layout.fillWidth: true
-                                                Layout.leftMargin: 4
+                                                Layout.leftMargin: Tokens.space.s4
                                                 text: "No calendars yet. Add iCloud, a CalDAV server, a Google / Outlook link or a local calendar — or import an .ics export."
                                                 color: Colors.fade(0.45)
-                                                font.pixelSize: 11
+                                                font.pixelSize: Tokens.font.caption
                                                 font.family: Properties.fontFamily
                                                 wrapMode: Text.WordWrap
                                             }
                                             RowLayout {
-                                                spacing: 6
+                                                spacing: Tokens.space.s6
                                                 ActionButton {
                                                     icon: "󰐕"
                                                     text: "Add account"
@@ -589,47 +562,18 @@ Scope {
                                     }
                                 }
 
-                                // sync status
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 6
-                                    Text {
-                                        Layout.fillWidth: true
-                                        Layout.leftMargin: 4
-                                        readonly property int errs: CalendarStore.errors.length
-                                        text: CalendarStore.syncing ? "Syncing…"
-                                            : errs > 0 ? "󰀦  " + errs + (errs === 1 ? " calendar" : " calendars") + " couldn't sync"
-                                            : CalendarStore.lastSync > 0 ? "Synced " + Qt.formatTime(new Date(CalendarStore.lastSync), "HH:mm") : ""
-                                        color: errs > 0 && !CalendarStore.syncing ? Colors.red : Colors.fade(0.4)
-                                        font.pixelSize: 10
-                                        font.family: Properties.fontFamily
-                                        elide: Text.ElideRight
-                                        HoverHandler { id: errHover }
-                                        ToolTip.visible: errHover.hovered && errs > 0
-                                        ToolTip.text: CalendarStore.errors.map(e => (e.account ? e.account + ": " : "") + e.message).join("\n")
-                                    }
-                                    // settings next to sync, like the mail app
-                                    IconButton {
-                                        implicitWidth: 26; implicitHeight: 26
-                                        iconSize: 12
-                                        icon: "󰒓"
-                                        tooltip: "Calendar settings"
-                                        onClicked: calSettings.open()
-                                    }
-                                    IconButton {
-                                        implicitWidth: 26; implicitHeight: 26
-                                        iconSize: 12
-                                        icon: "󰑐"
-                                        tooltip: "Sync now"
-                                        interactive: !CalendarStore.syncing && CalendarStore.activeAccounts.length > 0
-                                        rotation: CalendarStore.syncing ? 360 : 0
-                                        RotationAnimation on rotation {
-                                            running: CalendarStore.syncing
-                                            loops: Animation.Infinite
-                                            from: 0; to: 360; duration: 900
-                                        }
-                                        onClicked: CalendarStore.sync(true)
-                                    }
+                                SyncStatus {
+                                    readonly property int errs: CalendarStore.errors.length
+                                    text: CalendarStore.syncing ? "Syncing…"
+                                        : errs > 0 ? "󰀦  " + errs + (errs === 1 ? " calendar" : " calendars") + " couldn't sync"
+                                        : CalendarStore.lastSync > 0 ? "Synced " + Qt.formatTime(new Date(CalendarStore.lastSync), "HH:mm") : ""
+                                    error: errs > 0
+                                    details: CalendarStore.errors.map(e => (e.account ? e.account + ": " : "") + e.message).join("\n")
+                                    busy: CalendarStore.syncing
+                                    canSync: CalendarStore.activeAccounts.length > 0
+                                    settingsTip: "Calendar settings"
+                                    onSettings: calSettings.open()
+                                    onSync: CalendarStore.sync(true)
                                 }
                             }
                         }
@@ -638,112 +582,84 @@ Scope {
                         ColumnLayout {
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            spacing: 12
+                            spacing: Tokens.space.s12
 
                             // header (drag handle too)
-                            Item {
-                                Layout.fillWidth: true
-                                implicitHeight: 56
-                                DragHandler {
-                                    target: null
-                                    onActiveChanged: if (active) bg.Window.window.startSystemMove()
+                            AppHeader {
+                                title: win.heading
+                                subtitle: win.subtitle
+                                wrapSubtitle: false
+
+                                // greyed out while today is already shown (clicking would do nothing)
+                                ActionButton {
+                                    text: "Today"
+                                    interactive: !win.showingToday
+                                    onClicked: win.goToday()
                                 }
+                                IconButton {
+                                    icon: "󰅁"
+                                    tooltip: "Previous  (←)"
+                                    onClicked: win.step(-1)
+                                }
+                                IconButton {
+                                    icon: "󰅂"
+                                    tooltip: "Next  (→)"
+                                    onClicked: win.step(1)
+                                }
+                                Item { Layout.preferredWidth: 6 }
+                                // back to the view the day was opened from
+                                ActionButton {
+                                    visible: win.backTo !== "" && root.view === "day"
+                                    icon: "󰁍"
+                                    text: "Back to " + win.backTo
+                                    onClicked: win.goBack()
+                                }
+                                // zoom of the day / week view
                                 RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 6
-                                    spacing: 8
-
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 0
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: win.heading
-                                            color: Colors.ink
-                                            font.pixelSize: 24
-                                            font.bold: true
-                                            font.family: Properties.fontFamily
-                                            elide: Text.ElideRight
-                                        }
-                                        Text {
-                                            text: win.subtitle
-                                            color: Colors.fade(0.5)
-                                            font.pixelSize: 12
-                                            font.family: Properties.fontFamily
-                                        }
+                                    visible: win.timeGrid
+                                    spacing: 0
+                                    IconButton {
+                                        implicitWidth: 26; implicitHeight: 26
+                                        iconSize: 11
+                                        icon: "󰍴"
+                                        tooltip: "Zoom out the hours  (Ctrl Alt −, Ctrl + wheel over them) · " + CalendarStore.zoom + "%"
+                                        interactive: CalendarStore.zoom > CalendarStore.zoomSteps[0]
+                                        onClicked: win.zoom(-1)
                                     }
-
-                                    // greyed out while today is already shown (clicking would do nothing)
-                                    ActionButton {
-                                        text: "Today"
-                                        interactive: !win.showingToday
-                                        onClicked: win.goToday()
+                                    Text {
+                                        visible: CalendarStore.zoom !== 100
+                                        Layout.preferredWidth: 38
+                                        horizontalAlignment: Text.AlignHCenter
+                                        text: CalendarStore.zoom + "%"
+                                        color: Colors.fade(CalendarStore.zoom === 100 ? 0.4 : 0.75)
+                                        font.pixelSize: Tokens.font.caption
+                                        font.family: Properties.fontFamily
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: win.zoom(0)
+                                        }
                                     }
                                     IconButton {
-                                        icon: "󰅁"
-                                        tooltip: "Previous  (←)"
-                                        onClicked: win.step(-1)
+                                        implicitWidth: 26; implicitHeight: 26
+                                        iconSize: 11
+                                        icon: "󰐕"
+                                        tooltip: "Zoom in the hours  (Ctrl Alt +) · " + CalendarStore.zoom + "%"
+                                        interactive: CalendarStore.zoom < CalendarStore.zoomSteps[CalendarStore.zoomSteps.length - 1]
+                                        onClicked: win.zoom(1)
                                     }
-                                    IconButton {
-                                        icon: "󰅂"
-                                        tooltip: "Next  (→)"
-                                        onClicked: win.step(1)
-                                    }
-                                    Item { Layout.preferredWidth: 6 }
-                                    // back to the view the day was opened from
-                                    ActionButton {
-                                        visible: win.backTo !== "" && root.view === "day"
-                                        icon: "󰁍"
-                                        text: "Back to " + win.backTo
-                                        onClicked: win.goBack()
-                                    }
-                                    // zoom of the day / week view
-                                    RowLayout {
-                                        visible: win.timeGrid
-                                        spacing: 0
-                                        IconButton {
-                                            implicitWidth: 26; implicitHeight: 26
-                                            iconSize: 11
-                                            icon: "󰍴"
-                                            tooltip: "Zoom out the hours  (Ctrl Alt −, Ctrl + wheel over them) · " + CalendarStore.zoom + "%"
-                                            interactive: CalendarStore.zoom > CalendarStore.zoomSteps[0]
-                                            onClicked: win.zoom(-1)
-                                        }
-                                        Text {
-                                            visible: CalendarStore.zoom !== 100
-                                            Layout.preferredWidth: 38
-                                            horizontalAlignment: Text.AlignHCenter
-                                            text: CalendarStore.zoom + "%"
-                                            color: Colors.fade(CalendarStore.zoom === 100 ? 0.4 : 0.75)
-                                            font.pixelSize: 11
-                                            font.family: Properties.fontFamily
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: win.zoom(0)
-                                            }
-                                        }
-                                        IconButton {
-                                            implicitWidth: 26; implicitHeight: 26
-                                            iconSize: 11
-                                            icon: "󰐕"
-                                            tooltip: "Zoom in the hours  (Ctrl Alt +) · " + CalendarStore.zoom + "%"
-                                            interactive: CalendarStore.zoom < CalendarStore.zoomSteps[CalendarStore.zoomSteps.length - 1]
-                                            onClicked: win.zoom(1)
-                                        }
-                                    }
-                                    ChoiceControl {
-                                        navStyle: true
-                                        options: ["day", "week", "month", "agenda"]
-                                        value: root.view
-                                        onEdited: v => { win.backTo = ""; root.view = v }
-                                    }
-                                    Item { Layout.preferredWidth: 6 }
-                                    IconButton {
-                                        icon: "󰅖"
-                                        tooltip: "Close"
-                                        onClicked: root.open = false
-                                    }
+                                }
+                                Segmented {
+                                    navStyle: true
+                                    options: ["day", "week", "month", "agenda"]
+                                    value: root.view
+                                    onEdited: v => { win.backTo = ""; root.view = v }
+                                }
+                                Item { Layout.preferredWidth: 6 }
+                                IconButton {
+                                    icon: "󰅖"
+                                    tooltip: "Close"
+                                    onClicked: root.open = false
                                 }
                             }
 
@@ -770,8 +686,8 @@ Scope {
                                 }
                                 ParallelAnimation {
                                     id: viewIn
-                                    NumberAnimation { target: viewLoader; property: "opacity"; from: 0; to: 1; duration: 220; easing.type: Easing.OutCubic }
-                                    NumberAnimation { target: viewLoader; property: "scale"; from: 0.985; to: 1; duration: 260; easing.type: Easing.OutCubic }
+                                    NumberAnimation { target: viewLoader; property: "opacity"; from: 0; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+                                    NumberAnimation { target: viewLoader; property: "scale"; from: 0.985; to: 1; duration: Anim.medium; easing.type: Anim.standard }
                                 }
                             }
                         }
@@ -806,14 +722,14 @@ Scope {
                     }
                     DropZone {
                         anchors.fill: parent
-                        anchors.margins: 10
+                        anchors.margins: Tokens.space.s10
                         radius: Math.max(6, Compositor.appRadius - 4)
                         shown: drop.containsDrag
                         hot: true
                         z: 200
                         Column {
                             anchors.centerIn: parent
-                            spacing: 6
+                            spacing: Tokens.space.s6
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: "󰋺"
@@ -825,7 +741,7 @@ Scope {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: "Drop to import"
                                 color: Colors.ink
-                                font.pixelSize: 16
+                                font.pixelSize: Tokens.font.subtitle
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
@@ -833,7 +749,7 @@ Scope {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: ".ics exports from Apple Calendar, Google, Outlook, … or a single invite"
                                 color: Colors.fade(0.55)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                             }
                         }
@@ -841,7 +757,7 @@ Scope {
 
                     SelectionBar {
                         id: selBar
-                        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: 20 }
+                        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter; bottomMargin: Tokens.space.s20 }
                         z: 50
                         onShiftDays: n => win.groupMove(0, n)
                         onDeleteAll: onlyThis => win.deleteSelection(onlyThis)
@@ -856,7 +772,7 @@ Scope {
                         width: Math.min(errText.implicitWidth + 50, parent.width - 80)
                         height: 40
                         radius: 20
-                        color: Qt.rgba(0.2, 0.05, 0.08, 0.95)
+                        color: Colors.surfacePopover
                         border.width: 1
                         border.color: Colors.red
                         Text {
@@ -865,7 +781,7 @@ Scope {
                             width: parent.width - 40
                             text: CalendarStore.lastError
                             color: Colors.ink
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             elide: Text.ElideRight
                         }

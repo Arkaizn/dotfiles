@@ -19,14 +19,14 @@ ColumnLayout {
     Layout.fillWidth: true
     Layout.maximumWidth: Number.POSITIVE_INFINITY   // a layout is otherwise capped at its children
     Layout.alignment: Qt.AlignTop
-    spacing: 8
+    spacing: Tokens.space.s8
     CapsLabel { Layout.alignment: Qt.AlignHCenter; text: og.label.toUpperCase(); dot: og.accent }
     Gauge { id: g; Layout.alignment: Qt.AlignHCenter; color: og.accent }
     Text {
         Layout.alignment: Qt.AlignHCenter
         text: og.caption
         color: Colors.fade(0.5)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
     }
 }

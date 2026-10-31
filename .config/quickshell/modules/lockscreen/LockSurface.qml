@@ -57,17 +57,17 @@ LockStage {
     // ── Top-left: when it was locked ──
     Text {
         visible: root.show.lockedSince
-        anchors { left: parent.left; top: parent.top; margins: 32 }
+        anchors { left: parent.left; top: parent.top; margins: Tokens.space.s32 }
         text: "󰌾  Locked since " + Qt.formatTime(new Date(root.lock.lockedAt), "HH:mm")
-        color: Qt.rgba(1, 1, 1, 0.55)
-        font.pixelSize: 13
+        color: Colors.onWallpaper(0.55)
+        font.pixelSize: Tokens.font.body
         font.family: Properties.fontFamily
     }
 
     // ── Top-right: connected Bluetooth devices, then batteries ──
     Row {
         anchors { right: parent.right; top: parent.top; margins: 28 }
-        spacing: 8
+        spacing: Tokens.space.s8
 
         // headset, controller, … with its battery when it reports one
         Repeater {
@@ -98,14 +98,14 @@ LockStage {
     // ── Bottom-centre: media ──
     LockMedia {
         id: media
-        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 32 }
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Tokens.space.s32 }
         visible: root.show.media && player !== null
         controls: root.show.mediaControls
     }
 
     // ── Right side: notifications ──
     LockNotifications {
-        anchors { right: parent.right; rightMargin: 32; verticalCenter: parent.verticalCenter }
+        anchors { right: parent.right; rightMargin: Tokens.space.s32; verticalCenter: parent.verticalCenter }
         width: 360
         visible: root.show.notifications !== "off" && Notifs.count > 0
         privateMode: root.show.notifications === "private"
@@ -114,7 +114,7 @@ LockStage {
     // ── Bottom-right: power ──
     PowerRow {
         visible: root.show.power
-        anchors { right: parent.right; bottom: parent.bottom; margins: 32 }
+        anchors { right: parent.right; bottom: parent.bottom; margins: Tokens.space.s32 }
         onRun: id => id === "suspend" ? Session.suspend() : id === "reboot" ? Session.reboot() : Session.poweroff()
     }
 }

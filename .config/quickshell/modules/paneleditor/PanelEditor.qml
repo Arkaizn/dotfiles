@@ -130,10 +130,10 @@ PanelWindow {
     // ── canvas ──────────────────────────────────────────────────────────────
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.38)
+        color: Colors.dim(0.38)
         opacity: 0
         Component.onCompleted: opacity = 1
-        Behavior on opacity { NumberAnimation { duration: 180 } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
     }
     // a tap on an empty spot does nothing (Esc / Done close); keys
     MouseArea { anchors.fill: parent }
@@ -158,14 +158,14 @@ PanelWindow {
         border.width: Math.max(1, Properties.panelBorderWidth)
         border.color: Properties.panelBorder
         scale: barArea.pressed ? 1.01 : 1
-        Behavior on scale { NumberAnimation { duration: 160 } }
+        Behavior on scale { NumberAnimation { duration: Anim.normal } }
 
         Text {
             anchors.centerIn: parent
             rotation: EdgeMap.vertical(ed.edge) ? 90 : 0
             text: "󰍜  Bar · drag it to another edge"
             color: Colors.ink
-            font { pixelSize: 13; family: Properties.fontFamily; bold: true }
+            font { pixelSize: Tokens.font.body; family: Properties.fontFamily; bold: true }
         }
         MouseArea {
             id: barArea
@@ -221,11 +221,11 @@ PanelWindow {
             border.width: Math.max(1, Properties.panelBorderWidth)
             border.color: Properties.panelBorder
             scale: dragged ? 1.015 : 1
-            Behavior on scale { NumberAnimation { duration: 160 } }
+            Behavior on scale { NumberAnimation { duration: Anim.normal } }
 
             ColumnLayout {
                 anchors.centerIn: parent
-                spacing: 4
+                spacing: Tokens.space.s4
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: ed.icons[ghost.pid] + "  " + ed.names[ghost.pid] + (ghost.pid === "launcher" ? " · " + ed.view : "")
@@ -238,13 +238,13 @@ PanelWindow {
                           + "  ·  " + (ghost.floating ? "floating" : ghost.place.attach === "edge" ? "screen edge" : "on the bar")
                           + (ghost.floating ? "" : " · " + (typeof ghost.place.along === "number" ? Math.round(ghost.place.along * 100) + " %" : ghost.place.along))
                     color: Colors.fade(0.6)
-                    font { pixelSize: 11; family: Properties.fontFamily }
+                    font { pixelSize: Tokens.font.caption; family: Properties.fontFamily }
                 }
             }
 
             MouseArea {
                 anchors.fill: parent
-                anchors.margins: 14              // the grips sit on the edges
+                anchors.margins: Tokens.space.s14              // the grips sit on the edges
                 cursorShape: pressed ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                 preventStealing: true
                 onPressed: m => { ed.grab = Qt.point(m.x + anchors.margins, m.y + anchors.margins); ed.drag = ghost.pid }
@@ -308,20 +308,20 @@ PanelWindow {
         anchors.centerIn: parent
         width: tools.implicitWidth + 32
         height: tools.implicitHeight + 24
-        radius: 18
+        radius: Tokens.radius.dialog
         color: Properties.panelColor
         border.width: Math.max(1, Properties.panelBorderWidth)
         border.color: Properties.panelBorder
         z: 10
         opacity: ed.drag === "" ? 1 : 0.25
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
         ColumnLayout {
             id: tools
             anchors.centerIn: parent
-            spacing: 10
+            spacing: Tokens.space.s10
             RowLayout {
-                spacing: 10
+                spacing: Tokens.space.s10
                 Text {
                     text: "󰹑  Panel editor"
                     color: Colors.ink
@@ -343,14 +343,14 @@ PanelWindow {
             Text {
                 text: "Drag the bar to an edge · drag a panel along the bar, or off it to float · the grips resize"
                 color: Colors.fade(0.6)
-                font { pixelSize: 11; family: Properties.fontFamily }
+                font { pixelSize: Tokens.font.caption; family: Properties.fontFamily }
             }
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 Text {
                     text: "Launcher view"
                     color: Colors.fade(0.7)
-                    font { pixelSize: 11; family: Properties.fontFamily }
+                    font { pixelSize: Tokens.font.caption; family: Properties.fontFamily }
                 }
                 Segmented {
                     small: true

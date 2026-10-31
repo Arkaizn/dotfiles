@@ -61,17 +61,17 @@ Modal {
 
     ColumnLayout {
         width: parent.width
-        spacing: 12
+        spacing: Tokens.space.s12
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
-            Text { text: "󰈝"; color: Colors.color6; font.pixelSize: 20; font.family: Properties.fontFamily }
+            spacing: Tokens.space.s10
+            Text { text: "󰈝"; color: Colors.color6; font.pixelSize: Tokens.font.titleLarge; font.family: Properties.fontFamily }
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
-                Text { Layout.fillWidth: true; text: "Export settings"; color: Colors.ink; font.pixelSize: 17; font.bold: true; font.family: Properties.fontFamily }
-                Text { Layout.fillWidth: true; text: "Pick what goes into the file"; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
+                Text { Layout.fillWidth: true; text: "Export settings"; color: Colors.ink; font.pixelSize: Tokens.font.title; font.bold: true; font.family: Properties.fontFamily }
+                Text { Layout.fillWidth: true; text: "Pick what goes into the file"; color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
             }
             IconButton { implicitWidth: 30; implicitHeight: 30; icon: "󰅖"; onClicked: root.close() }
         }
@@ -79,11 +79,11 @@ Modal {
         // ── settings ──
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 4
+            Layout.topMargin: Tokens.space.s4
             Text {
                 Layout.fillWidth: true
                 text: "SETTINGS  ·  " + root.pickedCount + " of " + root.settingGroups.length
-                color: Colors.fade(0.45); font.pixelSize: 10; font.bold: true; font.letterSpacing: 1.1; font.family: Properties.fontFamily
+                color: Colors.fade(0.45); font.pixelSize: Tokens.font.micro; font.bold: true; font.letterSpacing: 1.1; font.family: Properties.fontFamily
             }
             ActionButton { text: "All"; onClicked: root.setAll(true) }
             ActionButton { text: "None"; onClicked: root.setAll(false) }
@@ -91,19 +91,19 @@ Modal {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: grid.implicitHeight + 16
-            radius: 14
+            radius: Tokens.radius.card
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
             GridLayout {
                 id: grid
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s8 }
                 columns: 3
-                columnSpacing: 4
-                rowSpacing: 2
+                columnSpacing: Tokens.space.s4
+                rowSpacing: Tokens.space.s2
                 Repeater {
                     model: root.settingGroups.slice().sort((a, b) => Settings.groupLabel(a).localeCompare(Settings.groupLabel(b)))
-                    Check {
+                    Checkbox {
                         required property string modelData
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1
@@ -117,11 +117,11 @@ Modal {
 
         // ── this device ──
         Text {
-            Layout.topMargin: 4
+            Layout.topMargin: Tokens.space.s4
             text: "THIS DEVICE"
-            color: Colors.fade(0.45); font.pixelSize: 10; font.bold: true; font.letterSpacing: 1.1; font.family: Properties.fontFamily
+            color: Colors.fade(0.45); font.pixelSize: Tokens.font.micro; font.bold: true; font.letterSpacing: 1.1; font.family: Properties.fontFamily
         }
-        Card {
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 label: "Monitors"
@@ -132,11 +132,11 @@ Modal {
 
         // ── accounts ──
         Text {
-            Layout.topMargin: 4
+            Layout.topMargin: Tokens.space.s4
             text: "ACCOUNTS"
-            color: Colors.fade(0.45); font.pixelSize: 10; font.bold: true; font.letterSpacing: 1.1; font.family: Properties.fontFamily
+            color: Colors.fade(0.45); font.pixelSize: Tokens.font.micro; font.bold: true; font.letterSpacing: 1.1; font.family: Properties.fontFamily
         }
-        Card {
+        ListCard {
             PlainRow {
                 Layout.fillWidth: true
                 opacity: MailStore.accounts.length > 0 ? 1 : 0.45
@@ -183,13 +183,13 @@ Modal {
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.topMargin: 4
-            spacing: 8
+            Layout.topMargin: Tokens.space.s4
+            spacing: Tokens.space.s8
             Text {
                 Layout.fillWidth: true
                 text: root.error
                 color: Colors.red
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.Wrap
             }
@@ -198,51 +198,4 @@ Modal {
         }
     }
 
-    component Check: Rectangle {
-        id: check
-        property string label
-        property bool checked: false
-        signal clicked()
-        implicitHeight: 30
-        radius: 8
-        color: checkMouse.containsMouse ? Colors.fade(0.06) : "transparent"
-        Row {
-            anchors.verticalCenter: parent.verticalCenter
-            x: 8
-            spacing: 8
-            Text {
-                text: check.checked ? "󰄵" : "󰄱"
-                color: check.checked ? Colors.color6 : Colors.fade(0.35)
-                font.pixelSize: 15
-                font.family: Properties.fontFamily
-            }
-            Text {
-                width: check.width - 40
-                anchors.verticalCenter: parent.verticalCenter
-                text: check.label
-                color: check.checked ? Colors.ink : Colors.fade(0.5)
-                font.pixelSize: 11
-                font.family: Properties.fontFamily
-                elide: Text.ElideRight
-            }
-        }
-        MouseArea { id: checkMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: check.clicked() }
-    }
-    component Card: Rectangle {
-        default property alias content: col.data
-        Layout.fillWidth: true
-        implicitHeight: col.implicitHeight
-        radius: 14
-        color: Colors.card
-        border.width: Properties.panelBorderWidth
-        border.color: Properties.cardBorder
-        ColumnLayout { id: col; width: parent.width; spacing: 0 }
-    }
-    component Divider: Rectangle {
-        Layout.fillWidth: true
-        Layout.leftMargin: 16
-        Layout.rightMargin: 16
-        implicitHeight: 1
-        color: Colors.fade(0.06)
-    }
 }

@@ -17,7 +17,7 @@ import "../../keybinds"
 //   kind "disable"   a bind from your config switched off
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string focusKeys: ""          // from the launcher's cheatsheet: open this bind's editor
     signal focusConsumed()
@@ -95,7 +95,7 @@ ColumnLayout {
     // ── Toolbar ─────────────────────────────────────────────────────────────
     RowLayout {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: Tokens.space.s8
         SearchField {
             id: search
             Layout.fillWidth: true
@@ -120,25 +120,25 @@ ColumnLayout {
         Rectangle {
             Layout.fillWidth: true
             implicitHeight: comboRow.implicitHeight + 18
-            radius: 12
+            radius: Tokens.radius.xl
             readonly property color tint: page.comboBind ? Colors.fade(1) : Colors.color6
             color: Qt.rgba(tint.r, tint.g, tint.b, 0.08)
             border.width: 1
             border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.3)
             RowLayout {
                 id: comboRow
-                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 12; rightMargin: 9 }
-                spacing: 8
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s12; rightMargin: 9 }
+                spacing: Tokens.space.s8
                 Repeater {
                     model: page.combo ?? []
                     Keycap { required property string modelData; key: modelData }
                 }
                 Text {
                     Layout.fillWidth: true
-                    Layout.leftMargin: 4
+                    Layout.leftMargin: Tokens.space.s4
                     text: page.comboBind ? "→  " + Keybinds.describe(page.comboBind) : "is free"
                     color: Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -155,7 +155,7 @@ ColumnLayout {
     // ── Editor ──────────────────────────────────────────────────────────────
     Reveal {
         open: page.editing !== null
-        NetCard {
+        Section {
             id: editor
             Layout.fillWidth: true
             readonly property var item: page.editing?.item ?? null
@@ -165,7 +165,7 @@ ColumnLayout {
             readonly property bool isNew: item === null && entry === null
             title: isNew ? "New keybind" : "Edit keybind"
             icon: isNew ? "󰐕" : "󰏫"
-            tint: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.06)
+            tint: Colors.alpha(Colors.color6, 0.06)
 
             property var keys: []
             property string keysText: ""
@@ -197,7 +197,7 @@ ColumnLayout {
                 : cmd.trim() === "" ? (source === "app" ? "Pick an app" : source === "shell" ? "Pick an action" : "Type a command")
                 : ""
 
-            NetRow {
+            SettingRow {
                 first: true
                 wide: true
                 label: "Keys"
@@ -205,7 +205,7 @@ ColumnLayout {
                     : editor.keys.length > 0 ? "Free" : ""
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 8
+                    spacing: Tokens.space.s8
                     Repeater {
                         model: editor.keys
                         Keycap { required property string modelData; key: modelData }
@@ -222,7 +222,7 @@ ColumnLayout {
                     KeyRecorder { onRecorded: k => { editor.keys = k; editor.keysText = k.join("+"); editor.replaceOk = false } }
                 }
             }
-            NetRow {
+            SettingRow {
                 label: "Name"
                 desc: "Shown in the cheatsheet / hotkey overlay"
                 SearchField {
@@ -233,18 +233,18 @@ ColumnLayout {
                     onTextEdited: editor.name = text
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: editor.fromConfig || editor.entry?.kind === "original"
                 label: "Action"
                 desc: "Stays as it is in your config"
                 Text {
                     text: editor.item ? Keybinds.describe(editor.item) : (editor.entry?.desc ?? "")
                     color: Colors.fade(0.75)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: !(editor.fromConfig || editor.entry?.kind === "original")
                 wide: true
                 label: "Action"
@@ -255,7 +255,7 @@ ColumnLayout {
                     onEdited: v => { editor.source = v; editor.cmd = "" }
                 }
             }
-            NetRow {
+            SettingRow {
                 sub: true
                 visible: editor.source === "app" && !(editor.fromConfig || editor.entry?.kind === "original")
                 label: "App"
@@ -265,7 +265,7 @@ ColumnLayout {
                     onPicked: (v, name) => { editor.cmd = v; if (editor.name === "") editor.name = "Open " + name }
                 }
             }
-            NetRow {
+            SettingRow {
                 sub: true
                 visible: editor.source === "command" && !(editor.fromConfig || editor.entry?.kind === "original")
                 label: "Command"
@@ -279,18 +279,18 @@ ColumnLayout {
                     onTextEdited: editor.cmd = text
                 }
             }
-            NetRow {
+            SettingRow {
                 sub: true
                 visible: editor.source === "shell" && !(editor.fromConfig || editor.entry?.kind === "original")
                 label: "Shell action"
-                DropdownControl {
+                Dropdown {
                     implicitWidth: 300
                     options: shellActions
                     value: editor.cmd
                     onEdited: v => { editor.cmd = v; if (editor.name === "") editor.name = shellActions.find(a => a.value === v)?.label ?? "" }
                 }
             }
-            NetRow {
+            SettingRow {
                 visible: !editor.fromConfig && editor.entry?.kind !== "original"
                 label: "For"
                 Segmented {
@@ -300,12 +300,12 @@ ColumnLayout {
                     onEdited: v => editor.on = v
                 }
             }
-            NetRow {
+            SettingRow {
                 Text {
                     Layout.fillWidth: true
                     text: editor.problem
                     color: editor.conflict ? Colors.red : Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.bold: editor.conflict
                     font.family: Properties.fontFamily
                     wrapMode: Text.WordWrap
@@ -420,14 +420,14 @@ ColumnLayout {
     ]
 
     // ── Changed here ────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.entries.length > 0 && page.query === ""
         title: "Changed here  ·  " + page.entries.length
         icon: "󰏫"
         Repeater {
             model: page.entries
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 readonly property var e: modelData
@@ -466,17 +466,17 @@ ColumnLayout {
 
     // ── All binds ───────────────────────────────────────────────────────────
     Text {
-        Layout.leftMargin: 6
+        Layout.leftMargin: Tokens.space.s6
         text: Keybinds.error !== "" ? "󰀦  " + Keybinds.error
             : page.groups.reduce((n, g) => n + g.rows.length, 0) + " shown  ·  from your " + (Compositor.name || "niri") + " config"
         color: Keybinds.error !== "" ? Colors.red : Colors.fade(0.45)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
     }
 
     Repeater {
         model: page.groups
-        NetCard {
+        Section {
             required property var modelData
             readonly property var g: modelData
             Layout.fillWidth: true
@@ -484,7 +484,7 @@ ColumnLayout {
             icon: g.icon
             Repeater {
                 model: g.rows
-                NetRow {
+                SettingRow {
                     required property var modelData
                     required property int index
                     readonly property var r: modelData
@@ -498,11 +498,11 @@ ColumnLayout {
                             required property var modelData
                             implicitWidth: capsRow.implicitWidth + 10
                             implicitHeight: 30
-                            radius: 8
-                            color: capMouse.containsMouse ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.15) : "transparent"
+                            radius: Tokens.radius.md
+                            color: capMouse.containsMouse ? Colors.alpha(Colors.color6, 0.15) : "transparent"
                             border.width: 1
-                            border.color: capMouse.containsMouse ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.45) : "transparent"
-                            Behavior on color { ColorAnimation { duration: 120 } }
+                            border.color: capMouse.containsMouse ? Colors.alpha(Colors.color6, 0.45) : "transparent"
+                            Behavior on color { ColorAnimation { duration: Anim.fast } }
                             RowLayout {
                                 id: capsRow
                                 anchors.centerIn: parent

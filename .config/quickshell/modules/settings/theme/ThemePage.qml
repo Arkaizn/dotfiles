@@ -11,7 +11,7 @@ import "../network"
 // built-in ones. Nothing changes until Apply.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property bool light: false
     property string backend: "wal"
@@ -31,11 +31,11 @@ ColumnLayout {
     }
 
     // ── Light / dark ────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Light or dark"
         icon: Theme.mode === "light" ? "󰖨" : "󰖔"
-        NetRow {
+        SettingRow {
             first: true
             label: Theme.switching ? "Switching…" : Theme.mode === "light" ? "Light mode" : "Dark mode"
             desc: Theme.modeError !== "" ? "󰀦 " + Theme.modeError
@@ -48,7 +48,7 @@ ColumnLayout {
                 onEdited: v => Theme.setMode(v)
             }
         }
-        NetRow {
+        SettingRow {
             label: "Follow the wallpaper"
             desc: (Theme.autoMode ? "Picking a wallpaper switches: light for a bright one, dark for a dark one"
                                   : "Off: new wallpapers keep the mode. On: light for a bright wallpaper, dark for a dark one")
@@ -62,31 +62,31 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             label: "The shell's colors (pywal)"
             desc: "regenerated from the current wallpaper (wal -l for light)"
             ToggleSwitch { checked: Theme.part("wal"); onToggled: v => Settings.set("theme", "wal", v) }
         }
-        NetRow {
+        SettingRow {
             label: "Tell apps (prefer light / dark)"
             desc: "browsers, libadwaita / GNOME apps, Electron apps follow this"
             ToggleSwitch { checked: Theme.part("portal"); onToggled: v => Settings.set("theme", "portal", v) }
         }
-        NetRow {
+        SettingRow {
             label: "niri window borders"
             ToggleSwitch { checked: Theme.part("niri"); onToggled: v => Settings.set("theme", "niri", v) }
         }
         ThemePairRow { kind: "gtk"; label: "GTK theme"; desc: "GTK 3 and 4 apps (also ~/.config/gtk-4.0 for libadwaita)" }
         ThemePairRow { kind: "icons"; label: "Icon theme"; desc: "GTK and Qt apps" }
         ThemePairRow { kind: "kvantum"; label: "Qt apps (Kvantum)"; desc: "Kvantum theme + qt6ct style; already open Qt apps change on restart"; partKey: "qt" }
-        NetRow {
+        SettingRow {
             label: "Changed config files"
             desc: "copied once to ~/.local/state/quickshell/backups/color-mode/ before the first change"
         }
     }
 
     // ── Current ─────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Current colors"
         header: ActionButton {
@@ -94,13 +94,13 @@ ColumnLayout {
             interactive: Theme.hasUndo && !Theme.applying
             onClicked: Theme.undo()
         }
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: Theme.current ? "From " + Theme.wallpaper.replace(Theme.home, "~") : "No pywal colors yet"
             desc: Theme.current ? "~/.cache/wal/colors.json" : "pick a wallpaper in the launcher, or apply a theme below"
             RowLayout {
-                spacing: 14
+                spacing: Tokens.space.s14
                 visible: Theme.current !== null
                 ThemeSwatches { colors: Theme.current?.colors ?? ({}); size: 18 }
                 Item { Layout.fillWidth: true }
@@ -109,10 +109,10 @@ ColumnLayout {
     }
 
     // ── Preview ─────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Make a scheme from the wallpaper"
-        NetRow {
+        SettingRow {
             first: true
             label: "Mode"
             Segmented {
@@ -122,22 +122,22 @@ ColumnLayout {
                 onEdited: v => page.light = v
             }
         }
-        NetRow {
+        SettingRow {
             label: "Backend"
             desc: Theme.backends.length > 1 ? "how colors are picked from the image" : "only wal's own is installed (python-colorthief etc. add more)"
-            DropdownControl {
+            Dropdown {
                 options: Theme.backends.map(b => ({ label: b, value: b }))
                 value: page.backend
                 onEdited: v => page.backend = v
             }
         }
-        NetRow {
+        SettingRow {
             label: "Saturation"
             desc: page.saturate < 0 ? "wal's default" : String(page.saturate)
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 ToggleSwitch { checked: page.saturate >= 0; onToggled: v => page.saturate = v ? 0.5 : -1 }
-                NumberControl {
+                NumberField {
                     visible: page.saturate >= 0
                     from: 0; to: 1; step: 0.1
                     value: Math.max(0, page.saturate)
@@ -145,7 +145,7 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Preview"
             desc: Theme.previewing ? "running wal…" : "nothing changes until you apply"
             ActionButton {
@@ -159,18 +159,18 @@ ColumnLayout {
     }
 
     // the preview (from the wallpaper, a saved theme or a built-in one)
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Theme.preview !== null || Theme.error !== ""
         title: "Preview"
-        tint: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.06)
-        NetRow {
+        tint: Colors.alpha(Colors.color6, 0.06)
+        SettingRow {
             first: true
             visible: Theme.error !== ""
             label: "Problem"
             desc: Theme.error
         }
-        NetRow {
+        SettingRow {
             first: Theme.error === ""
             visible: Theme.preview !== null
             wide: true
@@ -178,7 +178,7 @@ ColumnLayout {
             desc: "background " + (Theme.preview?.special?.background ?? "") + "  ·  foreground " + (Theme.preview?.special?.foreground ?? "")
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 14
+                spacing: Tokens.space.s14
                 ThemeSample { scheme: Theme.preview }
                 ThemeSwatches { colors: Theme.preview?.colors ?? ({}); rows: 2; size: 20 }
                 Item { Layout.fillWidth: true }
@@ -194,16 +194,16 @@ ColumnLayout {
     }
 
     // ── Saved ───────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Saved themes"
-        NetRow {
+        SettingRow {
             first: true
             label: "Save the current colors"
             desc: page.nameError !== "" ? page.nameError : page.saveMsg !== "" ? page.saveMsg : Theme.savedDir.replace(Theme.home, "~")
             descError: page.nameError !== "" || page.saveFailed
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField {
                     Layout.preferredWidth: 200
                     icon: ""; clearable: false
@@ -227,11 +227,11 @@ ColumnLayout {
         }
         Repeater {
             model: Theme.saved
-            NetRow {
+            SettingRow {
                 required property var modelData
                 label: modelData.name
                 RowLayout {
-                    spacing: 8
+                    spacing: Tokens.space.s8
                     ThemeSwatches { colors: modelData.data.colors; size: 12 }
                     IconButton { icon: "󰈈"; tooltip: "Preview"; onClicked: Theme.previewFile(modelData.name, modelData.file, modelData.data) }
                     IconButton { icon: "󰄬"; tooltip: "Apply"; interactive: !Theme.applying; onClicked: Theme.apply(modelData.file) }
@@ -250,7 +250,7 @@ ColumnLayout {
     }
 
     // ── Built-in ────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "pywal themes (" + (page.light ? "light" : "dark") + ")"
         header: SearchField {
@@ -264,7 +264,7 @@ ColumnLayout {
             implicitHeight: Math.min(320, list.contentHeight + 12)
             ListView {
                 id: list
-                anchors { fill: parent; margins: 6 }
+                anchors { fill: parent; margins: Tokens.space.s6 }
                 clip: true
                 model: page.shownBuiltins
                 delegate: Rectangle {
@@ -272,13 +272,13 @@ ColumnLayout {
                     required property var modelData
                     width: list.width
                     height: 34
-                    radius: 8
+                    radius: Tokens.radius.md
                     color: hover.hovered ? Colors.fade(0.07) : "transparent"
                     HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: Theme.previewFile(row.modelData.name, row.modelData.file, row.modelData.data) }
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
-                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                        anchors { fill: parent; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s10 }
+                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily; elide: Text.ElideRight }
                         ThemeSwatches { colors: row.modelData.data.colors; size: 12 }
                     }
                 }

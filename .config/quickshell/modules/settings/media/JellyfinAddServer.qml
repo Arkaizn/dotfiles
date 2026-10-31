@@ -8,7 +8,7 @@ import "../network"
 
 // Add a Jellyfin server through the bridge (jellyfin.servers.add; only shown
 // when the bridge has that API). Test checks the address first (jellyfin.test).
-NetRow {
+SettingRow {
     id: add
     wide: true
     label: "Add a server"
@@ -24,7 +24,7 @@ NetRow {
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 8
+        spacing: Tokens.space.s8
         SearchField { id: name; Layout.preferredWidth: 130; icon: ""; clearable: false; placeholderText: "home" }
         SearchField { id: url; Layout.fillWidth: true; icon: "󰖟"; clearable: false; placeholderText: "https://jellyfin.example.org" }
         ActionButton {

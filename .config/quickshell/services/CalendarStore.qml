@@ -104,7 +104,9 @@ Singleton {
     }
 
     Component.onCompleted: {
-        Quickshell.execDetached(["mkdir", "-p", root.dir])
+        // private: the folder 0700 (new files inside then can't be read by
+        // others whatever their mode), and what's there already made private once
+        Quickshell.execDetached(["sh", "-c", 'umask 077; mkdir -p "$1" && chmod 700 "$1" && chmod -R go-rwx "$1"', "sh", root.dir])
         try { root.accounts = JSON.parse(accountsFile.text() || "[]") } catch (e) { root.accounts = [] }
         try {
             const c = JSON.parse(cacheFile.text() || "{}")
@@ -137,7 +139,7 @@ Singleton {
         proc.environment = { CAL_REQUEST: JSON.stringify(root.current.request) }
         // a time limit, so one server that never answers can't block the queue
         // for good (the sign-in and the import run as Jobs, not here)
-        proc.command = ["timeout", "-k", "5", root.current.cmd === "sync" ? "180" : "90", "python3", root.script, root.current.cmd]
+        proc.command = ["timeout", "-k", "5", root.current.cmd === "sync" ? "180" : "90", "python3", "-I", root.script, root.current.cmd]
         proc.running = true
     }
 
@@ -210,7 +212,7 @@ Singleton {
     }
 
     // ── Accounts ─────────────────────────────────────────────────────────────
-    readonly property var palette: ["#7aa2f7", "#9ece6a", "#e0af68", "#f7768e", "#bb9af7", "#7dcfff", "#ff9e64", "#73daca"]
+    readonly property var palette: Colors.accountPalette   // shared with the other app (Colors.qml)
 
     // form: { type, name, url, username, password } → done({ ok, calendars | error })
     function discover(form, done) {
@@ -271,7 +273,7 @@ Singleton {
     function graphLogin(form, onCode, done) {
         const run = ++root.loginRun
         let answered = false
-        Jobs.start("calendar-graph-login", ["python3", root.script, "graph-login"], {
+        Jobs.start("calendar-graph-login", ["python3", "-I", root.script, "graph-login"], {
             env: { CAL_REQUEST: JSON.stringify(form) }, store: false, timeout: 16 * 60000,
             onLine: (line, isErr) => {
                 if (isErr || run !== root.loginRun) return
@@ -684,7 +686,7 @@ Singleton {
         const target = opts.newCalendars ? { new: true, names: opts.names ?? {} }
                                          : { account: accountOf(opts.calendar), calendar: calendarOf(opts.calendar) }
         let answered = false
-        Jobs.start("calendar-import", ["python3", root.script, "import"], {
+        Jobs.start("calendar-import", ["python3", "-I", root.script, "import"], {
             env: { CAL_REQUEST: JSON.stringify({ paths: opts.paths, target: target, duplicates: opts.duplicates,
                                                  upcomingOnly: opts.upcomingOnly, alarms: opts.alarms }) },
             store: false, timeout: 30 * 60000,

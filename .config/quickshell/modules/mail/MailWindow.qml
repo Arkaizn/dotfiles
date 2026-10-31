@@ -173,7 +173,7 @@ Scope {
                     anchors.fill: parent
                     radius: Compositor.appRadius / zoomArea.zoom
                     // settings: mail → solid background (no transparency behind the mail)
-                    color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, MailStore.solid ? 1 : 0.86)
+                    color: Colors.alpha(Colors.background, MailStore.solid ? 1 : 0.86)
 
                     Item {
                         id: keys
@@ -220,8 +220,8 @@ Scope {
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 14
-                        spacing: 14
+                        anchors.margins: Tokens.space.s14
+                        spacing: Tokens.space.s14
 
                         // ── Sidebar ──
                         // its width: dragged on the line between it and the list (Settings.mail.sidebarWidth)
@@ -238,31 +238,10 @@ Scope {
 
                             ColumnLayout {
                                 anchors.fill: parent
-                                anchors.margins: 12
-                                spacing: 10
+                                anchors.margins: Tokens.space.s12
+                                spacing: Tokens.space.s10
 
-                                Item {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 40
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.leftMargin: 4
-                                        spacing: 10
-                                        Text { text: I.mail; color: Colors.color6; font.pixelSize: 22; font.family: Properties.fontFamily }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: "Mail"
-                                            color: Colors.ink
-                                            font.pixelSize: 18
-                                            font.bold: true
-                                            font.family: Properties.fontFamily
-                                        }
-                                    }
-                                    DragHandler {
-                                        target: null
-                                        onActiveChanged: if (active) bg.Window.window.startSystemMove()
-                                    }
-                                }
+                                AppTitle { icon: I.mail; title: "Mail" }
 
                                 ActionButton {
                                     Layout.fillWidth: true
@@ -276,52 +255,32 @@ Scope {
                                 Sidebar {
                                     Layout.fillWidth: true
                                     Layout.fillHeight: true
-                                    Layout.topMargin: 6
+                                    Layout.topMargin: Tokens.space.s6
                                     view: root.view
                                     onPicked: v => root.view = v
                                     onAccountSettings: id => settingsDialog.openAccount(id)
                                     onNewFolder: (acc, parent) => folderDialog.start(acc, parent)
                                 }
 
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 4
-                                    Text {
-                                        Layout.fillWidth: true
-                                        Layout.leftMargin: 4
-                                        text: MailStore.syncing ? "Checking…"
-                                            : Object.keys(MailStore.errors).length ? "󰀦 " + Object.values(MailStore.errors)[0]
-                                            : MailStore.lastSync ? "Checked " + Format.hm(MailStore.lastSync) : ""
-                                        color: Object.keys(MailStore.errors).length && !MailStore.syncing ? Colors.red : Colors.fade(0.4)
-                                        font.pixelSize: 10
-                                        font.family: Properties.fontFamily
-                                        elide: Text.ElideRight
-                                    }
+                                SyncStatus {
+                                    text: MailStore.syncing ? "Checking…"
+                                        : Object.keys(MailStore.errors).length ? "󰀦 " + Object.values(MailStore.errors)[0]
+                                        : MailStore.lastSync ? "Checked " + Format.hm(MailStore.lastSync) : ""
+                                    error: Object.keys(MailStore.errors).length > 0
+                                    details: Object.values(MailStore.errors).join("\n")
+                                    busy: MailStore.syncing
+                                    canSync: MailStore.activeAccounts.length > 0
+                                    settingsIcon: I.cog
+                                    settingsTip: "Mail settings"
+                                    syncIcon: I.refresh
+                                    syncTip: "Check now  (F5)"
+                                    onSettings: settingsDialog.open()
+                                    onSync: MailStore.check(true)
                                     IconButton {
-                                        implicitWidth: 26; implicitHeight: 26; iconSize: 12
+                                        implicitWidth: 26; implicitHeight: 26; iconSize: Tokens.icon.sm
                                         icon: I.plus
                                         tooltip: "Add an account"
                                         onClicked: accountDialog.start()
-                                    }
-                                    IconButton {
-                                        implicitWidth: 26; implicitHeight: 26; iconSize: 12
-                                        icon: I.cog
-                                        tooltip: "Mail settings"
-                                        onClicked: settingsDialog.open()
-                                    }
-                                    IconButton {
-                                        id: refreshButton
-                                        implicitWidth: 26; implicitHeight: 26; iconSize: 12
-                                        icon: I.refresh
-                                        tooltip: "Check now  (F5)"
-                                        interactive: !MailStore.syncing && MailStore.activeAccounts.length > 0
-                                        RotationAnimation on rotation {
-                                            running: MailStore.syncing
-                                            loops: Animation.Infinite
-                                            from: 0; to: 360; duration: 900
-                                            onStopped: refreshButton.rotation = 0
-                                        }
-                                        onClicked: MailStore.check(true)
                                     }
                                 }
                             }
@@ -339,7 +298,7 @@ Scope {
                                 height: 48
                                 radius: 1.5
                                 color: Colors.fade(sideSplit.pressed ? 0.7 : sideSplit.containsMouse ? 0.45 : 0)
-                                Behavior on color { ColorAnimation { duration: 140 } }
+                                Behavior on color { ColorAnimation { duration: Anim.fast } }
                             }
                             MouseArea {
                                 id: sideSplit
@@ -391,7 +350,7 @@ Scope {
                                 height: 48
                                 radius: 1.5
                                 color: Colors.fade(split.pressed ? 0.7 : split.containsMouse ? 0.45 : 0)
-                                Behavior on color { ColorAnimation { duration: 140 } }
+                                Behavior on color { ColorAnimation { duration: Anim.fast } }
                             }
                             MouseArea {
                                 id: split
@@ -430,21 +389,21 @@ Scope {
                     Rectangle {
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 24
+                        anchors.bottomMargin: Tokens.space.s24
                         visible: MailStore.lastError !== ""
                         width: Math.min(parent.width - 80, errText.implicitWidth + 60)
                         height: 40
                         radius: 20
-                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+                        color: Colors.surfacePopover
                         border.width: 1
                         border.color: Colors.red
                         z: 50
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 16
-                            anchors.rightMargin: 6
+                            anchors.leftMargin: Tokens.space.s16
+                            anchors.rightMargin: Tokens.space.s6
                             Text { id: errText; Layout.fillWidth: true; text: "󰀦  " + MailStore.lastError; color: Colors.ink
-                                   font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                                   font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily; elide: Text.ElideRight }
                             IconButton { implicitWidth: 28; implicitHeight: 28; icon: I.close; onClicked: MailStore.lastError = "" }
                         }
                     }
@@ -462,20 +421,20 @@ Scope {
                         visible: opacity > 0
                         opacity: on ? 1 : 0
                         scale: on ? 1 : 0.92
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+                        Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
+                        Behavior on scale { NumberAnimation { duration: Anim.medium; easing.type: Anim.pop } }
                         width: undoRow.implicitWidth + 30
                         height: 42
                         radius: 21
-                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+                        color: Colors.surfacePopover
                         border.width: Properties.panelBorderWidth
                         border.color: Properties.panelBorder
                         z: 50
                         RowLayout {
                             id: undoRow
                             anchors.centerIn: parent
-                            spacing: 10
-                            Text { text: undoToast.label; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                            spacing: Tokens.space.s10
+                            Text { text: undoToast.label; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                             ActionButton { icon: I.back; text: "Undo  (Ctrl+Z)"; onClicked: MailStore.undo() }
                         }
                     }

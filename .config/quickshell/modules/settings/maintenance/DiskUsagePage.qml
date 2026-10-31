@@ -13,7 +13,7 @@ import "../network"
 // moved to the trash (two clicks); nothing is deleted for good here.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property string home: Quickshell.env("HOME")
     property string path: home
@@ -86,17 +86,17 @@ ColumnLayout {
         })
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Folder"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: page.scanning ? "Scanning " + page.path + " …" : page.path + "  ·  " + Format.bytes(page.total)
             desc: page.error !== "" ? "󰀦 " + page.error : "stays on one file system (other disks and mounts are skipped)"
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Tokens.space.s6
                 IconButton { icon: "󰁝"; tooltip: "Up"; interactive: page.path !== "/" && !page.scanning; onClicked: page.up() }
                 IconButton { icon: "󰋜"; tooltip: "Home folder"; interactive: !page.scanning; onClicked: page.scan(page.home) }
                 SearchField {
@@ -117,7 +117,7 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.items.length > 0
         title: page.items.length + " items"
@@ -131,8 +131,8 @@ ColumnLayout {
                 Layout.fillWidth: true
                 implicitHeight: 40
                 Rectangle {
-                    anchors { fill: parent; leftMargin: 6; rightMargin: 6; topMargin: 2; bottomMargin: 2 }
-                    radius: 8
+                    anchors { fill: parent; leftMargin: Tokens.space.s6; rightMargin: Tokens.space.s6; topMargin: Tokens.space.s2; bottomMargin: Tokens.space.s2 }
+                    radius: Tokens.radius.md
                     color: hover.hovered && row.modelData.dir ? Colors.fade(0.06) : "transparent"
                     // size bar behind the row, relative to the biggest item
                     Rectangle {
@@ -140,17 +140,17 @@ ColumnLayout {
                         width: parent.width * row.modelData.size / Math.max(1, page.items[0].size)
                         visible: width >= 4
                         radius: Math.min(8, width / 2)
-                        color: Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.12)
+                        color: Colors.alpha(Colors.color6, 0.12)
                     }
                     HoverHandler { id: hover; cursorShape: row.modelData.dir ? Qt.PointingHandCursor : Qt.ArrowCursor }
                     TapHandler { enabled: row.modelData.dir && !page.scanning; onTapped: page.scan(row.full) }
                     RowLayout {
-                        anchors { fill: parent; leftMargin: 10; rightMargin: 6 }
-                        spacing: 10
+                        anchors { fill: parent; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s6 }
+                        spacing: Tokens.space.s10
                         Text { text: row.modelData.dir ? "󰉋" : "󰈔"; color: row.modelData.dir ? Colors.color6 : Colors.fade(0.5); font.pixelSize: 15; font.family: Properties.fontFamily }
-                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
-                        Text { text: (page.total > 0 ? Math.round(100 * row.modelData.size / page.total) : 0) + " %"; color: Colors.fade(0.4); font.pixelSize: 11; font.family: Properties.fontFamily }
-                        Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: Format.bytes(row.modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                        Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
+                        Text { text: (page.total > 0 ? Math.round(100 * row.modelData.size / page.total) : 0) + " %"; color: Colors.fade(0.4); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
+                        Text { Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight; text: Format.bytes(row.modelData.size); color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                         IconButton {
                             visible: row.full.startsWith(page.home + "/")
                             icon: page.confirmTrash === row.full ? "󰄬" : "󰩹"
@@ -164,13 +164,13 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.items.length > 60
             label: "… and " + (page.items.length - 60) + " smaller items"
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Biggest files"
         header: ActionButton {
@@ -178,7 +178,7 @@ ColumnLayout {
             text: page.findingFiles ? "Stop" : "Find files over 50 MB"
             onClicked: page.findingFiles ? Jobs.cancel("du-files") : page.findBig()
         }
-        NetRow {
+        SettingRow {
             first: true
             visible: page.bigFiles.length === 0
             label: page.findingFiles ? "Searching " + page.path + " …" : "Not searched yet"
@@ -186,14 +186,14 @@ ColumnLayout {
         }
         Repeater {
             model: page.bigFiles
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 first: index === 0
                 label: modelData.path.replace(page.home, "~")
                 RowLayout {
-                    spacing: 6
-                    Text { text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    spacing: Tokens.space.s6
+                    Text { text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                     IconButton { icon: "󰉋"; tooltip: "Show the folder"; onClicked: Quickshell.execDetached(["xdg-open", modelData.path.replace(/\/[^/]*$/, "")]) }
                 }
             }

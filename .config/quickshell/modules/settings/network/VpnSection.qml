@@ -8,7 +8,7 @@ import ".."
 // NetworkManager VPN / WireGuard profiles, each with its state and a switch.
 ColumnLayout {
     id: sec
-    spacing: 14
+    spacing: Tokens.space.s14
 
     signal openProfiles()       // "import one" → the Profiles tab
 
@@ -32,15 +32,15 @@ ColumnLayout {
         wrapMode: Text.Wrap
         text: "󰀦 " + Vpn.message
         color: Colors.red
-        font.pixelSize: 12
+        font.pixelSize: Tokens.font.small
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Vpn.tailscale.installed
         title: "Tailscale"
         icon: "󰖂"
-        NetRow {
+        SettingRow {
             first: true
             label: sec.stateText(Vpn.tailscale)
             desc: Vpn.tailscale.error || [Vpn.tailscale.tailnet, Vpn.tailscale.ip, Vpn.tailscale.peers].filter(x => x).join("  ·  ")
@@ -52,12 +52,12 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: Vpn.netbird.installed
         title: "NetBird"
         icon: "󰒄"
-        NetRow {
+        SettingRow {
             first: true
             label: Vpn.busy === "netbird" ? (Vpn.netbird.needsLogin ? "Waiting for the login in the browser…" : "Switching…") : sec.stateText(Vpn.netbird)
             desc: Vpn.netbird.error || [Vpn.netbird.ip, Vpn.netbird.peers].filter(x => x).join("  ·  ")
@@ -77,11 +77,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "VPN and WireGuard profiles"
         icon: "󰌾"
-        NetRow {
+        SettingRow {
             first: true
             visible: Vpn.profiles.length === 0
             label: "None yet"
@@ -90,7 +90,7 @@ ColumnLayout {
         }
         Repeater {
             model: Vpn.profiles
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 first: index === 0

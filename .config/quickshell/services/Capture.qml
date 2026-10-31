@@ -32,7 +32,7 @@ Singleton {
     id: root
 
     readonly property string home: Quickshell.env("HOME")
-    readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
+    readonly property string runtime: Quickshell.env("XDG_RUNTIME_DIR") || Quickshell.cachePath("run")   // never /tmp: fixed names there are anyone's
     readonly property string stateFile: runtime + "/quickshell-recording"
 
     // options (Settings.capture, edited on the Screenshots page)
@@ -302,9 +302,10 @@ Singleton {
     IpcHandler {
         target: "capture"
         function menu(): void { root.menuOpen = !root.menuOpen }
-        function screenshot(what: string): void { root.screenshot(what || "region") }
+        // only the known kinds (anything else is ignored, not guessed)
+        function screenshot(what: string): void { if (["", "region", "screen", "window"].includes(what)) root.screenshot(what || "region") }
         function ocr(): void { root.ocr() }
-        function record(what: string): void { root.record(what || "screen") }
+        function record(what: string): void { if (["", "screen", "window"].includes(what)) root.record(what || "screen") }
         function recordAll(): void { root.record("screen", "", "all") }
         function stop(): void { root.stop() }
         function status(): string {

@@ -13,7 +13,7 @@ import "../network"
 // each job can be cancelled and is stopped when the page closes.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property var jobIds: ["diag-ping", "diag-trace", "diag-port", "diag-speed"]
 
@@ -99,11 +99,11 @@ ColumnLayout {
     }
 
     // ── Connectivity ────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Connectivity"
         icon: "󰖟"
-        NetRow {
+        SettingRow {
             first: true
             label: !Network.networking ? "Networking is off"
                  : ({ full: "Online", limited: "Limited: no internet", portal: "Captive portal: log in to get online",
@@ -123,15 +123,15 @@ ColumnLayout {
                 onClicked: page.runCheck()
             }
         }
-        NetRow {
+        SettingRow {
             label: "Router" + (page.check?.gateway ? " (" + page.check.gateway + ")" : "")
             desc: page.check === null ? "…" : page.check.gateway === "" ? "no default route" : NetCheck.pingText(page.check.gwPing)
         }
-        NetRow {
+        SettingRow {
             label: "Internet (" + page.checkHost + ")"
             desc: page.check === null ? "…" : NetCheck.pingText(page.check.netPing)
         }
-        NetRow {
+        SettingRow {
             label: "DNS"
             desc: (page.dnsServers.length > 0 ? page.dnsServers.join("  ") : "no servers")
                 + (page.check === null ? "" : "  ·  " + (page.check.dns === null ? "not checked" : page.check.dns < 0
@@ -140,16 +140,16 @@ ColumnLayout {
     }
 
     // ── Ping / traceroute ───────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Ping and traceroute"
         icon: "󰛳"
-        NetRow {
+        SettingRow {
             first: true
             label: "Host"
             desc: page.errors.host ?? page.errors.count ?? "name or IP address"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField {
                     Layout.preferredWidth: 220
                     icon: ""; clearable: false
@@ -166,13 +166,13 @@ ColumnLayout {
                     error: page.errors.count !== undefined
                     onTextEdited: page.count = text
                 }
-                Text { text: "pings"; color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
+                Text { text: "pings"; color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Run"
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 ActionButton {
                     icon: Jobs.isRunning("diag-ping") ? "󰜺" : "󰐊"
                     text: Jobs.isRunning("diag-ping") ? "Stop" : "Ping"
@@ -191,16 +191,16 @@ ColumnLayout {
     }
 
     // ── Port ────────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Is a port open?"
         icon: "󰒍"
-        NetRow {
+        SettingRow {
             first: true
             label: "Host and port"
             desc: page.errors.portHost ?? page.errors.port ?? "TCP connect test (nc), e.g. ssh = 22, https = 443, rdp = 3389"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField {
                     Layout.preferredWidth: 200
                     icon: ""; clearable: false
@@ -229,11 +229,11 @@ ColumnLayout {
     }
 
     // ── Speed ───────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Internet speed"
         icon: "󰓅"
-        NetRow {
+        SettingRow {
             first: true
             label: "Speed test"
             desc: page.hasSpeedtestCli ? "speedtest-cli against the nearest speedtest.net server (~30 s, uses some data)"

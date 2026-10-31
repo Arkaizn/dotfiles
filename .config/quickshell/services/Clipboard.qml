@@ -80,4 +80,24 @@ Singleton {
     }
 
     function later(fn) { Jobs.later(400, fn) }
+
+    // The history for the launcher: cb([{ id, preview, isImage }]). `cliphist
+    // list` prints `<id>\t<preview>`; images have a "[[ binary data … ]]"
+    // placeholder, shown as "Image". Ids are numeric — anything else is skipped.
+    function history(cb) {
+        Jobs.run(["cliphist", "list"], (code, out) => cb((out ?? "").split("\n").map(line => {
+            const tab = line.indexOf("\t")
+            if (tab === -1) return null
+            const id = line.slice(0, tab)
+            if (!/^\d+$/.test(id)) return null
+            const preview = line.slice(tab + 1)
+            const isImage = preview.startsWith("[[ binary data")
+            return { id: id, preview: isImage ? "Image" : preview, isImage: isImage }
+        }).filter(e => e !== null)))
+    }
+    // put an entry back on the clipboard (the id as $1, never in the script)
+    function copyEntry(id) {
+        if (!/^\d+$/.test(String(id))) return
+        Jobs.run(["sh", "-c", 'printf "%s\\t" "$1" | cliphist decode | wl-copy', "sh", String(id)], () => {})
+    }
 }

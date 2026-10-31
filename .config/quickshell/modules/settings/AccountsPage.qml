@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 import "network"
 
@@ -9,13 +10,13 @@ import "network"
 // take both along.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     function calKind(a) { return a.type === "ics" ? "Subscription" : a.type === "local" ? "Local" : a.type === "graph" ? "Microsoft 365" : /icloud/i.test(a.url) ? "iCloud" : "CalDAV" }
     readonly property var calErrors: CalendarStore.errors ?? []
 
     // ── Mail ──
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Mail"
         icon: "󰇮"
@@ -24,7 +25,7 @@ ColumnLayout {
             ActionButton { icon: "󰈔"; text: "Export…"; interactive: MailStore.accounts.length > 0; onClicked: Panels.call("mail", "transfer", "export") },
             ActionButton { icon: "󰇚"; text: "Import…"; onClicked: Panels.call("mail", "transfer", "import") }
         ]
-        NetRow {
+        SettingRow {
             first: true
             visible: MailStore.accounts.length === 0
             label: "No mail accounts yet"
@@ -48,7 +49,7 @@ ColumnLayout {
     }
 
     // ── Calendar ──
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Calendar"
         icon: "󰃭"
@@ -57,7 +58,7 @@ ColumnLayout {
             ActionButton { icon: "󰈔"; text: "Export…"; interactive: CalendarStore.accounts.length > 0; onClicked: Panels.call("calendar", "transfer", "export") },
             ActionButton { icon: "󰇚"; text: "Import…"; onClicked: Panels.call("calendar", "transfer", "import") }
         ]
-        NetRow {
+        SettingRow {
             first: true
             visible: CalendarStore.accounts.length === 0
             label: "No calendar accounts yet"
@@ -82,10 +83,10 @@ ColumnLayout {
 
     Text {
         Layout.fillWidth: true
-        Layout.leftMargin: 6
+        Layout.leftMargin: Tokens.space.s6
         text: "Passwords stay in the keyring. An export takes them only encrypted with a passphrase you choose. The settings export (󰈝 at the top) can include these accounts too."
         color: Colors.fade(0.42)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
         wrapMode: Text.Wrap
     }
@@ -103,40 +104,40 @@ ColumnLayout {
         implicitHeight: 58
         Rectangle {
             visible: !row.first
-            anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 16; rightMargin: 16 }
+            anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: Tokens.space.s16; rightMargin: Tokens.space.s16 }
             height: 1
             color: Colors.fade(0.06)
         }
         Rectangle {
             anchors.fill: parent
-            anchors.margins: 4
-            radius: 10
+            anchors.margins: Tokens.space.s4
+            radius: Tokens.radius.lg
             color: rowMouse.containsMouse ? Colors.fade(0.04) : "transparent"
         }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 16
-            anchors.rightMargin: 12
-            spacing: 12
+            anchors.leftMargin: Tokens.space.s16
+            anchors.rightMargin: Tokens.space.s12
+            spacing: Tokens.space.s12
             Rectangle {
-                implicitWidth: 28; implicitHeight: 28; radius: 14
+                implicitWidth: 28; implicitHeight: 28; radius: Tokens.radius.card
                 color: row.color
                 opacity: row.dim ? 0.4 : 1
                 Text {
                     anchors.centerIn: parent
                     text: row.title.charAt(0).toUpperCase()
                     color: Colors.background
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
             }
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 1
-                Text { Layout.fillWidth: true; text: row.title; color: row.dim ? Colors.fade(0.5) : Colors.ink; font.pixelSize: 13; font.bold: true
+                spacing: Tokens.space.s1
+                Text { Layout.fillWidth: true; text: row.title; color: row.dim ? Colors.fade(0.5) : Colors.ink; font.pixelSize: Tokens.font.body; font.bold: true
                        font.family: Properties.fontFamily; elide: Text.ElideRight }
-                Text { Layout.fillWidth: true; text: row.sub; color: row.error ? Colors.red : Colors.fade(0.45); font.pixelSize: 11
+                Text { Layout.fillWidth: true; text: row.sub; color: row.error ? Colors.red : Colors.fade(0.45); font.pixelSize: Tokens.font.caption
                        font.family: Properties.fontFamily; elide: Text.ElideRight }
             }
             ActionButton { icon: "󰒓"; text: "Settings"; onClicked: row.open() }

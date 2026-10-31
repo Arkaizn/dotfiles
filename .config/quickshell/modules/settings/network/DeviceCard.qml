@@ -88,22 +88,22 @@ Rectangle {
         })
     }
 
-    component Info: Text { color: Colors.fade(0.5); font.pixelSize: 11; font.family: Properties.fontFamily }
+    component Info: Text { color: Colors.fade(0.5); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
 
     implicitHeight: col.implicitHeight + 24
-    radius: 14
+    radius: Tokens.radius.card
     color: expanded ? Colors.fade(0.045) : hover.hovered ? Colors.fade(0.03) : Colors.card
     border.width: Properties.panelBorderWidth
-    border.color: expanded ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.35) : Properties.cardBorder
+    border.color: expanded ? Colors.alpha(Colors.color6, 0.35) : Properties.cardBorder
     opacity: isHidden ? 0.6 : 1
-    Behavior on color { ColorAnimation { duration: 200 } }
-    Behavior on border.color { ColorAnimation { duration: 200 } }
+    Behavior on color { ColorAnimation { duration: Anim.normal } }
+    Behavior on border.color { ColorAnimation { duration: Anim.normal } }
     HoverHandler { id: hover }
 
     ColumnLayout {
         id: col
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12; leftMargin: 14 }
-        spacing: 10
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12; leftMargin: Tokens.space.s14 }
+        spacing: Tokens.space.s10
 
         // ── Header (click to expand) ──
         Item {
@@ -113,7 +113,7 @@ Rectangle {
             RowLayout {
                 id: head
                 anchors { left: parent.left; right: parent.right }
-                spacing: 12
+                spacing: Tokens.space.s12
 
                 // type icon with a state ring that pulses while connecting
                 Rectangle {
@@ -121,32 +121,32 @@ Rectangle {
                     color: Qt.rgba(card.stateColor.r, card.stateColor.g, card.stateColor.b, 0.14)
                     border.width: 1.5
                     border.color: card.stateColor
-                    Behavior on border.color { ColorAnimation { duration: 300 } }
+                    Behavior on border.color { ColorAnimation { duration: Anim.slow } }
                     Text {
                         anchors.centerIn: parent
                         text: Network.typeIcon(card.d.type)
                         color: card.connected ? Colors.color6 : Colors.fade(0.75)
-                        font.pixelSize: 17
+                        font.pixelSize: Tokens.font.title
                         font.family: Properties.fontFamily
                     }
                     SequentialAnimation on opacity {
-                        running: card.connecting
+                        running: card.connecting && Anim.ambient
                         loops: Animation.Infinite
                         alwaysRunToEnd: true
-                        NumberAnimation { to: 0.45; duration: 600; easing.type: Easing.InOutSine }
-                        NumberAnimation { to: 1; duration: 600; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: 0.45; duration: 600; easing.type: Anim.loop }
+                        NumberAnimation { to: 1; duration: 600; easing.type: Anim.loop }
                     }
                 }
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 1
+                    spacing: Tokens.space.s1
                     RowLayout {
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         Text {
                             text: card.d.name
                             color: Colors.ink
-                            font.pixelSize: 14
+                            font.pixelSize: Tokens.font.label
                             font.bold: true
                             font.family: Properties.fontFamily
                         }
@@ -154,7 +154,7 @@ Rectangle {
                             visible: card.d.speed !== ""
                             text: card.d.speed
                             color: Colors.fade(0.4)
-                            font.pixelSize: 10
+                            font.pixelSize: Tokens.font.micro
                             font.family: Properties.fontFamily
                         }
                     }
@@ -164,7 +164,7 @@ Rectangle {
                                card.d.product ? (card.d.vendor + " " + card.d.product).trim() : null]
                               .filter(x => x).join("  ·  ")
                         color: Colors.fade(0.5)
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                         elide: Text.ElideRight
                     }
@@ -176,13 +176,13 @@ Rectangle {
                     implicitHeight: 22
                     radius: 11
                     color: Qt.rgba(card.stateColor.r, card.stateColor.g, card.stateColor.b, 0.14)
-                    Behavior on color { ColorAnimation { duration: 300 } }
+                    Behavior on color { ColorAnimation { duration: Anim.slow } }
                     Text {
                         id: stateText
                         anchors.centerIn: parent
                         text: card.d.external ? "external" : card.d.state
                         color: card.connected ? Colors.color6 : Colors.fade(0.65)
-                        font.pixelSize: 10
+                        font.pixelSize: Tokens.font.micro
                         font.bold: true
                         font.family: Properties.fontFamily
                     }
@@ -191,10 +191,10 @@ Rectangle {
                 Text {
                     text: "󰅀"
                     color: Colors.fade(0.5)
-                    font.pixelSize: 14
+                    font.pixelSize: Tokens.font.label
                     font.family: Properties.fontFamily
                     rotation: card.expanded ? 180 : 0
-                    Behavior on rotation { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+                    Behavior on rotation { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
                 }
             }
 
@@ -208,32 +208,32 @@ Rectangle {
         // ── Addresses at a glance ──
         Flow {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: Tokens.space.s6
             visible: card.d.ip4.length + card.d.ip6.length > 0 || card.d.mac !== ""
             Repeater {
                 model: card.d.ip4
-                Chip { required property string modelData; label: "IPv4"; text: modelData; accent: true }
+                ValueChip { required property string modelData; label: "IPv4"; text: modelData; accent: true }
             }
-            Chip { visible: card.d.gw4 !== ""; label: "GW"; text: card.d.gw4 }
+            ValueChip { visible: card.d.gw4 !== ""; label: "GW"; text: card.d.gw4 }
             Repeater {
                 model: card.d.dns4
-                Chip { required property string modelData; label: "DNS"; text: modelData }
+                ValueChip { required property string modelData; label: "DNS"; text: modelData }
             }
             Repeater {
                 model: card.expanded ? card.d.ip6 : card.d.ip6.slice(0, 1)
-                Chip { required property string modelData; label: "IPv6"; text: modelData }
+                ValueChip { required property string modelData; label: "IPv6"; text: modelData }
             }
             Repeater {
                 model: card.d.search4
-                Chip { required property string modelData; label: "DOMAIN"; text: modelData }
+                ValueChip { required property string modelData; label: "DOMAIN"; text: modelData }
             }
-            Chip { visible: card.d.mac !== "" && card.d.type !== "loopback"; label: "MAC"; text: card.d.mac }
+            ValueChip { visible: card.d.mac !== "" && card.d.type !== "loopback"; label: "MAC"; text: card.d.mac }
         }
 
         // ── Expanded ──
         Reveal {
             open: card.expanded
-            spacing: 10
+            spacing: Tokens.space.s10
 
             // not ours to configure
             Text {
@@ -243,7 +243,7 @@ Rectangle {
                     : card.d.external ? "Set up by another program (Docker, VPN client, VMware…); NetworkManager only watches it."
                     : "No profile is active on this interface."
                 color: Colors.fade(0.55)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap
             }
@@ -253,34 +253,34 @@ Rectangle {
                 Layout.fillWidth: true
                 visible: card.managedHere && card.profile !== null && ["auto", "manual"].includes(card.method)
                 implicitHeight: ipCol.implicitHeight + 24
-                radius: 12
-                color: Qt.rgba(0, 0, 0, 0.18)
+                radius: Tokens.radius.xl
+                color: Colors.shade(0.18)
                 border.width: 1
-                border.color: card.dirty ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.4) : Colors.fade(0.06)
-                Behavior on border.color { ColorAnimation { duration: 200 } }
+                border.color: card.dirty ? Colors.alpha(Colors.color6, 0.4) : Colors.fade(0.06)
+                Behavior on border.color { ColorAnimation { duration: Anim.normal } }
 
                 ColumnLayout {
                     id: ipCol
-                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-                    spacing: 10
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
+                    spacing: Tokens.space.s10
 
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 10
+                        spacing: Tokens.space.s10
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 1
+                            spacing: Tokens.space.s1
                             Text {
                                 text: "IPv4 address"
                                 color: Colors.ink
-                                font.pixelSize: 13
+                                font.pixelSize: Tokens.font.body
                                 font.bold: true
                                 font.family: Properties.fontFamily
                             }
                             Text {
                                 text: card.shownMethod === "auto" ? "Assigned by the DHCP server" : "Set by hand"
                                 color: Colors.fade(0.5)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                             }
                         }
@@ -295,16 +295,16 @@ Rectangle {
                     // static form
                     Reveal {
                         open: card.shownMethod === "manual"
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         GridLayout {
                             Layout.fillWidth: true
                             columns: 2
-                            columnSpacing: 8
-                            rowSpacing: 8
+                            columnSpacing: Tokens.space.s8
+                            rowSpacing: Tokens.space.s8
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                spacing: 4
-                                Text { text: "Address / prefix"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                                spacing: Tokens.space.s4
+                                Text { text: "Address / prefix"; color: Colors.fade(0.55); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                                 SearchField {
                                     Layout.fillWidth: true
                                     implicitHeight: Properties.buttonHeight
@@ -318,8 +318,8 @@ Rectangle {
                             }
                             ColumnLayout {
                                 Layout.fillWidth: true
-                                spacing: 4
-                                Text { text: "Gateway"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                                spacing: Tokens.space.s4
+                                Text { text: "Gateway"; color: Colors.fade(0.55); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                                 SearchField {
                                     Layout.fillWidth: true
                                     implicitHeight: Properties.buttonHeight
@@ -332,7 +332,7 @@ Rectangle {
                                 }
                             }
                         }
-                        Text { text: "DNS servers"; color: Colors.fade(0.55); font.pixelSize: 11; font.family: Properties.fontFamily }
+                        Text { text: "DNS servers"; color: Colors.fade(0.55); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                         ListField {
                             Layout.fillWidth: true
                             values: card.draftMethod === "manual" ? card.draftDns : card.d.dns4
@@ -345,7 +345,7 @@ Rectangle {
                             visible: card.addressError !== "" || card.gatewayError !== ""
                             text: card.addressError !== "" ? "Address: " + card.addressError : "Gateway: " + card.gatewayError
                             color: Colors.red
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                         }
                     }
@@ -356,10 +356,10 @@ Rectangle {
                         GridLayout {
                             Layout.fillWidth: true
                             columns: 2
-                            columnSpacing: 14
-                            rowSpacing: 6
+                            columnSpacing: Tokens.space.s14
+                            rowSpacing: Tokens.space.s6
                             Info { text: "DHCP server" }
-                            Chip { text: card.d.dhcp?.server ?? "" }
+                            ValueChip { text: card.d.dhcp?.server ?? "" }
                             Info { text: "Lease" }
                             Text {
                                 text: {
@@ -369,22 +369,22 @@ Rectangle {
                                     return Net.duration(l.leaseTime) + (l.expiry > 0 ? "  ·  renews / expires in " + Net.duration(left) : "")
                                 }
                                 color: Colors.ink
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                             }
                             Info { text: "DNS offered" }
                             Flow {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: Tokens.space.s6
                                 Repeater {
                                     model: card.d.dhcp?.dns ?? []
-                                    Chip { required property string modelData; text: modelData }
+                                    ValueChip { required property string modelData; text: modelData }
                                 }
                                 Text {
                                     visible: card.ignoresDhcpDns
                                     text: "ignored, this profile uses its own"
                                     color: Colors.yellow
-                                    font.pixelSize: 10
+                                    font.pixelSize: Tokens.font.micro
                                     font.family: Properties.fontFamily
                                     topPadding: 5
                                 }
@@ -393,13 +393,13 @@ Rectangle {
                             Flow {
                                 Layout.fillWidth: true
                                 visible: (card.d.dhcp?.domain ?? "") !== ""
-                                spacing: 6
-                                Chip { text: card.d.dhcp?.domain ?? "" }
+                                spacing: Tokens.space.s6
+                                ValueChip { text: card.d.dhcp?.domain ?? "" }
                                 Text {
                                     visible: card.ignoresDhcpDns
                                     text: "ignored, this profile uses its own"
                                     color: Colors.yellow
-                                    font.pixelSize: 10
+                                    font.pixelSize: Tokens.font.micro
                                     font.family: Properties.fontFamily
                                     topPadding: 5
                                 }
@@ -412,14 +412,14 @@ Rectangle {
                         open: card.dirty
                         RowLayout {
                             Layout.fillWidth: true
-                            spacing: 8
+                            spacing: Tokens.space.s8
                             Text {
                                 Layout.fillWidth: true
                                 text: card.draftMethod === "auto" ? "Switch to DHCP (the static address is removed)"
                                     : card.method === "auto" ? "Filled in from the current lease, change what you need"
                                     : "Not applied yet"
                                 color: Colors.fade(0.55)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                                 wrapMode: Text.WordWrap
                             }
@@ -444,28 +444,28 @@ Rectangle {
             RowLayout {
                 Layout.fillWidth: true
                 visible: card.managedHere && card.profile !== null && card.domains.length > 0
-                spacing: 10
+                spacing: Tokens.space.s10
                 Text {
                     Layout.alignment: Qt.AlignTop
-                    Layout.topMargin: 4
+                    Layout.topMargin: Tokens.space.s4
                     text: "Search domain"
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
                 Flow {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Repeater {
                         model: card.domains
                         Row {
                             required property var modelData
-                            spacing: 6
-                            Chip { text: modelData.name; accent: modelData.from.startsWith("set by hand") }
+                            spacing: Tokens.space.s6
+                            ValueChip { text: modelData.name; accent: modelData.from.startsWith("set by hand") }
                             Text {
                                 text: modelData.from
                                 color: Colors.fade(0.45)
-                                font.pixelSize: 10
+                                font.pixelSize: Tokens.font.micro
                                 font.family: Properties.fontFamily
                                 topPadding: 5
                             }
@@ -480,14 +480,14 @@ Rectangle {
                 visible: card.managedHere && card.profile !== null && !["auto", "manual"].includes(card.method)
                 text: "IPv4 method: " + card.method + " (change it in the profile)"
                 color: Colors.fade(0.55)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
 
             // actions
             Flow {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Tokens.space.s6
                 ActionButton {
                     visible: card.managedHere && card.connected && card.method === "auto"
                     icon: "󰑓"

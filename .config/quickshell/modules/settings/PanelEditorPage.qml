@@ -11,13 +11,13 @@ import "network"
 // (PanelGeometry → Settings.panels; limits: services/lib/PanelGeom.js).
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property var lim: PanelGeometry.limits
     readonly property var def: PanelGeometry.defaults
 
     // one number row: label, the value now, its limits, how to store it
-    component SizeRow: NetRow {
+    component SizeRow: SettingRow {
         id: row
         property real value: 0
         property real dflt: 0
@@ -25,7 +25,7 @@ ColumnLayout {
         property real step: 10
         signal edited(real v)
         changed: value !== dflt
-        NumberControl {
+        NumberField {
             from: row.range[0]
             to: row.range[1]
             step: row.step
@@ -34,11 +34,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Edit live"
         icon: "󰹑"
-        NetRow {
+        SettingRow {
             first: true
             label: "Panel editor"
             desc: "Drag the bar to another edge, panels along the bar or off it (floating), resize with the grips. Also: qs ipc call edit panels, or the bar's live edit"
@@ -51,7 +51,7 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Bar"
         icon: "󰍜"
@@ -60,7 +60,7 @@ ColumnLayout {
             interactive: Settings.panels.bar !== undefined
             onClicked: PanelGeometry.reset("bar")
         }
-        NetRow {
+        SettingRow {
             first: true
             label: "Screen edge"
             desc: "Every popup comes out of the bar on that edge"
@@ -84,7 +84,7 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Dashboard"
         icon: "󰕮"
@@ -114,7 +114,7 @@ ColumnLayout {
         PanelPlaceRow { pid: "dashboard" }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Control center"
         icon: "󰒓"
@@ -143,7 +143,7 @@ ColumnLayout {
         PanelPlaceRow { pid: "controlCenter" }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Launcher"
         icon: "󰀻"
@@ -152,7 +152,7 @@ ColumnLayout {
             interactive: Settings.panels.launcher !== undefined
             onClicked: PanelGeometry.reset("launcher")
         }
-        NetRow {
+        SettingRow {
             first: true
             label: "Comes from"
             desc: PanelGeometry.launcher.attach === "bar" ? "Out of the bar, like the dashboard"

@@ -87,7 +87,7 @@ Item {
             horizontalAlignment: Text.AlignRight
             text: root.format(v)
             color: Colors.fade(0.32)
-            font.pixelSize: 10
+            font.pixelSize: Tokens.font.micro
             font.family: Properties.fontFamily
         }
     }
@@ -97,7 +97,7 @@ Item {
         y: root.plotH + 4
         text: root.count < 2 ? "" : "−" + root.ago((root.count - 1) * root.interval / 1000)
         color: Colors.fade(0.32)
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.family: Properties.fontFamily
     }
     Text {
@@ -105,7 +105,7 @@ Item {
         y: root.plotH + 4
         text: "now"
         color: Colors.fade(0.32)
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.family: Properties.fontFamily
     }
     Text {
@@ -114,7 +114,7 @@ Item {
         y: (root.plotH - height) / 2
         text: "Collecting…"
         color: Colors.fade(0.3)
-        font.pixelSize: 11
+        font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
     }
 
@@ -198,19 +198,19 @@ Item {
         y: 4
         width: tip.implicitWidth + 16
         height: tip.implicitHeight + 10
-        radius: Properties.radius
-        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.96)
+        radius: Tokens.radius.md
+        color: Colors.surfacePopover
         border.width: Properties.panelBorderWidth
         border.color: Properties.panelBorder
         Column {
             id: tip
             anchors.centerIn: parent
-            spacing: 2
+            spacing: Tokens.space.s2
             Text {
                 text: root.hoverIndex < 0 ? "" : root.hoverIndex === root.count - 1 ? "now"
                     : "−" + root.ago((root.count - 1 - root.hoverIndex) * root.interval / 1000)
                 color: Colors.fade(0.45)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.family: Properties.fontFamily
             }
             Repeater {
@@ -221,7 +221,7 @@ Item {
                     text: "<font color='" + modelData.color + "'>●</font> " + modelData.label + "  " + (v < 0 ? "–" : root.format(v))
                     textFormat: Text.StyledText
                     color: Colors.ink
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }

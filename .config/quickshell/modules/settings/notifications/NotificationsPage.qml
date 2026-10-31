@@ -9,7 +9,7 @@ import "../network"
 // per-app rules and test notifications (services/Notifs.qml).
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property var cfg: Settings.notifications
     readonly property var rules: Array.isArray(cfg.rules) ? cfg.rules : []
@@ -37,30 +37,30 @@ ColumnLayout {
     }
 
     // ── Do not disturb ──────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Do not disturb"
         icon: Notifs.dnd ? "󰂛" : "󰂚"
-        NetRow {
+        SettingRow {
             first: true
             label: "Do not disturb"
             desc: Notifs.dnd ? (Notifs.dndManual ? "on" : "on by the schedule") + (Notifs.missed > 0 ? " · " + Notifs.missed + " held back (in the notification center)" : "")
                              : "popups show normally. Also: right-click the bell on the bar"
             ToggleSwitch { checked: Notifs.dndManual; onToggled: v => Notifs.setDnd(v) }
         }
-        NetRow {
+        SettingRow {
             label: "On a schedule"
             desc: "every day, e.g. 22:00 → 07:00 (over midnight works)"
             ToggleSwitch { checked: page.cfg.scheduleOn ?? false; onToggled: v => Settings.set("notifications", "scheduleOn", v) }
         }
-        NetRow {
+        SettingRow {
             visible: page.cfg.scheduleOn ?? false
             sub: true
             label: "From  →  to"
             desc: Notifs.minutesOf(page.cfg.scheduleFrom ?? "22:00") < 0 || Notifs.minutesOf(page.cfg.scheduleTo ?? "07:00") < 0
                   ? "use HH:MM, e.g. 22:00" : (Notifs.dndScheduled ? "active right now" : "not active right now")
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 TextControl {
                     implicitWidth: 90
                     value: page.cfg.scheduleFrom ?? "22:00"
@@ -74,7 +74,7 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Critical ones still pop up"
             desc: "e.g. low battery, failed backups"
             ToggleSwitch { checked: page.cfg.allowCritical ?? true; onToggled: v => Settings.set("notifications", "allowCritical", v) }
@@ -82,13 +82,13 @@ ColumnLayout {
     }
 
     // ── Popups ──────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Popups"
-        NetRow {
+        SettingRow {
             first: true
             label: "Position"
-            DropdownControl {
+            Dropdown {
                 options: [{ label: "Top right", value: "top-right" }, { label: "Top centre", value: "top-center" },
                           { label: "Top left", value: "top-left" }, { label: "Bottom right", value: "bottom-right" },
                           { label: "Bottom left", value: "bottom-left" }]
@@ -96,22 +96,22 @@ ColumnLayout {
                 onEdited: v => Settings.set("notifications", "position", v)
             }
         }
-        NetRow {
+        SettingRow {
             label: "Show for (seconds)"
             desc: "when the app doesn't say; critical ones stay until closed"
-            NumberControl { from: 1; to: 60; value: page.cfg.timeout ?? 5; onEdited: v => Settings.set("notifications", "timeout", Math.round(v)) }
+            NumberField { from: 1; to: 60; value: page.cfg.timeout ?? 5; onEdited: v => Settings.set("notifications", "timeout", Math.round(v)) }
         }
-        NetRow {
+        SettingRow {
             label: "At most on screen"
-            NumberControl { from: 1; to: 10; value: page.cfg.maxPopups ?? 5; onEdited: v => Settings.set("notifications", "maxPopups", Math.round(v)) }
+            NumberField { from: 1; to: 10; value: page.cfg.maxPopups ?? 5; onEdited: v => Settings.set("notifications", "maxPopups", Math.round(v)) }
         }
     }
 
     // ── Rules ───────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Per-app rules"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "Add a rule"
@@ -119,10 +119,10 @@ ColumnLayout {
                   : "app name as it appears on the notification; * matches anything (e.g. *discord*). Silent: notification center only. Hide: dropped."
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: Tokens.space.s8
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 8
+                    spacing: Tokens.space.s8
                     SearchField {
                         Layout.fillWidth: true
                         icon: ""
@@ -137,11 +137,11 @@ ColumnLayout {
                 }
                 Flow {
                     Layout.fillWidth: true
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     visible: page.knownApps.length > 0
                     Repeater {
                         model: page.knownApps
-                        Chip {
+                        ValueChip {
                             required property string modelData
                             text: "+ " + modelData
                             copyable: false
@@ -153,13 +153,13 @@ ColumnLayout {
         }
         Repeater {
             model: page.rules
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 label: modelData.app
                 desc: modelData.action === "hide" ? "dropped, never shown" : modelData.action === "silent" ? "no popup, kept in the center" : "normal"
                 RowLayout {
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Segmented {
                         small: true
                         options: [{ label: "Normal", value: "normal" }, { label: "Silent", value: "silent" }, { label: "Hide", value: "hide" }]
@@ -177,15 +177,15 @@ ColumnLayout {
     }
 
     // ── Test ────────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Test"
-        NetRow {
+        SettingRow {
             first: true
             label: "Send a test notification"
             desc: Notifs.dnd ? "do not disturb is on: normal ones go to the center only" : "goes through the rules above (app name \"Notification test\")"
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 ActionButton {
                     text: "Normal"
                     onClicked: Jobs.run(["notify-send", "-a", "Notification test", "Hello", "A normal notification at " + Qt.formatTime(new Date(), "HH:mm:ss")], () => {})

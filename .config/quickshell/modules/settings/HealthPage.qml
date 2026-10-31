@@ -10,7 +10,7 @@ import "network"
 // a re-run button. Runs when the page opens if it hasn't run yet.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     // results older than a minute (the startup check): checked again, so a fix made meanwhile shows
     Component.onCompleted: if (!Health.running && (Health.results.length === 0 || Date.now() - Health.lastRun > 60000)) Health.run()
@@ -28,17 +28,17 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         implicitHeight: sumRow.implicitHeight + 28
-        radius: 14
-        readonly property color tint: Health.errors > 0 ? Qt.rgba(0.95, 0.55, 0.66, 1) : Health.warnings > 0 ? Qt.rgba(0.98, 0.89, 0.69, 1) : Colors.color6
+        radius: Tokens.radius.card
+        readonly property color tint: Health.errors > 0 ? Colors.alpha(Colors.danger, 1) : Health.warnings > 0 ? Colors.alpha(Colors.warning, 1) : Colors.color6
         color: Qt.rgba(tint.r, tint.g, tint.b, 0.08)
         border.width: Properties.panelBorderWidth
         border.color: Qt.rgba(tint.r, tint.g, tint.b, 0.35)
-        Behavior on color { ColorAnimation { duration: 250 } }
+        Behavior on color { ColorAnimation { duration: Anim.medium } }
 
         RowLayout {
             id: sumRow
-            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 18; rightMargin: 14 }
-            spacing: 14
+            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 18; rightMargin: Tokens.space.s14 }
+            spacing: Tokens.space.s14
             Text {
                 text: Health.running ? "󰔟" : Health.errors > 0 ? "󰅙" : Health.warnings > 0 ? "󰀦" : "󰄬"
                 color: page.statusColor(Health.running ? "running" : Health.errors > 0 ? "error" : Health.warnings > 0 ? "warn" : "ok")
@@ -49,7 +49,7 @@ ColumnLayout {
             }
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 2
+                spacing: Tokens.space.s2
                 Text {
                     Layout.fillWidth: true
                     text: Health.running ? "Checking…"
@@ -58,7 +58,7 @@ ColumnLayout {
                         : Health.warnings > 0 ? "Works, " + Health.warnings + (Health.warnings === 1 ? " warning" : " warnings")
                         : "Everything looks good"
                     color: Colors.ink
-                    font.pixelSize: 16
+                    font.pixelSize: Tokens.font.subtitle
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -68,7 +68,7 @@ ColumnLayout {
                     text: Health.lastRun > 0 ? Health.results.filter(r => r.status === "ok").length + " of " + Health.results.length
                                                 + " checks ok  ·  last run " + new Date(Health.lastRun).toLocaleTimeString(Qt.locale(), "HH:mm:ss") : ""
                     color: Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -82,15 +82,15 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
-        NetRow {
+        SettingRow {
             first: true
             label: "First-run setup"
             desc: "name, bar preset, notifications, keys: the welcome steps of a new install"
             ActionButton { icon: "󰐊"; text: "Run again"; onClicked: Panels.open("wizard") }
         }
-        NetRow {
+        SettingRow {
             label: "Check at startup"
             desc: "20 s after the shell starts; a notification only if something is an error"
             ToggleSwitch {
@@ -103,14 +103,14 @@ ColumnLayout {
     // ── Checks by group ─────────────────────────────────────────────────────
     Repeater {
         model: page.groups
-        NetCard {
+        Section {
             id: gcard
             required property string modelData
             Layout.fillWidth: true
             title: modelData
             Repeater {
                 model: Health.results.filter(r => r.group === gcard.modelData)
-                NetRow {
+                SettingRow {
                     id: row
                     required property var modelData
                     required property int index
@@ -121,17 +121,17 @@ ColumnLayout {
                     desc: r.detail
                     RowLayout {
                         Layout.fillWidth: true
-                        spacing: 8
+                        spacing: Tokens.space.s8
                         Text {
                             text: page.statusIcon(row.r.status)
                             color: page.statusColor(row.r.status)
-                            font.pixelSize: 16
+                            font.pixelSize: Tokens.font.subtitle
                             font.family: Properties.fontFamily
                         }
                         Text {
                             text: row.r.status === "running" ? "checking…" : row.r.status
                             color: page.statusColor(row.r.status)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.bold: true
                             font.family: Properties.fontFamily
                         }
@@ -142,7 +142,7 @@ ColumnLayout {
                             visible: row.r.fix !== ""
                             text: "Fix:  " + row.r.fix
                             color: Colors.fade(0.75)
-                            font.pixelSize: 11
+                            font.pixelSize: Tokens.font.caption
                             font.family: Properties.fontFamily
                             wrapMode: Text.WrapAnywhere
                         }

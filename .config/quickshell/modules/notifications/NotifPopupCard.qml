@@ -65,21 +65,21 @@ Item {
     // ── Animations ────────────────────────────────────────────
     ParallelAnimation {
         id: enterAnim
-        NumberAnimation { target: root; property: "reveal"; to: 1; duration: 260; easing.type: Easing.OutCubic }
-        NumberAnimation { target: card; property: "x"; to: 0; duration: 340; easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "reveal"; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+        NumberAnimation { target: card; property: "x"; to: 0; duration: Anim.slow; easing.type: Anim.standard }
     }
 
     // Total must stay under Notifs.exitDuration, after which the model entry is removed.
     SequentialAnimation {
         id: exitAnim
-        NumberAnimation { target: card; property: "x"; to: root.side * (root.width + 20); duration: 200; easing.type: Easing.InCubic }
-        NumberAnimation { target: root; property: "reveal"; to: 0; duration: 180; easing.type: Easing.OutCubic }
+        NumberAnimation { target: card; property: "x"; to: root.side * (root.width + 20); duration: Anim.normal; easing.type: Anim.exit }
+        NumberAnimation { target: root; property: "reveal"; to: 0; duration: Anim.normal; easing.type: Anim.standard }
     }
 
     NumberAnimation {
         id: snapBack
         target: card; property: "x"; to: 0
-        duration: 260; easing.type: Easing.OutBack
+        duration: Anim.medium; easing.type: Anim.pop
     }
 
     NumberAnimation {
@@ -109,12 +109,12 @@ Item {
         radius: Properties.popupRadius
         color: Properties.panelColor
         border.width: Properties.panelBorderWidth
-        border.color: root.critical ? "#a0ff5f5f"
+        border.color: root.critical ? Colors.alpha(Colors.danger, 0.63)
                     : cardHover.hovered ? Qt.lighter(Properties.panelBorder, 1.6) : Properties.panelBorder
         // fade as it's dragged away
         opacity: 1 - Math.max(0, root.side * x) / (root.width * 1.4)
 
-        Behavior on border.color { ColorAnimation { duration: Anim.color } }
+        Behavior on border.color { ColorAnimation { duration: Anim.fast } }
 
         HoverHandler { id: cardHover }
 
@@ -148,12 +148,12 @@ Item {
 
         ColumnLayout {
             id: content
-            anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
-            spacing: 8
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
+            spacing: Tokens.space.s8
 
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: Tokens.space.s10
 
                 // Notification image (avatar, album art, …) or the app icon
                 Rectangle {
@@ -162,7 +162,7 @@ Item {
                     Layout.preferredWidth: 42
                     Layout.preferredHeight: 42
                     Layout.alignment: Qt.AlignTop
-                    radius: 10
+                    radius: Tokens.radius.lg
                     color: Colors.fade(0.13)
                     clip: true
 
@@ -171,7 +171,7 @@ Item {
                         anchors.centerIn: parent
                         text: root.glyph
                         color: Colors.color6
-                        font.pixelSize: 21
+                        font.pixelSize: Tokens.font.headline
                         font.family: Properties.fontFamily
                     }
                     Image {
@@ -186,12 +186,12 @@ Item {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.alignment: Qt.AlignTop
-                    spacing: 2
+                    spacing: Tokens.space.s2
 
                     Text {
                         text: root.appName
                         color: Colors.fade(0.53)
-                        font { bold: true; pixelSize: 11 }
+                        font { bold: true; pixelSize: Tokens.font.caption }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                         // leave room for the close button
@@ -202,7 +202,7 @@ Item {
                         text: root.summary
                         textFormat: Text.PlainText
                         color: Colors.fade(0.9)
-                        font { bold: true; pixelSize: 14 }
+                        font { bold: true; pixelSize: Tokens.font.label }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
@@ -212,7 +212,7 @@ Item {
                         text: root.body
                         textFormat: Text.StyledText
                         color: Colors.fade(0.69)
-                        font.pixelSize: 12
+                        font.pixelSize: Tokens.font.small
                         wrapMode: Text.Wrap
                         maximumLineCount: 4
                         elide: Text.ElideRight
@@ -226,7 +226,7 @@ Item {
             RowLayout {
                 visible: root.actions.length > 0
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Tokens.space.s6
 
                 Repeater {
                     model: root.actions
@@ -243,7 +243,7 @@ Item {
         }
 
         NotifActionButton {
-            anchors { top: parent.top; right: parent.right; margins: 8 }
+            anchors { top: parent.top; right: parent.right; margins: Tokens.space.s8 }
             width: 26; height: 26
             label: "✕"
             fontSize: 11
@@ -253,7 +253,7 @@ Item {
         // Remaining-time bar
         Rectangle {
             visible: !root.critical
-            anchors { left: parent.left; bottom: parent.bottom; leftMargin: card.radius; bottomMargin: 1 }
+            anchors { left: parent.left; bottom: parent.bottom; leftMargin: card.radius; bottomMargin: Tokens.space.s1 }
             width: (parent.width - card.radius * 2) * root.progress
             height: 2
             radius: 1

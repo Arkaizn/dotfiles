@@ -24,14 +24,14 @@ PerfCard {
             Row {
                 id: chipRow
                 anchors.centerIn: parent
-                spacing: 6
-                Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: 4; color: chip.off ? Colors.fade(0.2) : chip.modelData.color }
+                spacing: Tokens.space.s6
+                Rectangle { anchors.verticalCenter: parent.verticalCenter; width: 8; height: 8; radius: Tokens.radius.sm; color: chip.off ? Colors.fade(0.2) : chip.modelData.color }
                 Text {
                     readonly property var vals: chip.modelData.values
                     readonly property real last: vals.length ? vals[vals.length - 1] : -1
                     text: chip.modelData.label + (last >= 0 && !chip.off ? "  " + chart.format(last) : "")
                     color: chip.off ? Colors.fade(0.35) : Colors.fade(0.8)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }

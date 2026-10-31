@@ -13,13 +13,13 @@ ColumnLayout {
     property color barColor: Colors.color6
     property bool warnColors: true
     Layout.fillWidth: true
-    spacing: 4
+    spacing: Tokens.space.s4
     RowLayout {
         Layout.fillWidth: true
-        spacing: 8
-        Text { Layout.fillWidth: true; text: root.label; color: Colors.fade(0.6); font.pixelSize: 12; font.family: Properties.fontFamily; elide: Text.ElideRight }
-        Text { text: root.value; color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
-        Text { visible: root.detail !== ""; text: root.detail; color: Colors.fade(0.42); font.pixelSize: 11; font.family: Properties.fontFamily }
+        spacing: Tokens.space.s8
+        Text { Layout.fillWidth: true; text: root.label; color: Colors.fade(0.6); font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily; elide: Text.ElideRight }
+        Text { text: root.value; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
+        Text { visible: root.detail !== ""; text: root.detail; color: Colors.fade(0.42); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
     }
     Rectangle {
         visible: root.bar >= 0

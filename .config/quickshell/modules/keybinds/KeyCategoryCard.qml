@@ -11,20 +11,20 @@ Rectangle {
     property bool editable: false
     signal editRequested(var item)
     implicitHeight: cardCol.implicitHeight + 20
-    radius: 12
-    color: Colors.shade(0.27)
+    radius: Tokens.radius.xl
+    color: Colors.surfaceCardRaised
     border.width: Properties.panelBorderWidth
     border.color: Properties.cardBorder
 
     ColumnLayout {
         id: cardCol
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 10 }
-        spacing: 2
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s10 }
+        spacing: Tokens.space.s2
 
         RowLayout {
-            Layout.leftMargin: 6
-            Layout.bottomMargin: 4
-            spacing: 8
+            Layout.leftMargin: Tokens.space.s6
+            Layout.bottomMargin: Tokens.space.s4
+            spacing: Tokens.space.s8
             Text {
                 text: card.category.icon
                 color: Colors.color6
@@ -43,7 +43,7 @@ Rectangle {
             Text {
                 text: card.category.rows.length
                 color: Colors.fade(0.35)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
         }

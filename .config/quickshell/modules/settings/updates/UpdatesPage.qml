@@ -11,7 +11,7 @@ import "../network"
 // check / what to notify about.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property bool showAll: false
     // .pacnew / .pacsave: the last remove / overwrite's result, and click-again to confirm
@@ -24,7 +24,7 @@ ColumnLayout {
 
     Component.onCompleted: { Updates.refresh(); Updates.loadNews() }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Updates"
         icon: "󰚰"
@@ -35,28 +35,28 @@ ColumnLayout {
         // reboot needed: orange banner on top, with the button
         Rectangle {
             Layout.fillWidth: true
-            Layout.margins: 10
+            Layout.margins: Tokens.space.s10
             Layout.bottomMargin: 0
             visible: Updates.rebootNeeded
             implicitHeight: rebootRow.implicitHeight + 20
-            radius: 10
-            color: Qt.rgba(Colors.orange.r, Colors.orange.g, Colors.orange.b, 0.14)
+            radius: Tokens.radius.lg
+            color: Colors.alpha(Colors.orange, 0.14)
             border.width: 1
-            border.color: Qt.rgba(Colors.orange.r, Colors.orange.g, Colors.orange.b, 0.5)
+            border.color: Colors.alpha(Colors.orange, 0.5)
             RowLayout {
                 id: rebootRow
-                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 10 }
-                spacing: 12
-                Text { text: "󰜉"; color: Colors.orange; font.pixelSize: 20; font.family: Properties.fontFamily }
+                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s14; rightMargin: Tokens.space.s10 }
+                spacing: Tokens.space.s12
+                Text { text: "󰜉"; color: Colors.orange; font.pixelSize: Tokens.font.titleLarge; font.family: Properties.fontFamily }
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 2
-                    Text { text: "Reboot needed"; color: Colors.orange; font.pixelSize: 13; font.bold: true; font.family: Properties.fontFamily }
+                    spacing: Tokens.space.s2
+                    Text { text: "Reboot needed"; color: Colors.orange; font.pixelSize: Tokens.font.body; font.bold: true; font.family: Properties.fontFamily }
                     Text {
                         Layout.fillWidth: true
                         text: "The kernel was updated. Until you reboot, the running kernel's modules are missing (USB sticks, VPNs may fail)."
                         color: Colors.fade(0.6)
-                        font.pixelSize: 11
+                        font.pixelSize: Tokens.font.caption
                         font.family: Properties.fontFamily
                         wrapMode: Text.WordWrap
                     }
@@ -72,7 +72,7 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             first: !Updates.rebootNeeded
             label: (Updates.count === 0 ? "Up to date" : Updates.count + (Updates.count === 1 ? " update" : " updates"))
                    + (Updates.rebootNeeded ? "  ·  reboot needed" : "")
@@ -84,7 +84,7 @@ ColumnLayout {
         }
         Repeater {
             model: page.showAll ? page.all : page.all.slice(0, 12)
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: modelData.name
@@ -92,7 +92,7 @@ ColumnLayout {
                 Text {
                     text: modelData.src
                     color: modelData.src === "AUR" ? Colors.yellow : Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
             }
@@ -100,19 +100,19 @@ ColumnLayout {
         // AUR packages that failed and wait for a newer version
         Repeater {
             model: Updates.withAur ? Updates.aurHeld : []
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: "󰏤  " + modelData.name
                 desc: modelData.old + "  →  " + modelData.new + "  ·  failed to update, on hold until a newer version comes out"
                 RowLayout {
-                    spacing: 8
-                    Text { text: "on hold"; color: Colors.orange; font.pixelSize: 11; font.family: Properties.fontFamily }
+                    spacing: Tokens.space.s8
+                    Text { text: "on hold"; color: Colors.orange; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                     ActionButton { text: "Try again"; onClicked: Updates.release(modelData.name) }
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.all.length > 12
             sub: true
             label: page.showAll ? "Show fewer" : "… and " + (page.all.length - 12) + " more"
@@ -120,13 +120,13 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "After updating"
         // .pacnew / .pacsave: remove (always safe: your file stays), use the new one
         // (your file goes to /var/backups/pacnew/ first), or merge in a terminal.
         // Remove / overwrite run as root through polkit (Updates.pacnewAct)
-        NetRow {
+        SettingRow {
             first: true
             label: Updates.pacnew.length === 0 ? "No .pacnew files" : Updates.pacnew.length + " .pacnew / .pacsave files"
             desc: page.pacnewMsg !== "" ? page.pacnewMsg
@@ -134,7 +134,7 @@ ColumnLayout {
                 : "new defaults from packages next to configs you changed. Remove: keeps yours as it is (always safe). "
                   + "Merge opens a terminal (sudo DIFFPROG=\"nvim -d\" pacdiff) to compare side by side"
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 visible: Updates.pacnew.length > 0
                 ActionButton {
                     icon: "󰆴"
@@ -148,7 +148,7 @@ ColumnLayout {
         }
         Repeater {
             model: Updates.pacnew
-            NetRow {
+            SettingRow {
                 id: pacRow
                 required property string modelData
                 readonly property string file: page.pacfile(modelData)
@@ -161,7 +161,7 @@ ColumnLayout {
                     : "your config from a package that was removed"
                 descError: pacnewArm.armed === "new:" + file
                 RowLayout {
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     ActionButton {
                         text: pacnewArm.armed === "rm:" + pacRow.file ? "Remove?" : "Remove"
                         textColor: pacnewArm.armed === "rm:" + pacRow.file ? Colors.red : Colors.ink
@@ -178,32 +178,32 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             wide: Updates.news !== ""
             label: "Arch news"
             desc: !Updates.newsLoaded ? "loading…" : Updates.news === "" ? "nothing new since your last upgrade (yay -Pw)" : Updates.news
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Checking"
-        NetRow {
+        SettingRow {
             first: true
             label: "Check every (minutes)"
             desc: Updates.interval === 0 ? "only by hand (Check now)" : "also at login"
-            NumberControl { from: 0; to: 360; step: 15; value: Updates.interval; onEdited: v => Settings.set("updates", "interval", Math.round(v)) }
+            NumberField { from: 0; to: 360; step: 15; value: Updates.interval; onEdited: v => Settings.set("updates", "interval", Math.round(v)) }
         }
-        NetRow {
+        SettingRow {
             label: "Include the AUR"
             desc: "yay -Qua (needs network to the AUR)"
             ToggleSwitch { checked: Updates.withAur; onToggled: v => Settings.set("updates", "aur", v) }
         }
-        NetRow {
+        SettingRow {
             label: "Notify about new updates"
             ToggleSwitch { checked: Settings.updates.notify ?? false; onToggled: v => Settings.set("updates", "notify", v) }
         }
-        NetRow {
+        SettingRow {
             label: "Notify when a reboot is needed"
             desc: "after a kernel update, with a Reboot now button (the bar's update button also turns orange)"
             ToggleSwitch { checked: Settings.updates.rebootNotify ?? true; onToggled: v => Settings.set("updates", "rebootNotify", v) }

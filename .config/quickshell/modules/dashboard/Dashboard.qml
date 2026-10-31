@@ -36,7 +36,7 @@ BarPopup {
 
     readonly property bool editing: EditMode.target === "dashboard"
     autoClose: !editing
-    Behavior on panelHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+    Behavior on panelHeight { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
 
     onPopupClosed: if (editing) EditMode.stop()
     Connections {
@@ -116,14 +116,14 @@ BarPopup {
 
         ColumnLayout {
             anchors.fill: parent
-            spacing: 10
+            spacing: Tokens.space.s10
 
             // ── edit bar (only while editing) ───────────────────────────────
             Rectangle {
                 id: editBar
                 // unrolls / rolls up instead of popping (the spacing below grows with it)
                 property real amount: root.editing ? 1 : 0
-                Behavior on amount { NumberAnimation { duration: Anim.popupIn; easing.type: Anim.easingIn } }
+                Behavior on amount { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
                 visible: amount > 0
                 opacity: amount
                 clip: true
@@ -136,18 +136,18 @@ BarPopup {
                 border.color: Properties.cardBorder
 
                 RowLayout {
-                    anchors { fill: parent; leftMargin: 12; rightMargin: 6 }
-                    spacing: 8
-                    Text { text: "󰏫"; color: Colors.color6; font.pixelSize: 16; font.family: Properties.fontFamily }
+                    anchors { fill: parent; leftMargin: Tokens.space.s12; rightMargin: Tokens.space.s6 }
+                    spacing: Tokens.space.s8
+                    Text { text: "󰏫"; color: Colors.color6; font.pixelSize: Tokens.font.subtitle; font.family: Properties.fontFamily }
                     Text {
                         text: "Editing the dashboard"
                         color: Colors.ink
-                        font { pixelSize: 13; bold: true; family: Properties.fontFamily }
+                        font { pixelSize: Tokens.font.body; bold: true; family: Properties.fontFamily }
                     }
                     Text {
                         text: PanelLayout.dashHidden.length > 0 ? "·  hidden, drag one in:" : "·  drag cards to move  ·  − or dropping here hides one"
                         color: Colors.fade(0.5)
-                        font { pixelSize: 11; family: Properties.fontFamily }
+                        font { pixelSize: Tokens.font.caption; family: Properties.fontFamily }
                     }
                     Repeater {
                         model: PanelLayout.dashHidden
@@ -182,7 +182,7 @@ BarPopup {
             RowLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: 10
+                spacing: Tokens.space.s10
 
                 Repeater {
                     id: colRep
@@ -203,7 +203,7 @@ BarPopup {
 
                         ColumnLayout {
                             anchors.fill: parent
-                            spacing: 10
+                            spacing: Tokens.space.s10
 
                             Repeater {
                                 id: cardRep
@@ -336,7 +336,7 @@ BarPopup {
     Component {
         id: musicCard
         Item {
-            property real radius: parent ? parent.radius : 12
+            property real radius: parent ? parent.radius : Tokens.radius.xl
             DashboardMusic { active: root.shown }
             // The album-art background fills this card and would cover its
             // border, so draw the outline again on top.
@@ -367,8 +367,8 @@ BarPopup {
                 visible: parent.hasEvents
                 Layout.preferredWidth: 1
                 Layout.fillHeight: true
-                Layout.topMargin: 14
-                Layout.bottomMargin: 14
+                Layout.topMargin: Tokens.space.s14
+                Layout.bottomMargin: Tokens.space.s14
                 color: Properties.cardBorder
             }
             DashboardEvents {

@@ -42,7 +42,7 @@ PanelWindow {
     property int panelWidth: 400
     property real panelHeight: 300     // fully open height, including padding
     property int maxHeight: Math.ceil(panelHeight) // most it grows to (height; along a vertical bar)
-    property int padding: 10
+    property int padding: Tokens.space.s10
     property bool autoClose: true      // close shortly after the pointer leaves
     property string ipcName: ""
     // its place along the bar from Settings.panels.<placeId> (PanelGeometry,
@@ -196,7 +196,7 @@ PanelWindow {
     property real ox: side === "at" ? _atLeft : _fixedLeft
     Behavior on ox {
         enabled: root.shown && (root.side === "at" || root.placeId !== "")
-        NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+        NumberAnimation { duration: Anim.medium; easing.type: Anim.standard }
     }
     onOxChanged: if (shown) _attach()
 
@@ -213,13 +213,13 @@ PanelWindow {
     NumberAnimation {
         id: openAnim
         target: root; property: "reveal"; to: 1
-        duration: 300; easing.type: Easing.OutCubic
+        duration: Anim.panelIn; easing.type: Anim.standard
     }
 
     NumberAnimation {
         id: closeAnim
         target: root; property: "reveal"; to: 0
-        duration: 200; easing.type: Easing.InCubic
+        duration: Anim.panelOut; easing.type: Anim.exit
         onFinished: {
             if (root.shown) return
             root.visible = false

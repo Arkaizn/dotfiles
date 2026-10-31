@@ -149,13 +149,13 @@ ColumnLayout {
         })
     }
 
-    spacing: 10
+    spacing: Tokens.space.s10
 
     // ── Title ──
     RowLayout {
         Layout.fillWidth: true
-        Layout.leftMargin: 4
-        spacing: 8
+        Layout.leftMargin: Tokens.space.s4
+        spacing: Tokens.space.s8
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 0
@@ -163,7 +163,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 text: root.title
                 color: Colors.ink
-                font.pixelSize: 22
+                font.pixelSize: Tokens.font.headline
                 font.bold: true
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
@@ -177,7 +177,7 @@ ColumnLayout {
                     return (root.filtering ? n + " found" : n + (n === 1 ? " message" : " messages")) + (u ? "  ·  " + u + " unread" : "")
                 }
                 color: Colors.fade(0.5)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
             }
@@ -203,19 +203,18 @@ ColumnLayout {
     }
     RowLayout {
         Layout.fillWidth: true
-        spacing: 6
+        spacing: Tokens.space.s6
         visible: !root.drafts
         FilterChip { icon: I.mail; text: "Unread"; checked: root.fUnread; onToggled: root.fUnread = !root.fUnread }
         FilterChip { icon: I.star; text: "Starred"; checked: root.fFlagged; onToggled: root.fFlagged = !root.fFlagged }
-        FilterChip { icon: I.clip; checked: root.fAttachments; onToggled: root.fAttachments = !root.fAttachments
-                     ToolTip.visible: hov.hovered; ToolTip.text: "With attachments"; HoverHandler { id: hov } }
+        FilterChip { icon: I.clip; tooltip: "With attachments"; checked: root.fAttachments; onToggled: root.fAttachments = !root.fAttachments }
         Item { Layout.fillWidth: true }
         Text {
             visible: root.searching || root.serverNote !== ""
             Layout.maximumWidth: 160
             text: root.searching ? "Searching the server…" : root.serverNote
             color: Colors.fade(0.45)
-            font.pixelSize: 10
+            font.pixelSize: Tokens.font.micro
             font.family: Properties.fontFamily
             elide: Text.ElideRight
         }
@@ -225,7 +224,7 @@ ColumnLayout {
     Rectangle {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        radius: 12
+        radius: Tokens.radius.xl
         color: Colors.card
         border.width: Properties.panelBorderWidth
         border.color: Properties.cardBorder
@@ -234,11 +233,11 @@ ColumnLayout {
         ListView {
             id: list
             anchors.fill: parent
-            anchors.margins: 4
+            anchors.margins: Tokens.space.s4
             model: root.rows
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: CalScrollBar {}
+            ScrollBar.vertical: SlimScrollBar {}
             SmoothWheel { flick: list; step: 140 }
             reuseItems: true
             cacheBuffer: 1600          // rows are built ahead, so scrolling doesn't stall on new ones
@@ -284,16 +283,16 @@ ColumnLayout {
                 x: 2
                 width: list.width - 8
                 height: 74
-                radius: 10
+                radius: Tokens.radius.lg
                 color: Colors.fade(0.06)
                 opacity: card ? 1 : 0
                 scale: travel.running ? 0.98 : 1
-                Timer { id: travel; interval: 160 }
+                Timer { id: travel; interval: Anim.normal }   // the squash while the highlight travels
                 // leaving one row for the next: no fade in between
                 Timer { id: glowOff; interval: 60; onTriggered: hoverGlow.card = null }
-                Behavior on y { id: glowY; NumberAnimation { duration: 300; easing.type: Easing.OutQuint } }
-                Behavior on opacity { NumberAnimation { duration: 160 } }
-                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                Behavior on y { id: glowY; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+                Behavior on opacity { NumberAnimation { duration: Anim.normal } }
+                Behavior on scale { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
             }
 
             delegate: Column {
@@ -313,8 +312,8 @@ ColumnLayout {
                     PropertyAction { target: row; property: "opacity"; value: 0 }
                     PauseAnimation { duration: row.index * 35 }
                     ParallelAnimation {
-                        NumberAnimation { target: row; property: "opacity"; to: 1; duration: 260; easing.type: Easing.OutCubic }
-                        NumberAnimation { target: row; property: "scale"; from: 0.96; to: 1; duration: 360; easing.type: Easing.OutCubic }
+                        NumberAnimation { target: row; property: "opacity"; to: 1; duration: Anim.medium; easing.type: Anim.standard }
+                        NumberAnimation { target: row; property: "scale"; from: 0.96; to: 1; duration: Anim.slow; easing.type: Anim.standard }
                     }
                 }
 
@@ -323,12 +322,12 @@ ColumnLayout {
                     visible: row.r.head
                     width: parent.width
                     height: visible ? 28 : 0
-                    leftPadding: 10
+                    leftPadding: Tokens.space.s10
                     verticalAlignment: Text.AlignBottom
                     bottomPadding: 5
                     text: row.r.group
                     color: Colors.fade(0.4)
-                    font.pixelSize: 10
+                    font.pixelSize: Tokens.font.micro
                     font.bold: true
                     font.letterSpacing: 1.1
                     font.capitalization: Font.AllUppercase
@@ -339,11 +338,11 @@ ColumnLayout {
                     id: card
                     width: parent.width
                     height: 74
-                    radius: 10
-                    color: row.picked ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.24)
-                         : row.sel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.16)
+                    radius: Tokens.radius.lg
+                    color: row.picked ? Colors.alpha(Colors.color6, 0.24)
+                         : row.sel ? Colors.alpha(Colors.color6, 0.16)
                          : "transparent"
-                    Behavior on color { ColorAnimation { duration: 90 } }
+                    Behavior on color { ColorAnimation { duration: Anim.instant } }
 
                     // hover of the whole row, the action buttons included (the row's own
                     // MouseArea loses it over them: the buttons would hide, show, hide, …);
@@ -361,19 +360,19 @@ ColumnLayout {
                     Rectangle {
                         visible: (row.r.unread ?? 0) > 0
                         x: 5; y: 18
-                        width: 7; height: 7; radius: 4
+                        width: 7; height: 7; radius: Tokens.radius.sm
                         color: Colors.color6
                     }
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 16
-                        anchors.rightMargin: 10
-                        spacing: 10
+                        anchors.leftMargin: Tokens.space.s16
+                        anchors.rightMargin: Tokens.space.s10
+                        spacing: Tokens.space.s10
 
                         Avatar {
                             Layout.alignment: Qt.AlignTop
-                            Layout.topMargin: 10
+                            Layout.topMargin: Tokens.space.s10
                             size: 34
                             person: row.r.draft ? { name: "Draft", email: "" } : row.m.from
                             // picked: a check over the picture
@@ -384,25 +383,25 @@ ColumnLayout {
                                 opacity: row.picked ? 1 : 0
                                 scale: row.picked ? 1 : 0.6
                                 visible: opacity > 0
-                                Behavior on opacity { NumberAnimation { duration: 140 } }
-                                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
-                                Text { anchors.centerIn: parent; text: I.check; color: Colors.background; font.pixelSize: 16; font.family: Properties.fontFamily }
+                                Behavior on opacity { NumberAnimation { duration: Anim.fast } }
+                                Behavior on scale { NumberAnimation { duration: Anim.normal; easing.type: Anim.pop } }
+                                Text { anchors.centerIn: parent; text: I.check; color: Colors.background; font.pixelSize: Tokens.font.subtitle; font.family: Properties.fontFamily }
                             }
                         }
 
                         ColumnLayout {
                             Layout.fillWidth: true
                             Layout.alignment: Qt.AlignVCenter
-                            spacing: 1
+                            spacing: Tokens.space.s1
                             RowLayout {
                                 Layout.fillWidth: true
-                                spacing: 6
+                                spacing: Tokens.space.s6
                                 Text {
                                     Layout.fillWidth: true
                                     text: row.r.draft ? "To: " + ((row.r.draft.to ?? []).map(a => MailUtil.displayName(a)).join(", ") || "—")
                                         : row.r.people.slice(-3).join(", ")
                                     color: Colors.ink
-                                    font.pixelSize: 12
+                                    font.pixelSize: Tokens.font.small
                                     font.bold: (row.r.unread ?? 0) > 0
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
@@ -411,10 +410,10 @@ ColumnLayout {
                                     visible: (row.r.msgs?.length ?? 1) > 1 && !card.actions
                                     implicitWidth: cnt.implicitWidth + 10
                                     implicitHeight: 16
-                                    radius: 8
+                                    radius: Tokens.radius.md
                                     color: Colors.fade(0.08)
                                     Text { id: cnt; anchors.centerIn: parent; text: row.r.msgs?.length ?? ""; color: Colors.fade(0.6)
-                                           font.pixelSize: 10; font.family: Properties.fontFamily }
+                                           font.pixelSize: Tokens.font.micro; font.family: Properties.fontFamily }
                                 }
                                 // account color in the unified views
                                 Rectangle {
@@ -426,7 +425,7 @@ ColumnLayout {
                                     visible: !card.actions
                                     text: MailUtil.shortDate(row.r.latest, root.now)
                                     color: (row.r.unread ?? 0) > 0 ? Colors.color6 : Colors.fade(0.45)
-                                    font.pixelSize: 10
+                                    font.pixelSize: Tokens.font.micro
                                     font.family: Properties.fontFamily
                                 }
                             }
@@ -437,14 +436,14 @@ ColumnLayout {
                                     visible: !!row.m?.answered || !!row.m?.forwarded
                                     text: row.m?.forwarded ? I.forward : I.reply
                                     color: Colors.fade(0.4)
-                                    font.pixelSize: 11
+                                    font.pixelSize: Tokens.font.caption
                                     font.family: Properties.fontFamily
                                 }
                                 Text {
                                     Layout.fillWidth: true
                                     text: (row.r.draft ? row.r.draft.subject : row.r.subject) || "(no subject)"
                                     color: Colors.fade((row.r.unread ?? 0) > 0 ? 0.9 : 0.72)
-                                    font.pixelSize: 12
+                                    font.pixelSize: Tokens.font.small
                                     font.bold: (row.r.unread ?? 0) > 0
                                     font.family: Properties.fontFamily
                                     elide: Text.ElideRight
@@ -453,14 +452,14 @@ ColumnLayout {
                                     visible: !!row.r.attachments
                                     text: I.clip
                                     color: Colors.fade(0.45)
-                                    font.pixelSize: 11
+                                    font.pixelSize: Tokens.font.caption
                                     font.family: Properties.fontFamily
                                 }
                                 Text {
                                     visible: !!row.r.flagged
                                     text: I.star
                                     color: Colors.yellow
-                                    font.pixelSize: 11
+                                    font.pixelSize: Tokens.font.caption
                                     font.family: Properties.fontFamily
                                 }
                             }
@@ -468,7 +467,7 @@ ColumnLayout {
                                 Layout.fillWidth: true
                                 text: row.r.draft ? (row.r.draft.text || "").replace(/\s+/g, " ").slice(0, 160) : (row.m.preview || " ")
                                 color: Colors.fade(0.45)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                                 elide: Text.ElideRight
                                 maximumLineCount: 1
@@ -493,11 +492,11 @@ ColumnLayout {
                     Row {
                         opacity: card.actions ? 1 : 0
                         visible: opacity > 0
-                        Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                        Behavior on opacity { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
                         anchors.right: parent.right
-                        anchors.rightMargin: 6
+                        anchors.rightMargin: Tokens.space.s6
                         anchors.top: parent.top
-                        anchors.topMargin: 4
+                        anchors.topMargin: Tokens.space.s4
                         spacing: 0
                         IconButton {
                             implicitWidth: 24; implicitHeight: 24; iconSize: 12
@@ -536,15 +535,15 @@ ColumnLayout {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: parent.bottom
             anchors.bottomMargin: shown ? 10 : -height
-            Behavior on anchors.bottomMargin { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+            Behavior on anchors.bottomMargin { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
             opacity: shown ? 1 : 0
             visible: opacity > 0
-            Behavior on opacity { NumberAnimation { duration: 180 } }
+            Behavior on opacity { NumberAnimation { duration: Anim.normal } }
             z: 5
             width: Math.min(parent.width - 16, pickRow.implicitWidth + 16)
             height: 40
             radius: 20
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
+            color: Colors.surfacePopover
             border.width: Properties.panelBorderWidth
             border.color: Colors.color6
             // the bar takes clicks / hover / the wheel (the rows under it don't react)
@@ -557,11 +556,11 @@ ColumnLayout {
                 anchors.centerIn: parent
                 spacing: 0
                 Text {
-                    Layout.leftMargin: 6
-                    Layout.rightMargin: 4
+                    Layout.leftMargin: Tokens.space.s6
+                    Layout.rightMargin: Tokens.space.s4
                     text: pickBar.n + (root.width > 340 ? " selected" : "")
                     color: Colors.ink
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.bold: true
                     font.family: Properties.fontFamily
                 }
@@ -590,16 +589,11 @@ ColumnLayout {
                         property string chosen: ""
                         onClosed: if (chosen) { const p = chosen; chosen = ""; root.batch("move", p) }
                         y: -height - 6
-                        padding: 6
+                        padding: Tokens.space.s6
                         closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
-                        background: Rectangle {
-                            radius: Properties.popupRadius
-                            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
-                            border.width: Properties.panelBorderWidth
-                            border.color: Properties.panelBorder
-                        }
+                        background: PopoverBackground {}
                         contentItem: Column {
-                            spacing: 1
+                            spacing: Tokens.space.s1
                             Repeater {
                                 // not the folder they're all in already
                                 model: (MailStore.accountMap[root.pickedAccounts[0]]?.folders ?? [])
@@ -614,10 +608,10 @@ ColumnLayout {
                                         id: pfRow
                                         anchors.verticalCenter: parent.verticalCenter
                                         x: 10
-                                        spacing: 8
-                                        Text { text: I.role(modelData.role); color: Icons.tint(text, Colors.fade(0.55)); font.pixelSize: 13; font.family: Properties.fontFamily }
+                                        spacing: Tokens.space.s8
+                                        Text { text: I.role(modelData.role); color: Icons.tint(text, Colors.fade(0.55)); font.pixelSize: Tokens.font.body; font.family: Properties.fontFamily }
                                         Text { text: modelData.role === "inbox" ? "Inbox" : modelData.path; color: Colors.fade(0.85)
-                                               font.pixelSize: 12; font.family: Properties.fontFamily }
+                                               font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                                     }
                                     MouseArea {
                                         id: pfMouse
@@ -638,28 +632,14 @@ ColumnLayout {
         }
 
         // empty states
-        ColumnLayout {
+        EmptyState {
             anchors.centerIn: parent
             width: parent.width - 60
             visible: root.rows.length === 0
-            spacing: 6
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: root.filtering ? I.search : I.inbox
-                color: Colors.fade(0.2)
-                font.pixelSize: 34
-                font.family: Properties.fontFamily
-            }
-            Text {
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                text: root.filtering ? "Nothing matches" + (root.view.includes("|") && root.query ? " — press Enter to search the server" : "")
-                    : MailStore.accounts.length === 0 ? "No accounts yet" : MailStore.syncing ? "Checking for mail…" : "Nothing here"
-                color: Colors.fade(0.45)
-                font.pixelSize: 12
-                font.family: Properties.fontFamily
-            }
+            loading: !root.filtering && MailStore.accounts.length > 0 && MailStore.syncing
+            icon: root.filtering ? I.search : I.inbox
+            text: root.filtering ? "Nothing matches" + (root.view.includes("|") && root.query ? " — press Enter to search the server" : "")
+                : MailStore.accounts.length === 0 ? "No accounts yet" : MailStore.syncing ? "Checking for mail…" : "Nothing here"
         }
     }
 }

@@ -19,7 +19,7 @@ ColumnLayout {
 
     readonly property var errorFor: CalendarStore.errors.filter(e => e.calendar.startsWith(account.id + "|"))
 
-    spacing: 2
+    spacing: Tokens.space.s2
 
 
     Item {
@@ -28,21 +28,21 @@ ColumnLayout {
         HoverHandler { id: headHover }
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 4
-            spacing: 6
+            anchors.leftMargin: Tokens.space.s4
+            spacing: Tokens.space.s6
             Text {
                 text: root.account.type === "ics" ? "󰑫" : root.account.type === "local" ? "󰋜"
                     : root.account.type === "graph" ? "󰴢"
                     : /icloud/i.test(root.account.url) ? "󰀵" : "󰒍"
                 color: Colors.fade(root.on ? 0.45 : 0.25)
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
             }
             Text {
                 Layout.fillWidth: true
                 text: root.armed ? "Click again to remove" : root.account.name
                 color: root.armed ? Colors.red : Colors.fade(root.on ? 0.7 : 0.35)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.bold: true
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight
@@ -51,11 +51,10 @@ ColumnLayout {
                 visible: root.errorFor.length > 0
                 text: "󰀦"
                 color: Colors.red
-                font.pixelSize: 12
+                font.pixelSize: Tokens.font.small
                 font.family: Properties.fontFamily
                 HoverHandler { id: errHover }
-                ToolTip.visible: errHover.hovered
-                ToolTip.text: root.errorFor.map(e => e.message).join("\n")
+                HoverTip { shown: errHover.hovered; text: root.errorFor.map(e => e.message).join("\n") }
             }
             // calendars made on another device show up by themselves (hourly); this checks now
             IconButton {
@@ -64,13 +63,7 @@ ColumnLayout {
                 iconSize: 11
                 icon: "󰑓"
                 tooltip: "Look for new calendars"
-                interactive: !root.listing
-                RotationAnimation on rotation {
-                    running: root.listing
-                    loops: Animation.Infinite
-                    from: 0; to: 360; duration: 900
-                    onStopped: parent.rotation = 0
-                }
+                busy: root.listing
                 onClicked: {
                     root.listing = true
                     CalendarStore.refreshCalendars(root.account.id, () => root.listing = false)
@@ -100,11 +93,11 @@ ColumnLayout {
     Text {
         visible: !root.on
         Layout.fillWidth: true
-        Layout.leftMargin: 24
-        Layout.bottomMargin: 2
+        Layout.leftMargin: Tokens.space.s24
+        Layout.bottomMargin: Tokens.space.s2
         text: "Off — not syncing · " + root.account.calendars.length + (root.account.calendars.length === 1 ? " calendar" : " calendars")
         color: Colors.fade(0.3)
-        font.pixelSize: 10
+        font.pixelSize: Tokens.font.micro
         font.family: Properties.fontFamily
         elide: Text.ElideRight
     }
@@ -116,7 +109,7 @@ ColumnLayout {
             required property var modelData
             Layout.fillWidth: true
             implicitHeight: 30
-            radius: Properties.radius
+            radius: Tokens.radius.md
             color: rowMouse.containsMouse ? Colors.fade(0.06) : "transparent"
 
             MouseArea {
@@ -129,9 +122,9 @@ ColumnLayout {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                spacing: 10
+                anchors.leftMargin: Tokens.space.s8
+                anchors.rightMargin: Tokens.space.s8
+                spacing: Tokens.space.s10
 
                 // color square = visibility checkbox; click it to recolor
                 Rectangle {
@@ -146,8 +139,8 @@ ColumnLayout {
                         anchors.centerIn: parent
                         visible: row.modelData.enabled
                         text: "󰄬"
-                        color: "#1a1a1a"
-                        font.pixelSize: 10
+                        color: Colors.neutral(0.1)
+                        font.pixelSize: Tokens.font.micro
                         font.bold: true
                         font.family: Properties.fontFamily
                     }
@@ -169,17 +162,12 @@ ColumnLayout {
                         scale: AppZoom.at(parent)
                         transformOrigin: Popup.TopLeft
                         y: swatch.height + 6
-                        padding: 10
+                        padding: Tokens.space.s10
                         closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
-                        background: Rectangle {
-                            radius: Properties.popupRadius
-                            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
-                            border.width: Properties.panelBorderWidth
-                            border.color: Properties.panelBorder
-                        }
+                        background: PopoverBackground {}
                         contentItem: Grid {
                             columns: 6
-                            spacing: 6
+                            spacing: Tokens.space.s6
                             Repeater {
                                 model: CalendarStore.palette.concat([Colors.color1, Colors.color3, Colors.color6, Colors.color8])
                                 Rectangle {
@@ -208,7 +196,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     text: row.modelData.name
                     color: row.modelData.enabled ? Colors.ink : Colors.fade(0.4)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -216,7 +204,7 @@ ColumnLayout {
                     visible: row.modelData.readOnly || root.account.type === "ics"
                     text: "󰌾"
                     color: Colors.fade(0.3)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
                 // recolor
@@ -224,7 +212,7 @@ ColumnLayout {
                     visible: rowMouse.containsMouse
                     text: "󰏘"
                     color: Colors.fade(0.5)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.family: Properties.fontFamily
                     MouseArea {
                         anchors.fill: parent

@@ -11,7 +11,7 @@ import "../network"
 // of the sidebar), undo the last switch, export / import profiles.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property string newName: ""
     property var picked: SettingsProfiles.defaultGroups()
@@ -42,7 +42,7 @@ ColumnLayout {
 
     Component.onCompleted: SettingsProfiles.refresh()
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Profiles"
         header: [
@@ -58,7 +58,7 @@ ColumnLayout {
             },
             ActionButton { icon: "󰋺"; text: "Import…"; onClicked: page.pickImport() }
         ]
-        NetRow {
+        SettingRow {
             id: importRow
             first: true
             visible: page.importList.length > 0
@@ -69,7 +69,7 @@ ColumnLayout {
             desc: page.importList.map(e => (e.problem !== "" ? "󰀦 " + e.name + " (" + e.file + "): " + e.problem
                                                              : "󰄬 " + e.name + (e.exists ? "  (replaces yours)" : ""))).join("\n")
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 Item { Layout.fillWidth: true }
                 ActionButton { text: "Cancel"; onClicked: page.importList = [] }
                 ActionButton {
@@ -79,20 +79,20 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             first: page.importList.length === 0
             visible: SettingsProfiles.profiles.length === 0
             label: "No profiles yet"
             desc: "save the current settings below, change things, save another one, then switch here (or qs ipc call profiles apply <name>)"
         }
-        NetRow {
+        SettingRow {
             visible: SettingsProfiles.error !== "" || page.msg !== ""
             label: SettingsProfiles.error !== "" ? "Not applied" : page.msg
             desc: SettingsProfiles.error
         }
         Repeater {
             model: SettingsProfiles.profiles
-            NetRow {
+            SettingRow {
                 required property var modelData
                 required property int index
                 readonly property var p: modelData
@@ -102,9 +102,9 @@ ColumnLayout {
                 desc: p.broken ? "󰀦 not valid JSON" : p.groups.map(g => Settings.groupLabel(g)).join(", ") + (p.hasColors ? " + colors" : "")
                       + (p.saved ? "  ·  saved " + p.saved.slice(0, 16).replace("T", " ") : "")
                 ColumnLayout {
-                  spacing: 8
+                  spacing: Tokens.space.s8
                   RowLayout {
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     IconButton {
                         icon: p.icon || p.name.charAt(0).toUpperCase()
                         active: page.iconFor === p.name
@@ -141,7 +141,7 @@ ColumnLayout {
                   Flow {
                     Layout.fillWidth: true
                     visible: page.iconFor === p.name
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Repeater {
                         model: [""].concat(SettingsProfiles.iconChoices)
                         IconButton {
@@ -158,15 +158,15 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Save the current settings as a profile"
-        NetRow {
+        SettingRow {
             first: true
             label: "Name"
             desc: SettingsProfiles.profiles.some(p => p.name === page.newName.trim()) ? "exists: saving replaces it" : "e.g. Work, Gaming, Presentation"
             RowLayout {
-                spacing: 8
+                spacing: Tokens.space.s8
                 SearchField {
                     Layout.preferredWidth: 200
                     icon: ""; clearable: false
@@ -180,16 +180,16 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             wide: true
             label: "What it contains"
             desc: "machine-specific groups (monitors, connections, dotfiles, …) are off by default"
             Flow {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: Tokens.space.s6
                 Repeater {
                     model: Settings.groups
-                    Chip {
+                    ValueChip {
                         required property string modelData
                         readonly property bool on: page.picked.includes(modelData)
                         text: (on ? "󰄬 " : "") + (Settings.groupLabel(modelData))
@@ -205,7 +205,7 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Include the pywal colors"
             desc: "applying the profile then also applies its colors (Theme → Undo works too)"
             ToggleSwitch { checked: page.withColors; onToggled: v => page.withColors = v }

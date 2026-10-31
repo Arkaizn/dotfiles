@@ -169,8 +169,9 @@ Singleton {
     FileView { id: draftsFile; path: root.dir + "/drafts.json"; blockLoading: true; printErrors: false }
 
     Component.onCompleted: {
-        Quickshell.execDetached(["mkdir", "-p", root.bodyDir])
-        Quickshell.execDetached(["chmod", "700", root.dir])
+        // private: the folder 0700 (new files inside then can't be read by
+        // others whatever their mode), and what's there already made private once
+        Quickshell.execDetached(["sh", "-c", 'umask 077; mkdir -p "$2" && chmod 700 "$1" && chmod -R go-rwx "$1"', "sh", root.dir, root.bodyDir])
         try { root.accounts = JSON.parse(accountsFile.text() || "[]") } catch (e) { root.accounts = [] }
         try {
             const c = JSON.parse(cacheFile.text() || "{}")
@@ -262,7 +263,7 @@ Singleton {
     readonly property bool busy: actLane.current !== null || actLane.queue.length > 0
 
     // ── Accounts ─────────────────────────────────────────────────────────────
-    readonly property var palette: ["#7aa2f7", "#9ece6a", "#e0af68", "#f7768e", "#bb9af7", "#7dcfff", "#ff9e64", "#73daca"]
+    readonly property var palette: Colors.accountPalette   // shared with the other app (Colors.qml)
     function newAccountId() { return "mail-" + Date.now().toString(36) }
 
     function autoconfig(address, done) { toolLane.run("autoconfig", { email: address }, done) }

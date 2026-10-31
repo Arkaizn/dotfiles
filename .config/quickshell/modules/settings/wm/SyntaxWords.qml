@@ -9,7 +9,7 @@ import "../network"
 
 // Syntax page: the names the compositor uses (Syntax.words), editable.
 //   SyntaxWords { lg: "niri" }   ("niri" | "hypr")
-NetCard {
+Section {
     id: wc
     required property string lg
     Layout.fillWidth: true
@@ -17,10 +17,10 @@ NetCard {
     icon: "󰗊"
     GridLayout {
         Layout.fillWidth: true
-        Layout.margins: 14
+        Layout.margins: Tokens.space.s14
         columns: 1
-        columnSpacing: 14
-        rowSpacing: 8
+        columnSpacing: Tokens.space.s14
+        rowSpacing: Tokens.space.s8
         Repeater {
             model: Object.keys(Syntax.wordDefaults[wc.lg])
             RowLayout {
@@ -29,12 +29,12 @@ NetCard {
                 readonly property bool changed: Syntax.words[wc.lg + "." + modelData] !== undefined
                 Layout.fillWidth: true
                 Layout.preferredWidth: 1
-                spacing: 6
+                spacing: Tokens.space.s6
                 Text {
                     Layout.preferredWidth: 230
                     text: "{@" + wr.modelData + "}"
                     color: wr.changed ? Colors.color6 : Colors.fade(0.6)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -43,7 +43,7 @@ NetCard {
                     implicitHeight: 28
                     icon: ""
                     clearable: false
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     text: Syntax.word(wc.lg, wr.modelData)
                     onEditingFinished: if (text !== Syntax.word(wc.lg, wr.modelData)) Syntax.setWord(wc.lg, wr.modelData, text.trim())
                 }
@@ -53,7 +53,7 @@ NetCard {
                     tooltip: "Back to: " + Syntax.wordDefaults[wc.lg][wr.modelData]
                     opacity: wr.changed ? 1 : 0
                     visible: opacity > 0
-                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                    Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                     onClicked: Syntax.setWord(wc.lg, wr.modelData, "")
                 }
             }

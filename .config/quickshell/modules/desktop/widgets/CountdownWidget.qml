@@ -9,13 +9,13 @@ ColumnLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 2
+    spacing: Tokens.space.s2
     // "YYYY-MM-DD" or "YYYY-MM-DD HH:MM" (local time)
     readonly property var target: {
         const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?$/.exec((opts.when ?? "").trim())
         return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] ?? 0), +(m[5] ?? 0)) : null
     }
-    readonly property real diff: target ? target.getTime() - Time.date.getTime() : 0
+    readonly property real diff: target ? target.getTime() - Time.minuteDate.getTime() : 0
     readonly property real remain: Math.abs(diff)
     readonly property int days: Math.floor(remain / 86400000)
     readonly property int hours: Math.floor(remain % 86400000 / 3600000)

@@ -11,7 +11,7 @@ import "../network"
 // shell's password prompt); user units don't need a password.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     property var units: []                  // [{ name, desc, user, log: [] }]
     property bool loading: false
@@ -54,19 +54,19 @@ ColumnLayout {
         })
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Failed services"
         icon: "󰒏"
         header: ActionButton { icon: "󰑓"; text: page.loading ? "Checking…" : "Check again"; onClicked: page.refresh() }
-        NetRow {
+        SettingRow {
             first: true
             label: page.loading ? "Checking…" : page.units.length === 0 ? "Nothing failed" : page.units.length + (page.units.length === 1 ? " service failed" : " services failed")
             desc: page.message !== "" ? page.message : "since this boot (systemctl --failed, system and user)"
         }
         Repeater {
             model: page.units
-            NetRow {
+            SettingRow {
                 id: row
                 required property var modelData
                 readonly property var u: modelData
@@ -75,7 +75,7 @@ ColumnLayout {
                 label: (u.user ? "󰀄 " : "󰒋 ") + u.name + (u.user ? "  ·  user" : "  ·  system")
                 desc: u.desc + (u.log.length ? "\n" + (row.open ? u.log : u.log.slice(-3)).join("\n") : "")
                 RowLayout {
-                    spacing: 6
+                    spacing: Tokens.space.s6
                     Item { Layout.fillWidth: true }
                     ActionButton { text: row.open ? "Less log" : "More log"; visible: u.log.length > 3; onClicked: page.expanded = row.open ? "" : u.name }
                     ActionButton { icon: "󰜉"; text: "Restart"; onClicked: page.act(u, "restart") }
@@ -85,10 +85,10 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Note"
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "Not every failed service is a problem"

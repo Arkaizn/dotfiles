@@ -27,21 +27,21 @@ ColumnLayout {
     }
     ParallelAnimation {
         id: monthSlide
-        NumberAnimation { id: monthSlideX; target: daysShift; property: "x"; to: 0; duration: 240; easing.type: Easing.OutCubic }
-        NumberAnimation { target: grid; property: "opacity"; from: 0.2; to: 1; duration: 220; easing.type: Easing.OutCubic }
+        NumberAnimation { id: monthSlideX; target: daysShift; property: "x"; to: 0; duration: Anim.medium; easing.type: Anim.standard }
+        NumberAnimation { target: grid; property: "opacity"; from: 0.2; to: 1; duration: Anim.medium; easing.type: Anim.standard }
     }
 
-    spacing: 6
+    spacing: Tokens.space.s6
 
     RowLayout {
         Layout.fillWidth: true
-        spacing: 4
+        spacing: Tokens.space.s4
         Text {
             Layout.fillWidth: true
-            Layout.leftMargin: 4
+            Layout.leftMargin: Tokens.space.s4
             text: U.monthNames[root.shownMonth.getMonth()] + " " + root.shownMonth.getFullYear()
             color: Colors.ink
-            font.pixelSize: 13
+            font.pixelSize: Tokens.font.body
             font.bold: true
             font.family: Properties.fontFamily
         }
@@ -76,7 +76,7 @@ ColumnLayout {
                 horizontalAlignment: Text.AlignHCenter
                 text: modelData.slice(0, 2)
                 color: index >= 5 ? Colors.fade(0.25) : Colors.fade(0.4)
-                font.pixelSize: 10
+                font.pixelSize: Tokens.font.micro
                 font.bold: true
                 font.family: Properties.fontFamily
             }
@@ -100,7 +100,7 @@ ColumnLayout {
                     width: Math.min(parent.width, parent.height) - 2
                     height: width
                     radius: width / 2
-                    color: cell.isSel ? Qt.rgba(Colors.color6.r, Colors.color6.g, Colors.color6.b, 0.85)
+                    color: cell.isSel ? Colors.alpha(Colors.color6, 0.85)
                          : hover.hovered ? Colors.fade(0.08) : "transparent"
                     border.width: cell.today && !cell.isSel ? 1.5 : 0
                     border.color: Colors.color6
@@ -111,7 +111,7 @@ ColumnLayout {
                     text: cell.day.getDate()
                     color: cell.isSel ? U.onColor(Colors.color6)
                          : cell.inMonth ? (cell.index % 7 >= 5 ? Colors.fade(0.55) : Colors.ink) : Colors.fade(0.3)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.bold: cell.today || cell.isSel
                     font.family: Properties.fontFamily
                 }
@@ -119,13 +119,13 @@ ColumnLayout {
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 4
-                    spacing: 2
+                    anchors.bottomMargin: Tokens.space.s4
+                    spacing: Tokens.space.s2
                     Repeater {
                         model: [...new Set(cell.evs.map(e => e.calendar))].slice(0, 3)
                         Rectangle {
                             required property string modelData
-                            width: 4; height: 4; radius: 2
+                            width: 4; height: 4; radius: Tokens.radius.xs
                             color: cell.isSel ? U.onColor(Colors.color6) : (CalendarStore.calendarMap[modelData]?.color ?? Colors.ink)
                         }
                     }

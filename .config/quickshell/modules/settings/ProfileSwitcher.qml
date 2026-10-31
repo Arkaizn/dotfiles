@@ -19,14 +19,14 @@ Item {
 
     // a thin line above, like a footer
     Rectangle {
-        anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 6; rightMargin: 6 }
+        anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: Tokens.space.s6; rightMargin: Tokens.space.s6 }
         height: 1
         color: Colors.fade(0.08)
     }
 
     Flickable {
         id: strip
-        anchors { left: parent.left; right: manageBtn.left; rightMargin: 4; top: parent.top; topMargin: 6; bottom: parent.bottom }
+        anchors { left: parent.left; right: manageBtn.left; rightMargin: Tokens.space.s4; top: parent.top; topMargin: Tokens.space.s6; bottom: parent.bottom }
         contentWidth: row.implicitWidth
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -37,7 +37,7 @@ Item {
             // centred while they fit
             x: Math.max(0, (strip.width - implicitWidth) / 2)
             height: strip.height
-            spacing: 4
+            spacing: Tokens.space.s4
 
             Repeater {
                 model: root.list
@@ -57,12 +57,12 @@ Item {
                         onClicked: if (!slot.current) SettingsProfiles.apply(slot.modelData.name, ok => { if (!ok) root.failed() })
                     }
                     Rectangle {
-                        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 1 }
+                        anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: Tokens.space.s1 }
                         width: slot.current ? 12 : 4
                         height: 3
                         radius: 1.5
                         color: slot.current ? Colors.color6 : Colors.fade(0.25)
-                        Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        Behavior on width { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
                     }
                 }
             }
@@ -71,7 +71,7 @@ Item {
                 visible: root.list.length === 0
                 text: "No profiles yet"
                 color: Colors.fade(0.4)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
         }
@@ -83,7 +83,7 @@ Item {
 
     IconButton {
         id: manageBtn
-        anchors { right: parent.right; top: parent.top; topMargin: 6 }
+        anchors { right: parent.right; top: parent.top; topMargin: Tokens.space.s6 }
         icon: root.list.length === 0 ? "󰐕" : "󰒓"
         tooltip: root.list.length === 0 ? "Save the current settings as a profile" : "Manage profiles"
         onClicked: root.manage()

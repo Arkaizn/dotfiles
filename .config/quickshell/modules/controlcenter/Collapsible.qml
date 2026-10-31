@@ -1,4 +1,6 @@
 import QtQuick
+import qs.components
+import qs.services
 import QtQuick.Layouts
 
 // Dropdown body for a ColumnLayout: height + opacity animate open/closed,
@@ -13,12 +15,12 @@ Item {
     visible: Layout.preferredHeight > 0.5
     opacity: open ? 1 : 0
     clip: true
-    Behavior on Layout.preferredHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-    Behavior on opacity { NumberAnimation { duration: 160 } }
+    Behavior on Layout.preferredHeight { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
+    Behavior on opacity { NumberAnimation { duration: Anim.normal } }
 
     ColumnLayout {
         id: inner
         width: cl.width
-        spacing: 8
+        spacing: Tokens.space.s8
     }
 }

@@ -242,7 +242,7 @@ Singleton {
         case "greeter": {
             // its code = this config's greeter/ (comment-only changes don't count), its theme copy
             // written, the font readable for the greeter user
-            Jobs.run(["sh", "-c", 'out="${XDG_RUNTIME_DIR:-/tmp}/quickshell-greeter-check"; inst=/usr/local/share/quickshell-greeter/shell; ' +
+            Jobs.run(["sh", "-c", 'out="${XDG_RUNTIME_DIR:?}/quickshell-greeter-check"; inst=/usr/local/share/quickshell-greeter/shell; ' +
                       'bash "$1/greeter/build.sh" "$out" || exit 1; cat "$inst/VERSION" 2>/dev/null || echo; ' +
                       'fc-list -f "%{file}\\n" "$2" | grep -c "^/usr/" || true; ' +
                       'strip() { sed -E "/^[[:space:]]*(\\/\\/|#)/d; /^[[:space:]]*$/d; s/[[:space:]]+$//" "$1"; }; ' +

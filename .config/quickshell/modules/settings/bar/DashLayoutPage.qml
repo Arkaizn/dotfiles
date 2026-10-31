@@ -1,6 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 import ".."
 import "../network"
@@ -15,9 +16,9 @@ Item {
     ColumnLayout {
         id: col
         width: parent.width
-        spacing: 16
+        spacing: Tokens.space.s16
 
-        NetCard {
+        Section {
             Layout.fillWidth: true
             title: "Cards"
             header: [
@@ -37,7 +38,7 @@ Item {
             ChipBoard {
                 id: board
                 Layout.fillWidth: true
-                Layout.margins: 12
+                Layout.margins: Tokens.space.s12
                 info: id => PanelLayout.dashCard(id)
                 place: (id, zone, index) => zone === "add" ? PanelLayout.dashAdd(id)
                                                            : PanelLayout.dashMove(id, zone === "" ? -1 : Number(zone), index)
@@ -47,12 +48,12 @@ Item {
                     text: "Drag cards between the columns  ·  × hides one  ·  a column with the media player or the calendar takes the free width; one with more than fits makes the dashboard taller"
                     wrapMode: Text.Wrap
                     color: Colors.fade(0.45)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                 }
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 10
+                    spacing: Tokens.space.s10
                     Repeater {
                         model: PanelLayout.dashColumnCount
                         BarZone {

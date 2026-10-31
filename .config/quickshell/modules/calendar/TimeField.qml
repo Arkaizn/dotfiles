@@ -43,7 +43,7 @@ Item {
         anchors.fill: parent
         icon: ""
         clearable: false
-        leftPadding: 12
+        leftPadding: Tokens.space.s12
         rightPadding: 30
         text: root.fmt(root.minutes)
         onActiveFocusChanged: if (activeFocus) selectAll()
@@ -53,7 +53,7 @@ Item {
 
     IconButton {
         anchors.right: parent.right
-        anchors.rightMargin: 4
+        anchors.rightMargin: Tokens.space.s4
         anchors.verticalCenter: parent.verticalCenter
         implicitWidth: 22; implicitHeight: 22
         iconSize: 11
@@ -70,17 +70,12 @@ Item {
         y: root.height + 4
         width: Math.max(root.width, 110)
         height: 240
-        padding: 6
+        padding: Tokens.space.s6
         closePolicy: Popup.CloseOnPressOutsideParent | Popup.CloseOnEscape
         onOpened: view.positionViewAtIndex(Math.round(root.minutes / 15), ListView.Center)
-        background: Rectangle {
-            radius: Properties.radius + 2
-            color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.98)
-            border.width: Properties.panelBorderWidth
-            border.color: Properties.panelBorder
-        }
-        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140 } }
-        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 100 } }
+        background: PopoverBackground {}
+        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Anim.fast } }
+        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: Anim.fast } }
 
         ListView {
             id: view
@@ -88,7 +83,7 @@ Item {
             clip: true
             model: 96
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: CalScrollBar {}
+            ScrollBar.vertical: SlimScrollBar {}
             SmoothWheel { flick: view; step: 84 }
             delegate: Rectangle {
                 id: entry
@@ -97,14 +92,14 @@ Item {
                 readonly property bool selected: value === root.minutes
                 width: ListView.view.width - 10
                 height: 28
-                radius: Properties.radius
+                radius: Tokens.radius.md
                 color: hover.hovered ? Colors.fade(0.08) : selected ? Colors.fade(0.05) : "transparent"
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     x: 10
                     text: root.fmt(entry.value)
                     color: entry.selected ? Colors.color6 : entry.value % 60 === 0 ? Colors.ink : Colors.fade(0.6)
-                    font.pixelSize: 12
+                    font.pixelSize: Tokens.font.small
                     font.bold: entry.selected || entry.value % 60 === 0
                     font.family: Properties.fontFamily
                 }

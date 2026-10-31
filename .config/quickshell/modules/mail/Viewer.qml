@@ -69,7 +69,7 @@ Item {
     visible: opacity > 0
     opacity: shown ? 1 : 0
     z: 120
-    Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
 
     // Ctrl +/−/0 zoom the attachment here, not the window (ZoomArea's shortcuts)
     Keys.onShortcutOverride: event => event.accepted = shown && (event.modifiers & Qt.ControlModifier)
@@ -96,21 +96,21 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 10
+        anchors.margins: Tokens.space.s14
+        spacing: Tokens.space.s10
 
         // toolbar
         RowLayout {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: Tokens.space.s4
             IconButton { icon: I.left; tooltip: "Previous  (←)"; visible: root.list.length > 1; onClicked: root.go(root.at - 1) }
             IconButton { icon: I.right; tooltip: "Next  (→)"; visible: root.list.length > 1; onClicked: root.go(root.at + 1) }
             Text {
                 text: root.item?.kind === "pdf" ? I.draft : I.clip
                 color: Colors.color6
-                font.pixelSize: 16
+                font.pixelSize: Tokens.font.subtitle
                 font.family: Properties.fontFamily
-                Layout.leftMargin: 6
+                Layout.leftMargin: Tokens.space.s6
             }
             ColumnLayout {
                 Layout.fillWidth: true
@@ -119,7 +119,7 @@ Item {
                     Layout.fillWidth: true
                     text: root.list[root.at]?.name ?? ""
                     color: Colors.ink
-                    font.pixelSize: 14
+                    font.pixelSize: Tokens.font.label
                     font.bold: true
                     font.family: Properties.fontFamily
                     elide: Text.ElideMiddle
@@ -131,7 +131,7 @@ Item {
                                                                    + (root.item.pages.length < root.item.pageCount ? " (first " + root.item.pages.length + " shown)" : "") : "",
                                         root.list.length > 1 ? (root.at + 1) + " of " + root.list.length : ""].filter(x => x).join("  ·  ")
                     color: root.note ? Colors.color6 : Colors.fade(0.5)
-                    font.pixelSize: 11
+                    font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight
                 }
@@ -143,12 +143,12 @@ Item {
                 horizontalAlignment: Text.AlignHCenter
                 text: Math.round(root.zoom * 100) + "%"
                 color: Colors.fade(0.6)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.zoomBy(0) }
             }
             IconButton { icon: I.plus; tooltip: "Zoom in  (Ctrl +)"; visible: root.item && root.item.kind !== "other"; onClicked: root.zoomBy(1.25) }
-            Rectangle { implicitWidth: 1; implicitHeight: 18; color: Colors.fade(0.1); Layout.leftMargin: 6; Layout.rightMargin: 6 }
+            Rectangle { implicitWidth: 1; implicitHeight: 18; color: Colors.fade(0.1); Layout.leftMargin: Tokens.space.s6; Layout.rightMargin: Tokens.space.s6 }
             // like Nautilus: the default app for this type (GNOME's default apps / mimeapps.list) …
             ActionButton {
                 icon: I.open
@@ -170,16 +170,11 @@ Item {
                     y: withButton.height + 4
                     x: withButton.width - width
                     width: 260
-                    padding: 6
+                    padding: Tokens.space.s6
                     height: Math.min(appCol.implicitHeight + 12, 320)
-                    background: Rectangle {
-                        radius: Properties.radius + 2
-                        color: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.97)
-                        border.width: Properties.panelBorderWidth
-                        border.color: Properties.panelBorder
-                    }
-                    enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 140; easing.type: Easing.OutCubic } }
-                    exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 100 } }
+                    background: PopoverBackground {}
+                    enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Anim.fast; easing.type: Anim.standard } }
+                    exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Anim.fast } }
                     Flickable {
                         anchors.fill: parent
                         contentHeight: appCol.implicitHeight
@@ -191,10 +186,10 @@ Item {
                             Text {
                                 visible: root.apps.length === 0
                                 width: parent.width
-                                padding: 8
+                                padding: Tokens.space.s8
                                 text: "No other app is registered for this kind of file"
                                 color: Colors.fade(0.5)
-                                font.pixelSize: 11
+                                font.pixelSize: Tokens.font.caption
                                 font.family: Properties.fontFamily
                                 wrapMode: Text.Wrap
                             }
@@ -206,14 +201,14 @@ Item {
                                     required property int index
                                     width: appCol.width
                                     height: 32
-                                    radius: Properties.radius
+                                    radius: Tokens.radius.md
                                     color: appHover.hovered ? Colors.fade(0.08) : "transparent"
-                                    Behavior on color { ColorAnimation { duration: 90 } }
+                                    Behavior on color { ColorAnimation { duration: Anim.instant } }
                                     RowLayout {
                                         anchors.fill: parent
-                                        anchors.leftMargin: 8
-                                        anchors.rightMargin: 8
-                                        spacing: 8
+                                        anchors.leftMargin: Tokens.space.s8
+                                        anchors.rightMargin: Tokens.space.s8
+                                        spacing: Tokens.space.s8
                                         Image {
                                             Layout.preferredWidth: 18
                                             Layout.preferredHeight: 18
@@ -224,7 +219,7 @@ Item {
                                             Layout.fillWidth: true
                                             text: appRow.modelData.entry.name
                                             color: Colors.ink
-                                            font.pixelSize: 12
+                                            font.pixelSize: Tokens.font.small
                                             font.family: Properties.fontFamily
                                             elide: Text.ElideRight
                                         }
@@ -232,7 +227,7 @@ Item {
                                             visible: appRow.index === 0
                                             text: "default"
                                             color: Colors.fade(0.4)
-                                            font.pixelSize: 10
+                                            font.pixelSize: Tokens.font.micro
                                             font.family: Properties.fontFamily
                                         }
                                     }
@@ -257,7 +252,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            radius: 12
+            radius: Tokens.radius.xl
             color: Colors.card
             border.width: Properties.panelBorderWidth
             border.color: Properties.cardBorder
@@ -267,13 +262,13 @@ Item {
             Flickable {
                 id: imgFlick
                 anchors.fill: parent
-                anchors.margins: 8
+                anchors.margins: Tokens.space.s8
                 visible: root.item?.kind === "image"
                 contentWidth: Math.max(width, img.width)
                 contentHeight: Math.max(height, img.height)
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: CalScrollBar {}
+                ScrollBar.vertical: SlimScrollBar {}
                 SmoothWheel { flick: imgFlick; step: 140; acceptedModifiers: Qt.NoModifier }
                 Image {
                     id: img
@@ -294,13 +289,13 @@ Item {
             ListView {
                 id: pages
                 anchors.fill: parent
-                anchors.margins: 8
+                anchors.margins: Tokens.space.s8
                 visible: root.item?.kind === "pdf"
                 model: root.item?.kind === "pdf" ? root.item.pages : []
-                spacing: 10
+                spacing: Tokens.space.s10
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: CalScrollBar {}
+                ScrollBar.vertical: SlimScrollBar {}
                 SmoothWheel { flick: pages; step: 160; acceptedModifiers: Qt.NoModifier }
                 contentWidth: Math.max(width, width * 0.9 * root.zoom)
                 flickableDirection: Flickable.AutoFlickIfNeeded
@@ -315,7 +310,7 @@ Item {
                         width: Math.min(pages.width * 0.9, 900) * root.zoom
                         height: pimg.implicitWidth > 0 ? width * pimg.implicitHeight / pimg.implicitWidth : width * 1.414
                         color: "white"
-                        radius: 4
+                        radius: Tokens.radius.sm
                         Image {
                             id: pimg
                             anchors.fill: parent
@@ -333,9 +328,9 @@ Item {
             ScrollView {
                 id: textScroll
                 anchors.fill: parent
-                anchors.margins: 8
+                anchors.margins: Tokens.space.s8
                 visible: root.item?.kind === "text"
-                ScrollBar.vertical: CalScrollBar {}
+                ScrollBar.vertical: SlimScrollBar {}
                 SmoothWheel { flick: textScroll.contentItem; step: 140; acceptedModifiers: Qt.NoModifier }
                 TextArea {
                     readOnly: true
@@ -361,7 +356,7 @@ Item {
                 anchors.centerIn: parent
                 width: parent.width - 80
                 visible: root.loading || root.error !== "" || root.item?.kind === "other"
-                spacing: 10
+                spacing: Tokens.space.s10
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: root.error ? I.alert : I.clip
@@ -376,7 +371,7 @@ Item {
                     text: root.loading ? "Opening…" : root.error ? root.error
                         : "This kind of file (" + (root.item?.type ?? "") + ") can't be shown here — open it with another app or save it."
                     color: Colors.fade(0.6)
-                    font.pixelSize: 13
+                    font.pixelSize: Tokens.font.body
                     font.family: Properties.fontFamily
                 }
             }

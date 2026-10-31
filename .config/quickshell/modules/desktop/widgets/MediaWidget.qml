@@ -12,7 +12,7 @@ RowLayout {
     property bool interactive: true
     property bool active: true
 
-    spacing: 14
+    spacing: Tokens.space.s14
     readonly property var player: Media.players.find(p => p.isPlaying) ?? Media.players[0] ?? null
     readonly property bool idle: player === null
     // the frame hides the widget (not `visible`: that follows the window)
@@ -32,7 +32,7 @@ RowLayout {
         visible: root.opts.cover !== false
         Layout.preferredWidth: 84
         Layout.preferredHeight: 84
-        radius: 12
+        radius: Tokens.radius.xl
         color: Colors.fade(0.08)
         Image {
             anchors.fill: parent
@@ -54,7 +54,7 @@ RowLayout {
 
     ColumnLayout {
         Layout.preferredWidth: 230
-        spacing: 4
+        spacing: Tokens.space.s4
         Text {
             Layout.fillWidth: true
             text: root.idle ? "Nothing playing" : (root.player.trackTitle || "Unknown title")
@@ -75,16 +75,16 @@ RowLayout {
         // progress
         Item {
             Layout.fillWidth: true
-            Layout.topMargin: 4
+            Layout.topMargin: Tokens.space.s4
             implicitHeight: 10
             visible: root.length > 0
             Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width; height: 4; radius: 2
+                width: parent.width; height: 4; radius: Tokens.radius.xs
                 color: Colors.fade(0.15)
                 Rectangle {
                     width: parent.width * Math.min(1, root.position / Math.max(1, root.length))
-                    height: parent.height; radius: 2
+                    height: parent.height; radius: Tokens.radius.xs
                     color: Colors.color6
                 }
             }
@@ -97,7 +97,7 @@ RowLayout {
         }
         RowLayout {
             Layout.alignment: Qt.AlignHCenter
-            spacing: 10
+            spacing: Tokens.space.s10
             IconButton {
                 icon: "󰒮"; iconSize: 16
                 interactive: root.interactive && (root.player?.canGoPrevious ?? false)

@@ -12,8 +12,8 @@ import Quickshell.Io
 ColumnLayout {
     id: root
     anchors.fill: parent
-    anchors.margins: 10
-    spacing: 8
+    anchors.margins: Tokens.space.s10
+    spacing: Tokens.space.s8
 
     // set by the dashboard: true while it's open
     property bool active: false
@@ -44,21 +44,6 @@ ColumnLayout {
         blockLoading: true
         onLoaded: info.uptimeSecs = parseFloat(text()) || 0
     }
-    Process {
-        id: osAgeProc
-        command: ["stat", "-c", "%W", "/"]
-        stdout: SplitParser { onRead: data => { const b = parseInt(data); if (b > 0) info.osAge = Math.floor((Date.now() / 1000 - b) / 86400) + "d" } }
-    }
-    Process {
-        id: diskProc
-        command: ["df", "-B1", "--output=used,size", "/"]
-        stdout: SplitParser { onRead: data => {
-            const p = data.trim().split(/\s+/)
-            if (isNaN(parseFloat(p[0]))) return // header line
-            info.diskUsed = parseFloat(p[0])
-            info.diskSize = parseFloat(p[1])
-        }}
-    }
 
     // on open: the last numbers at once, fresh ones as soon as SysStats has
     // read twice, then every 3 s
@@ -71,8 +56,16 @@ ColumnLayout {
         interval: 60000; running: root.active; repeat: true; triggeredOnStart: true
         onTriggered: {
             uptimeFile.reload()
-            osAgeProc.running = true
-            diskProc.running = true
+            Jobs.run(["stat", "-c", "%W", "/"], (c, out) => {
+                const b = parseInt(out)
+                if (b > 0) info.osAge = Math.floor((Date.now() / 1000 - b) / 86400) + "d"
+            })
+            Jobs.run(["df", "-B1", "--output=used,size", "/"], (c, out) => {
+                const p = (out ?? "").trim().split("\n").pop().trim().split(/\s+/)     // last line (the first is the header)
+                if (isNaN(parseFloat(p[0]))) return
+                info.diskUsed = parseFloat(p[0])
+                info.diskSize = parseFloat(p[1])
+            })
         }
     }
 
@@ -82,7 +75,7 @@ ColumnLayout {
         Layout.alignment: Qt.AlignHCenter
         text: "SYSTEM"
         color: Colors.fade(0.35)
-        font.pixelSize: 9
+        font.pixelSize: Tokens.font.micro
         font.letterSpacing: 3
         font.bold: true
     }
@@ -93,8 +86,8 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignHCenter
         columns: 2
-        rowSpacing: 6
-        columnSpacing: 6
+        rowSpacing: Tokens.space.s6
+        columnSpacing: Tokens.space.s6
         uniformCellWidths: true
         uniformCellHeights: true
 
@@ -107,10 +100,10 @@ ColumnLayout {
             property int usage: 0
             primaryValue: usage
             primaryMax: 100
-            primaryColor: "#e05252"
+            primaryColor: Colors.chartRed
             secondaryValue: temp
             secondaryMax: 100
-            secondaryColor: "#f0a040"
+            secondaryColor: Colors.chartOrange
             primaryLabel: usage + "%"
             secondaryLabel: temp + "°C"
         }
@@ -124,10 +117,10 @@ ColumnLayout {
             property int usage: 0
             primaryValue: usage
             primaryMax: 100
-            primaryColor: "#52aaee"
+            primaryColor: Colors.chartBlue
             secondaryValue: temp
             secondaryMax: 100
-            secondaryColor: "#a06ae0"
+            secondaryColor: Colors.chartPurple
             primaryLabel: usage + "%"
             secondaryLabel: temp + "°C"
         }
@@ -141,7 +134,7 @@ ColumnLayout {
             property string detail: ""
             primaryValue: usage
             primaryMax: 100
-            primaryColor: "#52e0a0"
+            primaryColor: Colors.chartGreen
             secondaryValue: 0
             secondaryMax: 100
             secondaryColor: "transparent"
@@ -163,11 +156,11 @@ ColumnLayout {
             property real txPct: Math.min(txKb / 102400.0, 1.0)
 
             property real animRx: 0
-            Behavior on animRx { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+            Behavior on animRx { NumberAnimation { duration: Anim.theme; easing.type: Anim.standard } }
             onRxPctChanged: animRx = rxPct
 
             property real animTx: 0
-            Behavior on animTx { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+            Behavior on animTx { NumberAnimation { duration: Anim.theme; easing.type: Anim.standard } }
             onTxPctChanged: animTx = txPct
 
             function fmt(kb) {
@@ -179,7 +172,7 @@ ColumnLayout {
             Rectangle {
                 anchors.centerIn: parent
                 width: 130; height: 130; radius: 65
-                color: Qt.rgba(0.32, 0.87, 0.63, 0.05)
+                color: Colors.alpha(Colors.chartGreen, 0.05)
                 // thin outline around the gauge circle
                 border.width: Properties.panelBorderWidth
                 border.color: Properties.cardBorder
@@ -208,7 +201,7 @@ ColumnLayout {
             Shape {
                 anchors.fill: parent
                 ShapePath {
-                    strokeColor: "#52e0a0"; strokeWidth: 8
+                    strokeColor: Colors.chartGreen; strokeWidth: 8
                     fillColor: "transparent"; capStyle: ShapePath.RoundCap
                     PathAngleArc {
                         centerX: 65; centerY: 65; radiusX: 50; radiusY: 50
@@ -217,14 +210,14 @@ ColumnLayout {
                     }
                 }
                 layer.enabled: true
-                layer.effect: Glow { radius: 6; samples: 13; color: "#52e0a0"; spread: 0.15; transparentBorder: true }
+                layer.effect: Glow { radius: 6; samples: 13; color: Colors.chartGreen; spread: 0.15; transparentBorder: true }
             }
 
             // Upload arc (right, red)
             Shape {
                 anchors.fill: parent
                 ShapePath {
-                    strokeColor: "#e05252"; strokeWidth: 8
+                    strokeColor: Colors.chartRed; strokeWidth: 8
                     fillColor: "transparent"; capStyle: ShapePath.RoundCap
                     PathAngleArc {
                         centerX: 65; centerY: 65; radiusX: 50; radiusY: 50
@@ -233,7 +226,7 @@ ColumnLayout {
                     }
                 }
                 layer.enabled: true
-                layer.effect: Glow { radius: 6; samples: 13; color: "#e05252"; spread: 0.15; transparentBorder: true }
+                layer.effect: Glow { radius: 6; samples: 13; color: Colors.chartRed; spread: 0.15; transparentBorder: true }
             }
 
             // Centre text
@@ -243,17 +236,17 @@ ColumnLayout {
                 Text {
                     text: "NET"
                     color: Colors.fade(0.4)
-                    font.pixelSize: 11; font.letterSpacing: 2; font.bold: true
+                    font.pixelSize: Tokens.font.caption; font.letterSpacing: 2; font.bold: true
                 }
                 Text {
                     text: "↓ " + (netGauge.rxKb >= 1024 ? (netGauge.rxKb/1024).toFixed(1)+"M" : netGauge.rxKb+"K")
-                    color: "#52e0a0"
-                    font.pixelSize: 12; font.bold: true
+                    color: Colors.chartGreen
+                    font.pixelSize: Tokens.font.small; font.bold: true
                 }
                 Text {
                     text: "↑ " + (netGauge.txKb >= 1024 ? (netGauge.txKb/1024).toFixed(1)+"M" : netGauge.txKb+"K")
-                    color: "#e05252"
-                    font.pixelSize: 12; font.bold: true
+                    color: Colors.chartRed
+                    font.pixelSize: Tokens.font.small; font.bold: true
                 }
             }
         }
@@ -266,8 +259,8 @@ ColumnLayout {
         id: info
         Layout.fillWidth: true
         Layout.fillHeight: true
-        Layout.topMargin: 2
-        spacing: 6
+        Layout.topMargin: Tokens.space.s2
+        spacing: Tokens.space.s6
 
         property real uptimeSecs: 0
         property string osAge: "—"
@@ -290,7 +283,7 @@ ColumnLayout {
         RowLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 6
+            spacing: Tokens.space.s6
 
             InfoTile { icon: "󰔚"; label: "UPTIME"; value: info.uptimeSecs > 0 ? info.shortDuration(info.uptimeSecs) : "—" }
             InfoTile { icon: "󰣇"; label: "OS AGE"; value: info.osAge }
@@ -314,8 +307,8 @@ ColumnLayout {
                     height: parent.height
                     radius: 3
                     width: parent.width * info.diskPct
-                    color: info.diskPct > 0.9 ? "#e05252" : info.diskPct > 0.75 ? "#e0a052" : "#52e0a0"
-                    Behavior on width { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+                    color: info.diskPct > 0.9 ? Colors.chartRed : info.diskPct > 0.75 ? Colors.chartAmber : Colors.chartGreen
+                    Behavior on width { NumberAnimation { duration: Anim.theme; easing.type: Anim.standard } }
                 }
             }
         }
@@ -331,10 +324,10 @@ ColumnLayout {
         property string label: "CPU"
         property int    primaryValue:   0
         property int    primaryMax:     100
-        property color  primaryColor:   "#52aaee"
+        property color  primaryColor:   Colors.chartBlue
         property int    secondaryValue: 0
         property int    secondaryMax:   100
-        property color  secondaryColor: "#f0a040"
+        property color  secondaryColor: Colors.chartOrange
         property string primaryLabel:   ""
         property string secondaryLabel: ""
         property bool   singleRing:     false
@@ -344,11 +337,11 @@ ColumnLayout {
         width: 130; height: 130
 
         property real animPrimary: 0
-        Behavior on animPrimary { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+        Behavior on animPrimary { NumberAnimation { duration: Anim.theme; easing.type: Anim.standard } }
         onPrimaryValueChanged: animPrimary = primaryValue
 
         property real animSecondary: 0
-        Behavior on animSecondary { NumberAnimation { duration: 600; easing.type: Easing.OutCubic } }
+        Behavior on animSecondary { NumberAnimation { duration: Anim.theme; easing.type: Anim.standard } }
         onSecondaryValueChanged: animSecondary = secondaryValue
 
         // Ambient glow
@@ -409,12 +402,12 @@ ColumnLayout {
 
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: 1
+            spacing: Tokens.space.s1
             Text {
                 Layout.alignment: Qt.AlignHCenter
                 text: gauge.label
                 color: Colors.fade(0.4)
-                font.pixelSize: 11; font.letterSpacing: 2; font.bold: true
+                font.pixelSize: Tokens.font.caption; font.letterSpacing: 2; font.bold: true
             }
             Text {
                 Layout.alignment: Qt.AlignHCenter

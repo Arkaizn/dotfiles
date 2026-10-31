@@ -45,7 +45,7 @@ Rectangle {
 
     readonly property int pad: own ? 12 : 0
     implicitHeight: ids.length === 0 && !editing && !own ? 0 : col.implicitHeight + pad * 2
-    radius: 14
+    radius: Tokens.radius.card
     color: own ? Colors.card : "transparent"
     border.width: own ? Properties.panelBorderWidth : 0
     border.color: Properties.cardBorder
@@ -53,7 +53,7 @@ Rectangle {
     ColumnLayout {
         id: col
         anchors { left: parent.left; right: parent.right; top: parent.top; margins: card.pad }
-        spacing: 8
+        spacing: Tokens.space.s8
 
         // ── name (own cards) ──
         Item {
@@ -65,7 +65,7 @@ Rectangle {
                 visible: !card.editing
                 text: card.title
                 color: Colors.ink
-                font { pixelSize: 13; bold: true; family: Properties.fontFamily }
+                font { pixelSize: Tokens.font.body; bold: true; family: Properties.fontFamily }
             }
             Rectangle {
                 anchors.fill: parent
@@ -76,20 +76,20 @@ Rectangle {
                 border.color: nameInput.activeFocus ? Colors.color6 : Colors.fade(0.12)
                 TextInput {
                     id: nameInput
-                    anchors { fill: parent; leftMargin: 8; rightMargin: 8 }
+                    anchors { fill: parent; leftMargin: Tokens.space.s8; rightMargin: Tokens.space.s8 }
                     verticalAlignment: TextInput.AlignVCenter
                     text: card.title
                     color: Colors.ink
                     selectByMouse: true
                     clip: true
-                    font { pixelSize: 12; bold: true; family: Properties.fontFamily }
+                    font { pixelSize: Tokens.font.small; bold: true; family: Properties.fontFamily }
                     onEditingFinished: PanelLayout.ccRename(card.cardId, text)
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: parent.text === "" && !parent.activeFocus
                         text: "Card name (optional)"
                         color: Colors.fade(0.35)
-                        font { pixelSize: 12; italic: true; family: Properties.fontFamily }
+                        font { pixelSize: Tokens.font.small; italic: true; family: Properties.fontFamily }
                     }
                 }
             }
@@ -102,7 +102,7 @@ Rectangle {
                 id: tileRow
                 required property var modelData
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: Tokens.space.s8
                 Repeater {
                     model: tileRow.modelData
                     CCItem {
@@ -110,7 +110,7 @@ Rectangle {
                         itemId: modelData
                         host: card.host
                         tileHeight: card.tileHeight
-                        Behavior on tileHeight { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                        Behavior on tileHeight { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
                         Layout.fillWidth: true
                         Layout.preferredWidth: 1     // equal shares, not the tiles' own widths
                         Layout.minimumWidth: 0
@@ -124,7 +124,7 @@ Rectangle {
             visible: card.ids.length === 0
             Layout.fillWidth: true
             implicitHeight: 56
-            radius: 12
+            radius: Tokens.radius.xl
             color: "transparent"
             border.width: 1
             border.color: Colors.fade(0.15)
@@ -132,12 +132,12 @@ Rectangle {
                 anchors.centerIn: parent
                 text: card.editing ? "Drag buttons here" : "Empty card — long-press to edit"
                 color: Colors.fade(0.4)
-                font { pixelSize: 11; italic: true; family: Properties.fontFamily }
+                font { pixelSize: Tokens.font.caption; italic: true; family: Properties.fontFamily }
             }
         }
 
         // ── Wi-Fi / Bluetooth list ──
-        CCCard {
+        Card {
             id: detailCard
             Layout.fillWidth: true
             readonly property real target: card.list === "wifi" ? wifiList.implicitHeight + 24
@@ -146,13 +146,13 @@ Rectangle {
             implicitHeight: target
             visible: implicitHeight > 0.5
             clip: true
-            Behavior on implicitHeight { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+            Behavior on implicitHeight { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
 
             WifiList {
                 id: wifiList
                 property real slideX: 0
                 transform: Translate { x: wifiList.slideX }
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
                 visible: card.list === "wifi"
                 device: card.host.wifiDevice
                 active: visible && card.host.shown
@@ -161,7 +161,7 @@ Rectangle {
                 id: vpnList
                 property real slideX: 0
                 transform: Translate { x: vpnList.slideX }
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
                 visible: card.list === "vpn"
                 active: visible && card.host.shown
             }
@@ -169,7 +169,7 @@ Rectangle {
                 id: btList
                 property real slideX: 0
                 transform: Translate { x: btList.slideX }
-                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 }
+                anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s12 }
                 visible: card.list === "bluetooth"
                 active: visible && card.host.shown
             }
@@ -193,8 +193,8 @@ Rectangle {
         id: listSlide
         property Item target: null
         property real from: 0
-        NumberAnimation { target: listSlide.target; property: "slideX"; from: listSlide.from; to: 0; duration: 220; easing.type: Easing.OutCubic }
-        NumberAnimation { target: listSlide.target; property: "opacity"; from: 0; to: 1; duration: 180; easing.type: Easing.OutCubic }
+        NumberAnimation { target: listSlide.target; property: "slideX"; from: listSlide.from; to: 0; duration: Anim.medium; easing.type: Anim.standard }
+        NumberAnimation { target: listSlide.target; property: "opacity"; from: 0; to: 1; duration: Anim.normal; easing.type: Anim.standard }
     }
 
     // don't auto-close while a Wi-Fi password is typed

@@ -14,7 +14,7 @@ import "../network"
 // ask there.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property string home: Quickshell.env("HOME")
     readonly property string cacheDir: (Quickshell.env("XDG_CACHE_HOME") || home + "/.cache")
@@ -86,12 +86,12 @@ ColumnLayout {
         if (ps.length > 0) Jobs.run(["rm", "-rf", "--"].concat(ps), () => refresh())
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "App caches (" + Format.bytes(page.cacheTotal) + ")"
         icon: "󰃢"
         header: ActionButton { icon: "󰑓"; text: page.loading ? "Measuring…" : "Measure again"; onClicked: page.refresh() }
-        NetRow {
+        SettingRow {
             first: true
             wide: true
             label: "~/.cache"
@@ -106,13 +106,13 @@ ColumnLayout {
         }
         Repeater {
             model: page.caches
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: modelData.path.replace(page.home, "~")
                 RowLayout {
-                    spacing: 8
-                    Text { text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: 12; font.family: Properties.fontFamily }
+                    spacing: Tokens.space.s8
+                    Text { text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
                     ActionButton {
                         text: page.armed(modelData.path) ? "Delete " + Format.bytes(modelData.size) : "Clear…"
                         textColor: page.armed(modelData.path) ? Colors.red : Colors.ink
@@ -123,11 +123,11 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "System"
         icon: "󰏗"
-        NetRow {
+        SettingRow {
             first: true
             label: "Package cache"
             desc: "old versions (keeps the last one, for downgrades): " + (page.pkgSaved || "…")
@@ -138,7 +138,7 @@ ColumnLayout {
                 onClicked: { if (arm.confirm("pkg")) page.terminal("Clean package cache", "sudo paccache -r -k 1 && sudo paccache -r -u -k 0") }
             }
         }
-        NetRow {
+        SettingRow {
             label: "System journal (logs)"
             desc: (page.journal || "…") + " · shrink to the newest 500 MB"
             ActionButton {
@@ -146,7 +146,7 @@ ColumnLayout {
                 onClicked: { if (arm.confirm("journal")) page.terminal("Shrink journal", "sudo journalctl --vacuum-size=500M") }
             }
         }
-        NetRow {
+        SettingRow {
             label: "Crash dumps"
             desc: (page.coredumps < 0 ? "…" : Format.bytes(page.coredumps)) + " in /var/lib/systemd/coredump (only needed to debug a crash)"
             ActionButton {
@@ -155,7 +155,7 @@ ColumnLayout {
                 onClicked: { if (arm.confirm("dumps")) page.terminal("Delete crash dumps", "sudo find /var/lib/systemd/coredump -type f -delete && echo deleted") }
             }
         }
-        NetRow {
+        SettingRow {
             wide: page.orphans.length > 0
             label: page.orphans.length + " orphan packages  ·  " + Format.bytes(page.orphans.reduce((a, o) => a + o.size, 0))
             desc: page.orphans.length === 0 ? "installed as dependencies, nothing needs them any more"
@@ -170,16 +170,16 @@ ColumnLayout {
         }
     }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Trash"
         icon: "󰩹"
-        NetRow {
+        SettingRow {
             first: true
             label: page.trash < 0 ? "…" : page.trash === 0 ? "Empty" : Format.bytes(page.trash)
             desc: "~/.local/share/Trash"
             RowLayout {
-                spacing: 6
+                spacing: Tokens.space.s6
                 ActionButton { icon: "󰉋"; text: "Open"; onClicked: Quickshell.execDetached(["xdg-open", "trash:///"]) }
                 ActionButton {
                     text: page.armed("trash") ? "Empty for good" : "Empty…"

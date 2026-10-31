@@ -34,17 +34,17 @@ Rectangle {
     opacity: stage.auth ? 1 : 0
     scale: stage.auth ? 1 : 0.94
     visible: opacity > 0
-    Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
-    Behavior on scale { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
-    Behavior on y { NumberAnimation { duration: 350; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: 300; easing.type: Anim.standard } }
+    Behavior on scale { NumberAnimation { duration: 350; easing.type: Anim.standard } }
+    Behavior on y { NumberAnimation { duration: 350; easing.type: Anim.standard } }
 
     // swallow clicks so they don't hit the background MouseArea
     MouseArea { anchors.fill: parent }
 
     ColumnLayout {
         id: cardCol
-        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 24 }
-        spacing: 12
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s24 }
+        spacing: Tokens.space.s12
 
         // avatar
         Item {
@@ -82,20 +82,20 @@ Rectangle {
             Layout.alignment: Qt.AlignHCenter
             text: root.greeting
             color: Colors.ink
-            font.pixelSize: 18
+            font.pixelSize: Tokens.font.title
             font.bold: true
         }
 
         ColumnLayout {
             id: extraCol
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
             visible: children.length > 0
         }
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 8
+            spacing: Tokens.space.s8
 
             SearchField {
                 id: passwordField
@@ -127,21 +127,21 @@ Rectangle {
             Layout.alignment: Qt.AlignHCenter
             implicitWidth: capsText.implicitWidth + 20
             implicitHeight: root.lock.capsLock ? 24 : 0
-            radius: 12
-            color: Qt.rgba(Colors.orange.r, Colors.orange.g, Colors.orange.b, 0.2)
+            radius: Tokens.radius.xl
+            color: Colors.alpha(Colors.orange, 0.2)
             border.width: 1
-            border.color: Qt.rgba(Colors.orange.r, Colors.orange.g, Colors.orange.b, 0.4)
+            border.color: Colors.alpha(Colors.orange, 0.4)
             opacity: root.lock.capsLock ? 1 : 0
             visible: implicitHeight > 0.5
             clip: true
-            Behavior on implicitHeight { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+            Behavior on implicitHeight { NumberAnimation { duration: 180; easing.type: Anim.standard } }
             Behavior on opacity { NumberAnimation { duration: 180 } }
             Text {
                 id: capsText
                 anchors.centerIn: parent
                 text: "󰘲  Caps Lock is on"
                 color: Colors.orange
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
         }
@@ -155,7 +155,7 @@ Rectangle {
             // the status, else what to do with the YubiKey (FIDO2: touch it)
             text: root.lock.status || root.lock.keyHint
             color: root.lock.failed && root.lock.status ? Colors.red : Colors.fade(0.6)
-            font.pixelSize: 12
+            font.pixelSize: Tokens.font.small
         }
     }
 }

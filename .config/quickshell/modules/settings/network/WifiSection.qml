@@ -10,7 +10,7 @@ import ".."
 // network (Network.joinHidden).
 ColumnLayout {
     id: sec
-    spacing: 14
+    spacing: Tokens.space.s14
 
     signal editProfile(string uuid)      // → the profile editor (password, …)
 
@@ -30,11 +30,11 @@ ColumnLayout {
 
     ConfirmArm { id: arm }
 
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "Saved networks"
         icon: "󰖩"
-        NetRow {
+        SettingRow {
             first: true
             visible: sec.saved.length === 0
             label: "None yet"
@@ -42,7 +42,7 @@ ColumnLayout {
         }
         Repeater {
             model: sec.saved
-            NetRow {
+            SettingRow {
                 id: srow
                 required property var modelData
                 required property int index
@@ -84,14 +84,14 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: sec.saved.length > 1
             label: "Order"
             desc: "With auto-connect on, the network with the highest priority in range is joined first"
         }
     }
 
-    NetCard {
+    Section {
         id: hidden
         Layout.fillWidth: true
         title: "Join a hidden network"
@@ -104,7 +104,7 @@ ColumnLayout {
         readonly property string problem: ssid.trim() === "" ? "Enter the network name"
             : security !== "open" && password.length < 8 ? "The password has at least 8 characters" : ""
 
-        NetRow {
+        SettingRow {
             first: true
             label: "Network name (SSID)"
             SearchField {
@@ -115,16 +115,16 @@ ColumnLayout {
                 onTextEdited: hidden.ssid = text
             }
         }
-        NetRow {
+        SettingRow {
             label: "Security"
-            DropdownControl {
+            Dropdown {
                 implicitWidth: 240
                 options: [{ label: "WPA / WPA2 Personal", value: "wpa-psk" }, { label: "WPA3 Personal", value: "sae" }, { label: "None (open)", value: "open" }]
                 value: hidden.security
                 onEdited: v => hidden.security = v
             }
         }
-        NetRow {
+        SettingRow {
             visible: hidden.security !== "open"
             label: "Password"
             SearchField {
@@ -143,11 +143,11 @@ ColumnLayout {
                 onClicked: active = !active
             }
         }
-        NetRow {
+        SettingRow {
             Text {
                 text: Network.busy && hidden.joining ? "Connecting…" : hidden.problem
                 color: Colors.fade(0.45)
-                font.pixelSize: 11
+                font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
             }
             ActionButton {

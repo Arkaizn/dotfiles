@@ -22,7 +22,7 @@ Item {
         height: root.horizontal ? 44 : 5
         radius: 2.5
         color: Colors.fade(area.pressed ? 0.9 : area.containsMouse ? 0.7 : 0.45)
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Anim.fast } }
     }
 
     MouseArea {

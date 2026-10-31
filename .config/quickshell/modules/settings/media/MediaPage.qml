@@ -1,6 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import qs.components
 import qs.services
 import qs.services.lib
 import ".."
@@ -12,7 +13,7 @@ import "../network"
 // Jellyfin password or token ever lands in Quickshell's settings.
 ColumnLayout {
     id: page
-    spacing: 16
+    spacing: Tokens.space.s16
 
     readonly property bool on: Settings.media.bridge ?? true
     readonly property bool up: MediaSync.connected
@@ -61,11 +62,11 @@ ColumnLayout {
         unauthenticated: "not logged in", error: "error", disabled: "disabled", stopped: "stopped" })
 
     // ── Bridge ───────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         title: "mediasync bridge"
         icon: "󰝚"
-        NetRow {
+        SettingRow {
             first: true
             label: "Use mediasync for the bar and dashboard"
             desc: "Local players and remote sessions (e.g. Jellyfin on your phone) through the bridge. Off: the bar and dashboard show this computer's players directly, as before. The lockscreen and desktop widget always do."
@@ -75,7 +76,7 @@ ColumnLayout {
                 onToggled: v => v ? Settings.reset("media", "bridge") : Settings.set("media", "bridge", false)
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.on
             label: page.up ? "Connected" : MediaSync.state === "connecting" ? "Connecting…" : "Not connected"
             desc: page.up ? "mediasync " + (MediaSync.info?.version ?? "") + " · API " + (MediaSync.info?.api_version ?? "?")
@@ -98,13 +99,13 @@ ColumnLayout {
                 onClicked: MediaSync.serviceAction("restart")
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.on && MediaSync.installState === "missing" && !page.up
             wide: true
             label: "Install"
             desc: "git clone https://github.com/Arkaizn/mediasync ~/git/mediasync && cd ~/git/mediasync && make install\nsystemctl --user daemon-reload && systemctl --user enable --now mediasyncd\n(details: MEDIASYNC.md in the Quickshell folder)"
         }
-        NetRow {
+        SettingRow {
             visible: page.on
             label: "Configuration"
             desc: "Servers and defaults: " + page.configFile.replace(Quickshell.env("HOME"), "~") + ". Changes on this page are stored by the bridge and win over the file until reset."
@@ -115,7 +116,7 @@ ColumnLayout {
                 onClicked: MediaSync.reloadConfig(err => page.settingsError = err ? MediaSources.errorText(err) : "")
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.settingsError !== ""
             label: "Couldn't apply"
             desc: page.settingsError
@@ -124,14 +125,14 @@ ColumnLayout {
     }
 
     // ── This device ──────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.on
         enabled: page.up
         opacity: page.up ? 1 : 0.5
         title: "This device"
         icon: "󰌢"
-        NetRow {
+        SettingRow {
             first: true
             label: "Discover media players on this device"
             desc: "Automatically discover and display compatible Linux media players running in your current user session, such as Feishin (MPRIS). Off: the bridge stops watching local players; Feishin keeps playing and the lockscreen still shows it."
@@ -140,12 +141,12 @@ ColumnLayout {
                 onToggled: v => page.update({ local_enabled: v })
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.st?.local_enabled ?? true
             sub: true
             label: "Preferred player"
             desc: "Chosen first when it plays, if several do"
-            DropdownControl {
+            Dropdown {
                 readonly property var locals: page.all.filter(s => s.origin === "local").map(s => {
                     const bus = (s.player?.bus_name ?? "").replace(/^org\.mpris\.MediaPlayer2\./, "").replace(/\.instance.*$/, "")
                     return { label: s.player?.identity || bus || MediaSources.playerName(s), value: (bus || s.player?.identity || "").toLowerCase() }
@@ -159,7 +160,7 @@ ColumnLayout {
         }
         Repeater {
             model: page.all.filter(s => s.origin === "local")
-            NetRow {
+            SettingRow {
                 required property var modelData
                 sub: true
                 label: MediaSources.playerName(modelData)
@@ -167,7 +168,7 @@ ColumnLayout {
                       + " · can: " + ((modelData.capabilities ?? []).join(", ") || "nothing")
             }
         }
-        NetRow {
+        SettingRow {
             visible: (page.st?.local_enabled ?? true) && !page.all.some(s => s.origin === "local")
             sub: true
             label: "No players running"
@@ -176,14 +177,14 @@ ColumnLayout {
     }
 
     // ── What the panel shows ─────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.on
         enabled: page.up
         opacity: page.up ? 1 : 0.5
         title: "Media panel sources"
         icon: "󰕮"
-        NetRow {
+        SettingRow {
             first: true
             label: "Show"
             desc: page.summary.text
@@ -197,7 +198,7 @@ ColumnLayout {
                 onEdited: v => page.update({ mode: v })
             }
         }
-        NetRow {
+        SettingRow {
             wide: true
             label: "When choosing automatically, prefer"
             desc: "Tie-breaker when nothing is selected by hand; a player that starts playing still takes over"
@@ -208,22 +209,22 @@ ColumnLayout {
                 onEdited: v => page.update({ prefer_origin: v })
             }
         }
-        NetRow {
+        SettingRow {
             label: "Show remote sessions that can't be controlled"
             desc: "e.g. a Jellyfin web player without remote control: shown, controls off"
             ToggleSwitch { checked: page.pres.show_view_only ?? true; onToggled: v => page.update({ show_view_only: v }) }
         }
-        NetRow {
+        SettingRow {
             label: "Show sessions that stopped reporting"
             desc: "Remote clients that went quiet, and sessions of an unreachable server (position unknown)"
             ToggleSwitch { checked: page.pres.show_stale ?? true; onToggled: v => page.update({ show_stale: v }) }
         }
-        NetRow {
+        SettingRow {
             label: "Show the same playback once"
             desc: "Feishin playing from Jellyfin appears as the local player, not twice. Different devices playing the same song are never merged."
             ToggleSwitch { checked: page.pres.dedup ?? true; onToggled: v => page.update({ dedup: v }) }
         }
-        NetRow {
+        SettingRow {
             visible: Object.keys(page.st?.overrides ?? {}).length > 0
             label: "Back to config.toml"
             desc: "Changed here: " + Object.keys(page.st?.overrides ?? {}).join(", ")
@@ -232,14 +233,14 @@ ColumnLayout {
     }
 
     // ── Remote: Jellyfin ─────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.on
         enabled: page.up
         opacity: page.up ? 1 : 0.5
         title: "Remote sessions (Jellyfin)"
         icon: Icons.get("mediaRemote")
-        NetRow {
+        SettingRow {
             first: true
             label: "Discover remote sessions"
             desc: "What your Jellyfin clients play on other devices (phone, TV, browser). Off: no server is contacted; local players keep working."
@@ -260,12 +261,12 @@ ColumnLayout {
                 when: page.when
             }
         }
-        NetRow {
+        SettingRow {
             visible: MediaSync.servers.length === 0 && !page.canManageServers
             label: "No server configured"
             desc: "Add one to config.toml, e.g.\n[[jellyfin.servers]]\nname = \"home\"\nurl = \"https://jellyfin.example.org\"\nthen Reload above."
         }
-        NetRow {
+        SettingRow {
             visible: !page.canManageServers && MediaSync.servers.length > 0
             label: "Add or change servers"
             desc: "Servers live in config.toml (this mediasync has no API to edit them yet). Reload after editing."
@@ -274,7 +275,7 @@ ColumnLayout {
         JellyfinAddServer {
             visible: page.canManageServers
         }
-        NetRow {
+        SettingRow {
             label: "Reconnecting and refresh"
             // poll_interval_ms: only from bridges that report it (MEDIASYNC.md, gap 3)
             readonly property var pollMs: MediaSync.servers.find(s => typeof s.poll_interval_ms === "number")?.poll_interval_ms
@@ -284,7 +285,7 @@ ColumnLayout {
     }
 
     // ── Sessions ─────────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         Layout.fillWidth: true
         visible: page.on && page.up
         title: "Sessions"
@@ -298,7 +299,7 @@ ColumnLayout {
         ]
         Repeater {
             model: page.all
-            NetRow {
+            SettingRow {
                 id: srow
                 required property var modelData
                 required property int index
@@ -310,7 +311,7 @@ ColumnLayout {
                 desc: [MediaSources.placeLabel(modelData), modelData.origin === "remote" ? MediaSources.kindLabel(modelData) : "", modelData.playback?.state ?? "",
                        modelData.track?.title ? [MediaSources.artists(modelData), modelData.track.title].filter(x => x).join(" — ") : "",
                        srow.hiddenWhy].filter(x => x).join(" · ")
-                Chip { visible: srow.selected; text: MediaSync.selectionReason === "user" ? "selected" : "selected (auto)"; accent: true; copyable: false }
+                ValueChip { visible: srow.selected; text: MediaSync.selectionReason === "user" ? "selected" : "selected (auto)"; accent: true; copyable: false }
                 ActionButton {
                     visible: !srow.selected && !modelData.hidden
                     icon: "󰐊"; text: "Select"
@@ -318,7 +319,7 @@ ColumnLayout {
                 }
             }
         }
-        NetRow {
+        SettingRow {
             visible: page.all.length === 0
             first: true
             label: "Nothing playing"
@@ -327,7 +328,7 @@ ColumnLayout {
     }
 
     // ── Diagnostics ──────────────────────────────────────────────────────────
-    NetCard {
+    Section {
         id: diagCard
         Layout.fillWidth: true
         visible: page.on && page.up && MediaSync.diagnostics !== null
@@ -342,7 +343,7 @@ ColumnLayout {
             }
         ]
         readonly property var d: MediaSync.diagnostics ?? ({})
-        NetRow {
+        SettingRow {
             first: true
             label: "Keyring"
             desc: (diagCard.d.credentials?.backend ?? "?") + (diagCard.d.credentials?.available ? " · available" : " · NOT available: Jellyfin login can't store its token")
@@ -350,7 +351,7 @@ ColumnLayout {
         }
         Repeater {
             model: MediaSync.providers
-            NetRow {
+            SettingRow {
                 required property var modelData
                 label: modelData.instance
                 desc: (page.stateLabels[modelData.state] ?? modelData.state) + " · " + modelData.sessions + " session(s)"
@@ -359,11 +360,11 @@ ColumnLayout {
                 descError: !!modelData.last_error && modelData.state !== "running"
             }
         }
-        NetRow {
+        SettingRow {
             label: "Files"
             desc: Object.entries(diagCard.d.paths ?? {}).map(([k, v]) => k.replace(/_/g, " ") + ": " + String(v).replace(Quickshell.env("HOME"), "~")).join("\n")
         }
-        NetRow {
+        SettingRow {
             label: "Log"
             desc: "journalctl --user -u mediasyncd -f   ·   mediasyncctl status / list --all / diag"
         }
