@@ -89,6 +89,10 @@ fi
 gum spin --title "Syncing .zshrc" -- \
     rsync -a --log-file="$LOG_FILE" --log-file-format='%t [copy] %i %n' ~/git/dotfiles/.config/.zshrc ~/
 
+# files the repo deleted or renamed: move the old copies out of ~/.config
+# (the rsync above doesn't --delete; leftovers can shadow new QML files and break quickshell)
+bash "$HOME/git/dotfiles/scripts/config/cleanup-stale.sh" "$LOG_FILE" || log "[stale] cleanup failed, continuing"
+
 # link launcher entries (~/.config/*/applications/*.desktop) if they aren't linked yet
 "$HOME/git/dotfiles/scripts/config/desktop-entries.sh" | tee -a "$LOG_FILE"
 
@@ -99,9 +103,9 @@ gum style --foreground 2 "$(printf '%s file(s) touched. Full log: %s' "$changed"
 
 # reload compositor config and restart quickshell, depending on which session is running
 if [[ -n "${NIRI_SOCKET:-}" ]]; then
-    gum spin --title "Reloading (niri)…" -- bash -c 'pkill qs && niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"'
+    gum spin --title "Reloading (niri)…" -- bash -c 'pkill -x qs; for _ in $(seq 50); do pgrep -x qs >/dev/null || break; sleep 0.1; done; pkill -9 -x qs || true; niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"'
 elif [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
-    gum spin --title "Reloading (Hyprland)…" -- bash -c 'hyprctl reload || true; pkill qs && hyprctl dispatch "hl.dsp.exec_cmd(\"QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs\")"'
+    gum spin --title "Reloading (Hyprland)…" -- bash -c 'hyprctl reload || true; pkill -x qs; for _ in $(seq 50); do pgrep -x qs >/dev/null || break; sleep 0.1; done; pkill -9 -x qs || true; hyprctl dispatch "hl.dsp.exec_cmd(\"QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs\")"'
 else
     gum style --foreground 1 "Could not detect niri or Hyprland session — skipping reload."
 fi
