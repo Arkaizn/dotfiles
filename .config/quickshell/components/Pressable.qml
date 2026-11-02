@@ -78,6 +78,8 @@ Item {
         sourceComponent: FocusRing { controlRadius: root.focusRadius; shown: true }
     }
     Loader {
+        // the tip positions itself against this, so it must cover the control
+        anchors.fill: parent
         active: root.hovered && root.tooltip !== ""
         sourceComponent: HoverTip { text: root.tooltip; shown: true }
     }
