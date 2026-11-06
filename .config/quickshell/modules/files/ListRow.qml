@@ -47,11 +47,11 @@ Rectangle {
 
     implicitHeight: Math.max(iconSize, Tokens.font.body) + Tokens.space.s12
     radius: Tokens.radius.lg
-    color: selected ? Colors.alpha(Colors.accent, 0.2) : hover.hovered ? Colors.fade(0.05) : "transparent"
+    color: dropTarget ? Colors.alpha(Colors.accent, 0.3) : selected ? Colors.alpha(Colors.accent, 0.2) : hover.hovered ? Colors.fade(0.05) : "transparent"
     // the cursor on something unselected (after Ctrl+click): a thin ring
     border.width: dropTarget ? Tokens.border.selected : current && !selected ? Tokens.border.thin : 0
     border.color: dropTarget ? Colors.accent : Colors.alpha(Colors.accent, 0.5)
-    Behavior on color { ColorAnimation { duration: Anim.instant } }
+    Behavior on color { ColorAnimation { duration: row.dropTarget ? Anim.fast : Anim.instant } }
     Accessible.role: Accessible.ListItem
     Accessible.name: name
     Accessible.selected: selected
@@ -86,6 +86,8 @@ Rectangle {
         Item {
             implicitWidth: row.iconSize
             implicitHeight: row.iconSize
+            scale: row.dropTarget ? 1.15 : 1
+            Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.pop } }
             Image {
                 id: pic
                 anchors.fill: parent
@@ -100,7 +102,7 @@ Rectangle {
             Text {
                 visible: pic.status !== Image.Ready
                 anchors.centerIn: parent
-                text: row.glyph || FmIcons.item(row.item)
+                text: row.dropTarget && row.dir ? FmIcons.g.folderOpen : row.glyph || FmIcons.item(row.item)
                 color: row.broken ? Colors.danger : row.dir ? Colors.accent : Colors.fade(0.6)
                 font.pixelSize: row.iconSize
                 font.family: Properties.fontFamily

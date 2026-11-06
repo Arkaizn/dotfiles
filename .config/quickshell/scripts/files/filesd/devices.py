@@ -49,9 +49,12 @@ class Asker(Gio.MountOperation):
     are overridden (do_*), not the signals connected: GIO's own default handlers run after
     connected ones and answer "unhandled" at once — the mount then fails with "Password
     dialog cancelled" before anyone could type"""
-    def __init__(self, rid):
+    def __init__(self, rid, cancellable=None):
         super().__init__()
         self.rid = rid
+        # a connect that hangs (a server that doesn't answer) asks nothing: stopping it
+        # cancels the call itself
+        self.cancellable = cancellable
 
     def do_ask_password(self, message, user, domain, flags):
         send({"id": self.rid, "type": "ask", "kind": "password", "message": message or "",
@@ -72,6 +75,8 @@ class Asker(Gio.MountOperation):
     def give(self, a):
         if a.get("action") == "cancel":
             self.reply(Gio.MountOperationResult.ABORTED)
+            if self.cancellable is not None:
+                self.cancellable.cancel()
             return
         if "choice" in a:
             self.set_choice(int(a["choice"]))
@@ -152,7 +157,8 @@ def connect(uri, rid, asks, done):
     if scheme not in SCHEMES or len(uri) > 2048 or "\0" in uri or "\n" in uri:
         raise Fail("Not a server address (smb://, sftp://, ftp://, dav://, nfs://)", "invalid")
     f = Gio.File.new_for_uri(uri)
-    op = Asker(rid)
+    cancel = Gio.Cancellable()
+    op = Asker(rid, cancel)
     asks[rid] = op
 
     def finish():
@@ -168,10 +174,11 @@ def connect(uri, rid, asks, done):
             obj.mount_enclosing_volume_finish(res)
         except GLib.Error as e:
             if not e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.ALREADY_MOUNTED):
-                done(None, Fail(_message(e), "cancelled" if e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.FAILED_HANDLED) else "io"))
+                stopped = e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.FAILED_HANDLED) or e.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED)
+                done(None, Fail(_message(e), "cancelled" if stopped else "io"))
                 return
         finish()
-    f.mount_enclosing_volume(Gio.MountMountFlags.NONE, op, None, cb)
+    f.mount_enclosing_volume(Gio.MountMountFlags.NONE, op, cancel, cb)
 
 
 def network(done):

@@ -96,6 +96,8 @@ Rectangle {
     // a selection key → its path (a folder's keys are names, search results' are paths)
     function pathOfKey(k) { return k.startsWith("/") ? k : FmPath.join(folder.path, k) }
     property int dropIndex: -1            // the folder row a drag is over
+    property point dropPos: Qt.point(0, 0) // where the pointer is during a drag (the "into" tag follows it)
+    property int dropAction: Qt.MoveAction
     property bool draggingOut: false
 
     readonly property Item view: loader.item
@@ -193,10 +195,45 @@ Rectangle {
         const paths = selectedItems().map(it => folder.pathOf(it))
         // a name that isn't valid UTF-8 can't become a URI here: left out of the URI list
         dragger.Drag.mimeData = FmDrop.mime(paths, p => { try { return FmPath.url(p) } catch (e) { return "" } })
+        // the pointer carries a picture of it (DragCard): drawn, grabbed, then the drag starts
+        const it = folder.at(i)
+        dragCard.name = FmFormat.shown(it.name)
+        dragCard.count = paths.length
+        dragCard.glyph = specialGlyph(it.key, it.dir) || FmIcons.item(it)
+        dragCard.glyphColor = it.broken ? Colors.danger : it.dir ? Colors.accent : Colors.fade(0.6)
+        dragCard.thumb = (thumbFor && !it.dir ? thumbFor(pathOfKey(it.key), it.type, it.mtime, it.size, Tokens.icon.lg) : "")
+                         || specialTheme(it.key, it.dir) || themeIcon(it.dir, it.type, it.exec)
         draggingOut = true
         dragStarted(paths)
-        dragger.Drag.active = true
+        _grabCard(0)
     }
+    function _grabCard(tries) {
+        // a thumbnail still loading: a frame or two more (then without it)
+        if (!dragCard.ready && tries < 10) { Qt.callLater(() => root._grabCard(tries + 1)); return }
+        // (at its own size: the drag's image has no pixel ratio, a sharper grab would show bigger)
+        const ok = dragCard.grabToImage(res => {
+            // let go meanwhile: no drag (one can't start without a button held)
+            if (!pointer.pressed) { root._dragOver(); return }
+            dragger.Drag.imageSource = res.url
+            dragger.Drag.hotSpot = Qt.point(Tokens.space.s12, Tokens.space.s12)
+            dragger.Drag.active = true
+        })
+        if (!ok) dragger.Drag.active = true
+    }
+    function _dragOver() {
+        dragger.Drag.active = false
+        dragger.Drag.imageSource = ""
+        draggingOut = false
+        dragEnded()
+    }
+    function _dragAt(drag) {
+        dropPos = Qt.point(drag.x, drag.y)
+        dropAction = drag.proposedAction
+        dropIndex = dirAt(drag.x, drag.y)
+    }
+    // (a binding: a spring-opened folder can put another one under a pointer that didn't move)
+    readonly property string dropName: folder.path, dropIndex >= 0 && dropIndex < folder.count ? FmFormat.shown(FmPath.base(_nameAt(dropIndex))) : ""
+    onDropNameChanged: if (dropName !== "") dropTag.name = dropName      // (kept while the tag fades out)
     // the folder row under a drag (not one of those being dragged)
     function dirAt(x, y) {
         const h = pointer.hit(x, y)
@@ -452,9 +489,9 @@ Rectangle {
                 anchors.fill: parent
                 onEntered: drag => {
                     drag.accepted = drag.hasUrls || drag.hasText || FmDrop.imageType(drag.formats) !== ""
-                    root.dropIndex = root.dirAt(drag.x, drag.y)
+                    root._dragAt(drag)
                 }
-                onPositionChanged: drag => root.dropIndex = root.dirAt(drag.x, drag.y)
+                onPositionChanged: drag => root._dragAt(drag)
                 onExited: root.dropIndex = -1
                 onDropped: drop => {
                     const i = root.dropIndex
@@ -468,11 +505,24 @@ Rectangle {
                 Drag.dragType: Drag.Automatic
                 Drag.supportedActions: Qt.CopyAction | Qt.MoveAction | Qt.LinkAction
                 Drag.proposedAction: Qt.MoveAction
-                Drag.onDragFinished: {
-                    dragger.Drag.active = false
-                    root.draggingOut = false
-                    root.dragEnded()
-                }
+                Drag.onDragFinished: root._dragOver()
+            }
+            // drawn out of sight, only for the drag's picture
+            DragCard { id: dragCard; x: -width - Tokens.size.row * 4; y: 0 }
+            // over a folder: a tag hangs under the dragged card saying where it goes (the card
+            // itself is a fixed picture once the drag runs; the compositor draws it on top, so
+            // the tag sits just below it, hot spot → card's bottom left)
+            DropTag {
+                id: dropTag
+                readonly property bool on: root.dropIndex >= 0
+                action: root.dropAction
+                x: Math.max(0, Math.min(parent.width - width, root.dropPos.x - Tokens.space.s12))
+                y: Math.min(parent.height - height, root.dropPos.y - Tokens.space.s12 + dragCard.height + Tokens.space.s4)
+                opacity: on ? 1 : 0
+                scale: on ? 1 : 0.9
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+                Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.pop } }
             }
 
             // the rubber band
@@ -527,7 +577,7 @@ Rectangle {
                 current: ListView.isCurrentItem
                 selected: root.selection[key] === true
                 faded: root.cut[root.pathOfKey(key)] === true
-                dropTarget: index === root.dropIndex
+                dropTarget: root.dropIndex >= 0 && index === root.dropIndex      // (a leaving / pooled row's index is -1 too)
                 count: dir ? (root.folder.counts[name] ?? -1) : -1
                 thumb: { root.thumbVersion; return (root.thumbFor && !dir ? root.thumbFor(root.pathOfKey(key), type, mtime, size, root.iconSize) : "") || root.specialTheme(key, dir) || root.themeIcon(dir, type, exec) }
                 glyph: root.specialGlyph(key, dir)
@@ -567,7 +617,7 @@ Rectangle {
                 current: GridView.isCurrentItem
                 selected: root.selection[key] === true
                 faded: root.cut[root.pathOfKey(key)] === true
-                dropTarget: index === root.dropIndex
+                dropTarget: root.dropIndex >= 0 && index === root.dropIndex      // (a leaving / pooled row's index is -1 too)
                 count: dir ? (root.folder.counts[name] ?? -1) : -1
                 thumb: { root.thumbVersion; return (root.thumbFor && !dir ? root.thumbFor(root.pathOfKey(key), type, mtime, size, root.iconSize) : "") || root.specialTheme(key, dir) || root.themeIcon(dir, type, exec) }
                 glyph: root.specialGlyph(key, dir)

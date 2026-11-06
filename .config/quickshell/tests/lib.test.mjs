@@ -733,6 +733,50 @@ test("FmSettings: page sections name real keys, allowed() by file system", () =>
     assert.equal(FmSettings.allowed("always", "cifs"), true)
     assert.equal(FmSettings.allowed("never", "ext4"), false)
 })
+test("FmTransfer: export file checked, merged without losing anything", () => {
+    const T = load("FmTransfer.js")
+    const J = x => JSON.parse(JSON.stringify(x))
+    const src = { settings: { solid: true }, bookmarks: [{ uri: "file:///home/u/A", label: "" }, { uri: "sftp://me@host/x", label: "Box" }],
+                  groups: [{ id: "g1", name: "Work", color: "blue", open: true }], groupPins: { "file:///home/u/A": "g1" },
+                  servers: [{ uri: "sftp://me:secret@host", name: "host" }], starred: ["/home/u/s.txt"], views: { columns: ["size"] } }
+    const all = T.build(T.PARTS, src, "2026-11-06")
+    assert.equal(all.servers[0].uri, "sftp://me@host", "never a password")
+    const only = T.build(["settings"], src, "x")
+    assert.equal(only.bookmarks, undefined)
+    // round trip
+    const r = T.parse(JSON.stringify(all))
+    assert.equal(r.error, "")
+    assert.deepEqual(JSON.parse(JSON.stringify(T.count(r.doc))), { settings: 1, bookmarks: 2, servers: 1, starred: 1, views: 1 })
+    // bad input
+    assert.notEqual(T.parse("{").error, "")
+    assert.notEqual(T.parse('{"quickshellSettings":1}').error, "")
+    const bad = T.parse(JSON.stringify({ quickshellFiles: 1,
+        bookmarks: [{ uri: "javascript:x" }, { uri: "file:///ok" }, { uri: "file:///a b" }, { uri: "file:///n", label: "two\nlines" }],
+        groups: [{ id: "../x", name: "x" }, { id: "g", name: "G", color: "$(x)" }], groupPins: { "file:///ok": "g", "file:///gone": "g" },
+        servers: [{ uri: "http://x" }, { uri: "smb://u:pw@srv/share" }], starred: ["rel", "/a/../etc", "/ok"], views: [] }))
+    assert.equal(bad.error, "")
+    assert.deepEqual(J(bad.doc.bookmarks.map(b => b.uri)), ["file:///ok"])
+    assert.equal(bad.doc.groups.length, 1)
+    assert.equal(bad.doc.groups[0].color, "blue")
+    assert.deepEqual(J(Object.keys(bad.doc.groupPins)), ["file:///ok"])
+    assert.deepEqual(J(bad.doc.servers.map(x => x.uri)), ["smb://u@srv/share"])
+    assert.deepEqual(J(Array.from(bad.doc.starred)), ["/ok"])
+    assert.ok(bad.problems.length >= 8)
+    // merge: added to what's there; groups by name; a pinned bookmark stays in its group
+    const cur = { bookmarks: [{ uri: "file:///home/u/A" }], groups: [{ id: "h1", name: "Work", color: "red", open: false }],
+                  groupPins: {}, servers: [{ uri: "sftp://me@host", name: "mine" }], starred: ["/x"] }
+    const doc = T.parse(JSON.stringify(Object.assign({}, all, { groups: all.groups.concat([{ id: "g2", name: "New", color: "teal" }]),
+                                                              groupPins: { "file:///home/u/A": "g1", "sftp://me@host/x": "g2" } }))).doc
+    const m = T.merge(cur, doc, ["bookmarks", "servers", "starred"], i => "n" + i)
+    assert.deepEqual(J(m.bookmarks.map(b => b.uri)), ["sftp://me@host/x"])
+    assert.deepEqual(J(m.groups.map(g => g.id + ":" + g.name)), ["h1:Work", "n0:New"])
+    assert.equal(m.groupPins["file:///home/u/A"], "h1")
+    assert.equal(m.groupPins["sftp://me@host/x"], "n0")
+    assert.equal(m.servers.length, 1)
+    assert.equal(m.servers[0].name, "mine")
+    assert.deepEqual(J(m.starred), ["/x", "/home/u/s.txt"])
+    assert.equal(m.views, undefined, "not picked")
+})
 test("FmSettings.checkRemote only lets the file manager write its own keys", () => {
     const zoom = ["50", "100", "125"]
     assert.equal(FmSettings.checkRemote("files", "solid", false, zoom), "")
@@ -1046,6 +1090,23 @@ test("FmAddress: typed text to a path", () => {
     assert.equal(FmAddress.resolve("sftp://host/a", "/x", "/home/u"), "")
     assert.equal(FmAddress.resolve("file:///a%00b", "/x", "/home/u"), "")
     assert.equal(FmAddress.resolve("   ", "/x", "/home/u"), "")
+})
+test("FmAddress: mounted servers", () => {
+    const g = "/run/user/1000/gvfs/"
+    const mounts = [{ uri: "smb://srv/share/", path: g + "smb-share:server=srv,share=share" },
+                    { uri: "sftp://u@box/", path: g + "sftp:host=box,user=u" },
+                    { uri: "file:///mnt/usb", path: "/mnt/usb" }, null, { uri: 3 }]
+    assert.equal(FmAddress.toServer(g + "smb-share:server=srv,share=share/My Dir", mounts), "smb://srv/share/My Dir")
+    assert.equal(FmAddress.toServer(g + "sftp:host=box,user=u", mounts), "sftp://u@box")
+    assert.equal(FmAddress.toServer("/mnt/usb/a", mounts), "")
+    assert.equal(FmAddress.toServer(g + "smb-share:server=srv,share=shareX", mounts), "")
+    assert.equal(FmAddress.fromServer("smb://srv/share/My%20Dir/", mounts), g + "smb-share:server=srv,share=share/My Dir")
+    assert.equal(FmAddress.fromServer("SMB://srv/share", mounts), g + "smb-share:server=srv,share=share")
+    assert.equal(FmAddress.fromServer("smb://srv/other", mounts), "")
+    assert.equal(FmAddress.fromServer("smb://srv/share/../x", mounts), "")
+    assert.equal(FmAddress.encodeUri("smb://srv/share/My Dir"), "smb://srv/share/My%20Dir")
+    assert.equal(FmAddress.encodeUri("smb://srv/share/My%20Dir"), "smb://srv/share/My%20Dir")
+    assert.equal(FmAddress.encodeUri("sftp://u@box:22"), "sftp://u@box:22")
 })
 test("FmAddress: completion", () => {
     same(FmAddress.split("~/Doc"), { dir: "~/", part: "Doc" })

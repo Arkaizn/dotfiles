@@ -4,6 +4,7 @@ import qs.components
 import qs.services
 import "lib/FmAddress.js" as FmAddress
 import "lib/FmFormat.js" as FmFormat
+import "lib/FmIcons.js" as FmIcons
 
 // The typeable address (Ctrl+L, or "/" / "~" in the folder): a path, "~/…",
 // a file:// address, a server (smb://, sftp://, …) or a path relative to the
@@ -17,7 +18,9 @@ import "lib/FmFormat.js" as FmFormat
 // nothing is picked, so Enter goes to the typed folder. Esc closes the list,
 // then the bar.
 //   AddressBar { backend; here; home; onGo: path => …; onConnectUri: uri => …; onFinished: … }   start(prefix)
-// smb://, sftp://, ftp://, dav(s)://, nfs:// addresses connect to the server (onConnectUri).
+// smb://, sftp://, ftp://, dav(s)://, nfs:// addresses connect to the server (onConnectUri;
+// the window hands back the connect job: `job`). Until it's there the bar stays as typed with a
+// bar running along it; ✕ / Esc stop it; a failed / stopped one leaves the text to fix.
 SearchField {
     id: root
 
@@ -30,7 +33,30 @@ SearchField {
     signal connectUri(string uri)          // smb://, sftp://, …: a server
     signal reveal(string path)             // a file suggestion: its folder, it selected
     property var servers: []               // saved servers [{ uri, name }]
+    // mounted servers ([{ uri, path }]): inside one it shows the server's address
+    // (smb://srv/share/dir: edit it to reach another share), the button beside
+    // switches to the mounted folder's local path and back
+    property var mounts: []
+    readonly property string serverHere: FmAddress.toServer(here, mounts)
+    property bool showMounted: false
     signal finished()
+    // connecting: the ops' job for it (0 = none)
+    property var ops: null
+    property int job: 0
+    readonly property bool connecting: job !== 0 && (ops?.jobs ?? []).some(j => j.id === job && j.state === "running")
+    // (later: `connecting` reads `job`, which this clears)
+    onConnectingChanged: if (!connecting && job !== 0) Qt.callLater(_connected)
+    function _connected() {
+        if (connecting || job === 0) return
+        const ok = ops.job(job)?.state === "done"
+        job = 0
+        // there: the folder opens (finish); else the address stays to fix or try again
+        if (ok) finish()
+        else { forceActiveFocus(); selectAll() }
+    }
+    function stopConnecting() { if (connecting) ops.cancel(job) }
+    readOnly: connecting
+    clearable: !connecting
 
     icon: ""
     placeholderText: "Type a path and press Enter"
@@ -50,20 +76,34 @@ SearchField {
     property int _req: 0
 
     function start(prefix) {
-        text = prefix && prefix !== "" ? (prefix === "~" ? "~/" : prefix) : (here === home ? "~/" : here + (here === "/" ? "" : "/"))
+        if (connecting) { forceActiveFocus(); return }      // (the address being connected to stays)
+        text = prefix && prefix !== "" ? (prefix === "~" ? "~/" : prefix) : _hereText()
         visible = true
         forceActiveFocus()
         if (!prefix) selectAll()
         offers = []
         picked = -1
     }
-    function finish() { visible = false; offers = []; finished() }
+    function _hereText() {
+        if (serverHere !== "" && !showMounted) return serverHere + "/"
+        return here === home ? "~/" : here + (here === "/" ? "" : "/")
+    }
+    function toggleMounted() {
+        showMounted = !showMounted
+        text = _hereText()
+        forceActiveFocus()
+        selectAll()
+        offers = []
+        picked = -1
+    }
+    function finish() { if (connecting) return; visible = false; offers = []; finished() }
 
     // the folder part of what's typed, and its subfolders
     function refresh() {
         search()
         const sp = FmAddress.split(text)
-        const dir = FmAddress.resolve(sp.dir === "" ? "." : sp.dir, here, home)
+        // (in a mounted server its address lists the mounted folder's subfolders)
+        const dir = FmAddress.fromServer(sp.dir, mounts) || FmAddress.resolve(sp.dir === "" ? "." : sp.dir, here, home)
         // not a local folder (ssh://svs, smb://…): no subfolders, but the servers still match
         if (dir === "") { _offer(null); return }
         if (cache.path === dir) { _offer(sp.part); return }
@@ -141,10 +181,14 @@ SearchField {
         // a scheme alone isn't an address yet: it's filled in, the host comes next
         if (o && o.kind === "scheme") { takeOffer(o); return }
         const t = o ? (o.kind === "result" ? o.path : o.value) : text
-        // a server address: connected to (GVfs), not resolved as a path
+        // a server address: in a mounted share, its folder; else connected to (GVfs), not resolved as a path
         if (/^[a-z][a-z0-9+.-]*:\/\//i.test(t.trim()) && !/^file:\/\//i.test(t.trim())) {
-            finish()
-            connectUri(t.trim())
+            const local = FmAddress.fromServer(t, mounts)
+            if (local !== "") { finish(); go(local); return }
+            // (stays open, as typed, until it's connected)
+            if (o) takeOffer(o)
+            offers = []
+            connectUri(FmAddress.encodeUri(t))
             return
         }
         const p = FmAddress.resolve(t, here, home)
@@ -162,12 +206,12 @@ SearchField {
         case Qt.Key_Down: if (offers.length) picked = (picked + 1) % offers.length; break
         case Qt.Key_Up: if (offers.length) picked = picked === 0 ? -1 : picked < 0 ? offers.length - 1 : picked - 1; break
         case Qt.Key_Tab: complete(); break
-        case Qt.Key_Escape: if (offers.length) offers = []; else finish(); break
+        case Qt.Key_Escape: if (connecting) stopConnecting(); else if (offers.length) offers = []; else finish(); break
         default: return
         }
         event.accepted = true
     }
-    onActiveFocusChanged: if (!activeFocus && visible) finish()
+    onActiveFocusChanged: if (!activeFocus && visible) finish()      // (not while connecting: finish waits)
 
     // the top suggestion's rest, greyed after the text (Tab takes it)
     Text {
@@ -178,6 +222,84 @@ SearchField {
         color: Colors.fade(0.35)
         font: root.font
         textFormat: Text.PlainText
+    }
+
+    // in a mounted server: the server's address ⇄ the mounted folder (left of the clear button;
+    // 34 / 14: SearchField's own paddings with / without it)
+    rightPadding: connecting ? stopBtn.width + Tokens.space.s12
+                  : (mountToggle.visible ? mountToggle.width + Tokens.space.s4 : 0) + (text.length > 0 ? 34 : 14)
+    Pressable {
+        id: mountToggle
+        visible: root.serverHere !== "" && !root.connecting
+        anchors.right: parent.right
+        anchors.rightMargin: root.text.length > 0 ? 34 : Tokens.space.s8
+        anchors.verticalCenter: parent.verticalCenter
+        width: Tokens.size.controlSmall
+        height: Tokens.size.controlSmall
+        tooltip: root.showMounted ? "Show the server address" : "Show the mounted folder's path"
+        accessibleName: tooltip
+        onClicked: root.toggleMounted()
+        Rectangle { anchors.fill: parent; radius: Tokens.radius.md; color: mountToggle.hovered ? Colors.fillHover : "transparent" }
+        Text {
+            anchors.centerIn: parent
+            text: root.showMounted ? "\u{F0318}" : FmIcons.g.folder
+            color: mountToggle.hovered ? Colors.ink : Colors.fade(0.5)
+            font.pixelSize: Tokens.font.label
+            font.family: Properties.fontFamily
+        }
+    }
+
+    // connecting: stop it
+    Pressable {
+        id: stopBtn
+        visible: root.connecting
+        anchors.right: parent.right
+        anchors.rightMargin: Tokens.space.s8
+        anchors.verticalCenter: parent.verticalCenter
+        width: Tokens.size.controlSmall
+        height: Tokens.size.controlSmall
+        tooltip: "Stop connecting (Esc)"
+        accessibleName: tooltip
+        onClicked: root.stopConnecting()
+        Rectangle { anchors.fill: parent; radius: Tokens.radius.md; color: stopBtn.hovered ? Colors.fillHover : "transparent" }
+        Text {
+            anchors.centerIn: parent
+            text: "\u{F0156}"
+            color: stopBtn.hovered ? Colors.danger : Colors.fade(0.6)
+            font.pixelSize: Tokens.font.label
+            font.family: Properties.fontFamily
+        }
+    }
+    // …and a bar running along its bottom edge (like the folder's loading bar)
+    Item {
+        id: connectBar
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: Tokens.space.s10
+        anchors.rightMargin: Tokens.space.s10
+        anchors.bottomMargin: Tokens.border.thin
+        height: Tokens.border.selected
+        clip: true
+        opacity: root.connecting ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
+        Rectangle { anchors.fill: parent; radius: height / 2; color: Colors.alpha(Colors.accent, 0.18) }
+        Rectangle {
+            id: runner
+            width: parent.width / 3
+            height: parent.height
+            radius: height / 2
+            color: Colors.accent
+            // (without ambient motion: a still third, still saying "busy")
+            NumberAnimation on x {
+                from: -runner.width; to: connectBar.width
+                duration: Anim.slower * 3
+                easing.type: Anim.standard
+                loops: Animation.Infinite
+                running: connectBar.visible && Anim.ambient
+            }
+        }
     }
 
     ToolTip.visible: error && visible

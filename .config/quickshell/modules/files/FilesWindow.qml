@@ -372,7 +372,8 @@ FloatingWindow {
                                     menu.show(item, x, y, place.name, [{ icon: FmIcons.g.folderOpen, label: "Open", run: () => win.tab.go(place.sideKey === "sideNetwork" ? "network:" : place.sideKey.slice(4).toLowerCase() + ":") }].concat(hide))
                                     return
                                 }
-                                if (place?.group) { win.groupMenu(place.group, item, x, y); return }
+                                // a group header (a bookmark in a group carries its group's id as `group`)
+                                if (place?.groupHeader) { win.groupMenu(place.groupHeader, item, x, y); return }
                                 if (place?.server) {
                                     menu.show(item, x, y, place.name, [
                                         { icon: "\u{F0318}", label: "Connect", run: () => win.connectTo(place.server, false) },
@@ -404,7 +405,8 @@ FloatingWindow {
                                     { icon: FmIcons.g.folderOpen, label: "Open", run: () => win.tab.go(place.path) },
                                     { icon: FmIcons.g.tab, label: "Open in new tab", run: () => win.newTab(place.path) },
                                     { icon: FmIcons.g.window, label: "Open in new window", run: () => win.app.newWindow(place.path) },
-                                    { icon: "󰆍", label: "Open in terminal", run: () => win.terminal(place.path) },
+                                    { icon: "󰆍", label: "Open in terminal", run: () => win.terminal(place.path) }
+                                ].concat(place.remote ? [] : [{ icon: FmIcons.g.drive, label: "Disk usage (ncdu)", run: () => win.diskUsage(place.path) }], [
                                     { sep: true },
                                     { icon: "󰆏", label: place.remote ? "Copy address" : "Copy location", run: () => win.copy(place.remote ? place.uri : place.path) }
                                 ].concat(place.bookmark ? [] : [
@@ -412,7 +414,7 @@ FloatingWindow {
                                     { icon: FmIcons.g.bookmark, label: "Add to bookmarks", run: () => backend.request("bookmark",
                                           place.remote ? { action: "add", uri: place.uri, label: place.name } : { action: "add", path: place.path },
                                           { done: () => win.toast("Added to the bookmarks", "info"), error: msg => win.toast(msg) }) }],
-                                    marks, hide))
+                                    marks, hide)))
                             }
                         }
                     }
@@ -461,26 +463,20 @@ FloatingWindow {
                     RowLayout {
                         id: toolbar
                         Layout.fillWidth: true
+                        // one height whatever it shows (path bar, typed path, search field: the
+                        // field is a few px taller than the buttons), so the folder never jumps
+                        Layout.preferredHeight: Math.max(Tokens.size.control, Properties.buttonHeight + 4)
                         spacing: Tokens.space.s6
                         // a narrow window: the view buttons fold into one menu, the path keeps its room
-                        readonly property bool narrow: width < Tokens.size.row * 14
+                        // (searching: its three buttons beside the field need that much more room)
+                        readonly property bool narrow: width < Tokens.size.row * (searchBar.visible ? 17 : 14)
 
-                        // searching: the search field takes the path bar's place
-                        SearchBar {
-                            id: searchBar
-                            backdrop: content
-                            visible: win.tab?.searching === true
-                            Layout.fillWidth: true
-                            here: win.tab ? win.tab.title : ""
-                            onSearch: (q, opts) => win.tab.search(q, opts)
-                            onFinished: win.endSearch()
-                            onToResults: { keys.forceActiveFocus(); if (win.tab.view.currentIndex < 0) win.tab.view.first(false) }
-                            onOpenFirst: win.openFirstResult()
-                        }
                         PathBar {
                             id: pathBar
-                            visible: !address.visible && !searchBar.visible
-                            Layout.fillWidth: true
+                            // searching / typing a path: the field takes the crumbs' place, the buttons stay
+                            navOnly: address.visible || searchBar.visible
+                            mounts: win.app.serverMounts
+                            Layout.fillWidth: !navOnly
                             path: win.tab ? win.tab.path : "/"
                             home: win.home
                             specialName: win.tab && win.tab.special !== "" ? win.tab.title : ""
@@ -499,6 +495,18 @@ FloatingWindow {
                                 else win.bookmark(win.tab.path)
                             }
                         }
+                        // searching: the search field takes the path bar's place
+                        SearchBar {
+                            id: searchBar
+                            backdrop: content
+                            visible: win.tab?.searching === true
+                            Layout.fillWidth: true
+                            here: win.tab ? win.tab.title : ""
+                            onSearch: (q, opts) => win.tab.search(q, opts)
+                            onFinished: win.endSearch()
+                            onToResults: { keys.forceActiveFocus(); if (win.tab.view.currentIndex < 0) win.tab.view.first(false) }
+                            onOpenFirst: win.openFirstResult()
+                        }
                         // Ctrl+L: type a path, with the subfolders offered
                         AddressBar {
                             id: address
@@ -509,9 +517,11 @@ FloatingWindow {
                             here: win.tab ? win.tab.path : "/"
                             home: win.home
                             onGo: p => win.tab.go(p)
-                            onConnectUri: uri => win.connectTo(uri, true)
+                            onConnectUri: uri => address.job = win.connectTo(uri, true)
+                            ops: win.app.ops
                             onReveal: p => win.tab.go(FmPath.parent(p), { select: FmPath.base(p) })
                             servers: win.app.knownServers
+                            mounts: win.app.serverMounts
                             onFinished: keys.forceActiveFocus()
                         }
 
@@ -780,6 +790,7 @@ FloatingWindow {
     }
     function itemMenu(t, i, item, x, y) {
         const here = t.path, view = t.view
+        const local = t.folder === t.dir && FmSettings.allowed("local", t.folder.fs)   // (ncdu: not over the network)
         if (t.special === "trash" || t.special === "network") { viewMenuFor(t, i, item, x, y); return }
         app.loadScripts()                 // (for the next menu: a script added meanwhile shows then)
         if (i < 0) {
@@ -801,10 +812,11 @@ FloatingWindow {
                 { sep: true },
                 { icon: FmIcons.g.tab, label: "Open in new tab", run: () => win.newTab(here) },
                 { icon: "󰆍", label: "Open in terminal", run: () => win.terminal(here) },
+            ].concat(local ? [{ icon: FmIcons.g.drive, label: "Disk usage (ncdu)", run: () => win.diskUsage(here) }] : [], [
                 { icon: "󰆏", label: "Copy location", run: () => win.copy(here) },
                 { icon: FmIcons.g.bookmark, label: "Add to bookmarks  (Ctrl+D)", run: () => win.bookmark(here) },
                 { icon: "󰋽", label: "Properties", run: () => props.start([here]) }
-            ]))
+            ])))
             return
         }
         const it = t.folder.at(i)
@@ -843,6 +855,7 @@ FloatingWindow {
                       { icon: FmIcons.g.tab, label: "Open in new tab", run: () => win.newTab(p, { background: true }) },
                       { icon: FmIcons.g.window, label: "Open in new window", run: () => app.newWindow(p) },
                       { icon: "󰆍", label: "Open in terminal", run: () => win.terminal(p) }] : [],
+            it.dir && local ? [{ icon: FmIcons.g.drive, label: "Disk usage (ncdu)", run: () => win.diskUsage(p) }] : [],
             // a script: run in a terminal that stays open (a double-click only opens it as text)
             !it.dir && isScript(it) ? [{ icon: "\u{F018D}", label: it.exec ? "Run in terminal" : "Allow and run in terminal",
                                          run: () => win.runInTerminal(p, it) }] : [],
@@ -921,11 +934,15 @@ FloatingWindow {
     }
 
     // ── Servers, archives, extras ──
+    // (answers the job: the address bar shows it running)
+    // (the window can be gone when the server answers — closed, or a reload: the app, kept here,
+    // still remembers it; only the folder isn't opened then)
     function connectTo(uri, keep) {
-        app.ops.connect(uri, res => {
-            app.addHistory(uri)
-            if (keep) app.rememberServer(uri)
-            if (tab) tab.go(res.path)
+        const a = app
+        return a.ops.connect(uri, res => {
+            a.addHistory(uri)
+            if (keep) a.rememberServer(uri)
+            try { if (win.tab) win.tab.go(res.path) } catch (e) {}
         })
     }
     // a result (an archive, an extracted folder) selected where it is, if that's open here
@@ -1290,6 +1307,16 @@ FloatingWindow {
         Jobs.which(["kitty"], have => {
             if (!have.kitty) { win.toast("kitty isn't installed (" + Jobs.installHint("kitty") + ")"); return }
             Jobs.detached(["kitty", "--directory", p])
+        })
+    }
+    // ncdu on a folder, in kitty (local folders only: over the network it reads every file's
+    // size through the server); the path is one argument, after "--"
+    function diskUsage(p) {
+        Jobs.which(["kitty", "ncdu"], have => {
+            if (!have.kitty) { win.toast("kitty isn't installed (" + Jobs.installHint("kitty") + ")"); return }
+            if (!have.ncdu) { win.toast("ncdu isn't installed (" + Jobs.installHint("ncdu") + ")"); return }
+            Jobs.detached(["kitty", "--directory", p, "--title", "Disk usage — " + FmPath.base(p), "ncdu", "-x", "--", p])
+            Compositor.focusLaunched(["kitty"])
         })
     }
     function copy(text) {

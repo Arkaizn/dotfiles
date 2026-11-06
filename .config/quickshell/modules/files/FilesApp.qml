@@ -87,6 +87,8 @@ Scope {
     }
     function forgetHistory(uri) { serverHistory = serverHistory.filter(x => x !== uri); stateObj.set("serverHistory", serverHistory) }
     // saved servers, then the history: [{ uri, name }] for suggestions
+    // the servers mounted now ([{ uri, path, name }]): the path bar shows their address
+    readonly property var serverMounts: (places?.mounts ?? []).filter(m => m.uri && !/^file:/i.test(m.uri) && m.path)
     readonly property var knownServers: {
         const out = servers.slice()
         const add = (uri, name) => { if (!out.some(s => s.uri.replace(/\/$/, "") === uri.replace(/\/$/, ""))) out.push({ uri: uri, name: name }) }
@@ -165,20 +167,34 @@ Scope {
     property var columns: FmColumns.chosen(stateObj.get("columns", undefined))
     function setColumns(ids) { columns = ids; stateObj.set("columns", ids) }
 
-    // the view of folders without their own (FmViews): the state's view / sort / iconSize
-    property var viewDefaults: {
-        const s = stateObj.get("iconSize", {})
-        return { view: (Settings.files.view ?? stateObj.get("view", "list")) === "grid" ? "grid" : "list",
-                 sort: FmViews.sortOf(stateObj.get("sort", {}), { by: "name", reverse: false, dirsFirst: true }),
-                 iconSize: { list: FmZoom.clamp("list", s.list ?? FmZoom.def.list), grid: FmZoom.clamp("grid", s.grid ?? FmZoom.def.grid) } }
-    }
-    function setViewDefaults(view, sort, iconSize) {
-        viewDefaults = { view: view, sort: sort, iconSize: iconSize }
+    // the view of folders without their own (FmViews): the state's view / sort
+    property var viewDefaults: ({ view: (Settings.files.view ?? stateObj.get("view", "list")) === "grid" ? "grid" : "list",
+                                  sort: FmViews.sortOf(stateObj.get("sort", {}), { by: "name", reverse: false, dirsFirst: true }) })
+    function setViewDefaults(view, sort) {
+        viewDefaults = { view: view, sort: sort }
         Settings.set("files", "view", view)
         stateObj.set("sort", sort)
-        stateObj.set("iconSize", iconSize)
     }
-    function viewFor(p) { return FmViews.resolve(stateObj.get("folders", {}), p, viewDefaults) }
+    // the icon size: one per view mode, the same in every folder and window
+    // (older per-folder sizes in the state's "folders" are ignored)
+    property var iconSizes: {
+        const s = stateObj.get("iconSize", {})
+        return { list: FmZoom.clamp("list", s.list ?? FmZoom.def.list), grid: FmZoom.clamp("grid", s.grid ?? FmZoom.def.grid) }
+    }
+    function setIconSize(mode, size) {
+        const o = Object.assign({}, iconSizes)
+        o[mode] = FmZoom.clamp(mode, size)
+        iconSizes = o
+        stateObj.set("iconSize", o)
+    }
+    function viewFor(p) {
+        // a folder's old icon size alone doesn't make it a folder with its own view
+        const all = stateObj.get("folders", {}), f = all && typeof all === "object" ? all[p] : undefined
+        const own = f && typeof f === "object" ? { view: f.view, sort: f.sort } : undefined
+        const one = {}
+        if (own) one[p] = own
+        return FmViews.resolve(one, p, Object.assign({ iconSize: iconSizes }, viewDefaults))
+    }
     function rememberView(p, patch) { if (p !== "") stateObj.set("folders", FmViews.remember(stateObj.get("folders", {}), p, patch, Date.now())) }
     function forgetView(p) { stateObj.set("folders", FmViews.forget(stateObj.get("folders", {}), p)) }
 
@@ -269,6 +285,45 @@ Scope {
         for (const w of FmViews.windows(raw)) newWindow("", "", w)
     }
 
+    // an import's file (written by the Settings app a moment ago): read at once
+    FileView { id: transferFile; blockLoading: true; printErrors: false }
+    function applyTransfer(path, parts) {
+        transferFile.path = ""
+        transferFile.path = path
+        const text = transferFile.text()
+        if (text.length > 4194304) return "too big"
+        const r = FmTransfer.parse(text)
+        if (r.error !== "") return "the file " + r.error
+        const doc = r.doc
+        const m = FmTransfer.merge({ bookmarks: places.bookmarks ?? [], groups: groups, groupPins: groupPins, servers: servers, starred: starred },
+                                   doc, parts, i => "g" + Date.now().toString(36) + i)
+        const did = {}
+        if (m.bookmarks) {
+            // (one after the other: each rewrites GTK's file; a file:// one goes by its path)
+            for (const b of m.bookmarks) {
+                const p = /^file:/.test(b.uri) ? FmPath.fromArg(b.uri) : ""
+                backendObj.request("bookmark", p !== "" ? { action: "add", path: p, label: b.label } : { action: "add", uri: b.uri, label: b.label }, { error: () => {} })
+            }
+            did.bookmarks = m.bookmarks.length
+            did.groups = m.groups.length - groups.length
+            saveGroups(m.groups, m.groupPins)
+        }
+        if (m.servers) { did.servers = m.servers.length - servers.length; servers = m.servers; stateObj.set("servers", servers) }
+        if (m.starred) { did.starred = m.starred.length - starred.length; starred = m.starred; stateObj.set("starred", starred) }
+        if (m.views) {
+            const v = m.views
+            if (v.sort) setViewDefaults(viewDefaults.view, FmViews.sortOf(v.sort, viewDefaults.sort))
+            if (v.iconSize) for (const mode of ["list", "grid"]) if (typeof v.iconSize[mode] === "number") setIconSize(mode, v.iconSize[mode])
+            if (v.columns) setColumns(FmColumns.chosen(v.columns))
+            if (v.sideOrder) {
+                const known = v.sideOrder.filter(x => sideDefault.indexOf(x) >= 0)
+                setSideOrder(known.concat(sideDefault.filter(x => known.indexOf(x) < 0)))
+            }
+            did.views = true
+        }
+        return "ok " + JSON.stringify(did)
+    }
+
     IpcHandler {
         target: "files"
         function open(path: string): string {
@@ -305,6 +360,23 @@ Scope {
             const w = root.target ?? root.newWindow(root.home)
             w.connectTo(uri, false)
             return "ok"
+        }
+        // Settings → Apps → Files → Export / Import (the Settings app reads / writes the file and
+        // the preferences; this process owns the bookmarks and the state): what's here, as JSON
+        // ("notready" until the sidebar's places are read, just after a start)
+        function transferData(): string {
+            if (!root.places) return "notready"
+            return JSON.stringify({ bookmarks: (root.places.bookmarks ?? []).map(b => ({ uri: b.uri, label: b.label ?? "" })),
+                                    groups: root.groups, groupPins: root.groupPins, servers: root.servers, starred: root.starred,
+                                    views: { sort: root.viewDefaults.sort, iconSize: root.iconSizes, columns: root.columns, sideOrder: root.sideOrder } })
+        }
+        // …and taking one in: `path` a file the Settings app wrote under $XDG_RUNTIME_DIR, `parts`
+        // comma-separated (bookmarks, servers, starred, views); answers "ok {what was added}"
+        function transferApply(path: string, parts: string): string {
+            if (!root.places) return "notready"
+            const run = Quickshell.env("XDG_RUNTIME_DIR") ?? ""
+            if (run === "" || !path.startsWith(run + "/") || !/^[A-Za-z0-9._\/-]+$/.test(path) || path.includes("/../")) return "not a file of the Settings app"
+            return root.applyTransfer(path, parts.split(",").filter(x => FmTransfer.PARTS.indexOf(x) >= 0 && x !== "settings"))
         }
         function close(): void { root.closeAll() }
         function ping(): string { return "ok" }

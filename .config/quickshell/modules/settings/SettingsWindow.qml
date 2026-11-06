@@ -75,6 +75,7 @@ Scope {
     }
 
     // what the IPC target and the rest of the shell (Panels.call("settings", …)) can do
+    property var filesDialog: null           // FilesTransfer, while the window exists (Apps → Files → Export / import)
     readonly property var api: ({
         toggle: () => root.open = !root.open,
         open: () => root.show(),
@@ -393,7 +394,7 @@ Scope {
                 { key: "wizard", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Welcome (first run)" } ] } ] },
         // the file manager: its own process; the same spec its Preferences show (FmSettings)
         { id: "files", group: "Apps", icon: "󰉋", title: "Files", store: "files",
-          keywords: "file manager nautilus thunar folders browse search thumbnails preview hidden files trash copy",
+          keywords: "file manager nautilus thunar folders browse search thumbnails preview hidden files trash copy bookmarks export import backup move another device",
           desc: "The file manager: clicks, views, search, thumbnails · in the app: ⋮ → Preferences",
           sections: FmSettings.sections().concat([
             { title: "App", items: [
@@ -404,7 +405,15 @@ Scope {
                   // (the candidates are read first: set() only takes an installed entry)
                   run: () => DefaultApps.refresh(() => DefaultApps.set("files", "quickshell-files.desktop", ok => {
                       if (!ok) Jobs.run(["notify-send", "-a", "Files", "Default file manager", DefaultApps.error || "Couldn't set it (is the desktop entry linked?)"])
-                  })) } ] } ]) },
+                  })) } ] },
+            // like the settings' own export: pick what goes in; an import adds, nothing goes
+            { title: "Export / import", items: [
+                { key: "exportFiles", type: "button", icon: "󰈝", text: "Export…", label: "Export bookmarks and preferences",
+                  desc: "Preferences, bookmarks and their groups, saved servers, starred, views — pick what goes into the file",
+                  run: () => root.filesDialog?.startExport() },
+                { key: "importFiles", type: "button", icon: "󰋺", text: "Import…", label: "Import bookmarks and preferences",
+                  desc: "From a file made with Export: added to what's here (bookmarks, servers, starred); preferences and views replace yours",
+                  run: () => root.filesDialog?.startImport() } ] } ]) },
         { id: "perfmon", group: "Apps", icon: "󰓅", title: "Performance monitor", store: "perfmon",
           keywords: "performance monitor cpu gpu temperature fan cooler kraken nzxt cam system monitor process processes task manager top sort memory chart history",
           desc: "CPU, GPU, memory, liquid cooler, sensors, processes (launcher: Performance Monitor)",
@@ -1511,6 +1520,13 @@ Scope {
 
                     // what goes into an export (settings, monitors, accounts)
                     ExportDialog { id: exportDialog; settingsTransfer: transfer }
+                    // the file manager's bookmarks and preferences (Apps → Files → Export / import)
+                    FilesTransfer {
+                        id: filesTransfer
+                        // (the page specs live outside the window: they reach it through root)
+                        Component.onCompleted: root.filesDialog = filesTransfer
+                        Component.onDestruction: if (root.filesDialog === filesTransfer) root.filesDialog = null
+                    }
                 }
             }
         }

@@ -14,7 +14,7 @@ var g = {
     pdf: "\u{F0226}", archive: "\u{F05C4}", code: "\u{F022E}", sheet: "\u{F021B}", doc: "\u{F022C}",
     slides: "\u{F0227}", script: "\u{F018D}", book: "\u{F00BA}", key: "\u{F0306}", database: "\u{F01BC}",
     calendar: "\u{F00ED}", mail: "\u{F01EE}", font: "\u{F06D6}", disc: "\u{F05EE}",
-    link: "\u{F0337}", lock: "\u{F033E}", alert: "\u{F0026}",
+    link: "\u{F0337}", copy: "\u{F018F}", lock: "\u{F033E}", alert: "\u{F0026}",
     back: "\u{F004D}", forward: "\u{F0054}", up: "\u{F005D}", down: "\u{F0045}", refresh: "\u{F0450}", list: "\u{F0572}",
     grid: "\u{F0570}", sort: "\u{F04BA}", eye: "\u{F0208}", eyeOff: "\u{F0209}", search: "\u{F0349}",
     chevron: "\u{F0142}", cog: "\u{F0493}", newFolder: "\u{F0B9D}",

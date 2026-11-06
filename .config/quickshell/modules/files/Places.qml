@@ -136,6 +136,23 @@ Flickable {
 
     function used(m) { return m && m.size > 0 ? 1 - m.free / m.size : -1 }
 
+    // The groups as a model changed in place: a new app.groups array (every
+    // fold / rename saves one) would rebuild each group's rows, so a fold had
+    // nothing to animate. Only a changed list of ids rebuilds it.
+    ListModel { id: groupModel }
+    readonly property var groupList: app.groups
+    onGroupListChanged: syncGroups()
+    Component.onCompleted: syncGroups()
+    function syncGroups() {
+        const gs = groupList
+        const row = g => ({ gid: g.id, gname: g.name, gcolor: g.color ?? "", gopen: g.open === true })
+        let same = groupModel.count === gs.length
+        for (let i = 0; same && i < gs.length; i++) same = groupModel.get(i).gid === gs[i].id
+        if (same) { for (let i = 0; i < gs.length; i++) groupModel.set(i, row(gs[i])); return }
+        groupModel.clear()
+        for (const g of gs) groupModel.append(row(g))
+    }
+
     // the open folder's highlight (the entries point it at themselves)
     Rectangle {
         id: pick
@@ -205,36 +222,43 @@ Flickable {
             BookmarkEntry { places: root }
         }
         Repeater {
-            model: root.app.groups
+            model: groupModel
             ColumnLayout {
                 id: grp
-                required property var modelData
+                required property string gid
+                required property string gname
+                required property string gcolor
+                required property bool gopen
+                readonly property var modelData: root.app.groups.find(g => g.id === gid) ?? ({ id: gid, name: gname, color: gcolor, open: gopen })
                 Layout.fillWidth: true
                 spacing: Tokens.space.s1
                 visible: root.shown("sideBookmarks")
                 PlaceEntry {
                     id: header
                     dragKind: "group"
-                    dragId: grp.modelData.id
+                    dragId: grp.gid
                     onDragMoved: y => root.moved("group", dragId, y)
                     onDragDone: y => root.done("group", dragId, y)
-                    label: grp.modelData.name
-                    dot: Colors[grp.modelData.color] ?? Colors.accent
-                    fold: grp.modelData.open ? "open" : "closed"
+                    label: grp.gname
+                    dot: Colors[grp.gcolor] ?? Colors.accent
+                    fold: grp.gopen ? "open" : "closed"
                     // a bookmark dragged over it: it goes in here
                     dropRing: root.dropGroup === dragId
-                    onClicked: root.app.editGroup(grp.modelData.id, { open: !grp.modelData.open })
-                    onContext: (x, y) => root.context({ group: grp.modelData }, header, x, y)
+                    onClicked: root.app.editGroup(grp.gid, { open: !grp.gopen })
+                    onContext: (x, y) => root.context({ groupHeader: grp.modelData }, header, x, y)
                 }
                 // its bookmarks fold in and out (the height eases; folded: hidden, no drop target)
                 Item {
                     id: fold
                     Layout.fillWidth: true
-                    readonly property bool open: grp.modelData.open === true
-                    Layout.preferredHeight: open ? inner.implicitHeight : 0
-                    Behavior on Layout.preferredHeight { NumberAnimation { duration: Anim.normal; easing.type: Anim.emphasized } }
+                    readonly property bool open: grp.gopen
+                    // (a Behavior on Layout.preferredHeight never runs: attached properties
+                    // don't animate, so the eased value is a property of its own)
+                    property real shownHeight: open ? inner.implicitHeight : 0
+                    Behavior on shownHeight { NumberAnimation { duration: Anim.medium; easing.type: Anim.emphasized } }
+                    Layout.preferredHeight: shownHeight
                     clip: true
-                    visible: Layout.preferredHeight > 0
+                    visible: shownHeight > 0
                     opacity: open ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
                     ColumnLayout {
@@ -242,8 +266,8 @@ Flickable {
                         width: parent.width
                         spacing: Tokens.space.s1
                         Repeater {
-                            model: root.marksIn(grp.modelData.id)
-                            BookmarkEntry { places: root; indent: true; group: grp.modelData.id }
+                            model: root.marksIn(grp.gid)
+                            BookmarkEntry { places: root; indent: true; group: grp.gid }
                         }
                     }
                 }

@@ -42,10 +42,10 @@ Item {
         anchors.fill: parent
         anchors.margins: Tokens.space.s2
         radius: Tokens.radius.xl
-        color: tile.selected ? Colors.alpha(Colors.accent, 0.2) : hover.hovered ? Colors.fade(0.05) : "transparent"
+        color: tile.dropTarget ? Colors.alpha(Colors.accent, 0.3) : tile.selected ? Colors.alpha(Colors.accent, 0.2) : hover.hovered ? Colors.fade(0.05) : "transparent"
         border.width: tile.dropTarget ? Tokens.border.selected : tile.current && !tile.selected ? Tokens.border.thin : 0
         border.color: tile.dropTarget ? Colors.accent : Colors.alpha(Colors.accent, 0.5)
-        Behavior on color { ColorAnimation { duration: Anim.instant } }
+        Behavior on color { ColorAnimation { duration: tile.dropTarget ? Anim.fast : Anim.instant } }
     }
     HoverHandler { id: hover }
     // the icon and the name under it (the margin around them starts a rubber band)
@@ -67,6 +67,8 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: tile.iconSize
             height: tile.iconSize
+            scale: tile.dropTarget ? 1.1 : 1
+            Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.pop } }
             Image {
                 id: pic
                 anchors.fill: parent
@@ -81,7 +83,7 @@ Item {
             Text {
                 visible: pic.status !== Image.Ready
                 anchors.centerIn: parent
-                text: tile.glyph || FmIcons.item(tile.item)
+                text: tile.dropTarget && tile.dir ? FmIcons.g.folderOpen : tile.glyph || FmIcons.item(tile.item)
                 color: tile.broken ? Colors.danger : tile.dir ? Colors.accent : Colors.fade(0.6)
                 font.pixelSize: tile.iconSize
                 font.family: Properties.fontFamily

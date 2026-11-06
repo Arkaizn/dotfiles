@@ -3,11 +3,11 @@ import qs.services
 import qs.services.lib
 import "lib/FmPath.js" as FmPath
 import "lib/FmFormat.js" as FmFormat
-import "lib/FmZoom.js" as FmZoom
 
 // One tab of a window: its folder (FmFolder, watched while the tab exists),
 // back / forward history, the cursor and the selection, and the folder's view
-// (list / grid, sort, icon size: remembered per folder, FilesApp.viewFor).
+// (list / grid and sort: remembered per folder, FilesApp.viewFor; the icon
+// size is one per view mode for every folder, FilesApp.iconSizes).
 // The window shows the current tab and sends it the keys.
 //
 //   FolderTab { app; win; startPath; startSelect }
@@ -40,7 +40,7 @@ Item {
     // ── The folder's view (FmViews through the app) ──
     property string viewMode: "list"
     property var sort: ({ by: "name", reverse: false, dirsFirst: true })
-    property var iconSizes: ({ list: FmZoom.def.list, grid: FmZoom.def.grid })
+    readonly property var iconSizes: app.iconSizes
     property bool ownView: false
     property bool introduced: false       // its chip in the tab strip has grown in
     readonly property int iconSize: iconSizes[viewMode]
@@ -49,7 +49,6 @@ Item {
         viewMode = r.view
         // folders first is one setting for every folder (Settings.files.dirsFirst)
         sort = { by: r.sort.by, reverse: r.sort.reverse, dirsFirst: Settings.files.dirsFirst ?? true }
-        iconSizes = { list: FmZoom.clamp("list", r.iconSize.list), grid: FmZoom.clamp("grid", r.iconSize.grid) }
         ownView = r.own
     }
     function setView(m) { viewMode = m; ownView = true; app.rememberView(path, { view: m }) }
@@ -69,19 +68,12 @@ Item {
     // the folders-first setting changed (here or in another window / the Settings app)
     readonly property bool dirsFirstSetting: Settings.files.dirsFirst ?? true
     onDirsFirstSettingChanged: if (sort.dirsFirst !== dirsFirstSetting) { sort = Object.assign({}, sort, { dirsFirst: dirsFirstSetting }); folderObj.setSort(sort) }
-    function setIconSize(size) {
-        const o = Object.assign({}, iconSizes)
-        o[viewMode] = size
-        iconSizes = o
-        ownView = true
-        const patch = {}
-        patch[viewMode] = size
-        app.rememberView(path, { iconSize: patch })
-    }
+    // the same in every folder (zooming the Desktop zooms Downloads too)
+    function setIconSize(size) { app.setIconSize(viewMode, size) }
     // this folder back to the defaults
     function resetView() { app.forgetView(path); _takeView(path); folderObj.setSort(sort) }
     // this folder's view for every folder without its own
-    function makeDefault() { app.setViewDefaults(viewMode, sort, iconSizes); app.forgetView(path); ownView = false }
+    function makeDefault() { app.setViewDefaults(viewMode, sort); app.forgetView(path); ownView = false }
 
     // ── Where we are ──
     FmFolder {

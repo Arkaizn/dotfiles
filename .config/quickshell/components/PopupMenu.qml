@@ -10,6 +10,8 @@ import qs.services
 // An entry with sep: true is a line. run() is called after the menu closed,
 // so it may change what the menu was opened on.
 // Keyboard: ↑/↓ move the highlight, Enter / Space runs it, Esc closes.
+// As wide as its longest entry (at least 210, at most 460 or the parent's
+// width); a longer label (a file name, an app) elides.
 Popup {
     id: root
     // the app window's zoom (Ctrl +/−): popups are drawn above it, not inside
@@ -49,7 +51,16 @@ Popup {
     onClosed: if (chosen) { const f = chosen; chosen = null; Qt.callLater(f) }
 
     padding: 5
-    width: 210
+    FontMetrics { id: metrics; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
+    // icon column + gaps around the label (see the entry's Row)
+    readonly property real _chrome: 2 * padding + 9 + 16 + Tokens.space.s10 + 12
+    readonly property real _widest: {
+        let w = 0
+        for (const e of entries) if (!e.sep && e.label) w = Math.max(w, metrics.advanceWidth(e.label))
+        return w
+    }
+    readonly property real _room: parent ? parent.width / Math.max(scale, 0.01) - 8 : 460
+    width: Math.max(210, Math.min(Math.ceil(_widest + _chrome), 460, _room))
     closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
     enter: Transition {
         NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Anim.fast; easing.type: Anim.standard }
@@ -118,6 +129,8 @@ Popup {
                             font.family: Properties.fontFamily
                         }
                         Text {
+                            width: entry.width - 9 - 16 - Tokens.space.s10 - 9
+                            elide: Text.ElideMiddle
                             text: entry.modelData.label ?? ""
                             color: entry.modelData.danger ? Colors.danger : Colors.fade(0.88)
                             font.pixelSize: Tokens.font.small

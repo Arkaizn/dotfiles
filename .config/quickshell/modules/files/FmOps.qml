@@ -174,7 +174,7 @@ Scope {
     // ── Drives, servers, archives (they may ask for a password: PasswordDialog) ──
     function mount(volume, name, then) { _start("mount", { volume: volume }, "Opening " + name, then) }
     function unmount(uri, name, eject) { _start("unmount", { uri: uri, eject: eject === true }, (eject ? "Ejecting " : "Unmounting ") + name, null) }
-    function connect(uri, then) { _start("connect", { uri: uri }, "Connecting to " + uri.replace(/^[a-z]+:\/\//, ""), then) }
+    function connect(uri, then) { return _start("connect", { uri: uri }, "Connecting to " + uri.replace(/^[a-z]+:\/\//, ""), then) }
     function extract(path, dest, then) {
         _start("extract", { path: path, dest: dest }, "Extracting " + names([path]), res => { if (then) then(res) }, { dest: dest })
     }
