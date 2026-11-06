@@ -17,6 +17,7 @@ Item {
     required property bool link
     required property bool exec
     required property bool broken
+    property string glyph: ""            // a special folder's own glyph (Downloads, Desktop …), "" = by type
     required property string key
     required property real size
     required property real mtime
@@ -80,7 +81,7 @@ Item {
             Text {
                 visible: pic.status !== Image.Ready
                 anchors.centerIn: parent
-                text: FmIcons.item(tile.item)
+                text: tile.glyph || FmIcons.item(tile.item)
                 color: tile.broken ? Colors.danger : tile.dir ? Colors.accent : Colors.fade(0.6)
                 font.pixelSize: tile.iconSize
                 font.family: Properties.fontFamily

@@ -66,6 +66,13 @@ Flickable {
         }
         return out
     }
+    // mounted servers (sftp://, smb://, … — also ones Nautilus connected) go under Network
+    function isRemote(m) { return !!m.uri && !/^file:/i.test(m.uri) }
+    readonly property var localMounts: (places?.mounts ?? []).filter(m => !isRemote(m))
+    readonly property var remoteMounts: (places?.mounts ?? []).filter(m => isRemote(m))
+    // saved servers not mounted right now (a mounted one shows as its mount)
+    readonly property var idleServers: servers.filter(sv => !remoteMounts.some(m => m.uri.replace(/\/$/, "") === sv.uri.replace(/\/$/, "")))
+
     // ── Bookmarks: the top-level ones, then each group with its own ──
     readonly property var marks: places?.bookmarks ?? []
     function groupOf(b) { const g = app.groupPins[b.uri]; return g && app.groups.some(x => x.id === g) ? g : "" }
@@ -134,15 +141,19 @@ Flickable {
         id: pick
         property Item target: null
         readonly property bool on: target !== null && target.current && target.visible
+        // its entry gone (a bookmark removed): it stays where it was and fades, not off to 0, 0
+        property rect last: Qt.rect(0, 0, 0, 0)
         readonly property point at: {
+            if (!target) return Qt.point(last.x, last.y)
             let x = 0, y = 0
             for (let it = target; it && it !== root.contentItem; it = it.parent) { x += it.x; y += it.y }
             return Qt.point(x, y)
         }
+        onAtChanged: if (target) last = Qt.rect(at.x, at.y, target.width, target.height)
         x: at.x
         y: at.y
-        width: target?.width ?? 0
-        height: target?.height ?? 0
+        width: target ? target.width : last.width
+        height: target ? target.height : last.height
         radius: Tokens.radius.lg
         border.width: Tokens.border.control
         border.color: Colors.fade(0.24)
@@ -215,9 +226,26 @@ Flickable {
                     onClicked: root.app.editGroup(grp.modelData.id, { open: !grp.modelData.open })
                     onContext: (x, y) => root.context({ group: grp.modelData }, header, x, y)
                 }
-                Repeater {
-                    model: grp.modelData.open ? root.marksIn(grp.modelData.id) : []
-                    BookmarkEntry { places: root; indent: true; group: grp.modelData.id }
+                // its bookmarks fold in and out (the height eases; folded: hidden, no drop target)
+                Item {
+                    id: fold
+                    Layout.fillWidth: true
+                    readonly property bool open: grp.modelData.open === true
+                    Layout.preferredHeight: open ? inner.implicitHeight : 0
+                    Behavior on Layout.preferredHeight { NumberAnimation { duration: Anim.normal; easing.type: Anim.emphasized } }
+                    clip: true
+                    visible: Layout.preferredHeight > 0
+                    opacity: open ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
+                    ColumnLayout {
+                        id: inner
+                        width: parent.width
+                        spacing: Tokens.space.s1
+                        Repeater {
+                            model: root.marksIn(grp.modelData.id)
+                            BookmarkEntry { places: root; indent: true; group: grp.modelData.id }
+                        }
+                    }
                 }
             }
         }
@@ -239,7 +267,7 @@ Flickable {
             onDropped: drop => root.dropped(dropPath, drop)
         }
         Repeater {
-            model: root.places?.mounts ?? []
+            model: root.localMounts
             PlaceEntry {
                 id: mountEntry
                 required property var modelData
@@ -280,7 +308,28 @@ Flickable {
 
         SideLabel { text: "NETWORK"; Layout.topMargin: Tokens.space.s12; visible: root.shown("sideNetwork") }
         Repeater {
-            model: root.servers
+            model: root.remoteMounts
+            PlaceEntry {
+                id: remoteEntry
+                required property var modelData
+                visible: root.shown("sideNetwork") && !!modelData.path
+                icon: "\u{F048B}"
+                iconSource: root.themeIcon("folder-remote")
+                label: modelData.name
+                tooltip: modelData.uri
+                glow: pick
+                current: root.path === modelData.path
+                onClicked: root.picked(modelData.path)
+                onContext: (x, y) => root.context(Object.assign({ sideKey: "sideNetwork", remote: true }, modelData), remoteEntry, x, y)
+                actionIcon: modelData.canUnmount || modelData.canEject ? "\u{F0377}" : ""
+                actionTip: "Disconnect"
+                onAction: root.ejectRequested(modelData)
+                dropPath: modelData.path ?? ""
+                onDropped: drop => root.dropped(dropPath, drop)
+            }
+        }
+        Repeater {
+            model: root.idleServers
             PlaceEntry {
                 id: serverEntry
                 required property var modelData

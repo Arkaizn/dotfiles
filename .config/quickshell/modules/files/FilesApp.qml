@@ -21,6 +21,7 @@ import "lib/FmZoom.js" as FmZoom
 //     open <path | file://…>     in the window used last: the tab already on it, else a new tab
 //                                (a file: its folder, with the file selected); no window, or
 //                                Settings.files.openFrom "window": a new one → "ok"
+//   fresh(path)                  Mod+E: a new tab in the window used last (openFrom "window": a new window) → "ok"
 //     select <path>              the same, with it selected → "ok"
 //     newWindow <path>           a new window on it → "ok"
 //     connect <smb://…|sftp://…>  connect to a server (asks for a password in the window) → "ok"
@@ -86,8 +87,14 @@ Scope {
     }
     function forgetHistory(uri) { serverHistory = serverHistory.filter(x => x !== uri); stateObj.set("serverHistory", serverHistory) }
     // saved servers, then the history: [{ uri, name }] for suggestions
-    readonly property var knownServers: servers.concat(serverHistory.filter(u => !servers.some(s => s.uri === u))
-                                                                       .map(u => ({ uri: u, name: u.replace(/^[a-z0-9+.-]+:\/\//i, "") })))
+    readonly property var knownServers: {
+        const out = servers.slice()
+        const add = (uri, name) => { if (!out.some(s => s.uri.replace(/\/$/, "") === uri.replace(/\/$/, ""))) out.push({ uri: uri, name: name }) }
+        for (const u of serverHistory) add(u, u.replace(/^[a-z0-9+.-]+:\/\//i, ""))
+        // mounted right now (connected here or from another app)
+        for (const m of places?.mounts ?? []) if (m.uri && !/^file:/i.test(m.uri)) add(safeUri(m.uri), m.name)
+        return out
+    }
     function rememberServer(uri, name) {
         uri = safeUri(uri)
         if (servers.some(s => s.uri === uri)) return
@@ -280,6 +287,16 @@ Scope {
             const p = FmPath.fromArg(path)
             if (p === "") return "not an absolute path or file:// URI"
             root.newWindow(p)
+            return "ok"
+        }
+        // Mod+E / the launcher: a new tab in the window used last, or a new window (Settings.files.openFrom)
+        function fresh(path: string): string {
+            const p = FmPath.fromArg(path)
+            if (p === "") return "not an absolute path or file:// URI"
+            const w = root.target
+            if (!w || (Settings.files.openFrom ?? "tab") === "window") { root.newWindow(p); return "ok" }
+            w.newTab(p, {})
+            Compositor.focusWindow(w.title)
             return "ok"
         }
         // a server (smb://, sftp://, ftp://, dav(s)://, nfs://): connected to in the window used last

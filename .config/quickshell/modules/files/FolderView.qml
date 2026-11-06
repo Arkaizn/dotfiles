@@ -62,11 +62,19 @@ Rectangle {
     signal dragEnded()
     signal swiped(int dir)                // the touchpad: two fingers sideways (-1 back, +1 forward)
     signal springOpen(string path)        // a drag rested on a folder: go in
+    signal pressed()                      // any press on the files (the window takes the keyboard back)
     property var cut: ({})
     property bool singleClick: false
     property var thumbFor: null
     property int thumbVersion: 0
     property string caption: "none"            // grid: size | date | type under the name
+    // special folders (home, Desktop, Downloads …): path → kind; they show their own icons
+    property var specials: ({})
+    function specialGlyph(key, dir) { const k = dir ? specials[pathOfKey(key)] : undefined; return k ? Icons.get("files." + k) : "" }
+    function specialTheme(key, dir) {
+        const k = dir && themed ? specials[pathOfKey(key)] : undefined
+        return k ? Quickshell.iconPath(FmIcons.specialTheme[k] ?? "folder", true) : ""
+    }
     // the icon theme's picture of an item (Settings.files.iconTheme), "" = the glyph; looked up once per type
     property bool themed: false
     property var _themeCache: ({})
@@ -344,6 +352,7 @@ Rectangle {
                 function content(x, y) { const v = root.view; return Qt.point(x + v.contentX - v.originX, y + v.contentY - v.originY) }
 
                 onPressed: m => {
+                    root.pressed()
                     const h = hit(m.x, m.y)
                     press = { x: m.x, y: m.y, index: h.index, body: h.body, button: m.button, mods: m.modifiers }
                     banding = false
@@ -520,7 +529,8 @@ Rectangle {
                 faded: root.cut[root.pathOfKey(key)] === true
                 dropTarget: index === root.dropIndex
                 count: dir ? (root.folder.counts[name] ?? -1) : -1
-                thumb: { root.thumbVersion; return (root.thumbFor && !dir ? root.thumbFor(root.pathOfKey(key), type, mtime, size, root.iconSize) : "") || root.themeIcon(dir, type, exec) }
+                thumb: { root.thumbVersion; return (root.thumbFor && !dir ? root.thumbFor(root.pathOfKey(key), type, mtime, size, root.iconSize) : "") || root.specialTheme(key, dir) || root.themeIcon(dir, type, exec) }
+                glyph: root.specialGlyph(key, dir)
                 iconSize: root.iconSize
                 cols: root.cols
                 colIds: root.colIds
@@ -559,7 +569,8 @@ Rectangle {
                 faded: root.cut[root.pathOfKey(key)] === true
                 dropTarget: index === root.dropIndex
                 count: dir ? (root.folder.counts[name] ?? -1) : -1
-                thumb: { root.thumbVersion; return (root.thumbFor && !dir ? root.thumbFor(root.pathOfKey(key), type, mtime, size, root.iconSize) : "") || root.themeIcon(dir, type, exec) }
+                thumb: { root.thumbVersion; return (root.thumbFor && !dir ? root.thumbFor(root.pathOfKey(key), type, mtime, size, root.iconSize) : "") || root.specialTheme(key, dir) || root.themeIcon(dir, type, exec) }
+                glyph: root.specialGlyph(key, dir)
                 iconSize: root.iconSize
                 caption: root.caption
             }
@@ -631,6 +642,40 @@ Rectangle {
             : root.folder.kind === "starred" ? "Right-click a file or folder → Star"
             : root.folder.kind === "network" ? "Or: Connect to server… (smb://, sftp://, …)"
             : root.folder.hiddenCount > 0 ? root.folder.hiddenCount + " hidden — Ctrl+H shows them" : ""
+    }
+
+    // still loading after a moment (a big folder, a slow server): a thin bar runs along the top
+    // (with items already showing too — they keep coming); a short load never flashes it
+    Timer { id: barDelay; interval: Anim.fast; running: root.folder.loading }
+    Item {
+        id: loadBar
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.leftMargin: Tokens.space.s12
+        anchors.rightMargin: Tokens.space.s12
+        height: Tokens.border.selected
+        z: 4
+        clip: true
+        opacity: root.folder.loading && !barDelay.running ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
+        Rectangle { anchors.fill: parent; radius: height / 2; color: Colors.alpha(Colors.accent, 0.18) }
+        Rectangle {
+            id: runner
+            width: parent.width / 3
+            height: parent.height
+            radius: height / 2
+            color: Colors.accent
+            // (without ambient motion: a still third, still saying "loading")
+            NumberAnimation on x {
+                from: -runner.width; to: loadBar.width
+                duration: Anim.slower * 3
+                easing.type: Anim.standard
+                loops: Animation.Infinite
+                running: loadBar.visible && Anim.ambient
+            }
+        }
     }
 
     // the icon size, for a moment after a change (like ZoomArea's pill)

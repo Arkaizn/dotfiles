@@ -97,6 +97,8 @@ Item {
             else if (tab.view.leaving) tab.view.enter(0)      // (it didn't change after all: back to normal)
             tab._shown = folderObj.path
         }
+        // a slow folder: in it goes with what's there so far (the progress bar says it's still coming)
+        onStarted: tab._showNow()
         onNotFolder: {
             // a file was asked for: its folder, with it selected
             const p = folderObj.path
@@ -109,6 +111,14 @@ Item {
     property var future: []               // ahead (after going back)
     property string pendingSelect: ""     // the item to put the cursor on once listed
     property string cursorName: ""        // the item under the cursor (kept across reloads)
+    // the new folder slides in now, not when its listing is complete
+    function _showNow() {
+        if (folderObj.path === _shown || !visible) return
+        view.enter(_way * Tokens.space.s24)
+        _shown = folderObj.path
+    }
+    // nothing yet after a moment: in anyway (empty, the progress bar running), never stuck dimmed
+    Timer { id: slowShow; interval: Anim.medium; onTriggered: if (folderObj.loading) tab._showNow() }
     property int _way: 0                  // +1 into a folder, -1 out of it / back: where the next one slides in from
     property string _shown: ""            // the folder the view last came in on
 
@@ -123,7 +133,8 @@ Item {
         if (opts) searchOpts = opts
         const deep = FmSettings.allowed(Settings.files.searchDepth ?? "local", folderObj.fs)
         viewObj.clearSelection()
-        searchObj.run(folderObj.path, q, { depth: deep ? 64 : 0, hidden: app.showHidden, kinds: searchOpts.kinds, since: searchOpts.since })
+        searchObj.run(folderObj.path, q, { depth: deep || searchOpts.everywhere ? 64 : 0, hidden: app.showHidden, kinds: searchOpts.kinds,
+                                          since: searchOpts.since, everywhere: searchOpts.everywhere === true })
     }
     function endSearch() {
         if (!searching) return
@@ -176,6 +187,7 @@ Item {
         viewObj.clearSelection()
         _takeView(p)
         view.leave(_way * Tokens.space.s24)
+        slowShow.restart()
         folderObj.load(p, sort)
         win.tabMoved(tab)
     }
@@ -230,7 +242,7 @@ Item {
         const files = sel.filter(x => !x.dir && !x.broken), dirs = sel.filter(x => x.dir)
         if (files.length + dirs.length > 10) { win.toast("That's " + sel.length + " items — select at most 10 to open them all"); return }
         for (const d of dirs) win.newTab(folder.pathOf(d), { background: true })
-        for (const f of files) app.backend.request("launch", { path: folder.pathOf(f) }, { error: msg => tab.win.toast(msg) })
+        for (const f of files) app.backend.request("launch", { path: folder.pathOf(f) }, { done: res => Compositor.focusLaunched(res.app), error: msg => tab.win.toast(msg) })
     }
     function open(i) {
         const it = folder.at(i)
@@ -297,6 +309,12 @@ Item {
         singleClick: (Settings.files.click ?? "double") === "single"
         caption: Settings.files.captions ?? "none"
         themed: Settings.files.iconTheme ?? false
+        specials: {
+            const m = {}, pl = tab.app.places
+            if (pl?.home) m[pl.home] = "home"
+            for (const x of pl?.xdg ?? []) m[x.path] = x.kind
+            return m
+        }
         thumbFor: FmSettings.allowed(Settings.files.thumbs ?? "local", folderObj.fs) ? tab.app.thumbs.get : null
         thumbVersion: tab.app.thumbs.version
         mode: tab.viewMode

@@ -33,6 +33,8 @@ An item: {name, dir, size, mtime (s), type (content type), hidden, link, mode,
 Ops:
     ping                                  -> {pong}
     list    {path, hidden, sort, reverse, dirsFirst}
+                                          -> (a slow folder: "partial" unsorted batches while it's
+                                              read, then the sorted whole, "reset" on its first batch)
                                           -> batches of sorted items, then
                                              {count, hiddenCount, path, canWrite, fs (its file system type)}
             sort: name | size | mtime | type
@@ -43,7 +45,7 @@ Ops:
     dirs    {path}                        -> {path, names, more}   its subfolders' names (links to
                                              folders too), sorted; at most 5000 (more: there were more)
     places                                -> {home, xdg: [...], bookmarks: [...], mounts: [...]}
-    launch  {path}                        -> {}   (the default app for its type; never runs it)
+    launch  {path}                        -> {app: [window names]}   (the default app for its type; never runs it)
     cancel  {target}                      -> {found}   (a listing, or an operation below)
 
 Operations (filesd/ops.py has the "ask" lines and how they're answered). The long
@@ -64,7 +66,7 @@ Quick ones:
     clipSet  {paths, cut}                 -> {count, cut}   (fmclip.py: gnome-copied-files, uri-list, text)
     clipGet                               -> {types, paths, cut, ours}
 Knowing (Phase 4):
-    search   {path, query, depth, hidden, kinds?, since?}  -> batches of items (+ loc, path, score), then
+    search   {path, query, depth, hidden, kinds?, since?, everywhere?}   (everywhere: from /, no /proc, /sys, mounted servers …)  -> batches of items (+ loc, path, score), then
                                              {count, more (stopped at 2000), scanned}   cancellable
     thumb    {path, type, mtime, large?}   -> {thumb: png path | ""}   (shared ~/.cache/thumbnails)
     preview  {path, type}                  -> {kind: image | pdf | text | other, path, mime, pages, pageCount, text, truncated}
@@ -73,7 +75,7 @@ Knowing (Phase 4):
     counts   {dir, names, hidden}          -> {counts: {name: n | -1}}
     apps     {type}                        -> {mime, description, default, apps: [{id, name, icon, default}]}
              {all: true}                   -> {apps: [{id, name, icon}]}   every app (Open with → all apps)
-    launchWith {paths, app}                -> {} · setDefault {type, app} -> {default}   (mimeapps.list backed up)
+    launchWith {paths, app}                -> {app: [window names]} · setDefault {type, app} -> {default}   (mimeapps.list backed up)
     chmod    {path, mode}                  -> {mode}   (yours only)
     chown    {path, owner, group, recursive?} -> {owner, group}   (pkexec: the shell's polkit agent asks)
 Reaching (Phase 5; filesd/devices.py has the password "ask" lines):

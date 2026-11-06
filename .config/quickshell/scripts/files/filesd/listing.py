@@ -110,8 +110,26 @@ def content_type(name, st, path=None, budget=None):
     return t
 
 
-def make_item(folder, name, lst, hidden_names=frozenset(), budget=None):
-    """an item from the entry's lstat; links show their target's kind and size"""
+# network file systems: every extra call per entry is a round trip there
+REMOTE_FS = frozenset(("fuse.gvfsd-fuse", "fuse.sshfs", "nfs", "nfs4", "cifs", "smb3", "smbfs", "9p",
+                       "fuse.rclone", "davfs", "fuse.davfs2", "afs", "ceph", "glusterfs", "fuse.s3fs"))
+_uid, _gids = os.getuid(), frozenset(os.getgroups()) | {os.getgid()}
+
+
+def _writable_by_mode(st):
+    """whether we may write it, from its mode bits alone (no access() round trip; ACLs aside)"""
+    if _uid == 0:
+        return True
+    if st.st_uid == _uid:
+        return bool(st.st_mode & 0o200)
+    if st.st_gid in _gids:
+        return bool(st.st_mode & 0o020)
+    return bool(st.st_mode & 0o002)
+
+
+def make_item(folder, name, lst, hidden_names=frozenset(), budget=None, remote=False):
+    """an item from the entry's lstat; links show their target's kind and size.
+    remote: no access() probe (the mode bits say it; sniffing is off through budget=None)"""
     path = os.path.join(folder, name)
     link = stat.S_ISLNK(lst.st_mode)
     st, broken, target = lst, False, None
@@ -135,7 +153,7 @@ def make_item(folder, name, lst, hidden_names=frozenset(), budget=None):
     if stat.S_ISREG(mode) and mode & 0o111:
         item["exec"] = True
     # a badge: you can't change it (a folder: can't add to it)
-    if not os.access(path, os.W_OK):
+    if not (_writable_by_mode(st) if remote else os.access(path, os.W_OK)):
         item["ro"] = True
     if link:
         item["target"] = target
@@ -154,20 +172,25 @@ def item_for(path):
     return make_item(folder or "/", name or "/", lst, read_hidden(folder) if name else frozenset())
 
 
-def scan(folder, cancelled):
-    """every entry of a folder as items, unsorted; None when cancelled"""
+def scan(folder, cancelled, remote=False, progress=None):
+    """every entry of a folder as items, unsorted; None when cancelled.
+    remote: the cheap path for network file systems (no sniffing, no access()).
+    progress(out): called every 100 entries (a slow folder shows while it's read)"""
     hidden_names = read_hidden(folder)
-    budget = [SNIFF_MAX]
+    budget = None if remote else [SNIFF_MAX]
     out = []
     with os.scandir(folder) as it:
         for i, e in enumerate(it):
-            if i % 1000 == 0 and cancelled():
-                return None
+            if i % 100 == 0:
+                if cancelled():
+                    return None
+                if progress and i:
+                    progress(out)
             try:
                 lst = e.stat(follow_symlinks=False)
             except OSError:
                 continue            # gone between readdir and stat
-            out.append(make_item(folder, e.name, lst, hidden_names, budget))
+            out.append(make_item(folder, e.name, lst, hidden_names, budget, remote))
     return out
 
 

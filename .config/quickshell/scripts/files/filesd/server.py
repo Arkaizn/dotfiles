@@ -24,6 +24,8 @@ from . import thumbs  # noqa: E402
 from .proto import VERSION, Fail, choice_arg, error_reply, from_os, path_arg, send  # noqa: E402
 
 BATCH = 2000                  # items per "batch" line
+PARTIAL_AFTER = 0.3           # s: a listing still running then shows what it has …
+PARTIAL_EVERY = 0.25          # s: … and what's new this often
 MAX_LINE = 4 << 20            # a request longer than this is dropped
 SORTS = ("name", "size", "mtime", "type")
 DIRS_MAX = 5000               # subfolder names one "dirs" answer holds
@@ -176,19 +178,40 @@ class Server:
         dirs_first = args.get("dirsFirst") is not False
 
         def work(cancelled):
-            items = listing.scan(path, cancelled)
+            fs = self.fs_of(path)
+            # a folder that takes a while (big, or over the network) shows while it's read:
+            # after PARTIAL_AFTER, what's new goes out every PARTIAL_EVERY ("partial": unsorted);
+            # the sorted whole follows ("reset" on its first batch) and replaces it
+            t0 = time.monotonic()
+            sent = [0, t0]
+
+            def progress(out):
+                now = time.monotonic()
+                if now - t0 < PARTIAL_AFTER or now - sent[1] < PARTIAL_EVERY:
+                    return
+                new = [r for r in out[sent[0]:] if show_hidden or not r["hidden"]]
+                sent[0], sent[1] = len(out), now
+                if new:
+                    send({"id": rid, "type": "batch", "partial": True, "items": new})
+            items = listing.scan(path, cancelled, fs in listing.REMOTE_FS, progress)
             if items is None:
                 raise Fail("cancelled", "cancelled")
             hidden = sum(1 for r in items if r["hidden"])
             if not show_hidden:
                 items = [r for r in items if not r["hidden"]]
             listing.sort_items(items, by, reverse, dirs_first)
+            streamed = sent[0] > 0
             for i in range(0, len(items), BATCH):
                 if cancelled():
                     raise Fail("cancelled", "cancelled")
-                send({"id": rid, "type": "batch", "items": items[i:i + BATCH]})
+                b = {"id": rid, "type": "batch", "items": items[i:i + BATCH]}
+                if streamed and i == 0:
+                    b["reset"] = True
+                send(b)
+            if streamed and not items:
+                send({"id": rid, "type": "batch", "reset": True, "items": []})
             return {"count": len(items), "hiddenCount": hidden, "path": path,
-                    "canWrite": os.access(path, os.W_OK), "fs": self.fs_of(path)}
+                    "canWrite": os.access(path, os.W_OK), "fs": fs}
         self.in_pool(rid, work)
 
     def op_dirs(self, rid, args):
@@ -250,10 +273,14 @@ class Server:
         for k in PRIVATE_ENV:
             ctx.unsetenv(k)
 
+        # the app that will open it: its window names, so the UI can bring that window up
+        mime = (listing.item_for(path) or {}).get("type") or ""
+        keys = info.app_keys(Gio.AppInfo.get_default_for_type(mime, False)) if mime else []
+
         def done(_src, res):
             try:
                 Gio.AppInfo.launch_default_for_uri_finish(res)
-                send({"id": rid, "type": "done"})
+                send({"id": rid, "type": "done", "app": keys})
             except GLib.Error as e:
                 send({"id": rid, "type": "error", "code": "unsupported",
                       "error": e.message.split("\n")[0] or "No app opens this kind of file"})
@@ -416,6 +443,13 @@ class Server:
                 "kinds": [k for k in (args.get("kinds") or []) if k in search.KINDS],
                 "since": args.get("since") if isinstance(args.get("since"), (int, float)) else 0}
 
+        if args.get("everywhere") is True:
+            # from /: the whole computer, without pseudo / network file systems (/proc, mounted servers …)
+            path = "/"
+            types = places.fs_types()
+            opts["skip"] = search.SKIP_ROOTS | {mp for mp, t in types.items()
+                                                if mp != "/" and (t in search.PSEUDO_FS or t in listing.REMOTE_FS)}
+
         def work(cancelled):
             res = search.run(path, query, opts, cancelled, lambda items: send({"id": rid, "type": "batch", "items": items}))
             if res is None:
@@ -490,10 +524,10 @@ class Server:
         for k in PRIVATE_ENV:
             ctx.unsetenv(k)
         try:
-            info.launch_with(paths, app, Gio, ctx)
+            keys = info.launch_with(paths, app, Gio, ctx)
         except GLib.Error as e:
             raise Fail(e.message.split("\n")[0], "unsupported")
-        send({"id": rid, "type": "done"})
+        send({"id": rid, "type": "done", "app": keys})
 
     def op_set_default(self, rid, args):
         mime, app = args.get("type"), args.get("app")

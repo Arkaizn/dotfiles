@@ -4,7 +4,8 @@
 # this. Starts the file manager's Quickshell process (files.qml) if it isn't
 # running, waits until its IPC answers, then hands each request over.
 #
-#   files.sh                       a new window on home (Mod+E, the launcher)
+#   files.sh                       home in a new tab of the window used last, or a new window
+#                                  (Settings → Files → "New folders open in"; Mod+E, the launcher)
 #   files.sh [PATH|file://URI]...  each in the window used last (the tab on it, else a new tab;
 #                                  a file: its folder with the file selected); no window yet: a new one
 #   files.sh --select PATH         its folder, with it selected
@@ -42,7 +43,7 @@ say() { r=$(ipc "$@") || return 1; [[ "$r" == ok ]] || { echo "files.sh: $r" >&2
 
 case "${1:-}" in
     --start) exit 0 ;;
-    "") say newWindow "$HOME" ;;
+    "") say fresh "$HOME" ;;
     --new-window) say newWindow "$(abs "${2:-$HOME}")" ;;
     --select) [[ -n "${2:-}" ]] || { echo "files.sh: --select needs a path" >&2; exit 2; }
               say select "$(abs "$2")" ;;

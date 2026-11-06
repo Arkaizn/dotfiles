@@ -47,6 +47,8 @@ Item {
     // true while live changes are put in (the views animate those, not whole listings)
     property bool live: false
     signal loaded()
+    signal started()                      // a slow listing began to show (before loaded)
+    property bool streaming: false        // showing a slow listing while it's read
     signal changed()
     signal gone()
     signal notFolder()
@@ -108,10 +110,27 @@ Item {
         let fresh = []
         _early = []
         _listId = backend.request("list", { path: path, hidden: true, sort: sortBy, reverse: reverse, dirsFirst: dirsFirst }, {
-            batch: items => { if (gen === root._gen) fresh = fresh.concat(items.map(root._norm)) },
+            batch: (items, m) => {
+                if (gen !== root._gen) return
+                // a slow folder: what's read so far shows at once (unsorted, at the end); the
+                // sorted whole comes after ("reset") and replaces it when done
+                if (m && m.partial) {
+                    const add = items.map(root._norm)
+                    if (!root.streaming) { root.streaming = true; root._all = []; list.clear(); root.started() }
+                    root._all = root._all.concat(add)
+                    const shown = root.showHidden ? add : add.filter(r => !r.hidden)
+                    root._shown = root._shown.concat(shown)
+                    list.append(shown)
+                    root.count = root._shown.length
+                    return
+                }
+                if (m && m.reset) fresh = []
+                fresh = fresh.concat(items.map(root._norm))
+            },
             done: res => {
                 if (gen !== root._gen) return
                 root._listId = 0
+                root.streaming = false
                 root.canWrite = res.canWrite
                 root.fs = res.fs ?? ""
                 root._all = fresh
@@ -126,6 +145,7 @@ Item {
             error: (msg, code) => {
                 if (gen !== root._gen || code === "cancelled") return
                 root._listId = 0
+                root.streaming = false
                 root.loading = false
                 if (code === "notdir") { root.notFolder(); return }
                 root._all = []

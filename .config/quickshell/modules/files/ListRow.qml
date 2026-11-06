@@ -9,7 +9,7 @@ import "lib/FmColumns.js" as FmColumns
 // One row of the list view: icon and name, then the chosen columns (size,
 // modified, type, permissions). The roles come from FmFolder's model; the
 // columns and their widths from FolderView. Clicks go to FolderView's pointer
-// area underneath (it asks onBody whether a press is on the icon / name).
+// area underneath (it asks onBody whether a press is on the item: anywhere on a row).
 Rectangle {
     id: row
 
@@ -23,6 +23,7 @@ Rectangle {
     required property bool link
     required property bool exec
     required property bool broken
+    property string glyph: ""            // a special folder's own glyph (Downloads, Desktop …), "" = by type
     required property int mode
     required property string key
     required property string loc
@@ -57,7 +58,9 @@ Rectangle {
 
     HoverHandler { id: hover }
     // the icon and the name's text (not the empty room after it, where a rubber band starts)
-    function onBody(x, y) { return x < nameText.mapToItem(row, Math.min(nameText.contentWidth, nameText.width), 0).x + Tokens.space.s10 }
+    // the whole row is the item: a press anywhere on it drags it (a rubber band starts from the
+    // empty space below the rows)
+    function onBody(x, y) { return true }
 
     function cell(id) {
         switch (id) {
@@ -97,7 +100,7 @@ Rectangle {
             Text {
                 visible: pic.status !== Image.Ready
                 anchors.centerIn: parent
-                text: FmIcons.item(row.item)
+                text: row.glyph || FmIcons.item(row.item)
                 color: row.broken ? Colors.danger : row.dir ? Colors.accent : Colors.fade(0.6)
                 font.pixelSize: row.iconSize
                 font.family: Properties.fontFamily

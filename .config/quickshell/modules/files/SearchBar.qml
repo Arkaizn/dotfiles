@@ -9,9 +9,11 @@ import "lib/FmFormat.js" as FmFormat
 // Search, like Nautilus: it takes the path bar's place while it's open. Typing
 // in a folder opens it (the letter goes in), Ctrl+F too; the results follow the
 // typing; the filter button limits them by kind and date. Esc (or the ×)
-// goes back to the folder; ↓ / Enter go to the results.
+// goes back to the folder; ↓ / Enter go to the results. It searches this folder
+// and its subfolders; "Everywhere" searches the whole computer instead. A click
+// anywhere else while nothing is typed closes it.
 //   SearchBar { here: "Downloads"; onSearch: (query, opts) => …; onFinished; onToResults }
-//   start(text)   opts: { kinds: ["image", …], since: epoch seconds | 0 }
+//   start(text)   opts: { kinds: ["image", …], since: epoch seconds | 0, everywhere: bool }
 RowLayout {
     id: root
 
@@ -25,6 +27,7 @@ RowLayout {
     signal openFirst()                   // Enter: the first result (or the one picked) opens
 
     property var kinds: []
+    property bool everywhere: false
     property string when: "any"
     readonly property var whens: [["any", "Any time"], ["day", "Today"], ["week", "This week"], ["month", "This month"], ["year", "This year"]]
     readonly property var kindList: [["folder", "Folders", FmIcons.g.folder], ["document", "Documents", FmIcons.g.doc],
@@ -43,6 +46,7 @@ RowLayout {
         if (field.text !== "") emit()
     }
     function finish() {
+        everywhere = false
         kinds = []
         when = "any"
         finished()
@@ -58,20 +62,37 @@ RowLayout {
         return 0
     }
     property string lastSent: ""
-    function emit() { lastSent = field.text; search(field.text, { kinds: kinds, since: since() }) }
+    function emit() { lastSent = field.text; search(field.text, { kinds: kinds, since: since(), everywhere: everywhere }) }
+    onEverywhereChanged: if (field.text !== "") emit()
+    // focus gone elsewhere (a click in the folder, the sidebar …) with nothing typed: the bar closes
+    // (not while its own buttons / filter menu have it, nor when only the window lost focus)
+    function _maybeClose() {
+        if (!root.visible || field.text !== "" || field.activeFocus || filterMenu.opened || !root.Window.active) return
+        for (let it = root.Window.activeFocusItem; it; it = it.parent) if (it === root) return
+        finish()
+    }
     Timer { id: typing; interval: Anim.medium; onTriggered: root.emit() }
 
     SearchField {
         id: field
         Layout.fillWidth: true
+        Layout.minimumWidth: Tokens.size.row * 4
         icon: FmIcons.g.search
-        placeholderText: "Search in " + root.here
+        placeholderText: root.everywhere ? "Search everywhere" : "Search in " + root.here + " and below"
+        onActiveFocusChanged: if (!activeFocus) Qt.callLater(root._maybeClose)
         onTextEdited: typing.restart()
         onAccepted: { typing.stop(); if (root.lastSent !== text) root.emit(); root.openFirst() }
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape) { root.finish(); event.accepted = true }
             else if (event.key === Qt.Key_Down) { root.toResults(); event.accepted = true }
         }
+    }
+    // where: this folder and below (off) or the whole computer (on; the placeholder says which)
+    IconButton {
+        icon: "\u{F01E7}"
+        active: root.everywhere
+        tooltip: root.everywhere ? "Searching everywhere — click for this folder only" : "Search everywhere (the whole computer)"
+        onClicked: { root.everywhere = !root.everywhere; field.forceActiveFocus() }
     }
     IconButton {
         id: filterButton

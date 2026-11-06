@@ -176,6 +176,24 @@ def apps_for(mime, Gio):
             "description": Gio.content_type_get_description(mime) if mime else ""}
 
 
+def app_keys(app):
+    """what an app's windows are called (lower case): its StartupWMClass, its desktop id
+    without ".desktop", the id's last part (org.gnome.TextEditor → texteditor) — the UI finds
+    the window it opened with these (Compositor.focusLaunched)"""
+    if app is None:
+        return []
+    keys = []
+    wm = app.get_startup_wm_class() if hasattr(app, "get_startup_wm_class") else None
+    if wm:
+        keys.append(wm.lower())
+    aid = (app.get_id() or "")[:-len(".desktop")] if (app.get_id() or "").endswith(".desktop") else (app.get_id() or "")
+    if aid:
+        keys.append(aid.lower())
+        if "." in aid:
+            keys.append(aid.rsplit(".", 1)[1].lower())
+    return [k for i, k in enumerate(keys) if k and k not in keys[:i]]
+
+
 def launch_with(paths, app_id, Gio, ctx):
     app = Gio.DesktopAppInfo.new(app_id)
     if app is None:
@@ -184,6 +202,7 @@ def launch_with(paths, app_id, Gio, ctx):
     if len(files) > 1 and not app.supports_files() and not app.supports_uris():
         files = files[:1]
     app.launch(files, ctx)
+    return app_keys(app)
 
 
 def set_default(mime, app_id, Gio):

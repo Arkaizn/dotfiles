@@ -72,6 +72,10 @@ function themeNames(i) {
     return out
 }
 
+// the special folders' icon-theme names (the sidebar and the views use them)
+var specialTheme = { home: "user-home", desktop: "user-desktop", documents: "folder-documents", downloads: "folder-download",
+                     music: "folder-music", pictures: "folder-pictures", videos: "folder-videos", trash: "user-trash" }
+
 function tone(i) {
     return i.dir ? "accent" : "muted"
 }

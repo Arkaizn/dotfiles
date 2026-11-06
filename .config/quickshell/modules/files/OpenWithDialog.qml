@@ -51,7 +51,8 @@ Modal {
     function pick(app) {
         close()
         if (always) backend.request("setDefault", { type: mime, app: app.id }, { error: msg => root.failed(msg) })
-        backend.request("launchWith", { paths: paths, app: app.id }, { error: msg => root.failed(msg) })
+        // (then its window comes to the front: the app may live on another workspace)
+        backend.request("launchWith", { paths: paths, app: app.id }, { done: res => Compositor.focusLaunched(res.app), error: msg => root.failed(msg) })
     }
 
     ColumnLayout {

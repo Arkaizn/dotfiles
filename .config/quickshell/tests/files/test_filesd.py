@@ -115,6 +115,30 @@ class FilesdTest(unittest.TestCase):
         _, r = self.b.call("ping")
         self.assertTrue(r["pong"])
 
+    def test_listing_parts(self):
+        # (in-process: the streaming callback, the network fast path, the search skips)
+        import sys
+        sys.path[:0] = [os.path.join(HERE, "..", "..", "scripts", "files"), os.path.join(HERE, "..", "..", "scripts", "lib")]
+        from filesd import listing, search
+        self.touch(*["f%03d" % i for i in range(250)])
+        seen = []
+        items = listing.scan(self.d, lambda: False, progress=lambda out: seen.append(len(out)))
+        self.assertEqual(len(items), 250)
+        self.assertEqual(seen, [100, 200])
+        # remote: no access() probe, no sniffing; the mode bits say read-only
+        os.chmod(os.path.join(self.d, "f000"), 0o444)
+        remote = {r["name"]: r for r in listing.scan(self.d, lambda: False, remote=True)}
+        self.assertTrue(remote["f000"].get("ro"))
+        self.assertNotIn("ro", remote["f001"])
+        # a search never goes into a skipped folder
+        os.makedirs(os.path.join(self.d, "skipme"))
+        self.touch("needle", folder=os.path.join(self.d, "skipme"))
+        got = []
+        search.run(self.d, "needle", {"skip": frozenset((os.path.join(self.d, "skipme"),))}, lambda: False, got.extend)
+        self.assertEqual(got, [])
+        search.run(self.d, "needle", {}, lambda: False, got.extend)
+        self.assertEqual([g["name"] for g in got], ["needle"])
+
     def test_natural_sort_folders_first(self):
         self.touch(*SORT_NAMES)
         os.mkdir(os.path.join(self.d, "zz dir"))

@@ -5,7 +5,7 @@ import QtQuick
 // The file manager's backend client: one long-running scripts/files/filesd.py
 // (JSON lines; the protocol is in its header), shared by every window.
 //
-//   request(op, args, { batch: items => …, progress: m => …, ask: m => …, done: res => …, error: (msg, code) => … })  → id
+//   request(op, args, { batch: (items, line) => …, progress: m => …, ask: m => …, done: res => …, error: (msg, code) => … })  → id
 //   cancel(id)                 stops a listing; its error callback gets code "cancelled"
 //   ready                      the backend answered; requests sent before wait in a queue
 //   problem                    "" or why it isn't running (shown as a Banner)
@@ -61,7 +61,7 @@ Scope {
         }
         const cb = _pending[m.id]
         if (!cb) return
-        if (m.type === "batch") { if (cb.batch) cb.batch(m.items); return }
+        if (m.type === "batch") { if (cb.batch) cb.batch(m.items, m); return }
         if (m.type === "progress") { if (cb.progress) cb.progress(m); return }
         if (m.type === "ask") { if (cb.ask) cb.ask(m); return }
         delete _pending[m.id]

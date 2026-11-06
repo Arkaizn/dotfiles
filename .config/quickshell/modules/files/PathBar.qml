@@ -10,6 +10,9 @@ import "lib/FmPath.js" as FmPath
 // below as dimmed crumbs (the trail), so you can step back down.
 //   PathBar { path; home; canBack; canForward; onBack; onForward; onUp; onGo: p => …; onEditRequested }
 // A click on the empty part of the well (right of the crumbs) asks to type a path (editRequested).
+// At the well's right end a flat star: yellow when this folder is bookmarked, grey when not;
+// a click toggles it (bookmarkable: false hides it — views, not folders).
+//   PathBar { …; bookmarked; bookmarkable; onToggleBookmark }
 RowLayout {
     id: root
 
@@ -23,6 +26,9 @@ RowLayout {
     signal up()
     signal go(string path)
     signal editRequested()
+    property bool bookmarked: false
+    property bool bookmarkable: true
+    signal toggleBookmark()
 
     spacing: Tokens.space.s4
 
@@ -53,11 +59,36 @@ RowLayout {
             onClicked: root.editRequested()
         }
 
+        // bookmarked or not, at a glance (a flat icon in the well, not a button)
+        Pressable {
+            id: star
+            visible: root.bookmarkable
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: Tokens.space.s4
+            width: Tokens.size.controlSmall
+            height: Tokens.size.controlSmall
+            z: 2
+            tooltip: root.bookmarked ? "Bookmarked — click to remove  (Ctrl+D)" : "Bookmark this folder  (Ctrl+D)"
+            accessibleName: tooltip
+            onClicked: root.toggleBookmark()
+            Text {
+                anchors.centerIn: parent
+                text: root.bookmarked ? "\u{F04CE}" : "\u{F04D2}"
+                color: root.bookmarked ? Colors.yellow : star.hovered ? Colors.fade(0.6) : Colors.fade(0.3)
+                Behavior on color { ColorAnimation { duration: Anim.fast } }
+                scale: star.pressed ? 0.85 : 1
+                Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.pop } }
+                font.pixelSize: Tokens.font.label
+                font.family: Properties.fontFamily
+            }
+        }
+
         Flickable {
             id: flick
             anchors.fill: parent
             anchors.leftMargin: Tokens.space.s4
-            anchors.rightMargin: Tokens.space.s4
+            anchors.rightMargin: Tokens.space.s4 + (star.visible ? star.width : 0)
             contentWidth: crumbRow.implicitWidth
             // scrolls only when the crumbs don't fit: else clicks reach the empty part (type a path)
             interactive: contentWidth > width

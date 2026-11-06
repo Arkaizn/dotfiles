@@ -64,7 +64,8 @@ SearchField {
         search()
         const sp = FmAddress.split(text)
         const dir = FmAddress.resolve(sp.dir === "" ? "." : sp.dir, here, home)
-        if (dir === "") { offers = []; return }
+        // not a local folder (ssh://svs, smb://…): no subfolders, but the servers still match
+        if (dir === "") { _offer(null); return }
         if (cache.path === dir) { _offer(sp.part); return }
         const req = ++_req
         backend.request("dirs", { path: dir }, {
@@ -77,11 +78,14 @@ SearchField {
         const t = text, low = t.trim().toLowerCase(), plain = t !== "" && t.indexOf("/") < 0 && !t.startsWith("~")
         const out = []
         if (plain && !low.includes(":")) for (const sc of schemes) if (sc.startsWith(low)) out.push({ label: sc, sub: "server address", value: sc, kind: "scheme" })
-        if (low.length >= 2)
-            for (const sv of servers) if (sv.uri.toLowerCase().includes(low) || sv.name.toLowerCase().includes(low))
+        // servers: by address or name; "ssh://svs" also finds sftp://svs-… (GVfs names ssh that way)
+        const bare = u => u.toLowerCase().replace(/^[a-z0-9+.-]+:\/\//, "")
+        const q = bare(low)
+        if (low.length >= 2 && (q !== "" || !low.includes("://")))
+            for (const sv of servers) if (sv.uri.toLowerCase().includes(low) || (q !== "" && bare(sv.uri).includes(q)) || sv.name.toLowerCase().includes(q || low))
                 out.push({ label: sv.name, sub: sv.uri, value: sv.uri, kind: "server" })
         const sp = FmAddress.split(t)
-        for (const n of FmAddress.matches(cache.names, part, 8)) out.push({ label: n, sub: "", value: sp.dir + n + "/", kind: "folder" })
+        if (part !== null) for (const n of FmAddress.matches(cache.names, part, 8)) out.push({ label: n, sub: "", value: sp.dir + n + "/", kind: "folder" })
         if (plain) for (const r of found) if (!out.some(o => o.kind === "folder" && o.label === r.name))
             out.push({ label: r.name, sub: "~/" + (r.path.startsWith(home + "/") ? r.path.slice(home.length + 1) : r.path).replace(/\/[^/]*$/, ""),
                        value: r.path, kind: "result", path: r.path, dir: r.dir })

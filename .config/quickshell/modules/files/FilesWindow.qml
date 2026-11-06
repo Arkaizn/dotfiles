@@ -303,7 +303,8 @@ FloatingWindow {
                     case Qt.Key_F5: t.folder.reload(); break
                     case Qt.Key_F2: win.renameCurrent(); break
                     case Qt.Key_Delete: if (shift) win.deleteSel(); else win.trashSel(); break
-                    case Qt.Key_Escape: if (t.searching) win.endSearch(); else view.clearSelection(); break
+                    // (a folder still loading — a slow server —: Esc goes back where you were)
+                    case Qt.Key_Escape: if (t.searching) win.endSearch(); else if (t.folder.loading && t.history.length) t.back(); else view.clearSelection(); break
                     case Qt.Key_Space: win.preview(); break
                     default: {
                         // "/" and "~" open the address bar; other text starts a search (like Nautilus)
@@ -405,8 +406,13 @@ FloatingWindow {
                                     { icon: FmIcons.g.window, label: "Open in new window", run: () => win.app.newWindow(place.path) },
                                     { icon: "󰆍", label: "Open in terminal", run: () => win.terminal(place.path) },
                                     { sep: true },
-                                    { icon: "󰆏", label: "Copy location", run: () => win.copy(place.path) }
-                                ].concat(marks, hide))
+                                    { icon: "󰆏", label: place.remote ? "Copy address" : "Copy location", run: () => win.copy(place.remote ? place.uri : place.path) }
+                                ].concat(place.bookmark ? [] : [
+                                    // a mounted server: kept by its address (a click reconnects after a reboot)
+                                    { icon: FmIcons.g.bookmark, label: "Add to bookmarks", run: () => backend.request("bookmark",
+                                          place.remote ? { action: "add", uri: place.uri, label: place.name } : { action: "add", path: place.path },
+                                          { done: () => win.toast("Added to the bookmarks", "info"), error: msg => win.toast(msg) }) }],
+                                    marks, hide))
                             }
                         }
                     }
@@ -485,6 +491,13 @@ FloatingWindow {
                             onUp: win.tab.up()
                             onGo: p => win.tab.go(p)
                             onEditRequested: address.start()
+                            readonly property var mark: win.tab ? (win.app.places?.bookmarks ?? []).find(b => b.path === win.tab.path) ?? null : null
+                            bookmarked: mark !== null
+                            bookmarkable: win.tab ? win.tab.special === "" && win.tab.path.startsWith("/") : false
+                            onToggleBookmark: {
+                                if (mark) win.backend.request("bookmark", { action: "remove", uri: mark.uri }, { error: msg => win.toast(msg) })
+                                else win.bookmark(win.tab.path)
+                            }
                         }
                         // Ctrl+L: type a path, with the subfolders offered
                         AddressBar {
@@ -696,7 +709,7 @@ FloatingWindow {
                     done: res => cb(Object.assign({ ok: true }, res)),
                     error: msg => cb({ ok: false, error: msg })
                 })
-                openDefault: it => win.backend.request("launch", { path: it.path }, { error: msg => win.toast(msg) })
+                openDefault: it => win.backend.request("launch", { path: it.path }, { done: res => Compositor.focusLaunched(res.app), error: msg => win.toast(msg) })
                 onShownChanged: if (!shown) keys.forceActiveFocus()
             }
             // an operation's questions show in the window used last
@@ -830,7 +843,10 @@ FloatingWindow {
                       { icon: FmIcons.g.tab, label: "Open in new tab", run: () => win.newTab(p, { background: true }) },
                       { icon: FmIcons.g.window, label: "Open in new window", run: () => app.newWindow(p) },
                       { icon: "󰆍", label: "Open in terminal", run: () => win.terminal(p) }] : [],
-            !it.dir && it.exec ? [{ icon: "󰐊", label: "Run…", run: () => win.askRun(p, it) }] : [],
+            // a script: run in a terminal that stays open (a double-click only opens it as text)
+            !it.dir && isScript(it) ? [{ icon: "\u{F018D}", label: it.exec ? "Run in terminal" : "Allow and run in terminal",
+                                         run: () => win.runInTerminal(p, it) }] : [],
+            !it.dir && it.exec && !isScript(it) ? [{ icon: "󰐊", label: "Run…", run: () => win.askRun(p, it) }] : [],
             [{ sep: true },
              { icon: "󰆐", label: "Cut", run: () => app.ops.clip([p], true) },
              { icon: "󰆏", label: "Copy", run: () => app.ops.clip([p], false) }],
@@ -1014,6 +1030,11 @@ FloatingWindow {
             if (win.tab.folder.count > 0 && win.tab.folder.query !== undefined) { win.tab.view.first(false); win.tab.activate(0) }
         }
     }
+    // a press in the files: the keys go to them (an empty search bar then closes itself)
+    Connections {
+        target: win.tab ? win.tab.view : null
+        function onPressed() { if (!keys.activeFocus) keys.forceActiveFocus() }
+    }
     function startSearch(text) {
         if (!tab) return
         tab.searching = true
@@ -1191,15 +1212,19 @@ FloatingWindow {
     // opening a file: programs, scripts and launchers ask first; the rest goes to its app
     function openFile(p, it) {
         if (it.type === "application/x-desktop" || p.endsWith(".desktop")) { openLauncher(p, it); return }
-        // an AppImage is a program: run it (asks); a downloaded one isn't executable yet
-        if (/appimage/i.test(it.type) || /\.appimage$/i.test(p)) { askRun(p, it); return }
+        // an AppImage is a program: it runs; a downloaded one isn't executable yet (asks once to allow it)
+        if (/appimage/i.test(it.type) || /\.appimage$/i.test(p)) {
+            if (it.exec) backend.request("run", { path: p }, { error: msg => win.toast(msg) })
+            else askRun(p, it)
+            return
+        }
         if (it.exec && (it.type.startsWith("text/") || /shellscript|x-executable|pie-executable|x-sharedlib|x-perl|x-python|x-ruby/.test(it.type))) {
             // Settings.files.executables: ask (default) · open (as text) · run
-            const how = Settings.files.executables ?? "ask"
+            const how = Settings.files.executables ?? "open"
             if (how === "run") { backend.request("run", { path: p }, { error: msg => win.toast(msg) }); return }
             if (how === "ask" || !(it.type.startsWith("text/") || /script|x-perl|x-python|x-ruby/.test(it.type))) { askRun(p, it); return }
         }
-        backend.request("launch", { path: p }, { done: () => win.noteRecent(p, it.type), error: msg => win.toast(msg) })
+        backend.request("launch", { path: p }, { done: res => { win.noteRecent(p, it.type); Compositor.focusLaunched(res.app) }, error: msg => win.toast(msg) })
     }
     // what's opened here goes to Recent (GTK's list: other apps see it too)
     function noteRecent(p, type) { backend.request("addRecent", { path: p, type: type ?? "" }, { error: () => {} }) }
@@ -1217,9 +1242,18 @@ FloatingWindow {
                         text: (script ? "It's an executable script." : "It's a program.")
                               + " Running it can do anything you can do — only run what you trust.",
                         buttons: [].concat(
-                            script ? [{ label: "Open as text", run: () => backend.request("launch", { path: p }, { error: msg => win.toast(msg) }) }] : [],
+                            script ? [{ label: "Open as text", run: () => backend.request("launch", { path: p }, { done: res => Compositor.focusLaunched(res.app), error: msg => win.toast(msg) }) }] : [],
                             [{ label: "Run in terminal", run: () => backend.request("run", { path: p, terminal: true }, { error: msg => win.toast(msg) }) },
                              { label: "Run", variant: "primary", run: () => backend.request("run", { path: p }, { error: msg => win.toast(msg) }) }]) })
+    }
+    function isScript(it) { return it.type.startsWith("text/") && it.exec || /shellscript|x-perl|x-python|x-ruby|x-php|javascript/.test(it.type) }
+    // kitty --hold: what it printed stays readable after it ends; a script not executable yet is made so first
+    function runInTerminal(p, it) {
+        const run = () => backend.request("run", { path: p, terminal: true }, { error: msg => win.toast(msg) })
+        if (it.exec) { run(); return }
+        backend.request("props", { path: p }, {
+            done: pr => backend.request("chmod", { path: p, mode: pr.lmode | ((pr.lmode & 0o444) >> 2) }, { done: run, error: msg => win.toast(msg) }),
+            error: msg => win.toast(msg) })
     }
     function allowAndRun(p) {
         backend.request("props", { path: p }, {

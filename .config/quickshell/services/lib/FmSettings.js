@@ -39,16 +39,16 @@ var items = [
     { key: "thumbs", type: "choice", def: "local", options: ["local", "always", "never"], label: "Thumbnails",
       desc: "Pictures of images, videos, PDFs and documents (the shared ~/.cache/thumbnails) · local: not on network drives" },
     { key: "thumbMax", type: "int", def: 50, min: 1, max: 2000, label: "Thumbnails up to (MB)", desc: "Bigger files get their icon" },
-    { key: "executables", type: "choice", def: "ask", options: ["ask", "open", "run"], label: "Executable scripts",
-      desc: "When you open one: ask (run, run in a terminal or open as text), open it as text, or run it" },
+    { key: "executables", type: "choice", def: "open", options: ["open", "ask", "run"], label: "Executable scripts",
+      desc: "A double-click on one: open it in its app (an editor; right-click → Run in terminal runs it), ask (run, run in a terminal or open as text), or run it" },
     { key: "confirmTrash", type: "bool", def: false, label: "Ask before moving to the trash",
       desc: "Deleting for good (Shift+Delete) always asks" },
     { key: "solid", type: "bool", def: false, label: "Solid background", desc: "No transparency behind the files" },
     { key: "sidebarWidth", type: "int", def: 230, min: 180, max: 400, label: "Sidebar width (px)",
       desc: "Or drag the line right of the sidebar; a double-click there resets it" },
-    // a folder from another app (files.sh PATH, xdg-open): a tab in the window used last, or a window
-    { key: "openFrom", type: "choice", def: "tab", options: ["tab", "window"], label: "Folders from other apps open in",
-      desc: "tab: a new tab in the Files window you used last · window: a window of their own" },
+    // Mod+E and a folder from another app (files.sh [PATH], xdg-open): a tab in the window used last, or a window
+    { key: "openFrom", type: "choice", def: "tab", options: ["tab", "window"], label: "New folders open in",
+      desc: "Mod+E and folders from other apps · tab: a new tab in the Files window you used last · window: a window of their own" },
     { key: "fileManager1", type: "bool", def: false, label: "Show in folder from other apps",
       desc: "Browsers' and other apps' \"Show in folder\" land in Files instead of Nautilus (it takes the D-Bus name org.freedesktop.FileManager1 and puts a small activation file in ~/.local/share/dbus-1/services; off removes it again)" },
     // the sidebar: what it shows (right-click an entry → Hide; here to bring it back)

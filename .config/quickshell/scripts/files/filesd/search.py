@@ -18,6 +18,11 @@ import time
 from . import listing
 
 MAX_RESULTS = 2000
+# "everywhere" (a search from /): never into these, nor into network / pseudo file systems
+SKIP_ROOTS = frozenset(("/proc", "/sys", "/dev", "/run", "/tmp", "/var/tmp", "/lost+found"))
+PSEUDO_FS = frozenset(("proc", "sysfs", "devtmpfs", "devpts", "tmpfs", "cgroup", "cgroup2", "securityfs", "debugfs",
+                       "tracefs", "pstore", "bpf", "configfs", "fusectl", "mqueue", "hugetlbfs", "autofs", "efivarfs",
+                       "binfmt_misc", "overlay", "squashfs", "nsfs"))
 BATCH_EVERY = 0.15            # seconds between batches while results come in
 _bound = re.compile(r"[\s._\-()\[\]]")
 
@@ -98,6 +103,7 @@ def run(base, query, opts, cancelled, emit):
     hidden = opts.get("hidden", False)
     kinds = set(opts.get("kinds") or ())
     since = opts.get("since") or 0
+    skip = opts.get("skip") or frozenset()
     found, batch, scanned = 0, [], 0
     last = time.monotonic()
     queue = collections.deque([(base, 0)])
@@ -123,7 +129,7 @@ def run(base, query, opts, cancelled, emit):
                 lst = e.stat(follow_symlinks=False)
             except OSError:
                 continue
-            if stat.S_ISDIR(lst.st_mode) and depth < depth_max:
+            if stat.S_ISDIR(lst.st_mode) and depth < depth_max and e.path not in skip:
                 queue.append((e.path, depth + 1))
             sc = score(name, words)
             if sc == 0:
