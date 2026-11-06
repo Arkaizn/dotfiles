@@ -48,3 +48,4 @@ Banner Banner.qml
 AppTitle AppTitle.qml
 AppHeader AppHeader.qml
 SyncStatus SyncStatus.qml
+FileViewer FileViewer.qml

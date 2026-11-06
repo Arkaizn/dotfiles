@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import qs.services
+import qs.services.lib
 
 // niri side of the settings app.
 //
@@ -314,6 +315,14 @@ Singleton {
         }) + "\n\n"
     }
 
+    // the file manager's windows: their title is a fixed prefix + the folder (FmSettings.titlePrefix)
+    function windowRuleTiled(prefix) {
+        return Syntax.fmt("niri.windowRuleTiled", {
+            title: Syntax.kdlString("^" + Compositor.escapeRegex(prefix)), radius: String(root.appRadius),
+            blur: (Settings.niri.appBlur ?? true) ? Syntax.fmt("niri.windowBlur", {}) : ""
+        }) + "\n\n"
+    }
+
     function generate() {
         const tree = { children: new Map(), lines: [] }
         const o = Settings.niri
@@ -334,14 +343,19 @@ Singleton {
             + "// the rest of the config. Change them in the app, or remove the include\n"
             + "// line from config.kdl to drop all of them.\n\n"
             + render(tree)
-            + "\n// the settings, calendar and mail windows\n"
+            + "\n// the settings, calendar, mail and file manager windows\n"
             + windowRule(windowTitle, 980, 680)
             + windowRule("Quickshell Calendar")
             + windowRule("Quickshell Mail")
+            + windowRuleTiled(FmSettings.titlePrefix)
             + Syntax.fmt("niri.bindsBlock", { body: indented(
                   Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),
                                             title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Settings") }),
                                             action: Syntax.fmt("niri.spawnSh", { cmd: Syntax.kdlString("qs ipc call settings toggle") }) }) + "\n"
+                  // the file manager (binds.kdl's Mod+E → nautilus comes earlier: this one wins)
+                  + Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "E"]),
+                                              title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Files") }),
+                                              action: Syntax.fmt("niri.spawnSh", { cmd: Syntax.kdlString(FmSettings.launchCommand(Quickshell.shellDir)) }) }) + "\n"
                   + generateBinds()) }) + "\n"
             + generateAutostart()
     }
@@ -381,6 +395,9 @@ Singleton {
         + 'else rm -f "$tmp"; printf "%s\\n" "$out" | sed "s/\\x1b\\[[0-9;]*m//g" | grep -vE " (DEBUG|INFO) " >&2; exit 1; fi'
 
     function apply() {
+        // the file manager's process (Settings.remote) reads the config for appRadius, but
+        // the override file belongs to the main shell: two writers would race
+        if (Settings.remote) return
         if (Files.read(mainConfig) === "") return     // no niri config here (e.g. a Hyprland-only machine)
         if (applyProc.running) { applyTimer.restart(); return }
         const text = generate()

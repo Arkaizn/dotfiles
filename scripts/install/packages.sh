@@ -113,6 +113,22 @@ necessary_packages=(
     python-fonttools      # icon picker (names of the Nerd Font icons)
     tigervnc              # VNC connections (vncviewer)
     ufw                   # firewall (VNC server rule)
+
+    # File manager (Quickshell, scripts/files): all from the official repos
+    python-gobject        # its backend (Gio: folders, trash, mounts, copies)
+    gnome-desktop-4       # thumbnails (freedesktop cache, sandboxed thumbnailers)
+    gvfs                  # trash, remote folders, mounting
+    gvfs-mtp              # Android phones
+    gvfs-gphoto2          # cameras (PTP)
+    gvfs-nfs              # NFS shares
+    gvfs-dnssd            # network discovery (DNS-SD / Avahi)
+    gvfs-wsdd             # network discovery (Windows shares)
+    udisks2               # drives, USB sticks, LUKS, ISO images
+    ffmpegthumbnailer     # video thumbnails
+    poppler               # PDF thumbnails and previews
+    7zip                  # 7z archives
+    unzip                 # zip archives
+    zip                   # creating zip archives
 )
 
 niri_packages=(

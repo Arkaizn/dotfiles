@@ -6,7 +6,6 @@ import hashlib
 import mimetypes
 import os
 import re
-import subprocess
 from .common import MailError
 from .mime import addresses, auth_results, decode_header, free_path, header_block, header_time, html_to_text, message_parts, mime_tree, part_text, safe_name
 from .files import atomic_write, cache_dir
@@ -132,27 +131,10 @@ def view(req):
 
 
 def render_pdf(fpath, base):
-    """pages as PNGs, rendered by poppler (no scripting), at most VIEW_PAGES, with a timeout"""
-    pdir = os.path.join(base, "pages")
-    pages = sorted(f for f in os.listdir(pdir)) if os.path.isdir(pdir) else []
-    count = 0
+    """pages as PNGs, rendered by poppler (no scripting), at most VIEW_PAGES, with a timeout
+    (scripts/lib/qsbackend/pdfview.py, shared with the file manager's preview)"""
+    from qsbackend import pdfview
     try:
-        info = subprocess.run(["pdfinfo", "--", fpath], capture_output=True, text=True, timeout=20)
-        m = re.search(r"^Pages:\s+(\d+)", info.stdout, re.M)
-        count = int(m.group(1)) if m else 0
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-    if not pages:
-        os.makedirs(pdir, mode=0o700, exist_ok=True)
-        last = min(count or VIEW_PAGES, VIEW_PAGES)
-        try:
-            r = subprocess.run(["pdftoppm", "-png", "-r", "110", "-f", "1", "-l", str(last), "--", fpath, os.path.join(pdir, "p")],
-                               capture_output=True, text=True, timeout=90)
-        except FileNotFoundError:
-            raise MailError("pdftoppm isn't installed (sudo pacman -S poppler)")
-        except subprocess.TimeoutExpired:
-            raise MailError("The PDF took too long to render")
-        pages = sorted(os.listdir(pdir))
-        if r.returncode != 0 and not pages:
-            raise MailError("The PDF couldn't be shown: " + (r.stderr.strip().splitlines() or ["damaged file"])[-1])
-    return {"pages": [os.path.join(pdir, p) for p in pages], "pageCount": count or len(pages)}
+        return pdfview.render(fpath, base, VIEW_PAGES)
+    except pdfview.ViewError as e:
+        raise MailError(str(e))

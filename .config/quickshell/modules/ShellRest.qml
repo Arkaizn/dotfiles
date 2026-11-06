@@ -41,6 +41,8 @@ Scope {
     readonly property bool wiredWifi: WiredWifi.turnedOff
     // and the login screen's theme copy (/var/lib/quickshell-greeter)
     readonly property string greeterSync: GreeterSync.status
+    // and the target the file manager's process writes its settings through
+    readonly property bool settingsStore: SettingsStore !== null
 
     DesktopLayer {}
 

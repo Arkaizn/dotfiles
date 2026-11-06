@@ -111,7 +111,8 @@ fi
 
 if [ -s "$f" ]; then
     a=$(notify-send -a Recording -i video-x-generic -A default=Open -A folder="Open folder" "Recording saved" "$f")
-    case $a in default) xdg-open "$f" ;; folder) xdg-open "${f%/*}" ;; esac
+    # the folder: in the file manager with the recording selected (files.sh; the default app if it can't start)
+    case $a in default) xdg-open "$f" ;; folder) "$(dirname "$0")/files/files.sh" --select "$f" || xdg-open "${f%/*}" ;; esac
 elif [ "$mode" = window ] && [ ! -e "$f" ]; then
     notify-send -a Recording -i video-x-generic "Recording cancelled" "No window was picked$(tail -n 1 "$log" | sed "s/^/ — /")"
 elif [ -z "$parts" ]; then

@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import qs.components
 import qs.services
+import qs.services.lib
 import "network"
 import "wm"
 import "bar"
@@ -386,8 +387,24 @@ Scope {
                 { key: "calendar", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Calendar",
                   desc: "The hours of the day / week view zoom on their own: Ctrl Alt +/−, or Ctrl + wheel over them" },
                 { key: "settings", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Settings" },
+                { key: "files", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Files",
+                  desc: "Over the files themselves Ctrl + wheel / Ctrl +/− change the icon size instead" },
                 { key: "perfmon", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Performance monitor" },
                 { key: "wizard", type: "choice", def: "100", options: AppZoom.options, unit: "%", label: "Welcome (first run)" } ] } ] },
+        // the file manager: its own process; the same spec its Preferences show (FmSettings)
+        { id: "files", group: "Apps", icon: "󰉋", title: "Files", store: "files",
+          keywords: "file manager nautilus thunar folders browse search thumbnails preview hidden files trash copy",
+          desc: "The file manager: clicks, views, search, thumbnails · in the app: ⋮ → Preferences",
+          sections: FmSettings.sections().concat([
+            { title: "App", items: [
+                { key: "openFiles", type: "button", icon: "󰉋", text: "Open Files", label: "Files",
+                  desc: "Also Mod+E · or files.sh <folder> from a terminal", run: () => FileManager.open(Quickshell.env("HOME")) },
+                { key: "makeDefault", type: "button", icon: "󰄬", text: "Make it the default", label: "Default file manager",
+                  desc: "Folders opened by other apps land here (Default apps → File manager; mimeapps.list is backed up first)",
+                  // (the candidates are read first: set() only takes an installed entry)
+                  run: () => DefaultApps.refresh(() => DefaultApps.set("files", "quickshell-files.desktop", ok => {
+                      if (!ok) Jobs.run(["notify-send", "-a", "Files", "Default file manager", DefaultApps.error || "Couldn't set it (is the desktop entry linked?)"])
+                  })) } ] } ]) },
         { id: "perfmon", group: "Apps", icon: "󰓅", title: "Performance monitor", store: "perfmon",
           keywords: "performance monitor cpu gpu temperature fan cooler kraken nzxt cam system monitor process processes task manager top sort memory chart history",
           desc: "CPU, GPU, memory, liquid cooler, sensors, processes (launcher: Performance Monitor)",
@@ -684,7 +701,7 @@ Scope {
         { page: "bluetooth", label: "Bluetooth visible to other devices", keywords: "discoverable pairable visible", icon: "󰂯" },
         { page: "bluetooth", label: "Forget a Bluetooth device", keywords: "unpair remove forget trust block rename", icon: "󰂲" },
         { page: "defaultapps", label: "Default web browser", keywords: "browser firefox zen chrome links", icon: "󰖟" },
-        { page: "defaultapps", label: "Default file manager", keywords: "nautilus thunar folders", icon: "󰉋" },
+        { page: "defaultapps", label: "Default file manager", keywords: "nautilus thunar folders files quickshell", icon: "󰉋" },
         { page: "defaultapps", label: "Open PDFs / images / videos with", keywords: "pdf image video music player viewer", icon: "󰀻" },
         { page: "clipboard", label: "Pause clipboard history", keywords: "stop clipboard record private", icon: "󰏤" },
         { page: "clipboard", label: "Clear clipboard history", keywords: "wipe delete clipboard", icon: "󰃢" },

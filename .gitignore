@@ -4,3 +4,5 @@
 __pycache__/
 *.pyc
 .config/wayvnc/config
+# quickshell notes / docs are local (sync-excludes.sh: quickshell/*.md)
+/.config/quickshell/*.md

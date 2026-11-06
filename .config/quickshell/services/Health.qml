@@ -70,6 +70,7 @@ Singleton {
             { id: "keyring", group: "Services", title: "Keyring (Secret Service)" },
             { id: "cliphist", group: "Services", title: "Clipboard watcher" },
             { id: "python", group: "Python", title: "Python modules (calendar)" },
+            { id: "filemanager", group: "Python", title: "File manager (backend, thumbnails, devices)" },
             { id: "settings", group: "Config", title: "settings.json" },
             { id: "colors", group: "Config", title: "pywal colors" },
             { id: "files", group: "Config", title: "Files the config uses" }
@@ -172,6 +173,30 @@ Singleton {
                 code === 0 ? done("ok", "dateutil")
                            : done("error", "python3 can't import dateutil (calendar sync fails)", "sudo pacman -S python-dateutil"))
             break
+        case "filemanager": {
+            // the file manager (files.qml, scripts/files): packages, most of them gvfs backends
+            // without a program to look for, so asked from pacman; then whether python3 (-I:
+            // nothing from the current folder or user site) can load what the backend imports
+            const pkgs = ["python-gobject", "gnome-desktop-4", "gvfs", "gvfs-mtp", "gvfs-gphoto2", "gvfs-nfs", "gvfs-smb",
+                          "gvfs-dnssd", "gvfs-wsdd", "udisks2", "ffmpegthumbnailer", "poppler", "7zip", "unzip", "zip"]
+            Jobs.run(["pacman", "-Qq", "--"].concat(pkgs), (code, out) => {
+                const have = out.split("\n").map(l => l.trim())
+                const missing = pkgs.filter(p => !have.includes(p))
+                Jobs.run(["python3", "-I", "-c", "import gi; gi.require_version('Gio', '2.0'); gi.require_version('GnomeDesktop', '4.0'); from gi.repository import Gio, GnomeDesktop"],
+                         (pc, pout, perr) => {
+                    const fix = missing.length ? "sudo pacman -S " + missing.join(" ") : ""
+                    if (pc !== 0) { done("warn", "python3 can't load Gio / GnomeDesktop (the file manager won't start)", fix || "sudo pacman -S python-gobject gnome-desktop-4"); return }
+                    // the backend itself: says "ready", then ends when its stdin closes
+                    Jobs.runInput(["timeout", "10", "python3", "-I", Quickshell.shellDir + "/scripts/files/filesd.py"], "", (bc, bout, berr) => {
+                        if (!bout.includes('"event":"ready"'))
+                            done("warn", "the file manager's backend doesn't start: " + (berr.trim().split("\n").pop() || "exit " + bc), fix)
+                        else if (missing.length) done("warn", "missing: " + missing.join(", "), fix)
+                        else done("ok", pkgs.length + " packages, Gio + GnomeDesktop load, the backend starts")
+                    })
+                })
+            })
+            break
+        }
         case "settings": {
             const text = Files.read(Settings.path)
             if (text === "") return done("ok", "no settings.json yet (all defaults)")

@@ -27,7 +27,7 @@ ColumnLayout {
             { title: "Settings", icon: "󰒓", names: ["niri.option", "niri.flagOn", "niri.flagOff", "niri.section", "niri.sectionOn", "niri.sectionOff"] },
             { title: "Keybinds", icon: "󰌌", names: ["niri.bindsBlock", "niri.bind", "niri.title", "niri.spawnSh", "niri.disable", "niri.keyJoin"] },
             { title: "Autostart", icon: "󰐊", names: ["niri.autostart"] },
-            { title: "Settings / calendar windows", icon: "󰖲", names: ["niri.windowRule", "niri.windowBlur"] },
+            { title: "Settings / calendar windows", icon: "󰖲", names: ["niri.windowRule", "niri.windowRuleTiled", "niri.windowBlur"] },
             { title: "Monitors", icon: "󰍹", names: ["niri.output", "niri.outputOff", "niri.outputMode", "niri.outputScale", "niri.outputTransform", "niri.outputPosition", "niri.outputVrr"] },
             { title: "Include line", icon: "󰈙", names: ["niri.include"] }
         ],
@@ -35,7 +35,7 @@ ColumnLayout {
             { title: "Settings", icon: "󰒓", names: ["hypr.config"] },
             { title: "Keybinds", icon: "󰌌", names: ["hypr.bind", "hypr.exec", "hypr.unbind", "hypr.keyJoin"] },
             { title: "Autostart", icon: "󰐊", names: ["hypr.autostart"] },
-            { title: "Settings / calendar windows", icon: "󰖲", names: ["hypr.windowRule"] },
+            { title: "Settings / calendar windows", icon: "󰖲", names: ["hypr.windowRule", "hypr.windowRuleTiled"] },
             { title: "Monitors", icon: "󰍹", names: ["hypr.monitor", "hypr.monitorOff"] }
         ]
     })

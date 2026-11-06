@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Fail-closed login lock (niri, spawned from startup.kdl): if the session isn't
-# locked TIMEOUT seconds after niri started, run ACTION.
+# locked TIMEOUT seconds after niri started, run ACTION. A shell that is still
+# starting then (a qs process runs, but neither the lock nor its "no lock
+# needed" marker is there yet: the first, cold login of a boot can take ~4 s)
+# gets until MAX_WAIT; without a qs process it acts at TIMEOUT as before.
 #
 # ACTION:
 #   auto      swaylock if installed, else logout
@@ -9,6 +12,7 @@
 #             (note: greetd's default_session autologins too, so this starts
 #             a new, unlocked session rather than showing a login prompt)
 TIMEOUT=4
+MAX_WAIT=12
 ACTION=auto
 
 log() {
@@ -39,21 +43,34 @@ locked() {
 # writes "none <NIRI_SOCKET>" at its start (LockScreen.noteStart). Missing or
 # from another niri instance → still expect the lock (fail-closed). Only from
 # the private runtime dir: a file in /tmp could be put there by anyone.
-[ -n "${XDG_RUNTIME_DIR:-}" ] && read -r want sock < "$XDG_RUNTIME_DIR/quickshell-login-lock" 2>/dev/null
-if [ "${want:-}" = none ] && [ -n "${NIRI_SOCKET:-}" ] && [ "${sock:-}" = "$NIRI_SOCKET" ]; then
-    log "ok: no lock needed (logged in on the login screen)"
-    exit 0
-fi
+no_lock_needed() {
+    local want="" sock=""
+    [ -n "${XDG_RUNTIME_DIR:-}" ] && { read -r want sock < "$XDG_RUNTIME_DIR/quickshell-login-lock"; } 2>/dev/null
+    [ "$want" = none ] && [ -n "${NIRI_SOCKET:-}" ] && [ "$sock" = "$NIRI_SOCKET" ]
+}
+late() { awk -v s="$start" -v now="$(cut -d' ' -f1 /proc/uptime)" 'BEGIN { printf "%.1f", now - s }'; }
 
-if locked; then
-    log "ok: locked within ${TIMEOUT}s of niri start ($start)"
-    exit 0
-fi
+while :; do
+    if no_lock_needed; then
+        log "ok: no lock needed (logged in on the login screen; $(late)s after niri start)"
+        exit 0
+    fi
+    if locked; then
+        log "ok: locked within $(late)s of niri start ($start)"
+        exit 0
+    fi
+    # still starting: a qs process of ours runs and the hard limit isn't reached
+    over=$(awk -v s="$start" -v m="$MAX_WAIT" -v now="$(cut -d' ' -f1 /proc/uptime)" 'BEGIN { print (now >= s + m) ? 1 : 0 }')
+    if [ "$over" = 1 ] || ! pgrep -u "$(id -u)" -x qs >/dev/null; then
+        break
+    fi
+    sleep 0.25
+done
 
 case "$ACTION" in
     auto) command -v swaylock >/dev/null && ACTION=swaylock || ACTION=logout ;;
 esac
-log "NOT locked ${TIMEOUT}s after niri start ($start): running $ACTION"
+log "NOT locked $(late)s after niri start ($start): running $ACTION"
 case "$ACTION" in
     swaylock) exec swaylock -f -c 000000 ;;
     logout)   exec niri msg action quit --skip-confirmation ;;

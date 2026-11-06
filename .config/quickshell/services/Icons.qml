@@ -75,6 +75,7 @@ Singleton {
         { group: "Launcher", id: "modeApps", label: "Apps", glyph: "󰀻" },
         { group: "Launcher", id: "modeClipboard", label: "Clipboard", glyph: "󰅍" },
         { group: "Launcher", id: "modeConnections", label: "Connections", glyph: "󰢹" },
+        { group: "Launcher", id: "modeFiles", label: "Files", glyph: "󰉋" },
         { group: "Launcher", id: "modeWallpapers", label: "Wallpapers", glyph: "󰸉" },
         { group: "Launcher", id: "modeKeybinds", label: "Keybinds", glyph: "󰌌" },
 
@@ -82,7 +83,19 @@ Singleton {
         { group: "Power", id: "suspend", label: "Suspend", glyph: "󰤄" },
         { group: "Power", id: "logout", label: "Log out", glyph: "󰍃" },
         { group: "Power", id: "powerReboot", label: "Reboot", glyph: "󰜉" },
-        { group: "Power", id: "poweroff", label: "Shut down", glyph: "󰐥" }
+        { group: "Power", id: "poweroff", label: "Shut down", glyph: "󰐥" },
+        // the file manager's sidebar (its process writes only these: SettingsStore → FmSettings.checkRemote)
+        { group: "Files", id: "files.home", label: "Home", glyph: "\u{F02DC}" },
+        { group: "Files", id: "files.desktop", label: "Desktop", glyph: "\u{F0379}" },
+        { group: "Files", id: "files.documents", label: "Documents", glyph: "\u{F19F6}" },
+        { group: "Files", id: "files.downloads", label: "Downloads", glyph: "\u{F024D}" },
+        { group: "Files", id: "files.music", label: "Music", glyph: "\u{F1359}" },
+        { group: "Files", id: "files.pictures", label: "Pictures", glyph: "\u{F024F}" },
+        { group: "Files", id: "files.videos", label: "Videos", glyph: "\u{F19FA}" },
+        { group: "Files", id: "files.bookmark", label: "Bookmarked folder", glyph: "\u{F024B}" },
+        { group: "Files", id: "files.root", label: "Computer", glyph: "\u{F02CA}" },
+        { group: "Files", id: "files.drive", label: "Drive", glyph: "\u{F02CA}" },
+        { group: "Files", id: "files.usb", label: "USB stick", glyph: "\u{F0553}" }
     ]
     readonly property var defaults: {
         const m = {}

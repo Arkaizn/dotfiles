@@ -30,12 +30,19 @@ import QtQuick
 //   zoom       → how big each app window draws (AppZoom.qml): { mail: "125", … } in %
 //   media      → { bridge: bool } use the mediasync bridge for the bar and
 //                dashboard (MediaSync.qml); its own settings live in the bridge
+//   files      → the file manager (files.qml, its own process): keys and
+//                checks in services/lib/FmSettings.js
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
 //   clipboard, connections, capture, dotfiles, netTools, updates,
 //   settingsProfiles, wizard, health, perfmon
 //              → one group per feature (see PLAN.md); readers always have a
 //                default, so an empty / old file never breaks anything
 // QS_SETTINGS_FILE replaces the path (the login screen reads its copy).
+// remote: the file manager's process (files.qml sets it, or QS_SETTINGS_REMOTE=1).
+// It never writes the file: set / reset / setGroup / resetGroup change its copy
+// and hand the change to the main shell (qs ipc call settingsStore apply,
+// services/SettingsStore.qml), the one writer. When no main shell is running,
+// it merges just those keys into the file itself.
 // "version" is the file format; migrate() brings older files up to date.
 // (both compositors' override files are generated from niri / hyprland /
 //  autostart / keybinds / syntax)
@@ -84,7 +91,9 @@ Singleton {
     property var panels: ({})
     property var zoom: ({})
     property var iconColors: ({})
+    property var files: ({})
     property bool loaded: false
+    property bool remote: Quickshell.env("QS_SETTINGS_REMOTE") === "1"
 
     // every group, in the order they're written
     readonly property var groups: ["properties", "niri", "hyprland", "monitors", "calendar", "mail", "network",
@@ -92,7 +101,7 @@ Singleton {
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
-                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "zoom", "iconColors"]
+                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "zoom", "iconColors", "files"]
     // how each group is called in the UI (export / import messages, profiles).
     // A new group needs: a property above, an entry in `groups`, a label here,
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
@@ -105,7 +114,7 @@ Singleton {
         netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
         health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
         monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout",
-        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)", zoom: "App zoom", iconColors: "Icon colors" })
+        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)", zoom: "App zoom", iconColors: "Icon colors", files: "Files" })
     function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────
@@ -125,6 +134,7 @@ Singleton {
         const m = Object.assign({}, root[group])
         m[key] = value
         root[group] = m
+        _queue(group, key, true, value)
         saveTimer.restart()
     }
 
@@ -133,22 +143,63 @@ Singleton {
         const m = Object.assign({}, root[group])
         delete m[key]
         root[group] = m
+        _queue(group, key, false)
         saveTimer.restart()
     }
 
     function setGroup(group, obj) {
+        if (remote) {           // key by key, so the main shell can check each one
+            for (const k of Object.keys(root[group])) if (!(k in obj)) reset(group, k)
+            for (const k of Object.keys(obj)) set(group, k, obj[k])
+            return
+        }
         root[group] = obj
         saveTimer.restart()
     }
 
     function resetGroup(group) {
+        if (remote) { for (const k of Object.keys(root[group])) reset(group, k); return }
         root[group] = {}
         saveTimer.restart()
+    }
+
+    // remote mode: changes waiting for the next batch { group: { set: {k: v}, reset: [k] } }
+    property var _outbox: ({})
+    property bool _missed: false
+    function _queue(group, key, isSet, value) {
+        if (!remote) return
+        const b = _outbox[group] ?? (_outbox[group] = { set: {}, reset: [] })
+        if (isSet) { b.set[key] = value; b.reset = b.reset.filter(k => k !== key) }
+        else { delete b.set[key]; if (!b.reset.includes(key)) b.reset.push(key) }
+    }
+    function _send() {
+        if (sendProc.running) { saveTimer.restart(); return }
+        const batch = _outbox
+        _outbox = {}
+        if (Object.keys(batch).length === 0) return
+        const json = JSON.stringify(batch)
+        sendProc.batch = batch
+        sendProc.command = ["qs", "ipc", "-p", Quickshell.shellDir, "call", "settingsStore", "apply", json]
+        sendProc.running = true
+    }
+    // no main shell to take it: merge only these keys into the file (read, change, write)
+    function _writeOwn(batch) {
+        let o = {}
+        try { const t = file.text() ?? ""; o = t.trim() === "" ? {} : JSON.parse(t) } catch (e) { console.warn("settings.json is not valid JSON, not writing:", e); return }
+        o = migrate(o)
+        for (const g of Object.keys(batch)) {
+            const m = (o[g] !== null && typeof o[g] === "object" && !Array.isArray(o[g])) ? o[g] : {}
+            for (const k of Object.keys(batch[g].set)) m[k] = batch[g].set[k]
+            for (const k of batch[g].reset) delete m[k]
+            o[g] = m
+        }
+        file.setText(JSON.stringify(o, null, 2) + "\n")
     }
 
     function parse(text) {
         // don't let the reload of an older write undo changes still waiting to be saved
         if (saveTimer.running) return
+        if (sendProc.running) { _missed = true; return }     // read again once it's sent
         try {
             const o = migrate(text.trim() === "" ? {} : JSON.parse(text))
             // a group that isn't an object (hand edit) falls back to defaults
@@ -164,9 +215,26 @@ Singleton {
         id: saveTimer
         interval: 400
         onTriggered: {
+            if (root.remote) { root._send(); return }
             const o = { version: root.version }
             for (const g of root.groups) o[g] = root[g]
             file.setText(JSON.stringify(o, null, 2) + "\n")
+        }
+    }
+
+    // remote mode: one batch at a time; what came in meanwhile goes in the next
+    Process {
+        id: sendProc
+        property var batch: ({})
+        stdout: StdioCollector { id: sendOut }
+        stderr: StdioCollector { id: sendErr }
+        onExited: code => {
+            const answer = sendOut.text.trim()
+            // (qs prints "No running instances …" on stdout or stderr, depending on the version)
+            if (code !== 0 && (answer + sendErr.text).includes("No running instances")) root._writeOwn(batch)
+            else if (answer !== "ok") console.warn("settings: the main shell didn't take", JSON.stringify(batch), "-", (answer || sendErr.text.trim()).split("\n")[0])
+            if (root._missed) { root._missed = false; file.reload() }
+            if (Object.keys(root._outbox).length > 0) saveTimer.restart()
         }
     }
 

@@ -5,6 +5,8 @@ import qs.services
 // A small right-click menu: a title, then entries.
 //   PopupMenu { id: m; parent: someItem }
 //   m.show(item, x, y, "Inbox", [{ icon, label, run, danger, sep }])   (x, y in item's coordinates)
+//   backdrop: someItem   what's behind shows through blurred (the file manager's window)
+// iconColor: the icon in that colour (a colour choice's preview).
 // An entry with sep: true is a line. run() is called after the menu closed,
 // so it may change what the menu was opened on.
 // Keyboard: ↑/↓ move the highlight, Enter / Space runs it, Esc closes.
@@ -42,7 +44,9 @@ Popup {
         y = p.y + implicitHeight > parent.height - 4 ? Math.max(4, p.y - implicitHeight) : p.y
         open()
     }
-    onClosed: if (chosen) { const f = chosen; chosen = null; f() }
+    // one tick later: Qt hands the focus back to where it was before the menu (after onClosed);
+    // a dialog the entry opens must get it after that, not lose it to it
+    onClosed: if (chosen) { const f = chosen; chosen = null; Qt.callLater(f) }
 
     padding: 5
     width: 210
@@ -52,7 +56,9 @@ Popup {
         NumberAnimation { property: "scale"; from: 0.96 * AppZoom.at(root.parent); to: AppZoom.at(root.parent); duration: Anim.fast; easing.type: Anim.standard }
     }
     exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: Anim.instant } }
-    background: PopoverBackground {}
+    // an item of the window to show blurred behind the menu (see PopoverBackground)
+    property Item backdrop: null
+    background: PopoverBackground { backdrop: root.backdrop }
     contentItem: Column {
         spacing: Tokens.space.s1
         focus: true
@@ -107,7 +113,7 @@ Popup {
                             width: 16
                             horizontalAlignment: Text.AlignHCenter
                             text: entry.modelData.icon ?? ""
-                            color: entry.modelData.danger ? Colors.danger : Icons.tint(text, entry.lit ? Colors.accent : Colors.fade(0.55))
+                            color: entry.modelData.danger ? Colors.danger : entry.modelData.iconColor ?? Icons.tint(text, entry.lit ? Colors.accent : Colors.fade(0.55))
                             font.pixelSize: Tokens.font.body
                             font.family: Properties.fontFamily
                         }

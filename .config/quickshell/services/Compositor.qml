@@ -6,7 +6,8 @@ import qs.services
 
 // Which compositor the shell runs on (niri or Hyprland), and the few
 // compositor actions the shell needs, so the rest of the code doesn't care:
-//   focusWindow(title)        bring a window to the front (settings, calendar)
+//   focusWindow(title, prefix) bring a window to the front (settings, calendar); prefix: true
+//                             = the first whose title starts with `title` (the file manager)
 //   focusAppWindow(app, t)    a player's window: app id/class contains `app`,
 //                             one whose title contains `t` first
 //   focusedOutput(cb)         name of the focused monitor (popups opened by keybind)
@@ -42,13 +43,13 @@ Singleton {
 
     function escapeRegex(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") }
 
-    function focusWindow(title) {
+    function focusWindow(title, prefix) {
         if (isHyprland)
             Quickshell.execDetached(["hyprctl", "dispatch",
-                "hl.dsp.focus({ window = " + luaString("title:^" + escapeRegex(title) + "$") + " })"])
+                "hl.dsp.focus({ window = " + luaString("title:^" + escapeRegex(title) + (prefix ? "" : "$")) + " })"])
         else if (isNiri)
             Quickshell.execDetached(["sh", "-c",
-                'id=$(niri msg -j windows | jq -r --arg t "$1" \'first(.[] | select(.title == $t) | .id) // empty\'); '
+                'id=$(niri msg -j windows | jq -r --arg t "$1" \'first(.[] | select(' + (prefix ? '(.title // "") | startswith($t)' : '.title == $t') + ') | .id) // empty\'); '
                 + '[ -n "$id" ] && niri msg action focus-window --id "$id"', "sh", title])
     }
 

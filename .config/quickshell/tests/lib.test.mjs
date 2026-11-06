@@ -1,6 +1,6 @@
 // Unit tests for services/lib/*.js (plain `.pragma library` files).
 // Run: node tests/lib.test.mjs
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync, statSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import vm from "node:vm"
@@ -701,6 +701,364 @@ test("ThemeCheck refuses shell code in colours, drops it in the wallpaper", () =
     assert.equal(r.theme.wallpaper, undefined)
     assert.equal(TC.clean({ special: { background: "$(id)", foreground: "#ffffff" }, colors }).ok, false)
     assert.equal(TC.clean([]).ok, false)
+})
+
+test("ThemeCheck.wallpaperPath: pictures without shell characters", () => {
+    const T = load("ThemeCheck.js")
+    assert.ok(T.wallpaperPath("/home/u/Pictures/a b.jpg"))
+    assert.ok(!T.wallpaperPath("/home/u/x.txt"))
+    assert.ok(!T.wallpaperPath("relative.png"))
+    assert.ok(!T.wallpaperPath("/home/u/it's.png"))
+    assert.ok(!T.wallpaperPath("/home/u/$(x).png"))
+    assert.ok(!T.wallpaperPath("/a/../etc/x.png"))
+})
+const FmSettings = load("FmSettings.js")
+test("FmSettings checks values against the spec", () => {
+    assert.equal(FmSettings.check("solid", true), "")
+    assert.notEqual(FmSettings.check("solid", "yes"), "")
+    assert.equal(FmSettings.check("sidebarWidth", 230), "")
+    assert.notEqual(FmSettings.check("sidebarWidth", 9999), "")
+    assert.notEqual(FmSettings.check("sidebarWidth", 230.5), "")
+    assert.notEqual(FmSettings.check("nope", 1), "")
+    assert.equal(FmSettings.check("openFrom", "window"), "")
+    assert.notEqual(FmSettings.check("openFrom", "popup"), "")
+})
+test("FmSettings: page sections name real keys, allowed() by file system", () => {
+    for (const sec of FmSettings.sections()) for (const it of sec.items) {
+        assert.ok(it && it.key && it.label, "section item " + sec.title)
+        assert.equal(FmSettings.check(it.key, it.def), "", it.key + " default fits its spec")
+    }
+    assert.equal(FmSettings.allowed("local", "ext4"), true)
+    assert.equal(FmSettings.allowed("local", "cifs"), false)
+    assert.equal(FmSettings.allowed("always", "cifs"), true)
+    assert.equal(FmSettings.allowed("never", "ext4"), false)
+})
+test("FmSettings.checkRemote only lets the file manager write its own keys", () => {
+    const zoom = ["50", "100", "125"]
+    assert.equal(FmSettings.checkRemote("files", "solid", false, zoom), "")
+    assert.equal(FmSettings.checkRemote("files", "solid", undefined, zoom), "")
+    assert.notEqual(FmSettings.checkRemote("files", "nope", undefined, zoom), "")
+    assert.equal(FmSettings.checkRemote("zoom", "files", "125", zoom), "")
+    assert.notEqual(FmSettings.checkRemote("zoom", "files", "123", zoom), "")
+    assert.notEqual(FmSettings.checkRemote("zoom", "mail", "125", zoom), "")
+    assert.equal(FmSettings.checkRemote("icons", "files.home", "󰋜", zoom), "")
+    assert.notEqual(FmSettings.checkRemote("icons", "arch", "x", zoom), "")
+    assert.notEqual(FmSettings.checkRemote("icons", "files.../x", "x", zoom), "")
+    assert.equal(FmSettings.checkRemote("iconColors", "files.home", false, zoom), "")
+    assert.notEqual(FmSettings.checkRemote("iconColors", "files.home", true, zoom), "")
+    assert.notEqual(FmSettings.checkRemote("properties", "radius", 3, zoom), "")
+    assert.notEqual(FmSettings.checkRemote("files", "", 1, zoom), "")
+})
+test("FmSettings.launchCommand quotes the path, falls back to Nautilus", () => {
+    assert.equal(FmSettings.launchCommand("/home/u/.config/quickshell"), "'/home/u/.config/quickshell/scripts/files/files.sh' || nautilus --new-window")
+    assert.equal(FmSettings.launchCommand("/a'b"), "'/a'\\''b/scripts/files/files.sh' || nautilus --new-window")
+})
+test("FmSettings.validate reports every bad key", () => {
+    const errs = []
+    FmSettings.validate({ solid: 1, sidebarWidth: 200, x: 2 }, (path, m) => errs.push(path[0]))
+    assert.deepEqual(errs, ["solid", "x"])
+})
+
+// ── the file manager's own libraries (modules/files/lib) ──
+const fmLib = join(dirname(fileURLToPath(import.meta.url)), "..", "modules", "files", "lib")
+function loadFm(name) {
+    const ctx = vm.createContext({})
+    vm.runInContext(readFileSync(join(fmLib, name), "utf8").replace(/^\.pragma library/m, ""), ctx)
+    return ctx
+}
+
+const FmSort = loadFm("FmSort.js")
+// the same names and order as tests/files/test_filesd.py (the backend sorts, this places changes)
+const sortNames = ["file10.txt", "File2.txt", "file1.txt", "b", "a10", "a9", "a09b", "Zed", "z"]
+const sortExpect = ["a9", "a09b", "a10", "b", "file1.txt", "File2.txt", "file10.txt", "z", "Zed"]
+const it = n => ({ name: n, dir: false, size: 0, mtime: 0, type: "" })
+test("FmSort: natural, case-insensitive, like the backend", () => {
+    assert.deepEqual(sortNames.map(it).sort((a, b) => FmSort.compare(a, b, {})).map(i => i.name), sortExpect)
+    const all = sortNames.map(it).concat([{ name: "zz dir", dir: true }, { name: "A dir", dir: true }])
+    assert.deepEqual(all.sort((a, b) => FmSort.compare(a, b, { reverse: true })).map(i => i.name),
+                     ["zz dir", "A dir"].concat(sortExpect.slice().reverse()))
+    assert.deepEqual(all.sort((a, b) => FmSort.compare(a, b, { dirsFirst: false })).map(i => i.name),
+                     ["a9", "a09b", "a10", "A dir", "b", "file1.txt", "File2.txt", "file10.txt", "z", "Zed", "zz dir"])
+})
+test("FmSort: huge numbers and ties", () => {
+    assert.ok(FmSort.nameCmp("x99999999999999999999", "x100000000000000000000") < 0)
+    assert.ok(FmSort.nameCmp("a", "A") > 0)                    // same key: by the exact name
+    assert.ok(FmSort.nameCmp("a", "a1") < 0)
+})
+test("FmSort.insertIndex keeps the order", () => {
+    const opts = { by: "size" }
+    const list = [{ name: "d", dir: true, size: 0 }, { name: "a", size: 1 }, { name: "b", size: 5 }, { name: "c", size: 9 }]
+    const at = i => list[i]
+    assert.equal(FmSort.insertIndex(list.length, at, { name: "x", size: 5 }, opts), 3)
+    assert.equal(FmSort.insertIndex(list.length, at, { name: "0", size: 0 }, opts), 1)
+    assert.equal(FmSort.insertIndex(list.length, at, { name: "e", dir: true, size: 0 }, opts), 1)
+    assert.equal(FmSort.insertIndex(0, at, { name: "x", size: 1 }, opts), 0)
+})
+
+const FmPath = loadFm("FmPath.js")
+test("FmPath basics", () => {
+    assert.equal(FmPath.normalize("/a//b/./c/../d/"), "/a/b/d")
+    assert.equal(FmPath.normalize("/../.."), "/")
+    assert.equal(FmPath.parent("/a/b"), "/a")
+    assert.equal(FmPath.parent("/a"), "/")
+    assert.equal(FmPath.parent("/"), "/")
+    assert.equal(FmPath.base("/a/b c"), "b c")
+    assert.equal(FmPath.join("/", "x"), "/x")
+    assert.equal(FmPath.join("/a", "-rf"), "/a/-rf")
+    assert.ok(FmPath.under("/home/u/x", "/home/u"))
+    assert.ok(!FmPath.under("/home/user2", "/home/u"))
+})
+test("FmPath.crumbs starts at Home under home", () => {
+    assert.deepEqual(JSON.parse(JSON.stringify(FmPath.crumbs("/home/u/a b", "/home/u"))),
+                     [{ label: "Home", path: "/home/u", home: true }, { label: "a b", path: "/home/u/a b", home: false }])
+    assert.deepEqual(Array.from(FmPath.crumbs("/etc/x", "/home/u"), c => c.path), ["/", "/etc", "/etc/x"])
+    assert.deepEqual(Array.from(FmPath.crumbs("/", "/home/u"), c => c.label), ["/"])
+})
+test("FmPath.fromArg takes paths and file URIs only", () => {
+    assert.equal(FmPath.fromArg("/tmp/x/"), "/tmp/x")
+    assert.equal(FmPath.fromArg("file:///tmp/a%20b"), "/tmp/a b")
+    assert.equal(FmPath.fromArg("file://localhost/tmp"), "/tmp")
+    assert.equal(FmPath.fromArg("file://host/tmp"), "")
+    assert.equal(FmPath.fromArg("file:///bad%zz"), "")
+    assert.equal(FmPath.fromArg("relative"), "")
+    assert.equal(FmPath.fromArg("sftp://h/x"), "")
+    assert.equal(FmPath.fromArg("/a\0b"), "")
+    assert.equal(FmPath.url("/tmp/a b#?"), "file:///tmp/a%20b%23%3F")
+})
+test("FmPath.validName", () => {
+    assert.equal(FmPath.validName("ok.txt"), "")
+    for (const n of ["", " ", ".", "..", "a/b", "a\0b"]) assert.notEqual(FmPath.validName(n), "", JSON.stringify(n))
+})
+
+const FmIcons = loadFm("FmIcons.js")
+test("FmIcons picks by type", () => {
+    assert.equal(FmIcons.item({ dir: true }), FmIcons.g.folder)
+    assert.equal(FmIcons.item({ type: "image/png" }), FmIcons.g.image)
+    assert.equal(FmIcons.item({ type: "application/x-compressed-tar" }), FmIcons.g.archive)
+    assert.equal(FmIcons.item({ type: "text/x-python" }), FmIcons.g.code)
+    assert.equal(FmIcons.item({ type: "application/octet-stream", exec: true }), FmIcons.g.script)
+    assert.equal(FmIcons.item({ type: "inode/symlink", broken: true }), FmIcons.g.link)
+    assert.equal(FmIcons.place("downloads"), FmIcons.g.downloads)
+    assert.equal(FmIcons.place("whatever"), FmIcons.g.folder)
+})
+
+const FmFormat = loadFm("FmFormat.js")
+test("FmFormat.when", () => {
+    const now = new Date(2026, 10, 3, 15, 0).getTime()
+    const s = d => d.getTime() / 1000
+    assert.equal(FmFormat.when(s(new Date(2026, 10, 3, 9, 5)), now), "09:05")
+    assert.equal(FmFormat.when(s(new Date(2026, 10, 2, 23, 59)), now), "Yesterday 23:59")
+    assert.equal(FmFormat.when(s(new Date(2026, 9, 30, 8, 0)), now), "Fri 08:00")
+    assert.equal(FmFormat.when(s(new Date(2026, 0, 7)), now), "7 Jan")
+    assert.equal(FmFormat.when(s(new Date(2025, 11, 31)), now), "31 Dec 2025")
+})
+test("FmFormat.typeLabel", () => {
+    assert.equal(FmFormat.typeLabel({ dir: true }), "Folder")
+    assert.equal(FmFormat.typeLabel({ type: "image/png" }), "PNG image")
+    assert.equal(FmFormat.typeLabel({ type: "image/svg+xml" }), "SVG image")
+    assert.equal(FmFormat.typeLabel({ type: "text/x-python" }), "Python source")
+    assert.equal(FmFormat.typeLabel({ type: "application/pdf" }), "PDF document")
+    assert.equal(FmFormat.typeLabel({ type: "application/x-ms-dos-executable" }), "Windows program")
+    assert.equal(FmFormat.typeLabel({ type: "application/x-foo-bar" }), "FOO file")
+    assert.equal(FmFormat.typeLabel({ type: "" }), "File")
+    assert.equal(FmFormat.items(1), "1 item")
+    assert.equal(FmFormat.shown("new\nline\t.txt"), "new\u21B5line\uFFFD.txt")
+})
+
+// ── the file manager's process may only use these shared singletons (FILES_NOTES: 2.1 point 4).
+// Others do work when they're created (VncServer starts wayvnc, GreeterSync writes
+// /var/lib, Notifs takes the D-Bus name, …) and would do it a second time in the files process.
+const root = join(dirname(fileURLToPath(import.meta.url)), "..")
+const fmAllowed = new Set(["Settings", "Properties", "Colors", "Tokens", "Anim", "AppZoom", "Icons", "Panels", "Jobs",
+                           "Compositor", "TokenFont", "TokenSpace", "TokenRadius", "TokenIcon", "TokenBorder", "TokenAlpha", "TokenSize"])
+function walk(dir) {
+    return readdirSync(dir).flatMap(n => {
+        const p = join(dir, n)
+        return statSync(p).isDirectory() ? walk(p) : /\.(qml|js)$/.test(n) ? [p] : []
+    })
+}
+const noComments = t => t.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'\\])\/\/.*$/gm, "$1")
+test("the file manager uses only side-effect-free shared services", () => {
+    const singletons = readFileSync(join(root, "services", "qmldir"), "utf8").split("\n")
+        .map(l => l.match(/^singleton\s+(\w+)/)).filter(Boolean).map(m => m[1])
+    const files = walk(join(root, "modules", "files")).concat([join(root, "files.qml")])
+    const bad = []
+    for (const f of files) {
+        const t = noComments(readFileSync(f, "utf8"))
+        for (const s of singletons) {
+            if (!fmAllowed.has(s) && new RegExp("\\b" + s + "\\s*\\.").test(t)) bad.push(f.slice(root.length + 1) + ": " + s)
+        }
+        // Compositor: only what doesn't start NiriIpc (focusedOutput does)
+        if (/Compositor\s*\.\s*focusedOutput/.test(t)) bad.push(f.slice(root.length + 1) + ": Compositor.focusedOutput")
+        // no other app's modules (Mail's pages import ../settings, which pulls in half the shell)
+        for (const m of t.matchAll(/^import\s+"(\.\.\/[^"]+)"/gm)) bad.push(f.slice(root.length + 1) + ": import " + m[1])
+        if (/\bDropZone\s*\{/.test(t)) bad.push(f.slice(root.length + 1) + ": DropZone (registers the edit IPC target)")
+    }
+    assert.deepEqual(bad, [])
+})
+test("the main shell never imports the file manager's modules (reload isolation)", () => {
+    const bad = []
+    for (const f of walk(join(root, "modules")).concat([join(root, "shell.qml")])) {
+        if (f.includes("/modules/files/")) continue
+        if (/^import\s+"(?:[^"]*\/)?files(?:\/[^"]*)?"/m.test(readFileSync(f, "utf8"))) bad.push(f.slice(root.length + 1))
+    }
+    assert.deepEqual(bad, [])
+})
+
+const FmSelect = loadFm("FmSelect.js")
+test("FmSelect: clicks like Nautilus", () => {
+    const names = ["a", "b", "c", "d", "e"], at = i => names[i], n = names.length
+    const keys = st => Object.keys(st.sel).sort().join("")
+    let st = FmSelect.click({ sel: {}, anchor: "" }, 1, 0, at, n)
+    assert.equal(keys(st), "b")
+    st = FmSelect.click(st, 3, FmSelect.SHIFT, at, n)             // b…d
+    assert.equal(keys(st), "bcd")
+    st = FmSelect.click(st, 2, FmSelect.CTRL, at, n)              // toggles c off, anchor c
+    assert.equal(keys(st), "bd")
+    st = FmSelect.click(st, 4, FmSelect.CTRL | FmSelect.SHIFT, at, n)   // adds c…e
+    assert.equal(keys(st), "bcde")
+    st = FmSelect.click(st, 0, 0, at, n)
+    assert.equal(keys(st), "a")
+    st = FmSelect.moveTo(st, 2, true, at, n)                       // Shift+↓↓ from a
+    assert.equal(keys(st), "abc")
+    st = FmSelect.moveTo(st, 3, false, at, n)
+    assert.equal(keys(st), "d")
+    assert.equal(Object.keys(FmSelect.all(n, at)).length, 5)
+    st = FmSelect.prune({ sel: { a: true, x: true }, anchor: "x" }, { a: true, b: true })
+    assert.equal(keys(st), "a")
+    assert.equal(st.anchor, "")
+})
+
+test("FmSelect: invert, patterns, rubber band", () => {
+    const names = ["a.png", "B.PNG", "c.jpg", "IMG_01.jpg", "notes.txt", "x[1].txt"], at = i => names[i], n = names.length
+    assert.ok(FmSelect.glob("*.txt").test("new\nline.txt"))
+    const keys = sel => Object.keys(sel).sort().join(" ")
+    assert.equal(keys(FmSelect.invert({ "a.png": true }, n, at)), "B.PNG IMG_01.jpg c.jpg notes.txt x[1].txt")
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("*.png"))), "B.PNG a.png")
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("*.{png,jpg}"))), "B.PNG IMG_01.jpg a.png c.jpg")
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("IMG_??.jpg; *.txt"))), "IMG_01.jpg notes.txt x[1].txt")
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("[ab]*"))), "B.PNG a.png")
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("[!ab]*.jpg"))), "IMG_01.jpg c.jpg")
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("x[1].txt"))), "")      // a class, like the shell
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("x[[]1].txt"))), "x[1].txt")
+    assert.equal(keys(FmSelect.matching(n, at, FmSelect.glob("a.png("))), "")         // regex characters are literal
+    assert.equal(FmSelect.glob("  ; "), null)
+    same(FmSelect.band({ x1: 0, y1: 25, x2: 10, y2: 75 }, { rowH: 30 }, 10), [0, 1, 2])
+    same(FmSelect.band({ x1: 0, y1: 290, x2: 10, y2: 400 }, { rowH: 30 }, 10), [9])
+    same(FmSelect.band({ x1: 150, y1: 10, x2: 50, y2: 110 }, { cellW: 100, cellH: 100, cols: 3 }, 5), [0, 1, 3, 4])
+    same(FmSelect.band({ x1: 0, y1: -40, x2: 10, y2: -1 }, { rowH: 30 }, 10), [])        // above every row
+    same(FmSelect.band({ x1: 0, y1: 0, x2: 10, y2: 10 }, { rowH: 30 }, 0), [])
+})
+
+test("FmPath.validName like the backend", () => {
+    assert.equal(FmPath.validName("a b.txt", "ext4"), "")
+    assert.notEqual(FmPath.validName("  ", "ext4"), "")
+    assert.notEqual(FmPath.validName("..", "ext4"), "")
+    assert.notEqual(FmPath.validName("a/b", "ext4"), "")
+    assert.notEqual(FmPath.validName("é".repeat(128), "ext4"), "")       // 256 bytes
+    assert.equal(FmPath.validName("é".repeat(127), "ext4"), "")
+    assert.equal(FmPath.validName("a:b", "ext4"), "")
+    assert.notEqual(FmPath.validName("a:b", "vfat"), "")
+    assert.notEqual(FmPath.validName("end.", "exfat"), "")
+    assert.notEqual(FmPath.nameWarning(".x"), "")
+    assert.notEqual(FmPath.nameWarning("x "), "")
+    assert.equal(FmPath.nameWarning("x"), "")
+})
+
+const FmDrop = loadFm("FmDrop.js")
+test("FmDrop: drag data, web links, base64", () => {
+    const m = FmDrop.mime(["/a b", "/x"], p => p === "/x" ? "" : "file:///a%20b")
+    assert.equal(m["text/uri-list"], "file:///a%20b\r\n")
+    assert.equal(m["text/plain"], "/a b\n/x")
+    assert.equal(m["x-special/gnome-copied-files"], "copy\nfile:///a%20b")
+    const l = FmDrop.webLink("https://user@example.com:8080/x?y", "A / page\n")
+    assert.equal(l.name, "Saved from web — A page.desktop")
+    assert.ok(l.text.includes("URL=https://user@example.com:8080/x?y\n"))
+    assert.equal(FmDrop.webLink("https://example.com/\nExec=evil", "").text.split("\n").filter(x => x.startsWith("Exec")).length, 0)
+    assert.equal(FmDrop.webLink("https://example.com", "").name, "Saved from web — example.com.desktop")
+    assert.equal(FmDrop.b64(new Uint8Array([104, 105])), "aGk=")
+    assert.equal(FmDrop.b64(new Uint8Array([1, 2, 3, 255])), Buffer.from([1, 2, 3, 255]).toString("base64"))
+    assert.equal(FmDrop.imageType(["text/html", "image/jpeg", "image/png"]), "image/png")
+    assert.equal(FmDrop.ext("image/jpeg"), "jpg")
+})
+
+const FmViews = loadFm("FmViews.js")
+test("FmViews: per-folder memory over the defaults", () => {
+    const defs = { view: "list", sort: { by: "name", reverse: false, dirsFirst: true }, iconSize: { list: 20, grid: 64 } }
+    let f = {}
+    assert.equal(FmViews.resolve(f, "/a", defs).view, "list")
+    assert.equal(FmViews.resolve(f, "/a", defs).own, false)
+    f = FmViews.remember(f, "/a", { view: "grid" }, 1)
+    f = FmViews.remember(f, "/a", { iconSize: { grid: 96 } }, 2)
+    const r = FmViews.resolve(f, "/a", defs)
+    assert.equal(r.view, "grid")
+    assert.equal(r.iconSize.grid, 96)
+    assert.equal(r.iconSize.list, 20)                       // not changed there: the default
+    assert.equal(r.sort.by, "name")
+    assert.equal(r.own, true)
+    assert.equal(FmViews.resolve(f, "/b", defs).view, "list")
+    assert.equal(FmViews.resolve({ "/a": { view: "tree", sort: { by: "evil", reverse: 1 }, iconSize: { list: -3 } } }, "/a", defs).view, "list")
+    same(FmViews.resolve({ "/a": { sort: { by: "evil", reverse: 1 } } }, "/a", defs).sort, defs.sort)
+    assert.equal(Object.keys(FmViews.forget(f, "/a")).length, 0)
+    let many = {}
+    for (let i = 0; i < FmViews.CAP + 5; i++) many = FmViews.remember(many, "/f" + i, { view: "grid" }, i)
+    assert.equal(Object.keys(many).length, FmViews.CAP)
+    assert.equal(many["/f0"], undefined)                     // the oldest went
+    assert.ok(many["/f" + (FmViews.CAP + 4)])
+})
+test("FmViews.windows reads v1 and v2, drops junk", () => {
+    same(FmViews.windows([{ path: "/home/u" }]), [{ tabs: [{ path: "/home/u" }], active: 0 }])
+    same(FmViews.windows([{ tabs: [{ path: "/a" }, { path: "rel" }, { path: "/b" }], active: 1, width: 900, height: 600 }]),
+                     [{ tabs: [{ path: "/a" }, { path: "/b" }], active: 1, width: 900, height: 600 }])
+    same(FmViews.windows([{ tabs: [{ path: "/a" }], active: 7 }]), [{ tabs: [{ path: "/a" }], active: 0 }])
+    same(FmViews.windows([{ tabs: [] }, 3, null, { path: 5 }]), [])
+    same(FmViews.windows("x"), [])
+})
+
+const FmColumns = loadFm("FmColumns.js")
+test("FmColumns: chosen, fit, toggle, move, perms", () => {
+    same(FmColumns.chosen(undefined), ["size", "mtime", "type"])
+    same(FmColumns.chosen(["perms", "nope", "perms", "size"]), ["perms", "size"])
+    same(FmColumns.chosen([]), [])
+    same(Object.keys(FmColumns.fit(["size", "mtime", "type"], 44 * 20, 44)), ["size", "mtime", "type"])
+    same(Object.keys(FmColumns.fit(["size", "mtime", "type"], 44 * 7, 44)), ["size"])
+    same(Object.keys(FmColumns.fit(["type", "size"], 44 * 7, 44)), [])           // in order: type doesn't fit, so neither after it
+    same(FmColumns.toggle(["size"], "perms"), ["size", "perms"])
+    same(FmColumns.toggle(["size", "perms"], "size"), ["perms"])
+    same(FmColumns.move(["size", "mtime", "type"], "type", -1), ["size", "type", "mtime"])
+    same(FmColumns.move(["size", "mtime"], "size", -1), ["size", "mtime"])
+    assert.equal(FmColumns.perms(0o755), "rwxr-xr-x")
+    assert.equal(FmColumns.perms(0o4755), "rwsr-xr-x")
+    assert.equal(FmColumns.perms(0o1777), "rwxrwxrwt")
+    assert.equal(FmColumns.perms(0o2640), "rw-r-S---")
+})
+
+const FmAddress = loadFm("FmAddress.js")
+test("FmAddress: typed text to a path", () => {
+    assert.equal(FmAddress.resolve("/usr//lib/", "/x", "/home/u"), "/usr/lib")
+    assert.equal(FmAddress.resolve("~", "/x", "/home/u"), "/home/u")
+    assert.equal(FmAddress.resolve("~/Doc ", "/x", "/home/u"), "/home/u/Doc")
+    assert.equal(FmAddress.resolve("sub/../b", "/x", "/home/u"), "/x/b")
+    assert.equal(FmAddress.resolve("..", "/", "/home/u"), "/")
+    assert.equal(FmAddress.resolve("~user", "/x", "/home/u"), "/x/~user")     // not someone else's home
+    assert.equal(FmAddress.resolve("file:///a%20b/c", "/x", "/home/u"), "/a b/c")
+    assert.equal(FmAddress.resolve("file://host/a", "/x", "/home/u"), "")
+    assert.equal(FmAddress.resolve("sftp://host/a", "/x", "/home/u"), "")
+    assert.equal(FmAddress.resolve("file:///a%00b", "/x", "/home/u"), "")
+    assert.equal(FmAddress.resolve("   ", "/x", "/home/u"), "")
+})
+test("FmAddress: completion", () => {
+    same(FmAddress.split("~/Doc"), { dir: "~/", part: "Doc" })
+    same(FmAddress.split("Doc"), { dir: "", part: "Doc" })
+    same(FmAddress.split("/a/"), { dir: "/a/", part: "" })
+    const names = ["Documents", "docs", ".config", "My Docs", "Downloads", "Desktop"]
+    same(FmAddress.matches(names, "doc"), ["Documents", "docs", "My Docs"])
+    same(FmAddress.matches(names, ""), ["Documents", "docs", "My Docs", "Downloads", "Desktop"])
+    same(FmAddress.matches(names, ".c"), [".config"])
+    same(FmAddress.matches(names, "docs"), ["My Docs"])          // the exact one is typed already
+    assert.equal(FmAddress.common(["Documents", "docs"]), "Doc")
+    assert.equal(FmAddress.common(["Downloads"]), "Downloads")
+    assert.equal(FmAddress.common([]), "")
 })
 
 console.log(passed + " passed, " + failed + " failed")

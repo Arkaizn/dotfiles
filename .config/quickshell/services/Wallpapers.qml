@@ -79,7 +79,7 @@ Singleton {
     function hasThumb(path) { return thumbs[hashPath(path) + ".png"] === true }
     function thumbSaved(path) { const t = Object.assign({}, thumbs); t[hashPath(path) + ".png"] = true; thumbs = t }
 
-    function openFolder() { Jobs.detached(["xdg-open", dir]) }
+    function openFolder() { FileManager.open(dir) }
 
     function apply(path) {
         if (applyProc.running) return

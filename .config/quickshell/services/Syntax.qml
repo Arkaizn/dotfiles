@@ -81,6 +81,14 @@ Singleton {
             + "    {@clipToGeometry} {@true}\n"
             + "    {@drawBorderWithBackground} {@false}\n"
             + "{blur}}",
+        // niri: the file manager's windows (in the layout, normal size; matched by a title prefix)
+        "niri.windowRuleTiled": "{@windowRule} {\n"
+            + "    {@match} {@title}={title}\n"
+            + "    {@openFloating} {@false}\n"
+            + "    {@geometryCornerRadius} {radius}\n"
+            + "    {@clipToGeometry} {@true}\n"
+            + "    {@drawBorderWithBackground} {@false}\n"
+            + "{blur}}",
         "niri.windowBlur": "    {@backgroundEffect} { {@blur} {@true}; }\n",
         // niri: monitors (quickshell-outputs.kdl)
         "niri.output": "{@output} {name} {\n{body}}",
@@ -103,7 +111,8 @@ Singleton {
         "hypr.monitor": "{@monitor}({ output = {output}, mode = {mode}, position = {position}, scale = {scale}, transform = {transform}, vrr = {vrr} })",
         "hypr.monitorOff": "{@monitor}({ output = {output}, disabled = true })",
         "hypr.windowRule": "{@windowRule}({\n    name = {name},\n    match = { title = {title} },\n    float = true,\n    center = true,\n    size = { {width}, {height} },\n})",
-        "hypr.windowRuleMaximized": "{@windowRule}({\n    name = {name},\n    match = { title = {title} },\n    maximize = true,\n})"
+        "hypr.windowRuleMaximized": "{@windowRule}({\n    name = {name},\n    match = { title = {title} },\n    maximize = true,\n})",
+        "hypr.windowRuleTiled": "{@windowRule}({\n    name = {name},\n    match = { title = {title} },\n    tile = true,\n})"
     })
 
     // what each template is for (Syntax page)
@@ -123,6 +132,7 @@ Singleton {
         "niri.autostart": "Start a command at login. {cmd} the command",
         "niri.windowRule": "Window rule for the settings window (floating). {title}, {width}, {height}, {radius}, {blur} (line below)",
         "niri.windowRuleMaximized": "Window rule for the mail / calendar windows (tiled, maximized). {title}, {radius}, {blur}",
+        "niri.windowRuleTiled": "Window rule for the file manager's windows (tiled; {title} matches the start of the title). {title}, {radius}, {blur}",
         "niri.windowBlur": "The blur line of that window rule (when \"Blur behind Quickshell windows\" is on)",
         "niri.output": "A monitor. {name} \"make model serial\", {body} its lines",
         "niri.outputOff": "Monitor turned off",
@@ -141,7 +151,8 @@ Singleton {
         "hypr.monitor": "A monitor (Monitors page)",
         "hypr.monitorOff": "A monitor turned off",
         "hypr.windowRule": "Window rule for the settings window (floating)",
-        "hypr.windowRuleMaximized": "Window rule for the mail / calendar windows (maximized)"
+        "hypr.windowRuleMaximized": "Window rule for the mail / calendar windows (maximized)",
+        "hypr.windowRuleTiled": "Window rule for the file manager's windows (tiled; {title} matches the start of the title)"
     })
 
     readonly property var templates: Settings.syntax.templates ?? ({})
