@@ -58,6 +58,7 @@ singleton SecretPrompt SecretPrompt.qml
 singleton MailStore MailStore.qml
 singleton AppZoom AppZoom.qml
 singleton Wallpapers Wallpapers.qml
+singleton SettingsStore SettingsStore.qml
 TokenFont TokenFont.qml
 TokenSpace TokenSpace.qml
 TokenRadius TokenRadius.qml
@@ -65,3 +66,4 @@ TokenIcon TokenIcon.qml
 TokenBorder TokenBorder.qml
 TokenAlpha TokenAlpha.qml
 TokenSize TokenSize.qml
+singleton FileManager FileManager.qml

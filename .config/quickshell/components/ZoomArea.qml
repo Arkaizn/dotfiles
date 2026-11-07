@@ -4,6 +4,8 @@ import qs.services
 // An app window's content, drawn bigger or smaller (AppZoom): Ctrl + / Ctrl −
 // / Ctrl 0 and Ctrl + wheel anywhere in it; a little pill shows the percent.
 //   FloatingWindow { ZoomArea { app: "mail"; anchors.fill: parent; …content… } }
+// Parts that zoom themselves: wheelExcept (Ctrl + wheel), keysExcept / keysAway
+// (Ctrl +/−/0 while the pointer is over them / away from the window).
 // The content lays out in a smaller (or bigger) area and is scaled up to the
 // window, so everything — text, icons, spacing — grows together. Popups sit
 // above the window, outside of this: they take AppZoom.at(parent) as scale.
@@ -15,6 +17,21 @@ Item {
     readonly property real zoom: AppZoom.of(app)
     // where Ctrl + wheel is someone else's (the calendar's hour grid zooms itself)
     property var wheelExcept: []
+    // where Ctrl +/−/0 are someone else's: while the pointer is over one of these items,
+    // or away from the window when keysAway is set, the keys go to that item (keysOwner)
+    // and this one leaves them alone. The file manager's view: its icon size.
+    property var keysExcept: []
+    property Item keysAway: null
+    readonly property Item keysOwner: {
+        if (!pointer.hovered) return keysAway
+        const pos = pointer.point.position
+        for (const it of keysExcept) {
+            if (!it || !it.visible) continue
+            const p = inner.mapToItem(it, pos.x, pos.y)
+            if (p.x >= 0 && p.y >= 0 && p.x < it.width && p.y < it.height) return it
+        }
+        return null
+    }
     default property alias content: inner.data
 
     Item {
@@ -23,6 +40,9 @@ Item {
         height: root.height / root.zoom
         scale: root.zoom
         transformOrigin: Item.TopLeft
+
+        // where the pointer is (keysOwner); passive, so nothing under it loses hover or clicks
+        HoverHandler { id: pointer }
 
         // Ctrl + wheel: above everything, lets every other wheel through. A plain Item with
         // a WheelHandler, not a MouseArea: every MouseArea has a cursor (the arrow, even
@@ -66,11 +86,12 @@ Item {
     // matches Ctrl++ for Ctrl+Shift++ it calls that ambiguous: same thing here
     Shortcut {
         sequences: ["Ctrl++", "Ctrl+=", "Ctrl+Shift++", "Ctrl+Shift+="]
+        enabled: root.keysOwner === null
         onActivated: root.step(1)
         onActivatedAmbiguously: root.step(1)
     }
-    Shortcut { sequences: ["Ctrl+-"]; onActivated: root.step(-1) }
-    Shortcut { sequences: ["Ctrl+0"]; onActivated: root.step(0) }
+    Shortcut { sequences: ["Ctrl+-"]; enabled: root.keysOwner === null; onActivated: root.step(-1) }
+    Shortcut { sequences: ["Ctrl+0"]; enabled: root.keysOwner === null; onActivated: root.step(0) }
 
     // the percent, for a moment after a change (not zoomed itself)
     Rectangle {

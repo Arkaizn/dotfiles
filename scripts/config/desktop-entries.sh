@@ -13,6 +13,11 @@ mkdir -p "$DEST_DIR"
 
 linked=0
 for src in "$CONFIG_DIR"/*/applications/*.desktop; do
+    # a backup copy of a config folder (quickshell.backup-2026-10-31, nvim.bak, …) ships
+    # the same entries: linking those would win over the live folder (glob order)
+    case "$(basename "$(dirname "$(dirname "$src")")")" in
+        *.backup*|*.bak*|*.old|*.orig|*~) continue ;;
+    esac
     link="$DEST_DIR/$(basename "$src")"
 
     # already linked to the right file: nothing to do

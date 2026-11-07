@@ -7,6 +7,8 @@
 // go through, the wallpaper only as an absolute path without quotes or shell
 // characters (dropped otherwise), and nothing else.
 //   clean(obj) → { ok: true, theme } | { ok: false, error }
+//   wallpaperPath(p) → whether p may become the wallpaper (from outside: the file
+//                      manager's "Set as wallpaper"): the same rule, and a picture's extension
 
 const HEX = /^#[0-9a-fA-F]{6}$/
 const SAFE_PATH = /^\/[^'"`$\\\n\r\0]*$/
@@ -32,4 +34,9 @@ function clean(j) {
     const a = Number(j.alpha)
     if (j.alpha !== undefined && Number.isFinite(a) && a >= 0 && a <= 100) theme.alpha = String(Math.round(a))
     return { ok: true, theme: theme }
+}
+
+const IMAGE = /\.(jpe?g|png|webp|gif|bmp|tiff?|avif|jxl)$/i
+function wallpaperPath(p) {
+    return typeof p === "string" && p.length < 4096 && SAFE_PATH.test(p) && IMAGE.test(p) && p.indexOf("/../") < 0
 }

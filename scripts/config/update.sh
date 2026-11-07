@@ -101,11 +101,28 @@ log ""
 log "=== Sync finished: $changed file(s) touched. Full log: $LOG_FILE ==="
 gum style --foreground 2 "$(printf '%s file(s) touched. Full log: %s' "$changed" "$LOG_FILE")"
 
-# reload compositor config and restart quickshell, depending on which session is running
+# reload compositor config and restart quickshell, depending on which session is running.
+# Two qs processes run from ~/.config/quickshell: the shell (shell.qml) and, when
+# open, the file manager (files.qml, scripts/files/files.sh). Both are stopped by
+# their command line (the shell: `qs` with no -p / -c; test copies and other
+# configs are left alone — `pkill -x qs` hit those too),
+# the shell is started again, and the file manager only if it was running (its
+# windows come back from its state file).
+# shellcheck disable=SC2016  # the scripts are for the inner bash, single quotes on purpose
+stop_qs='qs_pids() { for p in $(pgrep -u "$(id -u)" -x qs); do c=$(tr "\0" " " < "/proc/$p/cmdline" 2>/dev/null) || continue; case "$c" in *"/quickshell/files.qml "*) [ "$1" = files ] && echo "$p" ;; *" -p "*|*" -c "*|*" --path"*|*" --config"*) ;; *) [ "$1" = shell ] && echo "$p" ;; esac; done; }
+    files=0; [ -n "$(qs_pids files)" ] && files=1
+    for w in shell files; do pids=$(qs_pids $w); [ -n "$pids" ] && kill $pids; done
+    for _ in $(seq 50); do [ -z "$(qs_pids shell)$(qs_pids files)" ] && break; sleep 0.1; done
+    pids="$(qs_pids shell) $(qs_pids files)"; [ -n "${pids// }" ] && kill -9 $pids || true'
+files_start='[ "$files" = 1 ] && '
 if [[ -n "${NIRI_SOCKET:-}" ]]; then
-    gum spin --title "Reloading (niri)…" -- bash -c 'pkill -x qs; for _ in $(seq 50); do pgrep -x qs >/dev/null || break; sleep 0.1; done; pkill -9 -x qs || true; niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"'
+    gum spin --title "Reloading (niri)…" -- bash -c "$stop_qs"'
+    niri msg action spawn -- sh -c "QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs"
+    '"$files_start"'niri msg action spawn -- bash "$HOME/.config/quickshell/scripts/files/files.sh" --start || true'
 elif [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
-    gum spin --title "Reloading (Hyprland)…" -- bash -c 'hyprctl reload || true; pkill -x qs; for _ in $(seq 50); do pgrep -x qs >/dev/null || break; sleep 0.1; done; pkill -9 -x qs || true; hyprctl dispatch "hl.dsp.exec_cmd(\"QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs\")"'
+    gum spin --title "Reloading (Hyprland)…" -- bash -c 'hyprctl reload || true; '"$stop_qs"'
+    hyprctl dispatch "hl.dsp.exec_cmd(\"QS_NO_RELOAD_POPUP=1 QT_QPA_PLATFORMTHEME=qt6ct qs\")"
+    '"$files_start"'hyprctl dispatch "hl.dsp.exec_cmd(\"bash $HOME/.config/quickshell/scripts/files/files.sh --start\")" || true'
 else
     gum style --foreground 1 "Could not detect niri or Hyprland session — skipping reload."
 fi
@@ -126,6 +143,22 @@ pacman -Qi tesseract-data-deu &>/dev/null || yay -S tesseract-data-deu --noconfi
 pacman -Qi python-dateutil &>/dev/null || sudo pacman -S python-dateutil --noconfirm
 pacman -Qi libsecret &>/dev/null || sudo pacman -S libsecret --noconfirm
 pacman -Qi gnome-keyring &>/dev/null || sudo pacman -S gnome-keyring --noconfirm
+
+## 03/11/26
+# file manager (Quickshell): backend, thumbnails, devices, network, archives — official repos only
+for p in python-gobject gnome-desktop-4 gvfs gvfs-mtp gvfs-gphoto2 gvfs-nfs gvfs-dnssd gvfs-wsdd udisks2 ffmpegthumbnailer poppler 7zip unzip zip; do
+    pacman -Qi "$p" &>/dev/null || sudo pacman -S "$p" --noconfirm
+done
+# Files opens folders, once per machine (the marker keeps a later choice in Settings →
+# Default apps from being undone by the next update); mimeapps.list is backed up first,
+# like the Default apps page does. desktop-entries.sh above linked the entry.
+files_marker="$HOME/.local/state/quickshell/files-default-set"
+if [[ ! -e "$files_marker" && -e "${XDG_DATA_HOME:-$HOME/.local/share}/applications/quickshell-files.desktop" ]]; then
+    mkdir -p "$HOME/.local/state/quickshell/backups"
+    mimeapps="${XDG_CONFIG_HOME:-$HOME/.config}/mimeapps.list"
+    [[ -f "$mimeapps" ]] && cp -p -- "$mimeapps" "$HOME/.local/state/quickshell/backups/mimeapps.list.$(date +%Y%m%d-%H%M%S)"
+    xdg-mime default quickshell-files.desktop inode/directory && touch "$files_marker"
+fi
 
 
 

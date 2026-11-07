@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import qs.services
+import qs.services.lib
 
 // Hyprland side of the settings app (same API as NiriSettings).
 //
@@ -230,6 +231,12 @@ Singleton {
                                                 width: String(w), height: String(h) }) + "\n\n"
     }
 
+    // the file manager's windows: tiled, their title starts with FmSettings.titlePrefix
+    function windowRuleTiled(name, prefix) {
+        return Syntax.fmt("hypr.windowRuleTiled", { name: Compositor.luaString(name),
+                                                    title: Compositor.luaString("^" + Compositor.escapeRegex(prefix)) }) + "\n\n"
+    }
+
     function generate() {
         const tree = new Map()
         const o = Settings.hyprland
@@ -250,13 +257,19 @@ Singleton {
             + "-- the rest of the config. Change them in the app, or remove the dofile\n"
             + "-- line from hyprland.lua to drop all of them.\n\n"
             + (tree.size > 0 ? Syntax.fmt("hypr.config", { body: render(tree, "") }) + "\n\n" : "")
-            + "-- the settings, calendar and mail windows\n"
+            + "-- the settings, calendar, mail and file manager windows\n"
             + windowRule("quickshell-settings", windowTitle, 980, 680)
             + windowRule("quickshell-calendar", "Quickshell Calendar")
             + windowRule("quickshell-mail", "Quickshell Mail")
+            + windowRuleTiled("quickshell-files", FmSettings.titlePrefix)
             + Syntax.fmt("hypr.bind", { keys: Syntax.luaString(Syntax.hyprKeys(["Mod", "S"])),
                                         action: Syntax.fmt("hypr.exec", { cmd: Syntax.luaString("qs ipc call settings toggle") }),
                                         opts: Syntax.lua({ description: "Settings" }) }) + "\n\n"
+            // the file manager instead of keybinds.lua's fileManager (unbind first: Hyprland would run both)
+            + Syntax.fmt("hypr.unbind", { keys: Syntax.luaString(Syntax.hyprKeys(["Mod", "E"])) }) + "\n"
+            + Syntax.fmt("hypr.bind", { keys: Syntax.luaString(Syntax.hyprKeys(["Mod", "E"])),
+                                        action: Syntax.fmt("hypr.exec", { cmd: Syntax.luaString(FmSettings.launchCommand(Quickshell.shellDir)) }),
+                                        opts: Syntax.lua({ description: "Files" }) }) + "\n\n"
             + generateBinds()
             + generateAutostart()
             + "-- monitor setup from the Monitors page\n"
@@ -308,6 +321,8 @@ Singleton {
         + 'fi'
 
     function apply() {
+        // not from the file manager's process (Settings.remote): the main shell writes the override file
+        if (Settings.remote) return
         if (!available) return
         if (applyProc.running) { applyTimer.restart(); return }
         const text = generate()

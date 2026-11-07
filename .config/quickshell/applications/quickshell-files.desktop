@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Files
+GenericName=File Manager
+Comment=Browse your files and folders
+Icon=system-file-manager
+Exec=bash -c .$IFS${XDG_CONFIG_HOME:-$HOME/.config}/quickshell/scripts/files/files.sh files %U
+MimeType=inode/directory;
+Terminal=false
+Categories=System;FileTools;FileManager;
+Keywords=files;folders;file manager;explorer;browser;nautilus;
+StartupNotify=false

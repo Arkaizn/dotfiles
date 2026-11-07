@@ -46,7 +46,9 @@ Singleton {
         "nc": "openbsd-netcat", "ping": "iputils", "curl": "curl", "xdg-mime": "xdg-utils",
         "xdg-settings": "xdg-utils", "resolvectl": "systemd", "busctl": "systemd", "pgrep": "procps-ng",
         "yay": "yay (AUR)", "Hyprland": "hyprland", "wpctl": "wireplumber", "bluetoothctl": "bluez-utils",
-        "rsync": "rsync", "gdu": "gdu", "smartctl": "smartmontools", "reflector": "reflector", "paccache": "pacman-contrib", "pw-play": "pipewire", "pactl": "libpulse"
+        "rsync": "rsync", "gdu": "gdu", "smartctl": "smartmontools", "reflector": "reflector", "paccache": "pacman-contrib", "pw-play": "pipewire", "pactl": "libpulse",
+        "ffmpegthumbnailer": "ffmpegthumbnailer", "udisksctl": "udisks2", "7z": "7zip", "unzip": "unzip", "zip": "zip",
+        "pdftoppm": "poppler", "gio": "glib2"
     })
     function installHint(bin) {
         const p = packages[bin] ?? bin

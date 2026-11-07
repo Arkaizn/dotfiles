@@ -11,7 +11,7 @@ Singleton {
 
     readonly property var steps: [50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200]
     readonly property var options: steps.map(String)
-    readonly property var apps: ["mail", "calendar", "settings", "perfmon", "wizard"]
+    readonly property var apps: ["mail", "calendar", "settings", "perfmon", "wizard", "files"]
 
     function percent(app) {
         const p = parseInt(Settings.zoom[app] ?? "100")

@@ -112,7 +112,7 @@ ColumnLayout {
                     text: page.scanning ? "Stop" : "Rescan"
                     onClicked: page.scanning ? Jobs.cancel("du-scan") : page.scan(page.path, true)
                 }
-                ActionButton { icon: "󰉋"; text: "Open"; onClicked: Quickshell.execDetached(["xdg-open", page.path]) }
+                ActionButton { icon: "󰉋"; text: "Open"; onClicked: FileManager.open(page.path) }
             }
         }
     }
@@ -194,7 +194,7 @@ ColumnLayout {
                 RowLayout {
                     spacing: Tokens.space.s6
                     Text { text: Format.bytes(modelData.size); color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
-                    IconButton { icon: "󰉋"; tooltip: "Show the folder"; onClicked: Quickshell.execDetached(["xdg-open", modelData.path.replace(/\/[^/]*$/, "")]) }
+                    IconButton { icon: "󰉋"; tooltip: "Show in its folder"; onClicked: FileManager.select(modelData.path) }
                 }
             }
         }

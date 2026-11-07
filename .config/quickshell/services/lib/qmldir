@@ -15,3 +15,5 @@ PanelGeom 1.0 PanelGeom.js
 EdgeMap 1.0 EdgeMap.js
 MailUtil 1.0 MailUtil.js
 ThemeCheck 1.0 ThemeCheck.js
+FmSettings 1.0 FmSettings.js
+FmTransfer 1.0 FmTransfer.js

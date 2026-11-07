@@ -149,7 +149,7 @@ Singleton {
                 const a = out.trim()
                 if (a === "default") Quickshell.execDetached(["xdg-open", file])
                 else if (a === "edit") Jobs.run(["satty", "--filename", file, "--output-filename", file, "--copy-command", "wl-copy"], () => {})
-                else if (a === "folder") Quickshell.execDetached(["xdg-open", file.replace(/\/[^/]*$/, "")])
+                else if (a === "folder") FileManager.select(file)          // its folder, the screenshot selected
             })
         })
     }

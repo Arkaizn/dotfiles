@@ -36,7 +36,7 @@ Rectangle {
     // feature groups: free-form objects, checked by their own validator if there is one
     readonly property var freeGroups: ["bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
         "clipboard", "connections", "dotfiles", "netTools", "updates", "settingsProfiles", "wizard",
-        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "iconColors"]
+        "health", "icons", "monitorsPage", "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "iconColors", "files"]
     // group → function(value, err) for the feature groups that need more than "is an object"
     property var validators: ({
         // enabled, monitors, instances [{ id, type, x, y, rot, scale, monitors, opts }] (services/lib/DeskWidgets.js)
@@ -56,6 +56,8 @@ Rectangle {
                 }
             }
         },
+        // the file manager (services/lib/FmSettings.js: its keys and their checks)
+        files: (v, err) => FmSettings.validate(v, err),
         // bar edge / thickness, panel sizes and places (services/lib/PanelGeom.js)
         panels: (v, err) => { const m = PanelGeom.validate(v); if (m !== "") err([], m) },
         // login screen: follow, its own items / monitors, defaultUser, defaultSession (LockItems.checkGreeter)

@@ -157,6 +157,13 @@ PanelWindow {
         function toggle(): void { root.toggle("wallpapers") }
         function open(): void { if (!root.visible || root.mode !== "wallpapers") root.toggle("wallpapers") }
         function close(): void { if (root.visible) anim.exit() }
+        // a picture from the file manager ("Set as wallpaper"; its process doesn't load
+        // Wallpapers): only a path the wallpaper scripts can take safely (ThemeCheck)
+        function apply(path: string): string {
+            if (!ThemeCheck.wallpaperPath(path)) return "not a picture path that can be a wallpaper (no quotes or $ \\ ` in it)"
+            Wallpapers.apply(path)
+            return "ok"
+        }
     }
 
     // the same entry points for the rest of the shell: Panels.toggle("clipboard"), …
@@ -243,8 +250,8 @@ PanelWindow {
     }
 
     // Which sub-view is showing.
-    property string mode: "apps" // "apps" | "clipboard" | "connections" | "wallpapers" | "keybinds"
-    readonly property var modes: ["apps", "clipboard", "connections", "wallpapers", "keybinds"]
+    property string mode: "apps" // "apps" | "clipboard" | "connections" | "files" | "wallpapers" | "keybinds"
+    readonly property var modes: ["apps", "clipboard", "connections", "files", "wallpapers", "keybinds"]
 
     // Switching modes always clears the search text — carrying an "apps"
     // query like "steam" over into clipboard search would just be
@@ -283,7 +290,7 @@ PanelWindow {
         // in place; park it off-screen so the next open slides in cleanly
         anim.hide()
         slideAnim.stop()
-        const views = [appSearchView, clipboardView, connectionsView, wallpaperView, keybindsView]
+        const views = [appSearchView, clipboardView, connectionsView, filesView, wallpaperView, keybindsView]
         views.forEach(v => { v.slideX = 0; v.opacity = 1 })
         card.skipHeightAnim = true
         card.collapsed = true
@@ -335,6 +342,7 @@ PanelWindow {
              : root.mode === "clipboard" ? clipboardView
              : root.mode === "keybinds" ? keybindsView
              : root.mode === "connections" ? connectionsView
+             : root.mode === "files" ? filesView
              : wallpaperView
     }
 
@@ -497,6 +505,19 @@ PanelWindow {
                     onCloseRequested: anim.exit()
                 }
 
+                // files in home by name (the file manager's search; works without it running)
+                FilesView {
+                    id: filesView
+                    Layout.fillWidth: true
+                    maxHeight: root.viewSize("files").h
+                    query: searchField.text
+                    active: root.mode === "files"
+                    visible: root.mode === "files"
+                    property real slideX: 0
+                    transform: Translate { x: filesView.slideX }
+                    onCloseRequested: anim.exit()
+                }
+
                 WallpaperPicker {
                     id: wallpaperView
                     Layout.fillWidth: true
@@ -545,11 +566,12 @@ PanelWindow {
                     height: Properties.buttonHeight
                     implicitHeight: Properties.buttonHeight
                     icon: root.mode === "apps" ? "󰍉" : root.mode === "clipboard" ? "󰅍" : root.mode === "keybinds" ? "󰌌"
-                        : root.mode === "connections" ? "󰢹" : "󰸉"
+                        : root.mode === "connections" ? "󰢹" : root.mode === "files" ? "󰉋" : "󰸉"
                     placeholderText: root.mode === "apps" ? "Search apps"
                                    : root.mode === "clipboard" ? "Search clipboard history"
                                    : root.mode === "keybinds" ? "Search keybinds"
                                    : root.mode === "connections" ? "Search connections (SSH, RDP, VNC)"
+                                   : root.mode === "files" ? "Search files in your home folder"
                                    : "Search wallpapers"
 
                     Keys.onDownPressed: root.activeView().moveDown()
@@ -591,6 +613,7 @@ PanelWindow {
                             { value: "apps",       glyph: Icons.get("modeApps"), tip: "Apps" },
                             { value: "clipboard",  glyph: Icons.get("modeClipboard"), tip: "Clipboard history" },
                             { value: "connections", glyph: Icons.get("modeConnections"), tip: "Connections" },
+                            { value: "files",      glyph: Icons.get("modeFiles"), tip: "Files" },
                             { value: "wallpapers", glyph: Icons.get("modeWallpapers"), tip: "Wallpapers" },
                             { value: "keybinds",   glyph: Icons.get("modeKeybinds"), tip: "Keybinds" }
                         ]
