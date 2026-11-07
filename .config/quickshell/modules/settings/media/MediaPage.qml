@@ -78,7 +78,7 @@ ColumnLayout {
         }
         SettingRow {
             visible: page.on
-            label: page.up ? "Connected" : MediaSync.state === "connecting" ? "Connecting…" : "Not connected"
+            label: MediaSync.state === "reconnecting" ? "Reconnecting…" : page.up ? "Connected" : MediaSync.state === "connecting" ? "Connecting…" : "Not connected"
             desc: page.up ? "mediasync " + (MediaSync.info?.version ?? "") + " · API " + (MediaSync.info?.api_version ?? "?")
                             + (MediaSync.diagnostics ? " · running for " + page.duration(MediaSync.diagnostics.uptime_seconds) : "")
                 : MediaSync.problem + (MediaSync.state === "unavailable" ? ".  The bar and dashboard show this computer's players meanwhile; it reconnects by itself." : "")

@@ -337,7 +337,8 @@ BarPopup {
         id: musicCard
         Item {
             property real radius: parent ? parent.radius : Tokens.radius.xl
-            DashboardMusic { active: root.shown }
+            // its sheet (lyrics, queue, …) unfolds over the dashboard's content
+            DashboardMusic { active: root.shown; sheetHost: content }
             // The album-art background fills this card and would cover its
             // border, so draw the outline again on top.
             Rectangle {

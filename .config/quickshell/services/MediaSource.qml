@@ -65,9 +65,23 @@ QtObject {
     readonly property bool canLoop: mpris ? (mpris.loopSupported && mpris.canControl) : false
     readonly property bool canRaise: mpris ? mpris.canRaise : false
 
+    // queue / lyrics / playlists (MediaLibrary): bridge sessions only, as advertised.
+    // "queue" and "lyrics" are read-only (view-only sessions can have them too);
+    // a local player linked to a Jellyfin session advertises what it borrows.
+    function _has(c) { return Array.isArray(src.session?.capabilities) && src.session.capabilities.includes(c) }
+    readonly property bool hasQueue: _has("queue")
+    readonly property bool hasLyrics: _has("lyrics")
+    readonly property bool canQueueJump: _can("queue_jump")
+    readonly property bool canPlayItems: _can("play_items")
+    // a session with a queue at all (Jellyfin ones, even when the server shows none)
+    readonly property bool queueish: hasQueue || canQueueJump || canPlayItems
+    // where it plays, for the device chip: "phone" (any remote device) | "pc"
+    readonly property string deviceKind: remote ? "phone" : "pc"
+    readonly property string deviceName: remote ? (session?.player?.device || session?.server?.name || "Remote device") : "This PC"
+
     // position in seconds now; -1 = unknown (e.g. a stale remote session)
     function positionNow() {
-        if (src.mpris) return src.mpris.position
+        if (src.mpris) return src.mpris.positionSupported ? src.mpris.position : -1
         const ms = MediaSources.positionMs(src.session, Date.now())
         return ms < 0 ? -1 : ms / 1000
     }

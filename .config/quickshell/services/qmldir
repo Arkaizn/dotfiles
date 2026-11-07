@@ -49,6 +49,7 @@ singleton Vpn Vpn.qml
 singleton DesktopWidgets DesktopWidgets.qml
 singleton MediaSync MediaSync.qml
 singleton MediaArt MediaArt.qml
+singleton MediaLibrary MediaLibrary.qml
 singleton Yubikey Yubikey.qml
 singleton GreeterSync GreeterSync.qml
 MediaSource MediaSource.qml

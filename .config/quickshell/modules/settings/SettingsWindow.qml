@@ -825,6 +825,20 @@ Scope {
             readonly property var page: root.visiblePages.find(p => p.id === pageId) ?? root.visiblePages[0]
             readonly property var hub: page.parent ? root.visiblePages.find(p => p.id === page.parent) ?? null : null
 
+            // sidebar groups (Shell, System, …) fold like folders: closed when the
+            // window opens, except the open page's group, which opens by itself
+            property var openGroups: ({})
+            function groupOf(p) {
+                if (!p) return ""
+                const top = p.parent ? root.visiblePages.find(x => x.id === p.parent) : null
+                return top?.group ?? p.group ?? ""
+            }
+            function setGroupOpen(g, on) {
+                if (!g || (openGroups[g] === true) === on) return
+                const m = Object.assign({}, openGroups); m[g] = on; openGroups = m
+            }
+            onPageChanged: setGroupOpen(groupOf(page), true)
+
             // the page's sections (search shows SearchResults instead)
             readonly property var sections: query.trim() !== "" ? []
                 : (page.sections ?? []).map(s => ({ title: s.title, store: page.store, items: s.items }))
@@ -950,7 +964,8 @@ Scope {
                                     Rectangle {
                                         id: navGlow
                                         property Item target: null
-                                        readonly property bool on: target !== null && target.selected
+                                        // (not while its group is folded away)
+                                        readonly property bool on: target !== null && target.selected && target.visible && (target.groupOpen ?? true)
                                         // where the target sits: its x / y and every parent's up to the list, so
                                         // it follows each layout change (sub-pages folding, the list rebuilt);
                                         // transforms left out (a sub-page's fold-in shift)
@@ -976,7 +991,8 @@ Scope {
                                         Behavior on y { enabled: navGlow.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
                                         Behavior on width { enabled: navGlow.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
                                         Behavior on height { enabled: navGlow.slides; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
-                                        Behavior on opacity { NumberAnimation { duration: Anim.normal } }
+                                        // gone at once when its group folds (fades in as before)
+                                        Behavior on opacity { NumberAnimation { duration: navGlow.on ? Anim.normal : 0 } }
                                         Behavior on scale { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
                                     }
 
@@ -995,23 +1011,77 @@ Scope {
                                                 Layout.fillWidth: true
                                                 spacing: 3
 
-                                                Text {
-                                                    Layout.topMargin: Tokens.space.s6
-                                                    Layout.leftMargin: Tokens.space.s8
-                                                    Layout.bottomMargin: Tokens.space.s2
-                                                    text: group.modelData.toUpperCase()
-                                                    color: Colors.fade(0.4)
-                                                    font.pixelSize: Tokens.font.micro
-                                                    font.bold: true
-                                                    font.letterSpacing: 1.2
-                                                    font.family: Properties.fontFamily
+                                                readonly property bool open: win.openGroups[modelData] === true
+                                                readonly property var groupPages: root.visiblePages.filter(p => p.group === group.modelData && !p.parent && p.nav !== false)
+
+                                                // the group's title: click folds its pages in / out
+                                                Rectangle {
+                                                    Layout.fillWidth: true
+                                                    Layout.topMargin: Tokens.space.s2
+                                                    implicitHeight: 28
+                                                    radius: Tokens.radius.md
+                                                    color: groupMouse.containsMouse ? Colors.fillHover : "transparent"
+                                                    Behavior on color { ColorAnimation { duration: Anim.fast } }
+                                                    Text {
+                                                        anchors { left: parent.left; leftMargin: Tokens.space.s8; verticalCenter: parent.verticalCenter }
+                                                        text: group.modelData.toUpperCase()
+                                                        color: Colors.fade(group.open || groupMouse.containsMouse ? 0.6 : 0.4)
+                                                        font.pixelSize: Tokens.font.micro
+                                                        font.bold: true
+                                                        font.letterSpacing: 1.2
+                                                        font.family: Properties.fontFamily
+                                                        Behavior on color { ColorAnimation { duration: Anim.fast } }
+                                                    }
+                                                    // how many pages are in it, while it's folded
+                                                    Text {
+                                                        anchors { right: groupChevron.left; rightMargin: Tokens.space.s6; verticalCenter: parent.verticalCenter }
+                                                        visible: !group.open
+                                                        text: group.groupPages.length
+                                                        color: Colors.fade(0.3)
+                                                        font.pixelSize: Tokens.font.micro
+                                                        font.family: Properties.fontFamily
+                                                    }
+                                                    Chevron {
+                                                        id: groupChevron
+                                                        anchors { right: parent.right; rightMargin: Tokens.space.s8; verticalCenter: parent.verticalCenter }
+                                                        open: group.open
+                                                        font.pixelSize: Tokens.font.small
+                                                        color: Colors.fade(groupMouse.containsMouse ? 0.6 : 0.4)
+                                                    }
+                                                    MouseArea {
+                                                        id: groupMouse
+                                                        anchors.fill: parent
+                                                        hoverEnabled: true
+                                                        cursorShape: Qt.PointingHandCursor
+                                                        onClicked: win.setGroupOpen(group.modelData, !group.open)
+                                                    }
+                                                    Accessible.role: Accessible.Button
+                                                    Accessible.name: group.modelData + (group.open ? ", open" : ", folded")
                                                 }
 
+                                                // its pages: fold out like the sub-pages below
+                                                Item {
+                                                    Layout.fillWidth: true
+                                                    implicitHeight: group.open ? groupCol.implicitHeight : 0
+                                                    visible: implicitHeight > 0
+                                                    clip: true
+                                                    Behavior on implicitHeight { NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+                                                ColumnLayout {
+                                                    id: groupCol
+                                                    width: parent.width
+                                                    spacing: 3
+
                                                 Repeater {
-                                                    model: root.visiblePages.filter(p => p.group === group.modelData && !p.parent && p.nav !== false)
+                                                    model: group.groupPages
                                                     ColumnLayout {
                                                         id: navEntry
                                                         required property var modelData
+                                                        required property int index
+                                                        // in one after another when the group folds out (like the sub-pages)
+                                                        opacity: group.open ? 1 : 0
+                                                        transform: Translate { x: group.open ? 0 : -10
+                                                            Behavior on x { NumberAnimation { duration: 260 + navEntry.index * 30; easing.type: Anim.standard } } }
+                                                        Behavior on opacity { NumberAnimation { duration: group.open ? 200 + navEntry.index * 30 : Anim.fast; easing.type: Anim.standard } }
                                                         readonly property var subs: root.subPagesOf(modelData.id)
                                                         // its sub-pages fold out while it or one of them is open
                                                         readonly property bool expanded: subs.length > 0 && win.query === ""
@@ -1020,6 +1090,7 @@ Scope {
                                                         spacing: 3
                                                         NavItem {
                                                             id: hubItem
+                                                            property bool groupOpen: group.open      // the highlight leaves as soon as it folds
                                                             Layout.fillWidth: true
                                                             slideHighlight: true
                                                             onSelectedChanged: if (selected) navGlow.target = hubItem
@@ -1051,6 +1122,7 @@ Scope {
                                                                     model: navEntry.subs
                                                                     NavItem {
                                                                         id: subItem
+                                                                        property bool groupOpen: group.open
                                                                         required property var modelData
                                                                         required property int index
                                                                         Layout.fillWidth: true
@@ -1079,6 +1151,8 @@ Scope {
                                                         }
                                                     }
                                                 }
+                                                }   // groupCol
+                                                }   // the fold
                                             }
                                         }
                                     }

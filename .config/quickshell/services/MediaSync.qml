@@ -8,8 +8,10 @@ import qs.services.lib
 // MPRIS players and remote Jellyfin sessions through one socket API.
 // MEDIASYNC.md explains setup, MEDIASYNC_PLAN.md the decisions (D1–D8).
 //
-//   state         "off" (Settings → Media) | "connecting" | "connected" | "unavailable"
-//   connected     subscribed, `sessions` is the bridge's current list
+//   state         "off" (Settings → Media) | "connecting" | "connected"
+//                 | "reconnecting" (lost it, last state kept) | "unavailable"
+//   connected     the views use the bridge: subscribed, or reconnecting with
+//                 the last snapshot still shown (`live` = really subscribed)
 //   sessions      bridge sessions in its presentation order (hidden ones left out)
 //   selectedId    the bridge's selected session ("" = none) + selectionReason
 //   settings      settings.get: { settings: { mode, … }, local_enabled, remote_enabled }
@@ -20,8 +22,14 @@ import qs.services.lib
 //
 // One Socket, `subscribe` on every (re)connect (the snapshot replaces all
 // state, no event history needed), reconnect backoff 1 s → 30 s, pending
-// requests fail on disconnect or after their timeout. Nothing is kept from a
-// lost connection: no stale remote sessions are shown (D6).
+// requests fail on disconnect or after their timeout.
+// mediasyncd restarts itself after every package update (the socket is gone
+// for a few seconds): a lost connection first goes "reconnecting" for up to
+// `graceMs`, keeps the last sessions on screen and retries every 500 ms,
+// without any error in the UI. Only when that runs out is everything cleared
+// (no stale remote sessions shown for longer, D6) and it's "unavailable".
+//   queueUpdated(sessionId)   the bridge's queue.changed event
+//   resubscribed()            a new snapshot replaced everything (after a reconnect too)
 Singleton {
     id: root
 
@@ -30,7 +38,11 @@ Singleton {
         || (Quickshell.env("XDG_RUNTIME_DIR") ? Quickshell.env("XDG_RUNTIME_DIR") + "/mediasync/mediasync.sock" : "")
 
     property string state: "off"
-    readonly property bool connected: state === "connected"
+    readonly property bool connected: state === "connected" || state === "reconnecting"
+    readonly property bool live: state === "connected"
+    readonly property int graceMs: 30000
+    signal queueUpdated(string sessionId)
+    signal resubscribed()
     property string problem: ""
     property var info: null
     property var sessions: []
@@ -99,9 +111,12 @@ Singleton {
         root._setBusy(sessionId, true)
         root.request("player.command", Object.assign({ session_id: sessionId, command: name }, args ?? {}), (err, res) => {
             root._setBusy(sessionId, false)
-            if (err) {
+            // lost the connection meanwhile (service restart): quiet, it reconnects by itself
+            if (err && err.code === "disconnected") console.info("mediasync:", name, "not sent: reconnecting")
+            else if (err) {
                 root.reportError(sessionId, err)
-                console.warn("mediasync:", name, "failed:", err.code)
+                // the message says why (e.g. Jellyfin's HTTP status); the bridge never puts secrets in it
+                console.warn("mediasync:", name, "failed:", err.code, err.message)
             }
             if (cb) cb(err, res)
         }, 15000)       // the bridge's own limits: 5 s to accept + up to 5 s to verify a remote effect
@@ -203,6 +218,9 @@ Singleton {
         case "settings.changed":
             root.refreshSettings()
             break
+        case "queue.changed":
+            if (ev.session_id) root.queueUpdated(ev.session_id)
+            break
         case "subscription.closed":
             if (ev.reason !== "shutdown") root._subscribe()
             break
@@ -211,10 +229,18 @@ Singleton {
 
     function _subscribe() {
         root.request("subscribe", {}, (err, res) => {
-            if (err) { root._unavailable("The bridge refused the subscription: " + MediaSources.errorText(err)); return }
+            if (err) {
+                if (err.code === "disconnected") return     // the socket's handler deals with that
+                root._unavailable("The bridge refused the subscription: " + MediaSources.errorText(err))
+                return
+            }
+            const was = root.state
             root._applySnapshot(res.snapshot ?? {})
+            grace.stop()
             root.state = "connected"
             root.problem = ""
+            if (was === "reconnecting") console.info("mediasync: reconnected")
+            root.resubscribed()
             root.refreshSettings()
             root.refreshProviders()
         })
@@ -223,6 +249,7 @@ Singleton {
     function _start() {
         root.request("hello", { client: "quickshell", api_version: 1 }, (err, res) => {
             if (err) {
+                if (err.code === "disconnected") return     // the socket's handler deals with that
                 root._unavailable(err.code === "invalid_argument" ? "The installed mediasync is too old (needs API 1)"
                                                                    : "The bridge didn't answer: " + MediaSources.errorText(err))
                 return
@@ -256,9 +283,35 @@ Singleton {
         root.diagnostics = null
     }
 
+    // the socket went away or an attempt failed: while there's a snapshot to
+    // keep (connected / reconnecting) quietly retry, else unavailable
+    function _lost(why) {
+        root._failAll("disconnected")
+        if (!root.wanted) return
+        if (root.state === "connected") {
+            console.info("mediasync: connection lost, reconnecting in the background")
+            root.state = "reconnecting"
+            grace.restart()
+        }
+        if (root.state === "reconnecting") {
+            retry.attempt = 0
+            retry.interval = 500
+            retry.restart()
+            return
+        }
+        root._unavailable(why)
+    }
+    Timer {
+        id: grace
+        interval: root.graceMs
+        onTriggered: if (root.state === "reconnecting") root._unavailable("Connection to the bridge lost")
+    }
+
     function _unavailable(why) {
         const was = root.state
+        grace.stop()
         if (was === "connected") console.info("mediasync: connection lost, reconnecting in the background")
+        else if (was === "reconnecting") console.info("mediasync: still not reachable, showing local players only")
         root._failAll("disconnected")
         root._clear()
         root.state = root.wanted ? "unavailable" : "off"
@@ -276,10 +329,11 @@ Singleton {
             if (connected) {
                 retry.attempt = 0
                 retry.stop()
-                root.state = "connecting"
+                failed.stop()
+                if (root.state !== "reconnecting") root.state = "connecting"   // keeps the last state on screen
                 root._start()
             } else if (root.state !== "off") {
-                root._unavailable("Connection to the bridge lost")
+                root._lost("Connection to the bridge lost")
             }
         }
         parser: SplitParser {
@@ -310,22 +364,24 @@ Singleton {
     Timer {
         id: failed
         interval: 1500
-        onTriggered: if (root.wanted && !socket.connected) root._unavailable(root.problem || "The bridge isn't reachable")
+        onTriggered: if (root.wanted && !socket.connected) root._lost(root.problem || "The bridge isn't reachable")
     }
 
-    // only connect when the socket exists: every failed connect logs a warning
-    // in Quickshell, and the bridge may be off for hours
+    // only connect when something listens on the socket: every failed connect
+    // logs a warning in Quickshell, the bridge may be off for hours, and a
+    // killed mediasyncd can leave its socket file behind (ss; else test -S)
     function _attempt() {
         if (!root.wanted || socket.connected || probe.running) return
-        if (root.state !== "unavailable") root.state = "connecting"     // no flicker between attempts
+        if (root.state !== "unavailable" && root.state !== "reconnecting") root.state = "connecting"     // no flicker between attempts
         probe.running = true
     }
     Process {
         id: probe
-        command: ["test", "-S", root.socketPath]
+        command: ["sh", "-c", "if command -v ss >/dev/null; then ss -xlHn src \"$1\" | grep -q .; else test -S \"$1\"; fi",
+                  "sh", root.socketPath]
         onExited: code => {
             if (!root.wanted || socket.connected) return
-            if (code !== 0 || root.socketPath === "") { root._unavailable(root.problem || "The bridge isn't running"); return }
+            if (code !== 0 || root.socketPath === "") { root._lost(root.problem || "The bridge isn't running"); return }
             socket.connected = false
             socket.connected = true
             failed.restart()            // no connection within 1.5 s = failed; try again later
@@ -356,7 +412,7 @@ Singleton {
         if (!root.wanted || socket.connected) return
         retry.stop()
         retry.attempt = 0
-        checkInstall.running = true
+        if (root.state !== "reconnecting") checkInstall.running = true
         root._attempt()
     }
 
@@ -377,6 +433,7 @@ Singleton {
         } else {
             retry.stop()
             failed.stop()
+            grace.stop()
             probe.running = false
             const was = root.state
             root.state = "off"

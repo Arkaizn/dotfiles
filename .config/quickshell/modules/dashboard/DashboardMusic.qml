@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell.Services.Mpris
 import qs.services
+import qs.services.lib
 import qs.components
 
 Item {
@@ -12,6 +13,8 @@ Item {
 
     // set by the dashboard: true while it's open (position polling only then)
     property bool active: false
+    // the dashboard's content item: the sheet (lyrics, queue, …) is drawn there
+    property Item sheetHost: null
 
     // ── Player selection ─────────────────────────────────────────────────────
     // Media.sources: local players, plus remote sessions through the mediasync
@@ -31,17 +34,85 @@ Item {
     // Track whether the user just seeked — suppress the next poll overwrite
     property bool seekPending: false
 
+    // position: native players' own, bridge sessions extrapolated from
+    // position_ms / position_at (MediaSource.positionNow); -1 = unknown (a
+    // stale session): no time, no progress then, nothing faked
     function syncPosition() {
-        if (root.player && root.player.lengthSupported && root.player.length > 0) {
-            if (seekPending) {
-                seekPending = false
-                return
-            }
-            const p = root.player.positionNow()
-            root.positionKnown = p >= 0
-            localPosition = Math.max(0, p)
+        // (a source that's just going away can still send a last change)
+        if (!root.player || typeof root.player.positionNow !== "function") return
+        if (seekPending) {
+            seekPending = false
+            return
         }
+        const p = root.player.positionNow()
+        root.positionKnown = p >= 0
+        localPosition = Math.max(0, p)
+        // the next tick right after the next full second: the time label counts evenly
+        positionTimer.interval = p >= 0 ? 1000 - Math.floor((p * 1000) % 1000) + 15 : 1000
     }
+    Connections {
+        target: root.player
+        ignoreUnknownSignals: true
+        function onPbChanged() { root.syncPosition() }          // paused, seeked, … anywhere
+        function onIsPlayingChanged() { root.syncPosition() }
+    }
+
+    // ── Sheet: lyrics / queue / playlists / players ──────────────────────────
+    // "" = closed. The buttons in the card toggle it; only what the shown
+    // session offers is there (MediaLibrary.*Shown).
+    property string sheetTab: ""
+    readonly property bool canSwitch: root.players.length > 1
+    // players first: it doesn't depend on the session, so it keeps its place
+    // (top of the rail, leftmost tab) while the others come and go
+    readonly property var sheetTabs: [
+        root.canSwitch ? { value: "players", label: "Players", icon: "󰄘" } : null,
+        MediaLibrary.lyricsShown ? { value: "lyrics", label: "Lyrics", icon: "󰍰" } : null,
+        MediaLibrary.queueShown ? { value: "queue", label: "Queue", icon: "󰐑" } : null,
+        MediaLibrary.playlistsShown ? { value: "playlists", label: "Playlists", icon: "󰌳" } : null
+    ].filter(t => t !== null)
+    function toggleSheet(tab) { root.sheetTab = root.sheetTab === tab ? "" : tab }
+    // the session changed and doesn't offer that view: the next one it has, else closed
+    onSheetTabsChanged: if (sheetTab !== "" && !sheetTabs.some(t => t.value === sheetTab)) sheetTabFix.restart()
+    Timer {
+        id: sheetTabFix
+        interval: 400           // a session switch passes through "no session" for a moment
+        onTriggered: if (root.sheetTab !== "" && !root.sheetTabs.some(t => t.value === root.sheetTab))
+                         root.sheetTab = root.sheetTabs[0]?.value ?? ""
+    }
+    onActiveChanged: {
+        if (active) MediaLibrary.acquire()
+        else { MediaLibrary.release(); root.sheetTab = "" }      // closed with the dashboard
+    }
+    Component.onCompleted: if (active) MediaLibrary.acquire()
+    Component.onDestruction: if (active) MediaLibrary.release()
+    Connections {
+        target: EditMode
+        function onTargetChanged() { if (EditMode.target === "dashboard") root.sheetTab = "" }
+    }
+
+    function pickPlayer(i) {
+        const src = root.players[i]
+        if (!src) return
+        root.localPosition = 0
+        root.errorText = ""
+        if (Media.bridgeActive) MediaSync.select(src.sessionId)
+        else root.currentPlayerIndex = i
+        playerSwitchSync.restart()
+    }
+
+    // which controls this session has (bridge sessions: only what they advertise)
+    readonly property bool showShuffle: player?.canShuffle ?? false
+    readonly property bool showLoop: player?.canLoop ?? false
+    readonly property bool showPrev: player?.canGoPrevious ?? false
+    readonly property bool showNext: player?.canGoNext ?? false
+    readonly property bool showPlay: !!player && (player.mpris ? player.canControl && (player.canPlay || player.canPause || player.canTogglePlaying)
+                                                              : (player.canTogglePlaying || player.canPlay || player.canPause))
+    readonly property bool anyControl: showShuffle || showLoop || showPrev || showNext || showPlay
+    // marks: view only / not reporting / server unreachable
+    readonly property string kindNote: !player ? ""
+        : player.kind === "disconnected" ? "server unreachable"
+        : player.kind === "stale" || player.stale ? "not reporting"
+        : player.viewOnly ? "view only" : ""
 
     // a failed command of the shown session, for a few seconds instead of the artist
     property string errorText: ""
@@ -144,7 +215,9 @@ Item {
     }
 
     // ── Position polling ─────────────────────────────────────────────────────
+    // (local: nothing is asked from the bridge, positions are extrapolated)
     Timer {
+        id: positionTimer
         interval: 1000
         running: root.active && root.player !== null && root.player.isPlaying
         repeat: true
@@ -210,6 +283,36 @@ Item {
                          || albumArtImage.status !== Image.Ready
             }
 
+            // view only / not reporting / server unreachable: marked on the cover
+            Rectangle {
+                visible: root.kindNote !== ""
+                anchors { left: parent.left; bottom: parent.bottom; margins: 6 }
+                implicitHeight: 20
+                implicitWidth: kindRow.implicitWidth + 12
+                radius: Tokens.radius.md
+                color: Colors.dim(0.6)
+                Row {
+                    id: kindRow
+                    anchors.centerIn: parent
+                    spacing: 4
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.kindNote === "view only" ? "󰈈" : "󰅤"
+                        color: "white"
+                        opacity: 0.8
+                        font.pixelSize: Tokens.font.caption
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.kindNote
+                        color: "white"
+                        opacity: 0.85
+                        font.pixelSize: Tokens.font.micro
+                        font.bold: true
+                    }
+                }
+            }
+
             // volume: scroll on the cover (only players that support it); the
             // value shows for a moment. Remote volume is sent once scrolling pauses.
             property real pendingVolume: -1
@@ -252,15 +355,18 @@ Item {
             }
         }
 
-        // Right side
+        // Right side (takes what's left: long titles / notes elide, never push the rail out)
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.preferredWidth: 0
+            Layout.minimumWidth: 0
             Layout.fillHeight: true
             spacing: 5
 
             // Track title + artist
             ColumnLayout {
                 Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 spacing: Tokens.space.s2
 
                 Text {
@@ -339,28 +445,61 @@ Item {
 
                     Text {
                         id: sourceLabel
-                        // remote: "Finamp · Pixel 7" — where it plays matters more than the app
-                        text: !root.player ? "No player"
-                            : root.player.remote ? root.player.identity + (root.player.session?.player?.device ? " · " + root.player.session.player.device : "")
-                            : (root.player.identity || "Player")
+                        Layout.maximumWidth: 84
+                        elide: Text.ElideRight
+                        text: !root.player ? "No player" : (root.player.identity || "Player")
                         color: Properties.color
                         font.pixelSize: Tokens.font.caption
                         font.bold: true
                     }
+                    // where it plays: the phone (or another remote device) or this PC
+                    Text {
+                        visible: root.player !== null
+                        text: "·"
+                        color: Colors.fade(0.35)
+                        font.pixelSize: Tokens.font.caption
+                    }
+                    Text {
+                        visible: root.player !== null
+                        text: root.player?.deviceKind === "phone" ? "󰄜" : "󰍹"
+                        color: root.player?.remote ? Colors.color6 : Colors.fade(0.6)
+                        font.pixelSize: Tokens.font.caption
+                    }
+                    Text {
+                        visible: root.player !== null
+                        Layout.maximumWidth: 92
+                        elide: Text.ElideRight
+                        text: root.player?.deviceName ?? ""
+                        color: root.player?.remote ? Colors.color6 : Colors.fade(0.6)
+                        font.pixelSize: Tokens.font.caption
+                        font.bold: root.player?.remote ?? false
+                    }
+                    // more players: this opens the list
+                    Text {
+                        visible: root.canSwitch
+                        text: "󰅀"
+                        color: Colors.fade(0.5)
+                        font.pixelSize: Tokens.font.caption
+                    }
                 }
 
                 Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
+                // click: the player list (with more than one) · right click: the next player
                 MouseArea {
                     id: sourceHover
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onEntered: sourcePill.scale = 1.05
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    cursorShape: root.canSwitch ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onEntered: if (root.canSwitch) sourcePill.scale = 1.05
                     onExited:  sourcePill.scale = 1.0
-                    onPressed: sourcePill.scale = Properties.onPressedButtonScale
-                    onReleased: sourcePill.scale = containsMouse ? 1.05 : 1.0
+                    onPressed: if (root.canSwitch) sourcePill.scale = Properties.onPressedButtonScale
+                    onReleased: sourcePill.scale = containsMouse && root.canSwitch ? 1.05 : 1.0
                     onCanceled: sourcePill.scale = 1.0
-                    onClicked: root.nextPlayer()
+                    onClicked: m => {
+                        if (m.button === Qt.RightButton) root.nextPlayer()
+                        else if (root.canSwitch) root.toggleSheet("players")
+                    }
                 }
             }
 
@@ -398,12 +537,10 @@ Item {
                 }
             }
 
-            // view only / not reporting / bridge offline: says why the controls are off
+            // the bridge is on in settings but not reachable right now
             Text {
-                readonly property string note: root.player?.viewOnly ? (root.player.stale ? "not reporting" : "view only")
-                                             : root.bridgeOffline ? "mediasync offline" : ""
-                visible: note !== ""
-                text: note
+                visible: root.bridgeOffline
+                text: "mediasync offline"
                 color: Colors.fade(0.45)
                 font.pixelSize: Tokens.font.micro
                 font.italic: true
@@ -421,8 +558,26 @@ Item {
 
                 Item { Layout.fillWidth: true }
 
+                // nothing to control: say why instead of an empty row
+                Text {
+                    visible: root.player !== null && !root.anyControl
+                    Layout.fillWidth: true
+                    Layout.minimumWidth: 0
+                    Layout.preferredHeight: 34
+                    verticalAlignment: Text.AlignVCenter
+                    horizontalAlignment: Text.AlignHCenter
+                    text: root.kindNote === "server unreachable" ? "Server unreachable · last known state"
+                        : root.kindNote === "not reporting" ? "Not reporting · last known state"
+                        : "Can't be controlled from here"
+                    color: Colors.fade(0.4)
+                    font.pixelSize: Tokens.font.caption
+                    font.family: Properties.fontFamily
+                    elide: Text.ElideRight
+                }
+
                 // ── Shuffle ──────────────────────────────────────────────────
                 Rectangle {
+                    visible: root.showShuffle
                     width: 34
                     height: 34
                     radius: Tokens.radius.md
@@ -440,8 +595,6 @@ Item {
                         // Active = Colors.color6, inactive = dim white
                         color: root.player && root.player.shuffle
                                ? Colors.color6 : Colors.fade(0.35)
-                        // remote sessions show their shuffle state but can't change it (no bridge command)
-                        opacity: root.player && root.player.remote ? 0.4 : 1
                     }
                     Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                     MouseArea {
@@ -462,6 +615,7 @@ Item {
 
                 // ── Previous ─────────────────────────────────────────────────
                 Rectangle {
+                    visible: root.showPrev
                     width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(prevHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
@@ -494,6 +648,7 @@ Item {
 
                 // ── Play / Pause ─────────────────────────────────────────────
                 Rectangle {
+                    visible: root.showPlay
                     width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(playHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
@@ -533,6 +688,7 @@ Item {
 
                 // ── Next ─────────────────────────────────────────────────────
                 Rectangle {
+                    visible: root.showNext
                     width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(nextHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
@@ -566,6 +722,7 @@ Item {
                 // ── Repeat ───────────────────────────────────────────────────
                 // Cycles: MprisLoopState.None → All → Track → None
                 Rectangle {
+                    visible: root.showLoop
                     width: 34; height: 34; radius: Tokens.radius.md
                     border.color: Colors.fade(repeatHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
@@ -590,7 +747,6 @@ Item {
                                 return Colors.fade(0.35)
                             return Colors.color6
                         }
-                        opacity: root.player && root.player.remote ? 0.4 : 1
                     }
                     Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
                     MouseArea {
@@ -619,10 +775,24 @@ Item {
                 Item { Layout.fillWidth: true }
             }
 
-            // Progress bar
+            // elapsed time (styled like the dashboard's date line) + progress bar
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Tokens.space.s8
+
+            Text {
+                id: elapsedLabel
+                visible: root.player !== null && root.positionKnown
+                text: MediaSources.clock(root.localPosition * 1000)
+                color: Colors.fade(0.45)
+                font.pixelSize: Tokens.font.caption
+                font.family: Properties.fontFamily
+                font.features: { "tnum": 1 }        // the digits don't jiggle as they count
+            }
+
             Item {
                 Layout.fillWidth: true
-                height: 5
+                Layout.preferredHeight: 5
 
                 Rectangle {
                     anchors.fill: parent
@@ -650,17 +820,55 @@ Item {
 
                 MouseArea {
                     anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
+                    anchors.topMargin: -6       // easier to hit than 5 px
+                    anchors.bottomMargin: -6
+                    cursorShape: root.player?.canSeek ? Qt.PointingHandCursor : Qt.ArrowCursor
                     onClicked: (mouse) => {
                         if (root.player && root.player.canSeek && root.player.lengthSupported) {
-                            const ratio = mouse.x / width
+                            const ratio = Math.max(0, Math.min(1, mouse.x / width))
                             root.localPosition = ratio * root.player.length
+                            root.positionKnown = true
                             root.player.seek(root.localPosition)
                             root.seekPending = true
                         }
                     }
                 }
             }
+            }
         }
+
+        // the sheet's buttons: a slim rail on the right (each lights while its view is open)
+        ColumnLayout {
+            visible: root.sheetTabs.length > 0
+            Layout.fillHeight: true
+            Layout.preferredWidth: Tokens.size.controlSmall
+            spacing: Tokens.space.s6
+            Repeater {
+                model: root.sheetTabs
+                IconButton {
+                    required property var modelData
+                    implicitWidth: Tokens.size.controlSmall; implicitHeight: Tokens.size.controlSmall
+                    iconSize: Tokens.icon.md
+                    icon: modelData.icon
+                    active: root.sheetTab === modelData.value
+                    textColor: active ? Colors.accent : Properties.color
+                    tooltip: (active ? "Hide " : "Show ") + modelData.label.toLowerCase()
+                    onClicked: root.toggleSheet(modelData.value)
+                }
+            }
+            Item { Layout.fillHeight: true }
+        }
+    }
+
+    // ── the sheet (lyrics / queue / playlists / players) ─────────────────────
+    MusicSheet {
+        host: root.sheetHost ?? root
+        anchorItem: root
+        tab: root.sheetHost !== null && root.player !== null ? root.sheetTab : ""
+        tabs: root.sheetTabs
+        player: root.player
+        onTabPicked: t => root.sheetTab = t
+        onCloseRequested: root.sheetTab = ""
+        onPlayerPicked: i => root.pickPlayer(i)
     }
 }
