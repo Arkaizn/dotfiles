@@ -211,6 +211,12 @@ Item {
         Qt.callLater(() => root.live = false)
         for (const c of m.changes ?? []) {
             const name = c.kind === "upsert" ? c.item.name : c.name
+            // a changed file that keeps its place: updated in place (no remove + add, which
+            // faded its row out and in, and with reused rows could leave a blank gap)
+            if (c.kind === "upsert" && _update(_norm(c.item))) {
+                if (c.item.dir) _count(_gen, [c.item.name], true)
+                continue
+            }
             _remove(name)
             if (c.kind === "upsert") {
                 _insert(_norm(c.item))
@@ -220,6 +226,19 @@ Item {
         count = _shown.length
         hiddenCount = _all.filter(r => r.hidden).length
         changed()
+    }
+
+    // replace an item in place if it's shown and its sort position stays the same
+    function _update(item) {
+        const s = _shown.findIndex(r => r.name === item.name)
+        const a = _all.findIndex(r => r.name === item.name)
+        if (s < 0 || a < 0 || (item.hidden && !showHidden)) return false
+        const rest = _shown.slice(0, s).concat(_shown.slice(s + 1))
+        if (FmSort.insertIndex(rest.length, i => rest[i], item, opts) !== s) return false
+        _all[a] = item
+        _shown[s] = item
+        list.set(s, item)
+        return true
     }
 
     function _remove(name) {

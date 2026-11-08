@@ -43,7 +43,24 @@ Scope {
     // conversation (system-auth: password first, then the key), so unlike the lockscreen
     // nothing listens for a touch on its own. FIDO2: Enter on the empty field fails the
     // password at once, then pam_u2f waits for the touch ("Please touch the device")
-    readonly property string keyMode: !isOwner ? "none" : meta.yubikeyMode ?? (meta.yubikey === true ? "otp" : "none")
+    // Only with a key plugged in (checked every 2 s while it could matter): set up but not
+    // there, or no setup on this machine at all → password only, no word about a key
+    readonly property string keySetup: !isOwner ? "none" : meta.yubikeyMode ?? (meta.yubikey === true ? "otp" : "none")
+    readonly property string keyMode: keyConnected ? keySetup : "none"
+    property bool keyConnected: false
+    Process {
+        id: keyProbe
+        command: ["sh", "-c", "grep -lsx 1050 /sys/bus/usb/devices/*/idVendor"]
+        stdout: StdioCollector { onStreamFinished: root.keyConnected = text.trim() !== "" }
+    }
+    Timer {
+        interval: 2000
+        repeat: true
+        triggeredOnStart: true
+        running: root.keySetup !== "none"
+        onTriggered: if (!keyProbe.running) keyProbe.running = true
+        onRunningChanged: if (!running) root.keyConnected = false
+    }
     readonly property bool yubikey: keyMode !== "none"
     readonly property string keyHint: keyMode === "fido2" ? "…or Enter with an empty field, then touch your YubiKey" : ""
     readonly property bool emptySubmit: keyMode === "fido2"
@@ -229,8 +246,11 @@ Scope {
                     root.status = message.trim().replace(/:$/, "")
                 }
             } else if (message) {
-                root.lastMessage = message
-                if (error) root.status = message.trim()
+                // no usable key: PAM's key messages (a missing key file, …) aren't shown
+                const keyNoise = /touch|u2f|fido|yubi|authfile|mapping|security key|token/i.test(message)
+                if (!(keyNoise && root.keyMode === "none")) root.lastMessage = message
+                if (keyNoise && root.keyMode === "none") {}
+                else if (error) root.status = message.trim()
                 // pam_u2f's cue after the (empty) password: now it waits for the touch
                 else if (/touch/i.test(message)) root.status = "Touch your YubiKey…"
             }

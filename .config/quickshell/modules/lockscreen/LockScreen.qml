@@ -69,8 +69,12 @@ Scope {
 
     // YubiKey login (services/Yubikey.qml, re-checked on every lock): "none", "otp"
     // (the key types its code into the password field, system-auth checks it) or
-    // "fido2" (a touch unlocks: see `touch` below; typing still works)
-    readonly property string keyMode: Yubikey.mode
+    // "fido2" (a touch unlocks: see `touch` below; typing still works). Only with the
+    // key set up AND plugged in (watched while locked): else it's password only and
+    // nothing mentions a key (a machine without a YubiKey setup, or the key not there)
+    readonly property string keyMode: Yubikey.usable ? Yubikey.mode : "none"
+    readonly property bool _keyWatch: sessionLock.locked
+    on_KeyWatchChanged: Yubikey.watch(_keyWatch)
     readonly property bool yubikey: keyMode !== "none"
     readonly property string keyHint: keyMode === "fido2" ? "…or touch your YubiKey" : ""
     readonly property bool emptySubmit: false
@@ -118,7 +122,7 @@ Scope {
         onTriggered: root.startDone = true
     }
 
-    Component.onDestruction: Panels.unregister("lockscreen", api)
+    Component.onDestruction: { Panels.unregister("lockscreen", api); if (_keyWatch) Yubikey.watch(false) }
 
     function lock() {
         if (sessionLock.locked) return

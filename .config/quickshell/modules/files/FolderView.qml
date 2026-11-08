@@ -574,6 +574,10 @@ Rectangle {
             displaced: root.displacedMotion
             delegate: ListRow {
                 width: ListView.view.width
+                // a reused row can come back from the pool mid-way through (or after) the
+                // remove motion: faded out / shrunk, an empty gap in the list until F5
+                ListView.onReused: { opacity = 1; scale = 1 }
+                ListView.onPooled: { opacity = 1; scale = 1 }
                 current: ListView.isCurrentItem
                 selected: root.selection[key] === true
                 faded: root.cut[root.pathOfKey(key)] === true
@@ -613,6 +617,9 @@ Rectangle {
             displaced: root.displacedMotion
             delegate: GridTile {
                 width: GridView.view.cellWidth
+                // (see the list's delegate: a reused tile must not stay faded out)
+                GridView.onReused: { opacity = 1; scale = 1 }
+                GridView.onPooled: { opacity = 1; scale = 1 }
                 height: GridView.view.cellHeight
                 current: GridView.isCurrentItem
                 selected: root.selection[key] === true

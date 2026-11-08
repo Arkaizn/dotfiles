@@ -27,6 +27,11 @@ Scope {
     readonly property var flow: agent.flow
     property bool shown: false
     property bool failedOnce: false
+    // YubiKey: watched while the dialog is up; PAM's key messages (pam_u2f's "touch the
+    // device", a missing key file, …) only when a key is set up and plugged in
+    onShownChanged: { Yubikey.watch(shown); if (shown) Yubikey.refresh() }
+    Component.onDestruction: if (shown) Yubikey.watch(false)
+    function keyNoise(m) { return /touch|u2f|fido|yubi|authfile|mapping|security key|token/i.test(m) }
 
     Connections {
         target: agent
@@ -166,7 +171,8 @@ Scope {
                 Text {
                     Layout.fillWidth: true
                     horizontalAlignment: Text.AlignHCenter
-                    readonly property string msg: root.flow?.supplementaryMessage ?? ""
+                    readonly property string raw: root.flow?.supplementaryMessage ?? ""
+                    readonly property string msg: !Yubikey.usable && root.keyNoise(raw) ? "" : raw
                     visible: msg !== "" || root.failedOnce
                     text: msg !== "" ? msg : "Wrong password, try again"
                     color: (root.flow?.supplementaryIsError ?? false) || root.failedOnce ? Colors.red : Colors.fade(0.6)

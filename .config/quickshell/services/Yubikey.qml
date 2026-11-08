@@ -10,6 +10,11 @@ import QtQuick
 //            the same rules as the script's status; OTP and FIDO2 at once (set up by
 //            hand) counts as "otp": the typed field covers both then.
 //   present  mode !== "none"
+//   connected a YubiKey (USB vendor 1050) is plugged in right now; polled every 2 s
+//            while someone holds watch() (lockscreen while locked, polkit dialog)
+//   usable   present && connected: only then do the lockscreen / polkit / login
+//            screen mention the key (no setup, no module, no linked key or no key
+//            plugged in: password only, nothing about a YubiKey)
 // The lockscreen re-checks on every lock (refresh()); the login screen gets it
 // through GreeterSync. Read straight from the files (no repo, no process), so a
 // lock never depends on the dotfiles being there.
@@ -24,6 +29,28 @@ Singleton {
 
     property string mode: "none"
     readonly property bool present: mode !== "none"
+    property bool connected: false
+    readonly property bool usable: present && connected
+
+    // watch(true) / watch(false): keep `connected` current while it's needed
+    property int _watchers: 0
+    function watch(on) {
+        _watchers = Math.max(0, _watchers + (on ? 1 : -1))
+        if (on) probeConnected()
+    }
+    function probeConnected() { if (present && !keyProbe.running) keyProbe.running = true }
+    Process {
+        id: keyProbe
+        command: ["sh", "-c", "grep -lsx 1050 /sys/bus/usb/devices/*/idVendor"]
+        stdout: StdioCollector { onStreamFinished: root.connected = text.trim() !== "" }
+    }
+    Timer {
+        interval: 2000
+        repeat: true
+        running: root._watchers > 0 && root.present
+        onTriggered: root.probeConnected()
+    }
+    onPresentChanged: if (!present) connected = false; else probeConnected()
 
     function refresh() {
         const auth = Files.read("/etc/pam.d/system-auth").split("\n")
@@ -35,10 +62,13 @@ Singleton {
             const file = (/authfile=(\S+)/.exec(line) ?? [])[1] ?? def
             return Files.read(file).split("\n").some(l => l.split(":")[0] === user && l.split(":").length > 1)
         }
+        // the module must be installed too ("-auth" lines are skipped without it)
+        const installed = m => ["/usr/lib/security/", "/usr/lib64/security/", "/lib/security/"]
+            .some(d => Files.read(d + m) !== "")
         const otp = auth.find(l => /pam_yubico\.so/.test(l))
         const u2f = auth.find(l => /pam_u2f\.so/.test(l))
-        mode = otp && linked(otp, home + "/.yubico/authorized_yubikeys") ? "otp"
-             : u2f && linked(u2f, home + "/.config/Yubico/u2f_keys") ? "fido2" : "none"
+        mode = otp && installed("pam_yubico.so") && linked(otp, home + "/.yubico/authorized_yubikeys") ? "otp"
+             : u2f && installed("pam_u2f.so") && linked(u2f, home + "/.config/Yubico/u2f_keys") ? "fido2" : "none"
     }
     Component.onCompleted: refresh()
 
