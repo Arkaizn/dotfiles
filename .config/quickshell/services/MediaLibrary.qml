@@ -12,7 +12,9 @@ import qs.services.lib
 //   queueShown / lyricsShown / playlistsShown
 //                           what the session offers (its capabilities and the
 //                           bridge's methods): the views show only these
-//   queue    { sessionId, available, currentIndex, items:[…], source } | null (loading)
+//   queue    { sessionId, available, currentIndex, items:[…], source, context } | null (loading)
+//            context: { type: playlist|album, id, name, shuffled } — only for queues
+//            mediasync started (play_items), else null; then items = the whole list
 //   lyrics   { sessionId, trackId, status: ok|none|unavailable, synced, lines:[{ startMs, text }], source } | null
 //   playlists [{ id, name, count, art, server }] (Audio / unknown media type only)
 //   jump(index), playPlaylist(id, mode)   on exactly this session (MediaSync.command)
@@ -37,18 +39,19 @@ Singleton {
     readonly property var session: source?.session ?? null
 
     readonly property bool queueShown: sessionId !== "" && MediaSync.hasMethod("sessions.queue") && (source?.queueish ?? false)
-    // a local player offers "lyrics" only for tracks that have some: once a
-    // session had them, the view stays for it (and says "No lyrics" in between)
+    // only while the shown track really has lyrics (a browser, an instrumental:
+    // no button). While the next track's lyrics load the last answer stands,
+    // so the button doesn't blink on every track change.
     readonly property bool lyricsShown: sessionId !== "" && MediaSync.hasMethod("lyrics.get")
-                                        && ((source?.hasLyrics ?? false) || _lyricsSeen[sessionId] === true)
-    property var _lyricsSeen: ({})
-    readonly property bool _hasLyricsNow: source?.hasLyrics ?? false
-    function _noteLyrics() {
-        if (!root._hasLyricsNow || root.sessionId === "" || root._lyricsSeen[root.sessionId]) return
-        const m = Object.assign({}, root._lyricsSeen); m[root.sessionId] = true; root._lyricsSeen = m
-    }
-    on_HasLyricsNowChanged: _noteLyrics()
+                                        && (source?.hasLyrics ?? false) && _lyricsOk
+    property bool _lyricsOk: false
+    onLyricsChanged: if (lyrics !== null) _lyricsOk = lyrics.status === "ok"
     readonly property bool playlistsShown: sessionId !== "" && MediaSync.hasMethod("library.playlists") && (source?.canPlayItems ?? false)
+    // play a playlist shuffled: the bridge does it when the session advertises
+    // "play_items_shuffle" (play_items with shuffle: true); otherwise a local
+    // player whose own shuffle we can switch on first (MPRIS)
+    readonly property bool _bridgeShuffle: (session?.capabilities ?? []).includes("play_items_shuffle")
+    readonly property bool shuffleShown: playlistsShown && (_bridgeShuffle || (source?.canShuffle ?? false))
     readonly property bool canJump: sessionId !== "" && (source?.canQueueJump ?? false)
 
     // ── Queue ────────────────────────────────────────────────────────────────
@@ -86,11 +89,28 @@ Singleton {
                 available: res?.available === true && items.length > 0,
                 currentIndex: typeof res?.current_index === "number" ? res.current_index : -1,
                 items: items,
-                source: res?.source ?? null
+                source: res?.source ?? null,
+                context: res?.context && typeof res.context === "object"
+                    ? { type: res.context.type ?? "playlist", id: res.context.id ?? "",
+                        name: res.context.name || "", shuffled: res.context.shuffled === true }
+                    : null
             }
             root.pendingJump = -1
         })
     }
+
+    // the cover of the queue's context: the playlist's own (from the playlist
+    // list, loaded for it), else the first track's (an album)
+    // (also while the queue itself isn't known yet: a shuffled playlist waits for
+    // the client to report its order, Finamp does on its next track change)
+    readonly property var context: queue?.context ?? null
+    readonly property string contextArt: {
+        const c = root.context
+        if (!c) return ""
+        const pl = root.playlists.find(p => p.id === c.id)
+        return MediaArt.get(pl?.art || (queue?.items?.[0]?.art ?? ""))
+    }
+    onContextChanged: if (context && context.type === "playlist" && playlists.length === 0) loadPlaylists(false)
 
     function jump(index) {
         if (!root.canJump || typeof index !== "number") return
@@ -199,11 +219,15 @@ Singleton {
         }, 30000)
     }
 
-    // mode: now | next | last
-    function playPlaylist(id, mode) {
+    // mode: now | next | last; shuffle: in random order (only where shuffleShown)
+    function playPlaylist(id, mode, shuffle) {
         if (!root.playlistsShown || !id || root.playingPlaylist !== "") return
+        const args = { item_ids: [id], mode: mode || "now" }
+        if (shuffle && root._bridgeShuffle) args.shuffle = true
+        else if (shuffle && root.source?.canShuffle) root.source.setShuffle(true)
+        else if (shuffle) return
         root.playingPlaylist = id
-        MediaSync.command(root.sessionId, "play_items", { item_ids: [id], mode: mode || "now" }, err => {
+        MediaSync.command(root.sessionId, "play_items", args, err => {
             root.playingPlaylist = ""
             // "acknowledged" is fine too: accepted, the effect just wasn't seen yet
             if (!err) { root.playedPlaylist = id; playedClear.restart() }
@@ -217,7 +241,7 @@ Singleton {
     Timer { id: lyricsSoon; interval: 150; onTriggered: root.refreshLyrics(false) }
 
     onSessionIdChanged: {
-        root._noteLyrics()
+        root._lyricsOk = false
         root.queue = null
         root.pendingJump = -1
         queueSoon.restart()

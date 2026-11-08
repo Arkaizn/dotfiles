@@ -60,8 +60,10 @@ QtObject {
     readonly property bool canGoPrevious: mpris ? mpris.canGoPrevious : _can("previous")
     readonly property bool canSeek: mpris ? mpris.canSeek : _can("seek")
     readonly property bool canSetVolume: mpris ? (mpris.volumeSupported && mpris.canControl) : _can("volume")
-    // shuffle / repeat / raise: native MPRIS only (the bridge has no commands for them)
-    readonly property bool canShuffle: mpris ? (mpris.shuffleSupported && mpris.canControl) : false
+    // shuffle: native MPRIS, or the bridge's set_shuffle ("shuffle" capability;
+    // Finamp declares it but ignores it: the button then just stays as it is)
+    // repeat / raise: native MPRIS only (the bridge has no commands for them)
+    readonly property bool canShuffle: mpris ? (mpris.shuffleSupported && mpris.canControl) : _can("shuffle")
     readonly property bool canLoop: mpris ? (mpris.loopSupported && mpris.canControl) : false
     readonly property bool canRaise: mpris ? mpris.canRaise : false
 
@@ -111,7 +113,10 @@ QtObject {
         else src._send(src.canSetVolume, "set_volume", { volume: Math.max(0, Math.min(1, v)) })
     }
     // local players: as before the bridge (a player that ignores it just doesn't change)
-    function setShuffle(on) { if (src.mpris) src.mpris.shuffle = on }
+    function setShuffle(on) {
+        if (src.mpris) src.mpris.shuffle = on
+        else src._send(src.canShuffle, "set_shuffle", { shuffle: on === true })
+    }
     function setLoop(state) { if (src.mpris) src.mpris.loopState = state }
     function raise() { if (src.canRaise) src.mpris.raise() }
 }

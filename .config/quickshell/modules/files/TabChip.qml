@@ -46,6 +46,27 @@ Pressable {
         opacity = 0
         appear.start()
     }
+    // closing: it fades, shrinks a little and folds its width away (`keep` 1 → 0, the
+    // strip sizes it by that), so the tabs after it slide over; then `done` removes it
+    property bool leaving: false
+    property real keep: 1
+    function leave(done) {
+        if (leaving) return
+        leaving = true
+        appear.stop()
+        leaveAnim.done = done
+        leaveAnim.start()
+    }
+    SequentialAnimation {
+        id: leaveAnim
+        property var done: null
+        ParallelAnimation {
+            NumberAnimation { target: c; property: "opacity"; to: 0; duration: Anim.fast; easing.type: Anim.exit }
+            NumberAnimation { target: c; property: "scale"; to: 0.9; duration: Anim.normal; easing.type: Anim.exit }
+            NumberAnimation { target: c; property: "keep"; to: 0; duration: Anim.normal; easing.type: Anim.standard }
+        }
+        ScriptAction { script: if (leaveAnim.done) leaveAnim.done() }
+    }
     ParallelAnimation {
         id: appear
         NumberAnimation { target: c; property: "opacity"; to: 1; duration: Anim.normal; easing.type: Anim.standard }
@@ -53,7 +74,7 @@ Pressable {
     }
     TapHandler {
         acceptedButtons: Qt.MiddleButton
-        onTapped: c.closeRequested()
+        onTapped: if (!c.leaving) c.closeRequested()
     }
 
     Rectangle {
@@ -94,7 +115,7 @@ Pressable {
             opacity: c.current || c.hovered || hovered ? 1 : 0.5
             // a narrow tab keeps its room for the name: the cross only on the current / hovered one
             visible: c.width >= Tokens.size.row * 4 || c.current || c.hovered || hovered
-            onClicked: c.closeRequested()
+            onClicked: if (!c.leaving) c.closeRequested()
         }
     }
 }

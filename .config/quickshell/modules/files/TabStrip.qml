@@ -17,6 +17,18 @@ Item {
     signal moveRequested(int from, int to)
     signal newRequested()
 
+    // close tab `i` with its leaving animation (then closeRequested; by the tab, in case
+    // the list changed meanwhile). No animations: at once.
+    function close(i) {
+        const chip = rep.itemAt(i)
+        if (!chip || Anim.normal === 0) { closeRequested(i); return }
+        if (chip.leaving) return
+        const t = chip.tab
+        // the shown one: its listing drifts off at once, away from the side the next comes from
+        if (i === root.current && t?.view) t.view.leave((i < root.tabs.length - 1 ? 1 : -1) * Tokens.space.s24)
+        chip.leave(() => { const at = root.tabs.indexOf(t); if (at >= 0) root.closeRequested(at) })
+    }
+
     implicitHeight: Tokens.size.controlSmall + Tokens.space.s4
     readonly property real tabWidth: Math.max(Tokens.size.row * 3,
         Math.min(Tokens.size.row * 5, (width - plus.width - Tokens.space.s4) / Math.max(1, tabs.length) - Tokens.space.s4))
@@ -55,7 +67,7 @@ Item {
             visible: at !== null
             x: at ? at.x : 0
             y: at ? at.y : 0
-            width: root.tabWidth
+            width: at ? at.width : 0
             height: at ? at.height : 0
             radius: Tokens.radius.lg
             color: Colors.card
@@ -75,13 +87,14 @@ Item {
                     anchors.verticalCenter: parent?.verticalCenter
                     required property var modelData
                     required property int index
-                    width: root.tabWidth
+                    // closing: folds away, its gap to the next tab too
+                    width: (root.tabWidth + row.spacing) * keep - row.spacing
                     tab: modelData
                     label: modelData.title
                     path: modelData.path
                     current: index === root.current
                     onClicked: root.picked(index)
-                    onCloseRequested: root.closeRequested(index)
+                    onCloseRequested: root.close(index)
                     onDragged: steps => root.moveRequested(index, Math.max(0, Math.min(root.tabs.length - 1, index + steps)))
                     dropHover: index === root.dropIndex
                 }

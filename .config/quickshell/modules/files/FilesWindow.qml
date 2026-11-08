@@ -76,12 +76,19 @@ FloatingWindow {
         if (i < 0 || i >= tabs.length) return
         if (tabs.length === 1) { win.visible = false; return }
         const t = tabs[i]
+        const wasCurrent = i === current
         closedTabs = closedTabs.concat([{ path: t.path }]).slice(-10)
         const list = tabs.slice()
         list.splice(i, 1)
         tabs = list
         if (current > i || current >= tabs.length) current = Math.max(0, current - 1)
         _showCurrent()
+        // the shown tab closed: its neighbour's listing comes in from that neighbour's side
+        // (the one after it from the right, else the one before from the left)
+        if (wasCurrent) {
+            tabs[current].view.enter((current >= i ? 1 : -1) * Tokens.space.s24)
+            if (tabs[current].searching) searchBar.text = tabs[current].query
+        }
         t.destroy()
         app.saveWindows()
     }
@@ -251,7 +258,7 @@ FloatingWindow {
                         case Qt.Key_R: t.folder.reload(); break
                         case Qt.Key_L: address.start(); break
                         case Qt.Key_T: if (shift) win.reopenTab(); else win.newTab(t.path); break
-                        case Qt.Key_W: if (shift) win.visible = false; else win.closeTab(win.current); break
+                        case Qt.Key_W: if (shift) win.visible = false; else if (tabStrip.visible) tabStrip.close(win.current); else win.closeTab(win.current); break
                         case Qt.Key_Q: win.visible = false; break
                         case Qt.Key_N: if (shift) win.newFolder(); else win.app.newWindow(t.path); break
                         case Qt.Key_Tab: win.selectTab((win.current + 1) % win.tabs.length); break

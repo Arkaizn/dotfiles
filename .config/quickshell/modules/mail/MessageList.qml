@@ -249,10 +249,10 @@ ColumnLayout {
             property var anchor: null           // { key, index, offset, view, filter }
             function filterKey() { return [root.query, root.fUnread, root.fFlagged, root.fAttachments].join("|") }
             function noteAnchor() {
-                anchorRows = model
+                anchorRows = root.rows
                 const i = indexAt(10, contentY + 1)
                 const it = i >= 0 ? itemAtIndex(i) : null
-                anchor = it ? { key: model[i].key, index: i, offset: contentY - it.y, view: root.view, filter: filterKey() } : null
+                anchor = it ? { key: root.rows[i].key, index: i, offset: contentY - it.y, view: root.view, filter: filterKey() } : null
             }
             function restoreAnchor() {
                 const a = anchor
@@ -266,14 +266,39 @@ ColumnLayout {
                 }
                 noteAnchor()
             }
-            onContentYChanged: if (model === anchorRows) noteAnchor()
-            onModelChanged: Qt.callLater(restoreAnchor)
+            // no reads of the ListView itself here: setModel moves contentY while the old
+            // model is half torn down, and touching `model` / itemAt then crashes Qt
+            onContentYChanged: { if (root.rows === anchorRows) noteAnchor(); Qt.callLater(trackHover) }
+            onModelChanged: { Qt.callLater(restoreAnchor); Qt.callLater(trackHover) }
+
+            // which row's card is under the pointer: worked out from the pointer's scene
+            // position, not from each row's own hover (with reused delegates and wheel
+            // scrolling those go stale and point the tint at a row far from the pointer).
+            // Also re-run on scroll, so the tint and buttons follow the row that moves under it.
+            HoverHandler {
+                id: listHover
+                onHoveredChanged: list.trackHover()
+                onPointChanged: list.trackHover()
+            }
+            function trackHover() {
+                if (!listHover.hovered) { if (hoverGlow.card) glowOff.restart(); return }
+                const sp = listHover.point.scenePosition
+                const p = contentItem.mapFromItem(null, sp.x, sp.y)
+                const it = itemAt(p.x, p.y)
+                const c = it ? it.card : null
+                // over a day header (not the card): no row
+                if (c && p.y >= it.y + c.y) { glowOff.stop(); hoverGlow.card = c }
+                else if (hoverGlow.card) glowOff.restart()
+            }
 
             // hover: one plain tint under the rows that slides to the hovered one (a small
             // squash on the way), like the pages of the mail settings. The rows point it
             // at their card; leaving the list fades it out where it is.
             Rectangle {
                 id: hoverGlow
+                // in the scrolling content (a ListView keeps its own children in place,
+                // so without this the tint is off by however far the list is scrolled)
+                parent: list.contentItem
                 property Item card: null
                 readonly property real cardY: card ? card.parent.y + card.y : -1
                 // the first hover after it faded: it appears there (no slide from the last one)
@@ -307,6 +332,7 @@ ColumnLayout {
                 x: 2
                 transformOrigin: Item.Top
                 property alias rowIn: rowIn
+                property alias card: card
                 SequentialAnimation {
                     id: rowIn
                     PropertyAction { target: row; property: "opacity"; value: 0 }
@@ -344,17 +370,9 @@ ColumnLayout {
                          : "transparent"
                     Behavior on color { ColorAnimation { duration: Anim.instant } }
 
-                    // hover of the whole row, the action buttons included (the row's own
-                    // MouseArea loses it over them: the buttons would hide, show, hide, …);
-                    // its look is the sliding hoverGlow under the rows
-                    HoverHandler {
-                        id: rowHover
-                        onHoveredChanged: {
-                            if (hovered) { glowOff.stop(); hoverGlow.card = card }
-                            else if (hoverGlow.card === card) glowOff.restart()
-                        }
-                    }
-                    readonly property bool actions: rowHover.hovered && !row.r.draft
+                    // hover of the whole row, the action buttons included: the list's
+                    // trackHover points hoverGlow at the card under the pointer
+                    readonly property bool actions: hoverGlow.card === card && !row.r.draft
 
                     // unread dot
                     Rectangle {

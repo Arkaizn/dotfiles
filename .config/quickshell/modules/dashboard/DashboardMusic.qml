@@ -75,7 +75,7 @@ Item {
     onSheetTabsChanged: if (sheetTab !== "" && !sheetTabs.some(t => t.value === sheetTab)) sheetTabFix.restart()
     Timer {
         id: sheetTabFix
-        interval: 400           // a session switch passes through "no session" for a moment
+        interval: 1500          // a session switch / a client dropping out briefly passes through "no session"
         onTriggered: if (root.sheetTab !== "" && !root.sheetTabs.some(t => t.value === root.sheetTab))
                          root.sheetTab = root.sheetTabs[0]?.value ?? ""
     }

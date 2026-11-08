@@ -134,7 +134,7 @@ Singleton {
     // id "" = back to automatic selection
     function select(id, cb) {
         root.request("sessions.select", { session_id: id || null }, (err, res) => {
-            if (!err) { root.selectedId = res.session?.id ?? ""; root.selectionReason = res.reason ?? "" }
+            if (!err) { root._bridgeSelected = res.session?.id ?? ""; root._bridgeReason = res.reason ?? ""; root._applySelection() }
             if (cb) cb(err, res)
         })
     }
@@ -180,11 +180,68 @@ Singleton {
     function testServer(url, cb) { root.request("jellyfin.test", { url: url }, cb, 30000) }
 
     // ── Snapshot and events ──────────────────────────────────────────────────
-    function _applySnapshot(snap) {
+    // A session the bridge removes stays for `leaveGraceMs` (with the selection
+    // on it): Jellyfin clients such as Finamp drop out of the server's list for
+    // a moment during remote commands (a queue jump) and come back with the same
+    // id. Without this the card emptied and its sheet closed for that second.
+    // A full subscribe (reconnect) still replaces everything at once.
+    readonly property int leaveGraceMs: 4000
+    property var _leaving: ({})             // id → { session, since }
+    property string _bridgeSelected: ""     // the bridge's own selection (selectedId may hold the leaving one)
+    property string _bridgeReason: ""
+
+    function _applySnapshot(snap, keepLeaving) {
         root.revision = snap.revision ?? 0
-        root.sessions = snap.sessions ?? []
-        root.selectedId = snap.selected_id ?? ""
-        root.selectionReason = snap.selection_reason ?? ""
+        let list = snap.sessions ?? []
+        if (keepLeaving) {
+            // gone from the list now: leaving (kept a moment); back: not leaving any more
+            const now = Date.now(), ids = new Set(list.map(x => x.id)), lv = Object.assign({}, root._leaving)
+            for (const old of root.sessions) if (!ids.has(old.id) && !lv[old.id]) lv[old.id] = { session: old, since: now }
+            for (const id of Object.keys(lv)) if (ids.has(id)) delete lv[id]
+            root._leaving = lv
+            if (Object.keys(lv).length > 0) leaveSweep.start()
+            list = list.concat(Object.values(lv).map(x => x.session))
+        } else {
+            root._leaving = ({})
+        }
+        root.sessions = list
+        root._bridgeSelected = snap.selected_id ?? ""
+        root._bridgeReason = snap.selection_reason ?? ""
+        root._applySelection()
+    }
+    // the bridge's selection, unless the selected session is only leaving for a moment
+    function _applySelection() {
+        if (root._leaving[root.selectedId] && root._bridgeSelected !== root.selectedId) return
+        root.selectedId = root._bridgeSelected
+        root.selectionReason = root._bridgeReason
+    }
+    function _left(id, session) {
+        if (!session || root._leaving[id]) return
+        const lv = Object.assign({}, root._leaving)
+        lv[id] = { session: session, since: Date.now() }
+        root._leaving = lv
+        leaveSweep.start()
+    }
+    function _back(id) {
+        if (!root._leaving[id]) return
+        const lv = Object.assign({}, root._leaving)
+        delete lv[id]
+        root._leaving = lv
+    }
+    Timer {
+        id: leaveSweep
+        interval: 500
+        repeat: true
+        onTriggered: {
+            const now = Date.now(), lv = Object.assign({}, root._leaving), gone = []
+            for (const id of Object.keys(lv)) if (now - lv[id].since >= root.leaveGraceMs) { delete lv[id]; gone.push(id) }
+            if (gone.length > 0) {
+                root._leaving = lv
+                root.sessions = root.sessions.filter(x => !gone.includes(x.id))
+                root._applySelection()
+            }
+            if (Object.keys(lv).length === 0) stop()
+        }
     }
 
     function _onEvent(ev) {
@@ -196,20 +253,24 @@ Singleton {
         case "session.added":
         case "session.updated": {
             if (!ev.session) break
+            root._back(ev.session_id)
             const list = root.sessions.slice()
             const i = list.findIndex(s => s.id === ev.session_id)
             if (i >= 0) list[i] = ev.session; else list.push(ev.session)
             root.sessions = list
+            root._applySelection()
             resync.restart()                // the bridge's order may have changed
             break
         }
         case "session.removed":
-            root.sessions = root.sessions.filter(s => s.id !== ev.session_id)
+            // kept for a moment: it may come straight back (see leaveGraceMs)
+            root._left(ev.session_id, root.byId[ev.session_id] ?? ev.session ?? null)
             resync.restart()
             break
         case "selection.changed":
-            root.selectedId = ev.session_id ?? ""
-            root.selectionReason = ev.reason ?? ""
+            root._bridgeSelected = ev.session_id ?? ""
+            root._bridgeReason = ev.reason ?? ""
+            root._applySelection()
             break
         case "provider.status":
         case "provider.removed":
@@ -266,7 +327,7 @@ Singleton {
         onTriggered: root.request("sessions.list", {}, (err, res) => {
             if (err || !res || (res.revision ?? 0) < root.revision) return
             root._applySnapshot({ revision: res.revision, sessions: res.sessions,
-                                  selected_id: res.selected_id, selection_reason: res.selection_reason })
+                                  selected_id: res.selected_id, selection_reason: res.selection_reason }, true)
         })
     }
     Timer { id: providersRefresh; interval: 300; onTriggered: root.refreshProviders() }

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Quickshell.Widgets
 import qs.services
 import qs.services.lib
 import qs.components
@@ -37,17 +38,121 @@ Item {
         text: "Loading the queue…"
     }
     EmptyState {
-        anchors.centerIn: parent
+        // under the playlist card when there is one
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: fromCard.visible ? fromCard.height / 2 : 0
         width: Math.min(parent.width - 40, 280)
         visible: root.q !== null && !root.available
         compact: true
         icon: "󰐑"
-        text: "Queue not available for this player"
+        text: root.context !== null ? (root.context.shuffled ? "Shuffled: the order shows once the player reports it"
+                                                             : "The track list shows once the player reports it")
+                                    : "Queue not available for this player"
+    }
+
+    // where the queue comes from: only known when mediasync started it (a
+    // playlist / album from the dashboard); the list is then the whole of it,
+    // played tracks included, and a jump keeps it (mediasync sends it again)
+    readonly property var context: MediaLibrary.context
+    readonly property bool busy: root.context !== null && MediaLibrary.playingPlaylist === root.context.id
+    Rectangle {
+        id: fromCard
+        visible: root.context !== null
+        anchors { left: parent.left; right: parent.right; top: parent.top; margins: Tokens.space.s6 }
+        height: visible ? 56 : 0
+        radius: Tokens.radius.lg
+        color: Colors.fade(0.05)
+        border.width: Tokens.border.thin
+        border.color: Colors.fade(0.08)
+
+        RowLayout {
+            anchors { fill: parent; leftMargin: Tokens.space.s8; rightMargin: Tokens.space.s8 }
+            spacing: Tokens.space.s10
+
+            ClippingRectangle {
+                Layout.preferredWidth: 40
+                Layout.preferredHeight: 40
+                radius: Tokens.radius.md
+                color: Colors.fade(0.06)
+                Image {
+                    id: ctxArt
+                    anchors.fill: parent
+                    source: MediaLibrary.contextArt
+                    fillMode: Image.PreserveAspectCrop
+                    sourceSize.width: 80
+                    sourceSize.height: 80
+                    asynchronous: true
+                    visible: status === Image.Ready
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: ctxArt.status !== Image.Ready
+                    text: root.context?.type === "album" ? "󰀥" : "󰲸"
+                    color: Colors.fade(0.4)
+                    font.pixelSize: Tokens.font.subtitle
+                    font.family: Properties.fontFamily
+                }
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                spacing: 0
+                Text {
+                    text: (root.context?.type === "album" ? "ALBUM" : "PLAYLIST") + (root.context?.shuffled ? "  ·  SHUFFLED" : "")
+                    color: Colors.fade(0.4)
+                    font.pixelSize: Tokens.font.micro
+                    font.bold: true
+                    font.letterSpacing: 1
+                    font.family: Properties.fontFamily
+                }
+                Text {
+                    Layout.fillWidth: true
+                    text: root.context?.name || "Untitled"
+                    elide: Text.ElideRight
+                    color: Colors.ink
+                    font.pixelSize: Tokens.font.body
+                    font.bold: true
+                    font.family: Properties.fontFamily
+                }
+                Text {
+                    // the list's length, else (not reported yet) the playlist's own count
+                    readonly property int n: (root.q?.items?.length ?? 0) > 0 ? root.q.items.length
+                        : (MediaLibrary.playlists.find(p => p.id === root.context?.id)?.count ?? -1)
+                    visible: n >= 0
+                    text: n + (n === 1 ? " track" : " tracks")
+                    color: Colors.fade(0.45)
+                    font.pixelSize: Tokens.font.caption
+                    font.family: Properties.fontFamily
+                }
+            }
+
+            // from the start · shuffled (the whole playlist / album again)
+            IconButton {
+                visible: MediaLibrary.playlistsShown
+                implicitWidth: Tokens.size.controlSmall; implicitHeight: Tokens.size.controlSmall
+                iconSize: Tokens.icon.sm
+                icon: root.busy ? "󰑓" : "󰐊"
+                busy: root.busy
+                tooltip: "Play from the start"
+                onClicked: MediaLibrary.playPlaylist(root.context.id, "now", false)
+            }
+            IconButton {
+                visible: MediaLibrary.shuffleShown
+                implicitWidth: Tokens.size.controlSmall; implicitHeight: Tokens.size.controlSmall
+                iconSize: Tokens.icon.sm
+                icon: "󰒝"
+                tooltip: "Shuffle play"
+                enabled: !root.busy
+                onClicked: MediaLibrary.playPlaylist(root.context.id, "now", true)
+            }
+        }
     }
 
     ListView {
         id: list
-        anchors.fill: parent
+        anchors { left: parent.left; right: parent.right; bottom: parent.bottom; top: fromCard.visible ? fromCard.bottom : parent.top }
         anchors.margins: Tokens.space.s6
         visible: root.available
         clip: true
@@ -57,10 +162,29 @@ Item {
         SmoothWheel { flick: list; step: 84 }
         ScrollBar.vertical: SlimScrollBar {}
 
-        delegate: Item {
-            id: row
+        delegate: Column {
+            id: entry
             required property var modelData
             required property int index
+            width: list.width
+            // "Played" above the first track when some were, "Up next" after the playing one
+            readonly property string label: entry.index === 0 && root.current > 0 ? "Played"
+                                          : root.current >= 0 && entry.modelData.index === root.current + 1 ? "Up next" : ""
+            Text {
+                visible: entry.label !== ""
+                height: visible ? 24 : 0
+                leftPadding: Tokens.space.s10
+                topPadding: entry.index === 0 ? 2 : Tokens.space.s8
+                text: entry.label.toUpperCase()
+                color: Colors.fade(0.4)
+                font.pixelSize: Tokens.font.micro
+                font.bold: true
+                font.letterSpacing: 1.2
+                font.family: Properties.fontFamily
+            }
+        Item {
+            id: row
+            readonly property var modelData: entry.modelData
             readonly property bool playing: modelData.index === root.current
             readonly property bool past: root.current >= 0 && modelData.index < root.current
             readonly property bool jumpable: MediaLibrary.canJump && !playing
@@ -150,6 +274,7 @@ Item {
                 enabled: row.jumpable && MediaLibrary.pendingJump < 0
                 onTapped: MediaLibrary.jump(row.modelData.index)
             }
+        }
         }
     }
 }

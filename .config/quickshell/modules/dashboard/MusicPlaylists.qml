@@ -105,14 +105,14 @@ Item {
                         anchors.fill: parent
                         radius: Tokens.radius.lg
                         color: row.done ? Colors.alpha(Colors.accent, 0.16)
-                             : hover.containsMouse ? Colors.fillHover : "transparent"
+                             : rowHover.hovered ? Colors.fillHover : "transparent"
                         Behavior on color { ColorAnimation { duration: Anim.fast } }
                     }
-                    // the row: under its contents, so the add button keeps its own click
+                    // hovering the row (stays on over its buttons: a handler, not a MouseArea)
+                    HoverHandler { id: rowHover }
+                    // the row's click: under its contents, so the buttons keep their own
                     MouseArea {
-                        id: hover
                         anchors.fill: parent
-                        hoverEnabled: true
                         enabled: row.free || row.busy
                         cursorShape: row.free ? Qt.PointingHandCursor : Qt.BusyCursor
                         onClicked: if (row.free) MediaLibrary.playPlaylist(row.modelData.id, "now")
@@ -171,36 +171,46 @@ Item {
                             }
                         }
 
-                        // add to the end of the queue (on hover)
-                        IconButton {
-                            implicitWidth: Tokens.size.controlSmall; implicitHeight: Tokens.size.controlSmall
-                            iconSize: Tokens.icon.sm
-                            icon: "󰐒"
-                            tooltip: "Add to the queue"
-                            opacity: (hover.containsMouse || hovered) && row.free ? 1 : 0
-                            visible: opacity > 0
-                            Behavior on opacity { NumberAnimation { duration: Anim.fast } }
-                            onClicked: MediaLibrary.playPlaylist(row.modelData.id, "last")
-                        }
-                        // play now; turns while the player confirms
-                        Item {
-                            Layout.preferredWidth: 22
-                            Layout.preferredHeight: 22
-                            Spinner {
-                                anchors.centerIn: parent
-                                visible: row.busy
-                                running: row.busy
-                                size: Tokens.font.label
-                                color: Colors.accent
+                        // on hover: shuffle play · add to the queue · play. They keep their place
+                        // while hidden (only fade), so nothing moves under the pointer; play stays
+                        // while the player confirms (spinner) and just after (check)
+                        Row {
+                            id: actions
+                            readonly property bool shown: rowHover.hovered && row.free
+                            spacing: Tokens.space.s4
+                            IconButton {
+                                visible: MediaLibrary.shuffleShown
+                                implicitWidth: Tokens.size.controlSmall; implicitHeight: Tokens.size.controlSmall
+                                iconSize: Tokens.icon.sm
+                                icon: "󰒝"
+                                tooltip: "Shuffle play"
+                                enabled: actions.shown      // off while hidden: no tooltip, the row gets the click
+                                opacity: actions.shown ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: Anim.fast } }
+                                onClicked: MediaLibrary.playPlaylist(row.modelData.id, "now", true)
                             }
-                            Text {
-                                anchors.centerIn: parent
-                                visible: !row.busy
-                                text: row.done ? "󰄳" : "󰐌"
-                                color: row.done || hover.containsMouse ? Colors.accent : Colors.fade(0.3)
-                                font.pixelSize: Tokens.font.title
-                                font.family: Properties.fontFamily
-                                Behavior on color { ColorAnimation { duration: Anim.fast } }
+                            IconButton {
+                                implicitWidth: Tokens.size.controlSmall; implicitHeight: Tokens.size.controlSmall
+                                iconSize: Tokens.icon.sm
+                                icon: "󰐒"
+                                tooltip: "Add to the queue"
+                                enabled: actions.shown      // off while hidden: no tooltip, the row gets the click
+                                opacity: actions.shown ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: Anim.fast } }
+                                onClicked: MediaLibrary.playPlaylist(row.modelData.id, "last")
+                            }
+                            IconButton {
+                                implicitWidth: Tokens.size.controlSmall; implicitHeight: Tokens.size.controlSmall
+                                iconSize: Tokens.icon.sm
+                                // while it starts: a turning reload arrow, not the play triangle
+                                icon: row.busy ? "󰑓" : row.done ? "󰄳" : "󰐊"
+                                textColor: row.done ? Colors.accent : Properties.color
+                                tooltip: "Play"
+                                busy: row.busy
+                                enabled: actions.shown      // off while hidden: no tooltip, the row gets the click
+                                opacity: actions.shown || row.busy || row.done ? 1 : 0
+                                Behavior on opacity { NumberAnimation { duration: Anim.fast } }
+                                onClicked: MediaLibrary.playPlaylist(row.modelData.id, "now")
                             }
                         }
                     }
