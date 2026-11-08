@@ -107,7 +107,29 @@ Item {
     readonly property bool showNext: player?.canGoNext ?? false
     readonly property bool showPlay: !!player && (player.mpris ? player.canControl && (player.canPlay || player.canPause || player.canTogglePlaying)
                                                               : (player.canTogglePlaying || player.canPlay || player.canPause))
-    readonly property bool anyControl: showShuffle || showLoop || showPrev || showNext || showPlay
+    // seekable but no previous / next (a video in the browser, a podcast): ±10 s instead
+    readonly property bool showSkip: !!player && player.canSeek && positionKnown && !isLive
+    readonly property bool showBack: showSkip && !showPrev
+    readonly property bool showFwd: showSkip && !showNext
+    // a stream: playing for a while with no length (MPRIS / mediasync send none for live
+    // media). Not browsers: they drop the length of ordinary videos too (ads, midway
+    // through), so "no length" says nothing there
+    readonly property bool isBrowser: /firefox|zen|librewolf|floorp|waterfox|chrom|brave|vivaldi|edge|opera|epiphany|falkon|qutebrowser/i
+                                      .test((player?.desktopEntry ?? "") + " " + (player?.identity ?? ""))
+    readonly property bool isLive: !!player && !isBrowser && player.isPlaying && !player.lengthSupported && trackTitleKnown
+                                   && positionKnown && localPosition >= 90
+    readonly property bool trackTitleKnown: (player?.trackTitle ?? "") !== ""
+    readonly property bool anyControl: showShuffle || showLoop || showPrev || showNext || showPlay || showBack || showFwd
+
+    // jump by `sec` seconds (the skip buttons), kept inside the track
+    function skipBy(sec) {
+        if (!player || !player.canSeek) return
+        const to = Math.max(0, Math.min(player.lengthSupported ? player.length - 1 : 1e9, localPosition + sec))
+        localPosition = to
+        positionKnown = true
+        player.seek(to)
+        seekPending = true
+    }
     // marks: view only / not reporting / server unreachable
     readonly property string kindNote: !player ? ""
         : player.kind === "disconnected" ? "server unreachable"
@@ -141,16 +163,44 @@ Item {
         Compositor.focusAppWindow(key, p.trackTitle || "", () => Panels.close("dashboard"))
     }
 
-    function nextPlayer() {
+    // step: 1 the next player, -1 the previous one (both wrap around)
+    function nextPlayer(step) {
+        step = step === -1 ? -1 : 1
         if (root.players.length > 0) {
             root.localPosition = 0
             root.errorText = ""
-            if (Media.bridgeActive) Media.selectNext()
-            else currentPlayerIndex = (currentPlayerIndex + 1) % root.players.length
+            if (Media.bridgeActive) { if (step > 0) Media.selectNext(); else Media.selectPrevious() }
+            else currentPlayerIndex = (currentPlayerIndex + step + root.players.length) % root.players.length
             playerSwitchSync.restart()
         }
     }
-    onPlayerChanged: { root.errorText = ""; playerSwitchSync.restart() }
+    onPlayerChanged: { root.errorText = ""; playerSwitchSync.restart(); root._switched() }
+
+    // another player (not just another track): the card's content slides in vertically
+    // (next → up from below, previous → down from above), the cover pops, the blurred
+    // background fades over
+    property string _lastKey: ""
+    property int _lastIndex: -1
+    function _switched() {
+        const key = root.player?.key ?? ""
+        const index = root.players.indexOf(root.player)
+        const was = root._lastKey
+        root._lastKey = key
+        const from = root._lastIndex
+        root._lastIndex = index
+        if (was === "" || key === "" || key === was || Anim.scale === 0) return
+        const dir = from < 0 || index < 0 ? 1 : (index > from || (from === root.players.length - 1 && index === 0) ? 1 : -1)
+        switchAnim.dy = dir * Tokens.space.s16
+        switchAnim.restart()
+    }
+    ParallelAnimation {
+        id: switchAnim
+        property real dy: 0
+        NumberAnimation { target: mainShift; property: "y"; from: switchAnim.dy; to: 0; duration: Anim.medium; easing.type: Anim.emphasized }
+        NumberAnimation { target: mainLayout; property: "opacity"; from: 0; to: 1; duration: Anim.normal; easing.type: Anim.standard }
+        NumberAnimation { target: artBox; property: "scale"; from: 0.88; to: 1; duration: Anim.medium; easing.type: Anim.pop }
+        NumberAnimation { target: blurContainer; property: "opacity"; from: 0.3; to: 1; duration: Anim.slow; easing.type: Anim.standard }
+    }
 
 
     Timer {
@@ -236,12 +286,14 @@ Item {
 
     // ── Main layout ──────────────────────────────────────────────────────────
     RowLayout {
+        id: mainLayout
         anchors {
             fill: parent
             margins: Tokens.space.s12
         }
         spacing: Tokens.space.s12
         visible: root.player !== null
+        transform: Translate { id: mainShift }
 
         // Album art
         Rectangle {
@@ -336,7 +388,81 @@ Item {
                     if (root.player && art.pendingVolume >= 0) root.player.setVolume(art.pendingVolume)
                 }
             }
-            Timer { id: volumeShow; interval: 1200; onTriggered: artBox.pendingVolume = -1 }
+            Timer { id: volumeShow; interval: 1200; onTriggered: if (!volDrag.pressed) artBox.pendingVolume = -1 }
+
+            // volume: a slim vertical bar on the cover's right edge, while the pointer is on
+            // the cover (click / drag; scrolling anywhere on the cover still works)
+            HoverHandler {
+                id: artHover
+                cursorShape: root.player !== null && !root.player.remote ? Qt.PointingHandCursor : Qt.ArrowCursor
+            }
+            // click the cover: to the player (its window; in a browser the playing tab), like the ↗ button
+            TapHandler {
+                enabled: root.player !== null && !root.player.remote
+                onTapped: root.jumpToPlayer()
+            }
+            Item {
+                id: volSlider
+                readonly property bool can: root.player !== null && root.player.canSetVolume
+                anchors.right: parent.right
+                anchors.rightMargin: Tokens.space.s4
+                anchors.top: parent.top
+                anchors.bottom: parent.bottom
+                anchors.topMargin: Tokens.space.s12
+                anchors.bottomMargin: Tokens.space.s12
+                width: 22                                    // easier to hit than the bar
+                z: 2
+                opacity: can && (artHover.hovered || volDrag.pressed) ? 1 : 0
+                visible: opacity > 0
+                Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
+                transform: Translate {
+                    x: volSlider.opacity < 1 ? (1 - volSlider.opacity) * 6 : 0   // slides in a touch from the edge
+                }
+
+                Rectangle {
+                    id: volTrack
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: volDrag.pressed || volDrag.containsMouse ? 8 : 6
+                    radius: width / 2
+                    color: Colors.dim(0.5)
+                    border.width: 0.5
+                    border.color: Qt.rgba(1, 1, 1, 0.18)
+                    Behavior on width { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        height: Math.max(parent.width, parent.height * Math.max(0, Math.min(1, artBox.shownVolume)))
+                        radius: parent.radius
+                        color: "white"
+                        opacity: artBox.shownVolume > 0 ? 0.9 : 0.3
+                        Behavior on height {
+                            enabled: !volDrag.pressed
+                            NumberAnimation { duration: Anim.fast; easing.type: Anim.standard }
+                        }
+                    }
+                }
+                MouseArea {
+                    id: volDrag
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    preventStealing: true
+                    cursorShape: Qt.PointingHandCursor
+                    function setFrom(y) {
+                        const v = Math.round(Math.max(0, Math.min(1, 1 - y / height)) * 100) / 100
+                        artBox.pendingVolume = v
+                        volumeShow.restart()
+                        // native players follow at once; bridge sessions once dragging pauses
+                        if (root.player?.mpris) root.player.setVolume(v)
+                        else volumeSend.restart()
+                    }
+                    onPressed: mouse => setFrom(mouse.y)
+                    onPositionChanged: mouse => { if (pressed) setFrom(mouse.y) }
+                    onReleased: volumeShow.restart()
+                }
+            }
             Rectangle {
                 anchors.centerIn: parent
                 width: volLabel.implicitWidth + 18; height: 26; radius: Tokens.radius.md
@@ -484,7 +610,23 @@ Item {
                 }
 
                 Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
-                // click: the player list (with more than one) · right click: the next player
+                // scroll: the next (down) / previous (up) player, one per notch
+                WheelHandler {
+                    enabled: root.canSwitch
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    property real acc: 0
+                    onWheel: e => {
+                        if (pillWheelPause.running) return
+                        acc += e.angleDelta.y !== 0 ? e.angleDelta.y : e.angleDelta.x
+                        if (Math.abs(acc) < 120) return
+                        root.nextPlayer(acc < 0 ? 1 : -1)
+                        acc = 0
+                        pillWheelPause.restart()
+                    }
+                }
+                // a touchpad swipe keeps sending: one switch per swipe
+                Timer { id: pillWheelPause; interval: 250 }
+                // click: the player list (with more than one) · right click: the next player · scroll: switch
                 MouseArea {
                     id: sourceHover
                     anchors.fill: parent
@@ -646,6 +788,40 @@ Item {
                     }
                 }
 
+                // ── Back 10 s (no previous) ──────────────────────────────────
+                Rectangle {
+                    id: skipBack
+                    visible: root.showBack
+                    width: 34; height: 34; radius: Tokens.radius.md
+                    border.color: Colors.fade(skipBackHover.containsMouse ? 0.28 : 0.18)
+                    border.width: 0.5
+                    gradient: ButtonGradient { hovered: skipBackHover.containsMouse }
+                    Rectangle {
+                        anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
+                        radius: Tokens.radius.md; color: Colors.dim(0.1)
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        text: String.fromCodePoint(0xF0D2A)
+                        font.pixelSize: Tokens.font.title
+                        color: Properties.color
+                    }
+                    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
+                    MouseArea {
+                        id: skipBackHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: parent.scale = 1.1
+                        onExited:  parent.scale = 1.0
+                        onPressed: parent.scale = Properties.onPressedButtonScale
+                        onReleased: parent.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: parent.scale = 1.0
+                        onClicked: root.skipBy(-10)
+                    }
+                    HoverTip { shown: skipBackHover.containsMouse; text: "Back 10 s" }
+                }
+
                 // ── Play / Pause ─────────────────────────────────────────────
                 Rectangle {
                     visible: root.showPlay
@@ -719,6 +895,40 @@ Item {
                     }
                 }
 
+                // ── Forward 10 s (no next) ───────────────────────────────────
+                Rectangle {
+                    id: skipFwd
+                    visible: root.showFwd
+                    width: 34; height: 34; radius: Tokens.radius.md
+                    border.color: Colors.fade(skipFwdHover.containsMouse ? 0.28 : 0.18)
+                    border.width: 0.5
+                    gradient: ButtonGradient { hovered: skipFwdHover.containsMouse }
+                    Rectangle {
+                        anchors.fill: parent; anchors.margins: 0.8; anchors.topMargin: 1.5
+                        radius: Tokens.radius.md; color: Colors.dim(0.1)
+                    }
+                    Text {
+                        anchors.centerIn: parent
+                        text: String.fromCodePoint(0xF0D71)
+                        font.pixelSize: Tokens.font.title
+                        color: Properties.color
+                    }
+                    Behavior on scale { NumberAnimation { duration: Anim.button; easing.type: Anim.standard } }
+                    MouseArea {
+                        id: skipFwdHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onEntered: parent.scale = 1.1
+                        onExited:  parent.scale = 1.0
+                        onPressed: parent.scale = Properties.onPressedButtonScale
+                        onReleased: parent.scale = containsMouse ? 1.1 : 1.0
+                        onCanceled: parent.scale = 1.0
+                        onClicked: root.skipBy(10)
+                    }
+                    HoverTip { shown: skipFwdHover.containsMouse; text: "Forward 10 s" }
+                }
+
                 // ── Repeat ───────────────────────────────────────────────────
                 // Cycles: MprisLoopState.None → All → Track → None
                 Rectangle {
@@ -775,20 +985,11 @@ Item {
                 Item { Layout.fillWidth: true }
             }
 
-            // elapsed time (styled like the dashboard's date line) + progress bar
-            RowLayout {
+            // progress bar, and under it the elapsed time (left, styled like the dashboard's
+            // date line) and the length / LIVE (right)
+            ColumnLayout {
                 Layout.fillWidth: true
-                spacing: Tokens.space.s8
-
-            Text {
-                id: elapsedLabel
-                visible: root.player !== null && root.positionKnown
-                text: MediaSources.clock(root.localPosition * 1000)
-                color: Colors.fade(0.45)
-                font.pixelSize: Tokens.font.caption
-                font.family: Properties.fontFamily
-                font.features: { "tnum": 1 }        // the digits don't jiggle as they count
-            }
+                spacing: Tokens.space.s4
 
             Item {
                 Layout.fillWidth: true
@@ -804,6 +1005,7 @@ Item {
                     id: progressFill
 
                     width: {
+                        if (seekArea.scrubbing) return parent.width * seekArea.ratio
                         if (!root.player || !root.player.lengthSupported || root.player.length <= 0 || !root.positionKnown)
                             return 0
                         return parent.width * Math.min(1, root.localPosition / root.player.length)
@@ -813,24 +1015,84 @@ Item {
                     color: Properties.color
 
                     Behavior on width {
-                        enabled: root.player !== null && root.player.isPlaying
+                        enabled: root.player !== null && root.player.isPlaying && !seekArea.scrubbing
                         SmoothedAnimation { duration: 800; velocity: -1 }
                     }
                 }
 
+                // click or drag: the bar and the time follow the pointer, the seek is sent on release
                 MouseArea {
+                    id: seekArea
                     anchors.fill: parent
                     anchors.topMargin: -6       // easier to hit than 5 px
                     anchors.bottomMargin: -6
-                    cursorShape: root.player?.canSeek ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: (mouse) => {
-                        if (root.player && root.player.canSeek && root.player.lengthSupported) {
-                            const ratio = Math.max(0, Math.min(1, mouse.x / width))
-                            root.localPosition = ratio * root.player.length
-                            root.positionKnown = true
-                            root.player.seek(root.localPosition)
-                            root.seekPending = true
+                    readonly property bool can: !!root.player && root.player.canSeek && root.player.lengthSupported && root.player.length > 0
+                    property bool scrubbing: false
+                    property real ratio: 0
+                    enabled: can
+                    cursorShape: can ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    preventStealing: true
+                    onPressed: mouse => { ratio = Math.max(0, Math.min(1, mouse.x / width)); scrubbing = true }
+                    onPositionChanged: mouse => { if (scrubbing) ratio = Math.max(0, Math.min(1, mouse.x / width)) }
+                    onReleased: {
+                        if (!scrubbing) return
+                        scrubbing = false
+                        if (!can) return
+                        root.localPosition = ratio * root.player.length
+                        root.positionKnown = true
+                        root.player.seek(root.localPosition)
+                        root.seekPending = true
+                    }
+                    onCanceled: scrubbing = false
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Tokens.space.s8
+
+                Text {
+                    id: elapsedLabel
+                    visible: root.player !== null && root.positionKnown
+                    text: MediaSources.clock((seekArea.scrubbing ? seekArea.ratio * root.player.length : root.localPosition) * 1000)
+                    color: Colors.fade(0.45)
+                    font.pixelSize: Tokens.font.caption
+                    font.family: Properties.fontFamily
+                    font.features: { "tnum": 1 }        // the digits don't jiggle as they count
+                }
+
+                Item { Layout.fillWidth: true }
+
+                // the track's length, or LIVE for a stream
+                Text {
+                    visible: !root.isLive && root.player !== null && root.player.lengthSupported && root.player.length > 0
+                    text: MediaSources.clock(root.player ? root.player.length * 1000 : -1)
+                    color: Colors.fade(0.3)
+                    font.pixelSize: Tokens.font.caption
+                    font.family: Properties.fontFamily
+                    font.features: { "tnum": 1 }
+                }
+                Row {
+                    visible: root.isLive
+                    spacing: Tokens.space.s4
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 6; height: 6; radius: 3
+                        color: Colors.color1
+                        SequentialAnimation on opacity {
+                            running: root.isLive && root.active && Anim.ambient
+                            loops: Animation.Infinite
+                            NumberAnimation { to: 0.35; duration: 900; easing.type: Anim.loop }
+                            NumberAnimation { to: 1; duration: 900; easing.type: Anim.loop }
                         }
+                    }
+                    Text {
+                        text: "LIVE"
+                        color: Colors.fade(0.55)
+                        font.pixelSize: Tokens.font.micro
+                        font.bold: true
+                        font.letterSpacing: 1
+                        font.family: Properties.fontFamily
                     }
                 }
             }

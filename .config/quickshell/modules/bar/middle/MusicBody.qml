@@ -6,7 +6,7 @@ import qs.services
 import qs.components
 
 // Media player on the bar: album art + a 3-bar visualizer (Media's shared
-// cava). Left click: show the controls · right click: next player.
+// cava). Left click: show the controls · right click: next player · scroll: switch player.
 // Sources: Media.sources (local players, and remote sessions through the
 // mediasync bridge; then the selection is the bridge's, shared with the dashboard).
 // Own button behaviour (not BarButton): its controls take clicks.
@@ -52,11 +52,30 @@ Item {
         }
     }
 
-    function nextPlayer() {
+    // step: 1 the next player, -1 the previous one (both wrap around)
+    function nextPlayer(step) {
+        step = step === -1 ? -1 : 1
         if (music.players.length === 0) return
-        if (Media.bridgeActive) Media.selectNext()
-        else music.currentPlayerIndex = (music.currentPlayerIndex + 1) % music.players.length
+        if (Media.bridgeActive) { if (step > 0) Media.selectNext(); else Media.selectPrevious() }
+        else music.currentPlayerIndex = (music.currentPlayerIndex + step + music.players.length) % music.players.length
     }
+
+    // scroll: the next (down) / previous (up) player, one per notch
+    WheelHandler {
+        enabled: music.players.length > 1
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+        property real acc: 0
+        onWheel: e => {
+            if (wheelPause.running) return
+            acc += e.angleDelta.y !== 0 ? e.angleDelta.y : e.angleDelta.x
+            if (Math.abs(acc) < 120) return
+            music.nextPlayer(acc < 0 ? 1 : -1)
+            acc = 0
+            wheelPause.restart()
+        }
+    }
+    // a touchpad swipe keeps sending: one switch per swipe
+    Timer { id: wheelPause; interval: 250 }
 
     ButtonBackground {
         id: buttonBackground

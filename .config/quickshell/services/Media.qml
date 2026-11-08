@@ -27,7 +27,7 @@ import QtQuick
 //   bridgeActive           sources come from the bridge
 //   selected               the bridge's selected session (or its first one);
 //                          null without the bridge (views keep their own pick)
-//   selectNext()           select the next source in the bridge
+//   selectNext() / selectPrevious()   select the next / previous source in the bridge
 // Lockscreen and desktop widget keep using `players` (native only).
 Singleton {
     id: root
@@ -106,11 +106,17 @@ Singleton {
         const next = MediaSources.nextKey(ids, root.selected?.sessionId ?? "")
         if (next !== "") MediaSync.select(next)
     }
+    // the one before (wraps to the last)
+    function selectPrevious() {
+        const ids = root.sources.map(s => s.sessionId)
+        const prev = MediaSources.nextKey(ids.slice().reverse(), root.selected?.sessionId ?? "")
+        if (prev !== "") MediaSync.select(prev)
+    }
 
     // what `qs ipc call media …` controls: the bridge's selection, else the playing native player
     readonly property var current: root.selected ?? root.sources.find(s => s.isPlaying) ?? root.sources[0] ?? null
 
-    // qs ipc call media toggle | next | previous | selectNext | select <session id> | seek <s> | status
+    // qs ipc call media toggle | next | previous | selectNext | selectPrevious | select <session id> | seek <s> | status
     IpcHandler {
         target: "media"
         function toggle(): void { root.current?.togglePlaying() }
@@ -118,6 +124,7 @@ Singleton {
         function previous(): void { root.current?.previous() }
         function seek(seconds: real): void { if (Number.isFinite(seconds) && root.current?.canSeek) root.current.seek(seconds) }
         function selectNext(): void { root.selectNext() }
+        function selectPrevious(): void { root.selectPrevious() }
         function select(id: string): void { MediaSync.select(id) }
         function status(): string {
             return JSON.stringify({
