@@ -84,6 +84,14 @@ ColumnLayout {
             desc: "Add one, or import your RDP / VNC scripts and ~/.ssh/config hosts. Open them from the launcher's 󰢹 tab."
         }
 
+        // the Servers app's servers show in the launcher too, but live in its own (local) servers.json
+        SettingRow {
+            visible: RemoteConnections.managed.length > 0
+            label: "󰒋  " + RemoteConnections.managed.length + (RemoteConnections.managed.length === 1 ? " server" : " servers") + " from the Servers app"
+            desc: "also in the launcher's 󰢹 tab (badge \"Servers\", their groups as tags); edit, archive or remove them in the Servers app"
+            ActionButton { icon: "󰒋"; text: "Open Servers"; onClicked: Panels.call("servers", "open") }
+        }
+
         Repeater {
             model: RemoteConnections.list
             ColumnLayout {

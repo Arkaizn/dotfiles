@@ -343,10 +343,11 @@ Singleton {
             + "// the rest of the config. Change them in the app, or remove the include\n"
             + "// line from config.kdl to drop all of them.\n\n"
             + render(tree)
-            + "\n// the settings, calendar, mail and file manager windows\n"
+            + "\n// the settings, calendar, mail, servers and file manager windows\n"
             + windowRule(windowTitle, 980, 680)
             + windowRule("Quickshell Calendar")
             + windowRule("Quickshell Mail")
+            + windowRule("Quickshell Servers")
             + windowRuleTiled(FmSettings.titlePrefix)
             + Syntax.fmt("niri.bindsBlock", { body: indented(
                   Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),

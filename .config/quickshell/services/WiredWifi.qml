@@ -1,6 +1,5 @@
 pragma Singleton
 import Quickshell
-import Quickshell.Networking
 import QtQuick
 import qs.services
 import qs.services.lib
@@ -14,7 +13,7 @@ Singleton {
     id: root
 
     readonly property bool enabled: Settings.network.wifiOffWhenWired ?? false
-    readonly property bool wired: Devices.pick(Networking.devices.values, DeviceType.Wired)?.connected ?? false
+    readonly property bool wired: NetLink.wiredConnected
 
     // kept across config reloads, so it still knows it switched the Wi-Fi off
     PersistentProperties {
@@ -25,9 +24,9 @@ Singleton {
     readonly property bool turnedOff: persist.turnedOff
 
     function update() {
-        const a = Devices.wifiAction(enabled, wired, Networking.wifiEnabled, persist.turnedOff)
+        const a = Devices.wifiAction(enabled, wired, NetLink.wifiEnabled, persist.turnedOff)
         persist.turnedOff = a.turnedOff
-        if (a.wifi !== null && a.wifi !== Networking.wifiEnabled) Networking.wifiEnabled = a.wifi
+        if (a.wifi !== null && a.wifi !== NetLink.wifiEnabled) NetLink.setWifiEnabled(a.wifi)
     }
 
     Timer { id: settle; interval: 3000; onTriggered: root.update() }

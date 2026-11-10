@@ -25,8 +25,8 @@ ColumnLayout {
     // recent first, then by name; the query matches name, host, user and type
     readonly property var shown: {
         const q = query.trim().toLowerCase()
-        return RemoteConnections.list
-            .filter(c => q === "" || [c.name, c.host, c.user, c.type].some(x => x.toLowerCase().includes(q)))
+        return RemoteConnections.all
+            .filter(c => q === "" || [c.name, c.host, c.user, c.type].concat(c.tags ?? []).some(x => x.toLowerCase().includes(q)))
             .sort((a, b) => (b.lastUsed - a.lastUsed) || a.name.localeCompare(b.name))
     }
     onShownChanged: list.currentIndex = shown.length > 0 ? 0 : -1
@@ -111,7 +111,31 @@ ColumnLayout {
                         elide: Text.ElideRight
                     }
                 }
+                // from the Servers app: a badge, its groups as tags
                 Text {
+                    visible: (cell.c.tags ?? []).length > 0
+                    text: (cell.c.tags ?? []).join(" · ")
+                    color: Colors.fade(0.4)
+                    font.pixelSize: Tokens.font.caption
+                    font.family: Properties.fontFamily
+                }
+                Rectangle {
+                    visible: cell.c.managed === "servers"
+                    implicitWidth: badge.implicitWidth + 12
+                    implicitHeight: 18
+                    radius: 9
+                    color: Colors.alpha(Colors.color6, 0.15)
+                    Text {
+                        id: badge
+                        anchors.centerIn: parent
+                        text: "󰒋 Servers"
+                        color: Colors.color6
+                        font.pixelSize: Tokens.font.caption
+                        font.family: Properties.fontFamily
+                    }
+                }
+                Text {
+                    visible: cell.c.managed !== "servers"
                     text: RemoteConnections.types[cell.c.type].name + (cell.c.password === "keyring" ? "  󰌋" : cell.c.password === "ask" ? "  󰌾" : "")
                     color: Colors.fade(0.4)
                     font.pixelSize: Tokens.font.caption
@@ -132,7 +156,7 @@ ColumnLayout {
         Text {
             anchors.centerIn: parent
             visible: root.shown.length === 0
-            text: RemoteConnections.list.length === 0 ? "No saved connections: add or import them in Settings → Connections"
+            text: RemoteConnections.all.length === 0 ? "No saved connections: add or import them in Settings → Connections"
                                                 : "No matching connections"
             color: Colors.fade(0.35)
             font.pixelSize: Tokens.font.body

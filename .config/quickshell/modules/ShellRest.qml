@@ -15,6 +15,7 @@ import "wizard"
 import "perfmon"
 import "desktop"
 import "paneleditor"
+import "servers"
 
 // Everything in the shell but the lockscreen. A file of its own, loaded by
 // shell.qml's LazyLoader through `source`: inline there, all of these modules
@@ -39,6 +40,10 @@ Scope {
     readonly property bool themeApplying: Theme.applying
     // and "Wi-Fi off while wired" (Settings → Network)
     readonly property bool wiredWifi: WiredWifi.turnedOff
+    // and the failed-services notification (Settings → Maintenance → Failed services)
+    readonly property int failedUnits: FailedUnits.units.length
+    // and the Servers app's scans (at start + every 6 h, notifications) and a run that was still going
+    readonly property bool serverRuns: ServerRuns.busy
     // and the login screen's theme copy (/var/lib/quickshell-greeter)
     readonly property string greeterSync: GreeterSync.status
     // and the target the file manager's process writes its settings through
@@ -58,6 +63,7 @@ Scope {
     SettingsWindow {}
     CalendarWindow {}
     MailWindow {}
+    ServersWindow {}
     PolkitDialog {}
     SecretDialog {}
     CaptureMenu {}

@@ -27,6 +27,10 @@ import qs.services.lib
 //
 //   qs ipc call connections list
 //   qs ipc call connections connect "<name>"
+//
+// `all` = the saved list plus the servers of the Servers app (ServerStore.connections:
+// id "srv:<name>", managed: "servers", tags = its groups). Those live only in the
+// Servers app's local servers.json, never in settings.json, and can't be edited here.
 Singleton {
     id: root
 
@@ -52,7 +56,9 @@ Singleton {
                 .map(c => normalize(c))
     }
 
-    function get(id) { return list.find(c => c.id === id) ?? null }
+    readonly property var managed: ServerStore.connections
+    readonly property var all: list.concat(managed)
+    function get(id) { return all.find(c => c.id === id) ?? null }
     function newId() { return "c" + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36) }
 
     function normalize(c) {
@@ -127,6 +133,8 @@ Singleton {
     signal failed(string id, string message)
 
     function connect(id) {
+        // a server of the Servers app: its own ssh (default terminal, remembers when)
+        if (String(id).startsWith("srv:")) { ServerStore.ssh(String(id).slice(4)); return }
         const c = get(id)
         if (!c) return
         const t = types[c.type]
@@ -250,7 +258,7 @@ Singleton {
     function probe() {
         Jobs.which(["nc"], have => {
             if (!have.nc) return
-            for (const c of list) {
+            for (const c of all) {
                 const id = c.id
                 const check = (host, port) => Jobs.run(["nc", "-z", "-w", "2", "--", host, String(port)],
                                                        code => setReach(id, code === 0 ? "up" : "down"))

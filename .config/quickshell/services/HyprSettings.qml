@@ -257,10 +257,11 @@ Singleton {
             + "-- the rest of the config. Change them in the app, or remove the dofile\n"
             + "-- line from hyprland.lua to drop all of them.\n\n"
             + (tree.size > 0 ? Syntax.fmt("hypr.config", { body: render(tree, "") }) + "\n\n" : "")
-            + "-- the settings, calendar, mail and file manager windows\n"
+            + "-- the settings, calendar, mail, servers and file manager windows\n"
             + windowRule("quickshell-settings", windowTitle, 980, 680)
             + windowRule("quickshell-calendar", "Quickshell Calendar")
             + windowRule("quickshell-mail", "Quickshell Mail")
+            + windowRule("quickshell-servers", "Quickshell Servers")
             + windowRuleTiled("quickshell-files", FmSettings.titlePrefix)
             + Syntax.fmt("hypr.bind", { keys: Syntax.luaString(Syntax.hyprKeys(["Mod", "S"])),
                                         action: Syntax.fmt("hypr.exec", { cmd: Syntax.luaString("qs ipc call settings toggle") }),

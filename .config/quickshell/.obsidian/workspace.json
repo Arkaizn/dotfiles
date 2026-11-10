@@ -11,10 +11,14 @@
             "id": "66c4fd4a0d610f49",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "brain/apps/PERFMON.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "PERFMON"
             }
           }
         ]
@@ -181,19 +185,43 @@
       "bases:Create new base": false
     }
   },
-  "active": "66c4fd4a0d610f49",
+  "active": "021b466b2a5c5afc",
   "lastOpenFiles": [
-    "modules/settings/PanelPlaceRow.qml",
-    "modules/paneleditor/PanelEditor.qml",
-    "modules/paneleditor/PanelEditor.qml.tmp.5108.8126d7c9f45e",
-    "modules/paneleditor",
-    "modules/Bar/Middle/MusicBody.qml",
-    "modules/Bar/BarSection.qml.tmp.5108.2d4987090c56",
-    "components/BarPopup.qml.tmp.5108.83a0390458a1",
-    "modules/Bar/Bar.qml.tmp.5108.93feffac5903",
-    "services/lib/EdgeMap.js",
-    "services/lib/EdgeMap.js.tmp.5108.ca9ec551f34c",
-    "components/ResizeHandle.qml",
-    "MANUAL_TESTING.md"
+    "scripts/servers/lib/json.sh.new",
+    "scripts/servers/lib/servers.sh.new",
+    "scripts/servers/lib/parallel.sh.new",
+    "scripts/servers/lib/report.sh.new",
+    "scripts/servers/lib/snapshot.sh.new",
+    "scripts/servers/lib/checks.sh.new",
+    "scripts/servers/lib/remote.sh.new",
+    "scripts/servers/svs.conf.sample.new",
+    "scripts/servers/manage-svs.sh.new",
+    "scripts/servers/sedD2fRPf",
+    "scripts/servers/svs.conf.sample",
+    "brain/apps/SERVERS.md",
+    "brain/Cheatsheet.md",
+    "brain/ARCHITECTURE.md",
+    "brain/Workflow.md",
+    "brain/Modules.md",
+    "brain/System.md",
+    "brain/SECURITY.md",
+    "brain/Open work.md",
+    "brain/Preferences.md",
+    "brain/projects/SERVERS_NOTES.md",
+    "brain/projects/SERVERS_PROMPT.md",
+    "brain/apps/GREETER.md",
+    "brain/apps/PERFMON.md",
+    "brain/apps/MEDIASYNC.md",
+    "brain/projects/README.md",
+    "brain/Log.md",
+    "brain/Dotfiles.md",
+    "brain/Gotchas.md",
+    "brain/projects/REDESIGN_PROMPT_PHASE0.md",
+    "brain/projects/FIXES-files-r10.md",
+    "brain/projects/FIXES-files-r9.md",
+    "brain/projects/FIXES-2026-10-28.md",
+    "brain/projects/FILES_PROMPT.md",
+    "brain/projects/FILES_NOTES.md",
+    "brain/projects/MAIL.md"
   ]
 }

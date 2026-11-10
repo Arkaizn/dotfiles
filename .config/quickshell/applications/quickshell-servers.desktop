@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Servers
+GenericName=Server Manager
+Comment=Your homelab servers: status, updates, SSH and SFTP
+Icon=network-server
+Exec=qs ipc call servers open
+Terminal=false
+Categories=System;Network;
+Keywords=servers;homelab;ssh;sftp;updates;proxmox;docker;manage-svs;
+StartupNotify=false

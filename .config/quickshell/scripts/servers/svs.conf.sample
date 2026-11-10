@@ -1,0 +1,38 @@
+# svs.conf.sample — every setting of manage-svs.sh, with its default.
+#
+# The program works without a config file. To change something, copy this file to the
+# data folder as svs.conf (~/.local/share/quickshell/servers/svs.conf) and edit that
+# copy. It is read as bash. Secrets (NOTIFY_TOKEN) belong only in that copy: this
+# sample is part of the Quickshell config, which is synced.
+#
+# Servers, groups, health checks and waves are not here: they are in servers.json in
+# the data folder, edited from the Servers app.
+
+# --- How updates run ---
+# Servers are updated in waves (servers.json "waves"): all servers of a wave run at the
+# same time, at most MAX_PARALLEL at once; the next wave starts when the previous one
+# is done. Put a server that others depend on (DNS, reverse proxy) in a later wave of
+# its own, and the nodes of a small Proxmox cluster one after the other.
+MAX_PARALLEL=4
+STOP_ON_FAILURE=yes         # --auto: don't start the next wave when a server failed
+CHECK_TIMEOUT=10            # seconds per single check
+VERIFY_TIMEOUT=300          # how long to wait for everything to come back after an update
+VERIFY_INTERVAL=15          # seconds between verification rounds
+REBOOT_WAIT_TIMEOUT=600     # how long to wait for SSH after a reboot
+SNAPSHOT_KEEP_DAYS=3        # pre-update Proxmox snapshots older than this are deleted
+ROLLBACK_KEEP_DAYS=7        # old container images kept for rollback this long
+LOG_KEEP_DAYS=60            # run logs older than this are deleted (reports are kept)
+AUTO_REBOOT=no              # yes = reboot servers that need it (never NO_REBOOT_SERVERS)
+AUTO_ROLLBACK=containers    # what to do when verification fails: none | containers | snapshot
+SNAPSHOT_REQUIRED=yes       # skip a guest's update when its snapshot can't be taken
+NOTIFY_URL="" # e.g. https://ntfy.sh/my-homelab, a Discord webhook URL, ...
+NOTIFY_TYPE=ntfy            # ntfy | gotify | discord | json (POSTs the full JSON report)
+NOTIFY_TOKEN="" # ntfy access token / gotify app token (optional)
+NOTIFY_ON=always            # always | changes (something updated or failed) | failure
+REPORT_DIR="$DATA_DIR/reports"
+LOG_DIR="$DATA_DIR/logs"
+
+# --- Added later (defaults shown) ---
+SCAN_PULL=no                # yes = a scan downloads new images (the old way) instead of asking the registries
+VERIFY_TIMEOUT_REBOOT=600   # how long to wait for everything to come back after a reboot
+WATCHTOWER_IMAGE="ghcr.io/nicholas-fedor/watchtower:1.21.2"   # updates containers started with docker run (run once, only where a server has "plainContainers": true)

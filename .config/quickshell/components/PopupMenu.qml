@@ -10,6 +10,7 @@ import qs.services
 // An entry with sep: true is a line. run() is called after the menu closed,
 // so it may change what the menu was opened on.
 // Keyboard: ↑/↓ move the highlight, Enter / Space runs it, Esc closes.
+// Clicking the button that opened it again closes it.
 // As wide as its longest entry (at least 210, at most 460 or the parent's
 // width); a longer label (a file name, an app) elides.
 Popup {
@@ -36,7 +37,13 @@ Popup {
         close()
     }
 
+    // the same button again closes it (toggle): its press outside already closed the
+    // menu a moment ago, so the click that follows must not open it again
+    property Item _owner: null
+    property real _closedAt: 0
     function show(item, px, py, t, list) {
+        if (item === _owner && (visible || Date.now() - _closedAt < 350)) { _owner = null; close(); return }
+        _owner = item
         title = t ?? ""
         entries = list
         current = -1
@@ -48,7 +55,11 @@ Popup {
     }
     // one tick later: Qt hands the focus back to where it was before the menu (after onClosed);
     // a dialog the entry opens must get it after that, not lose it to it
-    onClosed: if (chosen) { const f = chosen; chosen = null; Qt.callLater(f) }
+    onClosed: afterClose()
+    function afterClose() {
+        _closedAt = Date.now()
+        if (chosen) { const f = chosen; chosen = null; Qt.callLater(f) }
+    }
 
     padding: 5
     FontMetrics { id: metrics; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }

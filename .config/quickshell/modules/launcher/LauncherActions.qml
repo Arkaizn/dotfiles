@@ -102,12 +102,14 @@ ColumnLayout {
                      run: () => runInTerminal(args) })
         } else if (prefix === "ssh") {
             const s = sshQuery.toLowerCase()
-            for (const c of RemoteConnections.list)
+            for (const c of RemoteConnections.all)
                 if (s === "" || c.name.toLowerCase().includes(s) || c.host.toLowerCase().includes(s))
-                    a.push({ icon: RemoteConnections.types[c.type].icon, title: c.name, subtitle: RemoteConnections.types[c.type].name + "  ·  " + (c.user ? c.user + "@" : "") + c.host,
+                    a.push({ icon: RemoteConnections.types[c.type].icon, title: c.name,
+                             subtitle: (c.managed === "servers" ? "Servers" + ((c.tags ?? []).length ? " · " + c.tags.join(", ") : "") : RemoteConnections.types[c.type].name)
+                                       + "  ·  " + (c.user ? c.user + "@" : "") + c.host,
                              run: () => RemoteConnections.connect(c.id) })
             for (const h of sshHosts)
-                if ((s === "" || h.toLowerCase().includes(s)) && !RemoteConnections.list.some(c => c.type === "ssh" && c.host === h))
+                if ((s === "" || h.toLowerCase().includes(s)) && !RemoteConnections.all.some(c => c.type === "ssh" && c.host === h))
                     a.push({ icon: "󰣀", title: h, subtitle: "~/.ssh/config", run: () => runSsh(h) })
             if (sshQuery !== "" && !a.some(x => x.title === sshQuery)) {
                 const e = Valid.sshTarget(sshQuery)

@@ -45,6 +45,10 @@ singleton Session Session.qml
 singleton Media Media.qml
 singleton NiriIpc NiriIpc.qml
 singleton WiredWifi WiredWifi.qml
+singleton NetLink NetLink.qml
+singleton ServerStore ServerStore.qml
+singleton ServerRuns ServerRuns.qml
+singleton FailedUnits FailedUnits.qml
 singleton Vpn Vpn.qml
 singleton DesktopWidgets DesktopWidgets.qml
 singleton MediaSync MediaSync.qml

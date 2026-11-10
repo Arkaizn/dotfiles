@@ -7,62 +7,39 @@ import ".."
 import "../network"
 
 // Failed services (system and user): what failed, its last log lines,
-// restart it or clear the "failed" mark. System units go through pkexec (the
-// shell's password prompt); user units don't need a password.
+// restart it (or all of them) or clear the "failed" mark. System units go
+// through pkexec (the shell's password prompt); user units don't need a
+// password. The list and the actions live in services/FailedUnits.qml (it
+// also sends the "services failed" notification).
 ColumnLayout {
     id: page
     spacing: Tokens.space.s16
 
-    property var units: []                  // [{ name, desc, user, log: [] }]
-    property bool loading: false
-    property string message: ""
+    readonly property var units: FailedUnits.units
+    readonly property bool loading: FailedUnits.loading
     property string expanded: ""
 
-    Component.onCompleted: refresh()
-
-    function valid(u) { return /^[A-Za-z0-9@._:\\-]+\.(service|socket|timer|mount|automount|path|target|scope|slice|swap)$/.test(u) }
-
-    function refresh() {
-        loading = true
-        const list = []
-        let pending = 2
-        const done = () => { if (--pending > 0) return; units = list; loading = false; for (const u of list) loadLog(u) }
-        for (const user of [false, true])
-            Jobs.run(["systemctl"].concat(user ? ["--user"] : []).concat(["--failed", "--no-legend", "--plain", "--no-pager"]), (code, out) => {
-                for (const l of out.split("\n")) {
-                    const m = /^(\S+)\s+\S+\s+\S+\s+\S+\s+(.*)$/.exec(l.trim())
-                    if (m && valid(m[1])) list.push({ name: m[1], desc: m[2], user: user, log: [] })
-                }
-                done()
-            })
-    }
-
-    function loadLog(u) {
-        Jobs.run(["journalctl"].concat(u.user ? ["--user-unit"] : ["-u"]).concat([u.name, "-n", "12", "--no-pager", "-o", "short-iso", "-b"]), (code, out) => {
-            units = units.map(x => x.name === u.name && x.user === u.user ? Object.assign({}, x, { log: out.split("\n").filter(l => l.trim() && !l.startsWith("-- ")) }) : x)
-        })
-    }
-
-    function act(u, verb) {
-        if (!valid(u.name) || !["restart", "reset-failed"].includes(verb)) return
-        const argv = u.user ? ["systemctl", "--user", verb, "--", u.name] : ["pkexec", "systemctl", verb, "--", u.name]
-        message = (verb === "restart" ? "Restarting " : "Clearing ") + u.name + "…"
-        Jobs.run(argv, (code, out, err) => {
-            message = code === 0 ? u.name + (verb === "restart" ? " restarted" : ": failed mark cleared")
-                    : code === 126 || code === 127 && !u.user ? "cancelled (no password given)" : u.name + ": " + (err.trim().split("\n").pop() || "exit " + code)
-            refresh()
-        })
-    }
+    Component.onCompleted: FailedUnits.refresh()
 
     Section {
         Layout.fillWidth: true
         title: "Failed services"
         icon: "󰒏"
-        header: ActionButton { icon: "󰑓"; text: page.loading ? "Checking…" : "Check again"; onClicked: page.refresh() }
+        header: RowLayout {
+            spacing: Tokens.space.s6
+            ActionButton {
+                icon: "󰜉"
+                text: FailedUnits.busy ? "Restarting…" : "Restart all"
+                visible: page.units.length > 0 || FailedUnits.busy
+                enabled: !FailedUnits.busy
+                onClicked: FailedUnits.restartAll()
+            }
+            ActionButton { icon: "󰑓"; text: page.loading ? "Checking…" : "Check again"; onClicked: FailedUnits.refresh() }
+        }
         SettingRow {
             first: true
             label: page.loading ? "Checking…" : page.units.length === 0 ? "Nothing failed" : page.units.length + (page.units.length === 1 ? " service failed" : " services failed")
-            desc: page.message !== "" ? page.message : "since this boot (systemctl --failed, system and user)"
+            desc: FailedUnits.message !== "" ? FailedUnits.message : "since this boot (systemctl --failed, system and user)"
         }
         Repeater {
             model: page.units
@@ -78,9 +55,24 @@ ColumnLayout {
                     spacing: Tokens.space.s6
                     Item { Layout.fillWidth: true }
                     ActionButton { text: row.open ? "Less log" : "More log"; visible: u.log.length > 3; onClicked: page.expanded = row.open ? "" : u.name }
-                    ActionButton { icon: "󰜉"; text: "Restart"; onClicked: page.act(u, "restart") }
-                    ActionButton { icon: "󰃢"; text: "Clear mark"; onClicked: page.act(u, "reset-failed") }
+                    ActionButton { icon: "󰜉"; text: "Restart"; onClicked: FailedUnits.act(u, "restart") }
+                    ActionButton { icon: "󰃢"; text: "Clear mark"; onClicked: FailedUnits.act(u, "reset-failed") }
                 }
+            }
+        }
+    }
+
+    Section {
+        Layout.fillWidth: true
+        title: "Notifications"
+        icon: "󰂚"
+        SettingRow {
+            first: true
+            label: "Notify when a service fails"
+            desc: "30 s after login (what failed during boot), then every 5 minutes for new failures; with a \"Restart all\" button (asks for the password)"
+            ToggleSwitch {
+                checked: FailedUnits.notify
+                onToggled: v => Settings.set("health", "failedNotify", v)
             }
         }
     }

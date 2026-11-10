@@ -1,21 +1,16 @@
 import Quickshell
-import Quickshell.Networking
 import QtQuick
 import qs.services
-import qs.services.lib
 import qs.components
 
 // Left click: control center · right click: Wi-Fi on/off
 BarButton {
     id: root
 
-    readonly property var wired: Devices.pick(Networking.devices.values, DeviceType.Wired)
-    readonly property var wifi: Devices.pick(Networking.devices.values, DeviceType.Wifi)
-    readonly property var wifiNetwork: wifi?.networks?.values.find(n => n.connected) ?? null
-
+    // NetLink: Quickshell.Networking, or nmcli when that lost NetworkManager
+    // (NetworkManager not up yet when the shell started)
     readonly property string wifiIcon: {
-        const raw = wifiNetwork?.signalStrength ?? 0
-        const s = raw > 1 ? raw / 100 : raw
+        const s = NetLink.wifiSignal
         if (s > 0.75) return Icons.get("wifi4")
         if (s > 0.5) return Icons.get("wifi3")
         if (s > 0.25) return Icons.get("wifi2")
@@ -26,14 +21,14 @@ BarButton {
     // nothing connected → crossed-out globe.
     text: {
         const parts = []
-        if (wired?.connected) parts.push(Icons.get("wired"))
-        if (wifiNetwork) parts.push(wifiIcon)
+        if (NetLink.wiredConnected) parts.push(Icons.get("wired"))
+        if (NetLink.wifiConnected) parts.push(wifiIcon)
         return parts.length ? parts.join("  ") : Icons.get("offline")
     }
 
     buttons: Qt.LeftButton | Qt.RightButton
     onClicked: mouse => {
-        if (mouse.button === Qt.RightButton) Networking.wifiEnabled = !Networking.wifiEnabled
+        if (mouse.button === Qt.RightButton) NetLink.setWifiEnabled(!NetLink.wifiEnabled)
         else Panels.toggle("controlCenter", (QsWindow.window as QsWindow)?.screen)
     }
 }

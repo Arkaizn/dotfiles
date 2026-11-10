@@ -30,7 +30,7 @@ Item {
     readonly property var bt: host?.btAdapter ?? null
     readonly property string icon: {
         switch (itemId) {
-        case "wifi": return !Networking.wifiEnabled ? "󰤮" : host?.wifiNetwork ? "󰤨" : host?.wiredDevice?.connected ? "󰈀" : "󰤯"
+        case "wifi": return !NetLink.wifiEnabled ? "󰤮" : NetLink.wifiConnected ? "󰤨" : NetLink.wiredConnected ? "󰈀" : "󰤯"
         case "bluetooth": return !bt?.enabled ? Icons.get("btOff") : host.btConnected.length === 1 ? BluetoothPower.iconFor(host.btConnected[0])
                               : host.btConnected.length > 0 ? Icons.get("btConnected") : Icons.get("btOn")
         case "dnd": return Notifs.dnd ? "󰂛" : "󰂚"
@@ -43,10 +43,10 @@ Item {
     readonly property string subtitle: {
         if (armed) return "Click again"
         switch (itemId) {
-        case "wifi": return !host?.wifiDevice ? (host?.wiredDevice?.connected ? "Ethernet" : "No Wi-Fi device")
-                          : !Networking.wifiEnabled ? (host.wiredDevice?.connected ? "Off · Ethernet" : "Off")
-                          : host.wifiNetwork ? host.wifiNetwork.name
-                          : host.wiredDevice?.connected ? "Ethernet" : "Not connected"
+        case "wifi": return !NetLink.hasWifiDevice ? (NetLink.wiredConnected ? "Ethernet" : "No Wi-Fi device")
+                          : !NetLink.wifiEnabled ? (NetLink.wiredConnected ? "Off · Ethernet" : "Off")
+                          : NetLink.wifiConnected ? NetLink.wifiName
+                          : NetLink.wiredConnected ? "Ethernet" : "Not connected"
         case "bluetooth": return !bt ? "No adapter" : !bt.enabled ? "Off"
                                : host.btConnected.length === 1 ? host.btConnected[0].name
                                : host.btConnected.length > 1 ? host.btConnected.length + " devices" : "On"
@@ -57,7 +57,7 @@ Item {
         }
         return info.desc
     }
-    readonly property bool active: itemId === "wifi" ? Networking.wifiEnabled && host?.wifiDevice !== null
+    readonly property bool active: itemId === "wifi" ? NetLink.wifiEnabled && NetLink.hasWifiDevice
                                  : itemId === "bluetooth" ? (bt?.enabled ?? false)
                                  : itemId === "dnd" ? Notifs.dnd
                                  : itemId === "record" ? Capture.recording
@@ -80,7 +80,7 @@ Item {
     function activate() {
         if (info.confirm && !host?.confirm(itemId)) return
         switch (itemId) {
-        case "wifi": Networking.wifiEnabled = !Networking.wifiEnabled; break
+        case "wifi": NetLink.setWifiEnabled(!NetLink.wifiEnabled); break
         case "bluetooth": BluetoothPower.toggle(); break
         case "dnd": Notifs.setDnd(!Notifs.dndManual); break
         case "powerprofile": Power.cycle(); break

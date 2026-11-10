@@ -28,7 +28,8 @@ ColumnLayout {
                 first: index === 0 && DefaultApps.error === ""
                 label: modelData.icon + "  " + modelData.name
                 desc: apps.length === 0 ? (DefaultApps.loading ? "…" : "no installed app opens these")
-                      : (cur === "" ? "not set" : cur) + "  ·  " + modelData.types.length + (modelData.types.length === 1 ? " type" : " types")
+                      : (cur === "" ? "not set" : cur) + "  ·  " + (modelData.file ? modelData.file
+                        : modelData.types.length + (modelData.types.length === 1 ? " type" : " types"))
                 Dropdown {
                     visible: apps.length > 0
                     options: (cur === "" ? [{ label: "— not set —", value: "" }] : [])
@@ -47,6 +48,11 @@ ColumnLayout {
             wide: true
             label: "Written to ~/.config/mimeapps.list"
             desc: "with xdg-mime, for every type of the category (e.g. Web browser = http, https, html, xhtml). The old file is copied to ~/.local/state/quickshell/backups first. Apps that ignore mimeapps.list (some Flatpaks, Electron apps) may still ask."
+        }
+        SettingRow {
+            wide: true
+            label: "Terminal: ~/.config/xdg-terminals.list"
+            desc: "the xdg-terminal-exec standard (a desktop's own list, e.g. hyprland-xdg-terminals.list, wins on that desktop). The chosen app goes first, the old file is backed up the same way. Used by: Servers (SSH sessions)."
         }
     }
 }

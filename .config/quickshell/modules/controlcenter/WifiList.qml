@@ -48,7 +48,8 @@ ColumnLayout {
         Layout.fillWidth: true
         Text {
             Layout.fillWidth: true
-            text: !Networking.wifiEnabled ? "Wi-Fi is off"
+            text: NetLink.fallback ? "Restart the shell to list networks"  // NetworkManager wasn't up when it started
+                : !Networking.wifiEnabled ? "Wi-Fi is off"
                 : root.networks.length === 0 ? "Scanning…"
                 : root.networks.length + " networks"
             color: Colors.fade(0.55)

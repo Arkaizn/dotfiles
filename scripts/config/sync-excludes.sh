@@ -37,6 +37,7 @@ NEVER_PUSH=(
     "quickshell/MANUAL_TESTING.md"
     "quickshell/REFACTOR_REPORT.md"
     "quickshell/FILES_NOTES.md"             # file manager work notes (local only)
+    "quickshell/brain/"                     # the notes vault (docs, plans, prompts): local only
     "quickshell/*.md"                       # all notes / docs in the quickshell folder stay local
                                             # (ARCHITECTURE, DESIGN, SECURITY, CLAUDE, MAIL, FIXES-*, …;
                                             #  only that top level: greeter/RECOVERY.md is still pushed)
