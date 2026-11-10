@@ -134,58 +134,6 @@ ColumnLayout {
                     }
                 }
             }
-
-        RowLayout {
-            Item {
-                width: 90
-                height: 50
-                ButtonBackground {
-                        id: custom1Rect
-                        hovered: custom1MouseArea.containsMouse
-                        iconText: "RDP "
-                        iconSize: Properties.iconSize
-                        fontBold: true
-                }
-                MouseArea {
-                    id: custom1MouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onEntered: custom1Rect.scale = 1.1
-                    onExited: custom1Rect.scale = 1.0
-                    onPressed: custom1Rect.scale = Properties.onPressedButtonScale
-                    onReleased: custom1Rect.scale = containsMouse ? 1.1 : 1.0
-                    onCanceled: custom1Rect.scale = 1.0
-                    onClicked: Quickshell.execDetached(["bash", "-lc", "~/.config/custom/scripts/rdp-home.sh"])
-                }
-            }
-            
-            Item {
-                Layout.alignment: Qt.AlignHCenter
-                width: 90
-                height: 50
-                ButtonBackground {
-                        id: custom2Rect
-                        hovered: custom2MouseArea.containsMouse
-                        iconText: "RDP "
-                        iconSize: Properties.iconSize
-                        fontBold: true
-                }
-                MouseArea {
-                    id: custom2MouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onEntered: custom2Rect.scale = 1.1
-                    onExited: custom2Rect.scale = 1.0
-                    onPressed: custom2Rect.scale = Properties.onPressedButtonScale
-                    onReleased: custom2Rect.scale = containsMouse ? 1.1 : 1.0
-                    onCanceled: custom2Rect.scale = 1.0
-                    onClicked: Quickshell.execDetached(["bash", "-lc", "~/.config/custom/scripts/rdp-work.sh"])
-                }
-            }
-
             Item { Layout.fillHeight: true }
-        }
     }
 }

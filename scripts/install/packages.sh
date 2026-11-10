@@ -113,6 +113,7 @@ necessary_packages=(
     python-fonttools      # icon picker (names of the Nerd Font icons)
     tigervnc              # VNC connections (vncviewer)
     ufw                   # firewall (VNC server rule)
+    mediasync             # music card: players, Jellyfin, queue, lyrics, playlists (AUR)
 
     # File manager (Quickshell, scripts/files): all from the official repos
     python-gobject        # its backend (Gio: folders, trash, mounts, copies)
@@ -166,6 +167,8 @@ packages=("${necessary_packages[@]}")
 
 if gum confirm "Install ${#packages[@]} packages?"; then
     yay_install "${packages[@]}" || { err "Aborting installation."; exit 1; }
+    # the package ships the user service; it isn't started on its own
+    systemctl --user enable --now mediasyncd.service && ok "mediasync service enabled"
 else
     info "Skipping package installation."
 fi

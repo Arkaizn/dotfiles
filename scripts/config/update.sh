@@ -160,6 +160,33 @@ if [[ ! -e "$files_marker" && -e "${XDG_DATA_HOME:-$HOME/.local/share}/applicati
     xdg-mime default quickshell-files.desktop inode/directory && touch "$files_marker"
 fi
 
+## 09/11/26
+# mediasync (music card: queue, lyrics, playlists) comes from the AUR package now.
+# Older hand installs left a binary in ~/.local/bin and a user unit in ~/.config/systemd/user
+# that starts it; both shadow the package, so the card misses its newer features.
+# Nothing is deleted: the old files go to ~/.local/state/dotfiles-sync/mediasync-old/.
+if [[ ! -x /usr/bin/mediasyncd ]]; then
+    yay -S --needed --noconfirm mediasync || echo "mediasync: install failed, run: yay -S mediasync"
+fi
+ms_old="$HOME/.local/state/dotfiles-sync/mediasync-old"
+ms_unit="$HOME/.config/systemd/user/mediasyncd.service"
+if [[ -f "$ms_unit" ]] && grep -q '\.local/bin/mediasyncd' "$ms_unit"; then
+    mkdir -p "$ms_old"; mv -f "$ms_unit" "$ms_old/"
+fi
+for b in mediasyncd mediasyncctl; do
+    if [[ -e "$HOME/.local/bin/$b" ]]; then mkdir -p "$ms_old"; mv -f "$HOME/.local/bin/$b" "$ms_old/"; fi
+done
+if [[ -x /usr/bin/mediasyncd ]]; then
+    systemctl --user daemon-reload
+    systemctl --user enable mediasyncd.service &>/dev/null || true
+    # pacman doesn't restart user services: restart when the binary is newer than the running daemon
+    ms_started=$(systemctl --user show -p ActiveEnterTimestamp --value mediasyncd.service)
+    if ! systemctl --user is-active -q mediasyncd.service || [[ -z "$ms_started" ]] \
+        || (( $(stat -c %Y /usr/bin/mediasyncd) > $(date -d "$ms_started" +%s) )); then
+        systemctl --user restart mediasyncd.service || true
+    fi
+fi
+
 
 
 echo "Done ✅"
