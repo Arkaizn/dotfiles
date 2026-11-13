@@ -366,6 +366,25 @@ test("greeter: env + users + pick", () => {
     assert.equal(GL.pick(l, "id", ["", "b"]).id, "b"); assert.equal(GL.pick(l, "id", ["z"]).id, "a"); assert.equal(GL.pick([], "id", ["a"]), null)
 })
 
+test("greeter: session icons", () => {
+    const ic = (id, name, dn) => GL.sessionIcon({ id: id, name: name, desktopNames: dn ?? [] })
+    assert.equal(ic("hyprland-uwsm", "Hyprland (uwsm-managed)", ["Hyprland"]), ic("hyprland", "Hyprland"))
+    assert.equal(ic("plasma", "Plasma (Wayland)", ["KDE"]), ic("x", "KDE"))
+    const all = ["niri", "hyprland", "gnome", "plasma", "weston"].map(n => ic(n, n))
+    assert.equal(new Set(all).size, 5)
+    assert.equal(GL.sessionIcon(null), ic("weston", "Weston"))
+})
+
+test("greeter: typed users", () => {
+    for (const n of ["me", "jane.doe@corp.example", "CORP\\jane", " padded "]) assert.equal(GL.cleanUser(n), n.trim(), n)
+    for (const n of ["", "   ", "-f", "a:b", "a/b", "a\nb", "x".repeat(129)]) assert.equal(GL.cleanUser(n), "", JSON.stringify(n))
+    const l = GL.withOthers([{ name: "me", uid: 1000, gecos: "Me" }], ["jane@corp", "me", "", "a:b"])
+    assert.deepEqual([...l.map(u => u.name + ":" + u.uid)], ["me:1000", "jane@corp:-1"])
+    assert.deepEqual([...GL.rememberOther(["a", "b"], { name: "b", uid: -1 })], ["b", "a"])
+    assert.deepEqual([...GL.rememberOther(["a", "b"], { name: "me", uid: 1000 })], ["a", "b"])
+    assert.equal(GL.rememberOther(["a", "b", "c", "d", "e"], { name: "f", uid: -1 }).length, 5)
+})
+
 test("greeter: greetd mode + lock at start", () => {
     const greeter = '[terminal]\nvt = 1\n\n# login screen\n[default_session]\ncommand = "/usr/local/share/quickshell-greeter/greeter-session || agreety --cmd niri-session"\nuser = "greeter"\n'
     assert.equal(GL.greetdMode(greeter), "greeter")
@@ -504,7 +523,7 @@ test("greeter settings follow the lockscreen", () => {
 })
 test("greeter settings check", () => {
     assert.equal(LI.checkGreeter("follow", true), ""); assert.notEqual(LI.checkGreeter("follow", 1), "")
-    assert.equal(LI.checkGreeter("userPicker", "on"), ""); assert.notEqual(LI.checkGreeter("userPicker", "x"), "")
+    assert.equal(LI.checkGreeter("userPicker", "off"), ""); assert.notEqual(LI.checkGreeter("userPicker", "x"), "")
     assert.equal(LI.checkGreeter("blur", false), ""); assert.equal(LI.checkGreeter("media", true), null)
     assert.equal(LI.checkGreeter("defaultUser", "arkaizn"), ""); assert.notEqual(LI.checkGreeter("defaultUser", "a b"), "")
     assert.equal(LI.checkGreeter("defaultSession", "niri"), ""); assert.notEqual(LI.checkGreeter("defaultSession", "../x"), "")

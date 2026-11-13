@@ -7,8 +7,8 @@ import qs.services
 // The password card: picture + greeting, password field with the submit
 // button, Caps Lock hint, status line (checking / wrong password / …). The
 // field shakes when `lock.failed` goes true. Children go between the greeting
-// and the password field (the login screen puts its user / session pickers
-// there).
+// and the password field (the login screen puts its user picker there), `footer`
+// ones below the status line (its session picker).
 //
 //   AuthCard { stage: <LockStage>; lock: <shared state>; avatar: "/path/face" }
 Rectangle {
@@ -22,6 +22,7 @@ Rectangle {
     property string submitTip: "Unlock"
     readonly property alias field: passwordField
     default property alias extra: extraCol.data
+    property alias footer: footerCol.data
 
     anchors.horizontalCenter: parent.horizontalCenter
     y: stage.height * 0.5 - height / 2 + 40 + (stage.auth ? 0 : 30)
@@ -156,6 +157,13 @@ Rectangle {
             text: root.lock.status || root.lock.keyHint
             color: root.lock.failed && root.lock.status ? Colors.red : Colors.fade(0.6)
             font.pixelSize: Tokens.font.small
+        }
+
+        ColumnLayout {
+            id: footerCol
+            Layout.fillWidth: true
+            spacing: Tokens.space.s8
+            visible: children.length > 0
         }
     }
 }

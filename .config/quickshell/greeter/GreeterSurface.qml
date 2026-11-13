@@ -2,11 +2,12 @@ import Quickshell
 import Quickshell.Services.UPower
 import QtQuick
 import qs.services
+import qs.services.lib
 import "modules/lockscreen/parts"
 
 // What one monitor shows on the login screen: the lockscreen's parts (see
-// modules/lockscreen/LockSurface.qml) with the user / session pickers on the
-// password card. Left out (no session yet): media, notifications, "locked
+// modules/lockscreen/LockSurface.qml) with the user picker above and the session
+// picker below the password. Left out (no session yet): media, notifications, "locked
 // since", Bluetooth devices, custom batteries.
 LockStage {
     id: root
@@ -47,15 +48,23 @@ LockStage {
             model: root.lock.users
             current: root.lock.user
             label: u => u.gecos ? u.gecos + "  (" + u.name + ")" : u.name
-            onPicked: u => root.lock.chooseUser(u)
+            // any other account, also a domain one: typed
+            otherLabel: "Other user…"
+            otherPlaceholder: "Username  (or name@domain)"
+            onPicked: u => { root.lock.chooseUser(u); card.field.forceActiveFocus() }
+            onTyped: text => { if (root.lock.chooseUserName(text)) { editing = false; card.field.forceActiveFocus() } }
+            onCancelled: card.field.forceActiveFocus()
+            onActivity: root.lock.showAuth()        // typing a name keeps the card open
         }
-        ChoicePicker {
+        // what to start, below the password: who and the password stay together
+        footer: ChoicePicker {
             visible: root.show.sessionPicker && root.lock.sessions.length > 0
             icon: "󰍹"
+            iconOf: s => GreeterLib.sessionIcon(s)
             model: root.lock.sessions
             current: root.lock.session
             label: s => s.name
-            onPicked: s => root.lock.chooseSession(s)
+            onPicked: s => { root.lock.chooseSession(s); card.field.forceActiveFocus() }
         }
     }
 

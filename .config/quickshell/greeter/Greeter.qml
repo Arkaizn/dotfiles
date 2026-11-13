@@ -20,7 +20,7 @@ import "modules/lockscreen/parts"
 // Environment (greeter/system/runner sets these):
 //   GREETD_SOCK         greetd's socket (Quickshell.Services.Greetd)
 //   QS_GREETER_DATA     theme dir: wallpaper.jpg, face.png, meta.json
-//   QS_GREETER_STATE    writable: last.json { user, session }
+//   QS_GREETER_STATE    writable: last.json { user, session, others: [typed names] }
 //   QS_GREETER_RUN      runtime dir: "ready" once shown, "launched" before launching
 //   QS_GREETER_DRYRUN=1 power buttons only log (tests)
 Scope {
@@ -74,13 +74,16 @@ Scope {
     readonly property string hostname: Files.read("/etc/hostname").trim()
 
     // ── Users and sessions ──
-    readonly property var users: GreeterLib.users(Files.read("/etc/passwd"))
-    property var user: null                 // { name, uid, gecos }
+    // the machine's own users, then the typed ones that logged in before (domain
+    // accounts aren't in /etc/passwd: "Other user…" in the picker takes any name)
+    property var others: []
+    readonly property var users: GreeterLib.withOthers(GreeterLib.users(Files.read("/etc/passwd")), others)
+    property var user: null                 // { name, uid, gecos }; uid -1: a typed name
     readonly property bool isOwner: user !== null && user.name === meta.owner
     // the owner's display name / picture come from the shell; other users get their name
     readonly property string displayName: isOwner && Settings.profile.name ? Settings.profile.name : (user?.gecos || user?.name || "")
     readonly property string avatar: isOwner && meta.face === true ? dataDir + "/face.png" : ""
-    readonly property bool userPicker: show.userPicker === "on" || (show.userPicker === "auto" && users.length > 1)
+    readonly property bool userPicker: show.userPicker !== "off"
 
     property var sessions: []               // [{ id, name, exec, desktopNames, tryExec }]
     property var session: null
@@ -122,12 +125,14 @@ Scope {
     FileView { id: lastFile; path: root.stateDir + "/last.json"; blockLoading: true; blockWrites: true; printErrors: false }
     function pickDefaults() {
         let last = {}
-        try { last = JSON.parse(lastFile.text()) } catch (e) {}
+        try { last = JSON.parse(lastFile.text()) ?? {} } catch (e) {}
+        if (Array.isArray(last.others)) others = last.others.filter(n => typeof n === "string")
         if (!user) user = GreeterLib.pick(users, "name", [show.defaultUser, last.user, meta.owner])
         if (!session) session = GreeterLib.pick(sessions, "id", [show.defaultSession, last.session, "niri"])
     }
     function saveLast() {
-        lastFile.setText(JSON.stringify({ user: user?.name ?? "", session: session?.id ?? "" }) + "\n")
+        lastFile.setText(JSON.stringify({ user: user?.name ?? "", session: session?.id ?? "",
+                                          others: GreeterLib.rememberOther(others, user) }) + "\n")
     }
 
     function chooseUser(u) {
@@ -135,6 +140,13 @@ Scope {
         if (Greetd.state !== GreetdState.Inactive) Greetd.cancelSession()
         user = u
         password = ""; status = ""; failed = false
+    }
+    // a typed name ("Other user…"); returns whether it's usable
+    function chooseUserName(text) {
+        const name = GreeterLib.cleanUser(text)
+        if (name === "" || checking || unlocking) return false
+        chooseUser(users.find(u => u.name === name) ?? { name: name, uid: -1, gecos: "" })
+        return true
     }
     function chooseSession(s) { if (!unlocking) session = s }
 

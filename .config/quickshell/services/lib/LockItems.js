@@ -49,9 +49,9 @@ var greeterItems = [
     { key: "follow", label: "Same as the lockscreen", desc: "Clock, hint, picture, batteries, power buttons, blur and monitor as set for the lockscreen",
       kind: "bool", def: true },
     { key: "sessionPicker", label: "Session picker", desc: "Choose niri, Hyprland, … on the password card (else the last one used)", kind: "bool", def: true },
-    { key: "userPicker", label: "User picker", desc: "Auto: only when there's more than one user",
-      kind: "choice", def: "auto",
-      choices: [{ label: "Auto", value: "auto" }, { label: "Always", value: "on" }, { label: "Never", value: "off" }] },
+    { key: "userPicker", label: "User picker", desc: "Switch the user on the password card: the ones of this machine, or type a name (domain accounts too)",
+      kind: "choice", def: "auto",       // "on" (older settings) reads as "auto"
+      choices: [{ label: "Show", value: "auto" }, { label: "Hide", value: "off" }] },
     { key: "sync", label: "Keep the login screen's theme up to date", desc: "Colors, wallpaper, fonts and these settings, copied to /var/lib/quickshell-greeter when they change",
       kind: "bool", def: true }
 ]

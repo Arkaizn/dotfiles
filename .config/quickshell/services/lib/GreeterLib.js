@@ -27,6 +27,16 @@ function parseDesktop(id, text) {
     }
 }
 
+// A session's logo (Nerd Font glyph) by what it is: niri, Hyprland, GNOME, KDE Plasma
+// and a few more; anything else gets a monitor. (No niri logo in the font: columns.)
+function sessionIcon(session) {
+    const s = [session?.id, session?.name].concat(session?.desktopNames ?? []).join(" ").toLowerCase()
+    const known = [["niri", "󰕬"], ["hypr", ""], ["gnome", ""], ["plasma", ""], ["kde", ""],
+                   ["sway", ""], ["river", ""], ["xfce", ""], ["qtile", ""]]
+    for (const [word, glyph] of known) if (s.includes(word)) return glyph
+    return "󰍹"
+}
+
 // Exec line → argv (desktop-entry quoting; field codes like %U dropped)
 function splitExec(exec) {
     const args = []
@@ -66,6 +76,32 @@ function users(passwd) {
         out.push({ name: f[0], uid: uid, gecos: (f[4] || "").split(",")[0] })
     }
     return out
+}
+
+// A typed login name → the name to hand to PAM, or "" (nothing usable). Any account
+// the system can log in works, also ones not in /etc/passwd (domain accounts:
+// name@domain, DOMAIN\name), so only what no login name has is refused.
+function cleanUser(text) {
+    const s = String(text ?? "").trim()
+    if (s === "" || s.length > 128 || s.startsWith("-") || /[\x00-\x1f\x7f:\/]/.test(s)) return ""
+    return s
+}
+
+// the picker's users: those of /etc/passwd, then the remembered typed ones (uid -1)
+function withOthers(list, names) {
+    const out = list.slice()
+    for (const n of names ?? []) {
+        const name = cleanUser(n)
+        if (name !== "" && !out.some(u => u.name === name)) out.push({ name: name, uid: -1, gecos: "" })
+    }
+    return out
+}
+
+// typed names to remember after `user` logged in: newest first, at most 5
+function rememberOther(names, user) {
+    const old = (names ?? []).map(cleanUser).filter(n => n !== "")
+    if (!user || user.uid !== -1) return old.slice(0, 5)
+    return [user.name].concat(old.filter(n => n !== user.name)).slice(0, 5)
 }
 
 // first of `wanted` that is in `list` (by key), else the first of the list
