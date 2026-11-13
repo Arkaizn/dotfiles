@@ -1097,6 +1097,23 @@ test("FmColumns: chosen, fit, toggle, move, perms", () => {
 })
 
 const FmAddress = loadFm("FmAddress.js")
+test("FmAddress: saved servers for what's typed", () => {
+    const sv = [{ uri: "smb://server01/public", name: "public on server01" }, { uri: "sftp://server01-lab", name: "lab" }, { uri: "smb://nas/media", name: "media" }]
+    const of = t => [...FmAddress.serverOffers(t, sv)].map(o => o.server.uri + (o.continues ? " !" : ""))
+    // a typed scheme stays: ssh:// never turns into the saved smb:// of that host
+    assert.deepEqual(of("ssh://server01"), ["sftp://server01-lab !"])
+    assert.deepEqual(of("ftp://server01"), [])
+    // a whole host: the saved share is offered, not gone to by itself
+    assert.deepEqual(of("smb://server01"), ["smb://server01/public"])
+    assert.deepEqual(of("smb://ser"), ["smb://server01/public !"])
+    assert.deepEqual(of("smb://med"), ["smb://nas/media"])
+    assert.deepEqual(of("smb://"), ["smb://server01/public", "smb://nas/media"])
+    // no scheme: a search by name / address
+    assert.deepEqual(of("server01"), ["smb://server01/public !", "sftp://server01-lab !"])
+    assert.deepEqual(of("s"), []); assert.deepEqual(of("ssh://x"), [])
+    assert.equal(FmAddress.hasExact(["Doc", "Documents"], "Doc"), true)
+    assert.equal(FmAddress.hasExact(["Documents"], "Doc"), false); assert.equal(FmAddress.hasExact(["a"], ""), false)
+})
 test("FmAddress: typed text to a path", () => {
     assert.equal(FmAddress.resolve("/usr//lib/", "/x", "/home/u"), "/usr/lib")
     assert.equal(FmAddress.resolve("~", "/x", "/home/u"), "/home/u")

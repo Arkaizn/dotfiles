@@ -13,6 +13,14 @@
 //   toServer(path, mounts)      that path as its server address ("smb://srv/share/dir"), or ""
 //   fromServer(text, mounts)    a typed address inside a mounted server → its local path, or ""
 //   encodeUri(text)             a typed address with each path part percent-encoded (once)
+// Saved servers ([{ uri, name }]):
+//   serverOffers(text, servers) those matching what's typed: [{ server, continues }]. A typed
+//                               scheme is kept: "ssh://srv" never offers smb://srv (only ssh /
+//                               sftp, one family: GVfs names ssh that way); the scheme alone
+//                               ("smb://") lists all of its servers. `continues`: Enter may go
+//                               there by itself, i.e. it's what's typed, carried on; not once a
+//                               whole host is typed and only a share / folder would be added
+//   hasExact(names, part)       `part` is one of the folder names in full (Enter means that one)
 
 function resolve(text, here, home) {
     let t = String(text).trim()
@@ -56,6 +64,36 @@ function matches(names, part, max) {
         else if (p !== "" && l.indexOf(p) >= 0) inside.push(n)
     }
     return start.concat(inside).slice(0, max || 8)
+}
+
+function _scheme(u) { const m = /^([a-z][a-z0-9+.-]*):\/\//i.exec(u); return m ? m[1].toLowerCase() : "" }
+function _family(s) { return s === "ssh" ? "sftp" : s }
+function _bare(u) { return u.toLowerCase().replace(/^[a-z][a-z0-9+.-]*:\/\//, "") }
+
+function serverOffers(text, servers) {
+    const low = String(text).trim().toLowerCase()
+    const out = []
+    if (low.length < 2) return out
+    const sc = _scheme(low), q = _bare(low)
+    for (const sv of Array.isArray(servers) ? servers : []) {
+        if (!sv || typeof sv.uri !== "string") continue
+        const uri = sv.uri.toLowerCase(), name = String(sv.name ?? "").toLowerCase(), host = _bare(uri)
+        if (sc === "") {
+            // a name or a part of the address: a search, the best one may be picked
+            if (uri.includes(low) || name.includes(low)) out.push({ server: sv, continues: true })
+            continue
+        }
+        if (_family(_scheme(uri)) !== _family(sc)) continue
+        if (q === "") { out.push({ server: sv, continues: false }); continue }
+        if (!host.includes(q) && !name.includes(q)) continue
+        out.push({ server: sv, continues: host.startsWith(q) && !host.slice(q.length).startsWith("/") })
+    }
+    // those carrying on what's typed first
+    return out.filter(o => o.continues).concat(out.filter(o => !o.continues))
+}
+
+function hasExact(names, part) {
+    return part !== "" && (Array.isArray(names) ? names : []).indexOf(part) >= 0
 }
 
 function common(names) {

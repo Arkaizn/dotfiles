@@ -14,9 +14,12 @@ import "lib/FmIcons.js" as FmIcons
 // below the open one with the text in their name (a short search). The top one
 // shows greyed after the text and starts out picked (highlighted): Enter goes
 // there (a file: its folder, it selected; a scheme: it's filled in), Tab fills
-// it in. ↑/↓ pick another (↑ from the top: just what's typed); after a "/"
-// nothing is picked, so Enter goes to the typed folder. Esc closes the list,
-// then the bar.
+// it in. ↑/↓ pick another (↑ from the top: just what's typed). Nothing starts
+// out picked, so Enter goes to exactly what's typed: after a "/"; when a folder
+// of that very name exists ("Doc" beside "Documents"); when a typed server
+// address is whole and the saved one only adds a share ("smb://srv" stays
+// smb://srv, not smb://srv/public). A typed scheme is never swapped: ssh://srv
+// doesn't offer the saved smb://srv. Esc closes the list, then the bar.
 //   AddressBar { backend; here; home; onGo: path => …; onConnectUri: uri => …; onFinished: … }   start(prefix)
 // smb://, sftp://, ftp://, dav(s)://, nfs:// addresses connect to the server (onConnectUri;
 // the window hands back the connect job: `job`). Until it's there the bar stays as typed with a
@@ -118,19 +121,20 @@ SearchField {
         const t = text, low = t.trim().toLowerCase(), plain = t !== "" && t.indexOf("/") < 0 && !t.startsWith("~")
         const out = []
         if (plain && !low.includes(":")) for (const sc of schemes) if (sc.startsWith(low)) out.push({ label: sc, sub: "server address", value: sc, kind: "scheme" })
-        // servers: by address or name; "ssh://svs" also finds sftp://svs-… (GVfs names ssh that way)
-        const bare = u => u.toLowerCase().replace(/^[a-z0-9+.-]+:\/\//, "")
-        const q = bare(low)
-        if (low.length >= 2 && (q !== "" || !low.includes("://")))
-            for (const sv of servers) if (sv.uri.toLowerCase().includes(low) || (q !== "" && bare(sv.uri).includes(q)) || sv.name.toLowerCase().includes(q || low))
-                out.push({ label: sv.name, sub: sv.uri, value: sv.uri, kind: "server" })
+        // servers: by address or name, of the typed scheme only ("ssh://svs" also finds
+        // sftp://svs-…, GVfs names ssh that way; "smb://" alone lists the smb ones)
+        for (const m of FmAddress.serverOffers(t, servers))
+            out.push({ label: m.server.name, sub: m.server.uri, value: m.server.uri, kind: "server", sure: m.continues })
         const sp = FmAddress.split(t)
         if (part !== null) for (const n of FmAddress.matches(cache.names, part, 8)) out.push({ label: n, sub: "", value: sp.dir + n + "/", kind: "folder" })
         if (plain) for (const r of found) if (!out.some(o => o.kind === "folder" && o.label === r.name))
             out.push({ label: r.name, sub: "~/" + (r.path.startsWith(home + "/") ? r.path.slice(home.length + 1) : r.path).replace(/\/[^/]*$/, ""),
                        value: r.path, kind: "result", path: r.path, dir: r.dir })
         offers = out.slice(0, 10)
-        picked = offers.length && !t.endsWith("/") ? 0 : -1
+        // the top one starts out picked unless what's typed is already somewhere to go
+        const top = offers[0]
+        const typedWhole = t.endsWith("/") || (part !== null && FmAddress.hasExact(cache.names, part))
+        picked = top && !typedWhole && (top.kind !== "server" || top.sure) ? 0 : -1
     }
     // files / folders below the open one with the text in their name (a short search, the last one stopped)
     property int _searchId: 0
