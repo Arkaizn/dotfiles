@@ -32,11 +32,12 @@ Pressable {
     // what a running scan / update is doing on it right now
     readonly property var run: ServerRuns.per(server.name)
     // scans / checks do every server at once (no steps); updates go in waves (steps, waiting ones)
-    readonly property bool parallel: ServerRuns.busyMode !== "update"
+    readonly property string runMode: ServerRuns.modeOf(server.name)
+    readonly property bool parallel: runMode !== "update"
     readonly property bool working: run !== null && (run.status ?? "") === "" && ((run.phase ?? "") !== "" || parallel)
     readonly property bool queued: run !== null && (run.status ?? "") === "" && !working
     readonly property string runText: !run ? "" : (run.status ?? "") !== "" ? run.status
-        : run.phase || (ServerRuns.busyMode === "check" ? "health checks…" : parallel ? "scanning…" : "waiting")
+        : run.phase || (runMode === "check" ? "health checks…" : parallel ? "scanning…" : "waiting")
 
     // offline / not checked: grey · critical (security, reboot) or failing checks: red ·
     // normal updates: orange · nothing to do: green (ServerStore.statusColor, same everywhere)
@@ -72,14 +73,14 @@ Pressable {
     }
 
     // a run's result for this server: a green glow (fine) or a shake + red edge (failed)
-    readonly property string result: ServerRuns.run?.per?.[server.name]?.status ?? ""
+    readonly property string result: ServerRuns.resultOf(server.name)
     // Only for a result that comes in while this card is on screen and a run is going.
     // A card that is (re)built — at startup, on a reload, when the details pane opens and
     // the cards reflow — starts with the last run's result: that isn't news, no glow.
     property bool ready: false
     Component.onCompleted: ready = true
     onResultChanged: {
-        if (!ready || !ServerRuns.busy) return
+        if (!ready || !ServerRuns.anyBusy) return
         if (["ok", "up-to-date", "healthy"].includes(result)) glowAnim.restart()
         else if (["failed", "unreachable", "unhealthy", "rolled-back"].includes(result)) shakeAnim.restart()
     }
@@ -231,15 +232,22 @@ Pressable {
                 tip: root.info.normal + (root.info.normal === 1 ? " package update" : " package updates") }
         Badge { visible: root.info.containers > 0; icon: "󰡨"; text: String(root.info.containers); tone: Colors.orange
                 tip: root.info.containers + (root.info.containers === 1 ? " container has a new image" : " containers have new images") }
+        Badge { visible: (root.info.restartPending ?? 0) > 0; icon: "󰜉"; text: root.info.restartPending + " restart"; tone: Colors.orange
+                tip: root.info.restartPending + (root.info.restartPending === 1 ? " container has" : " containers have") + " the new image downloaded and still run" + (root.info.restartPending === 1 ? "s" : "") + " the old one: restart from the details" }
+        Badge { visible: (root.info.plainNew ?? 0) > 0; icon: "󰡨"; text: root.info.plainNew + " plain"; tone: root.server.plainContainers ? Colors.orange : Colors.fade(0.6)
+                tip: root.info.plainNew + (root.info.plainNew === 1 ? " container" : " containers") + " started with docker run " + (root.info.plainNew === 1 ? "has" : "have") + " a newer image"
+                     + (root.server.plainContainers ? "" : " (not updated: turn it on in Edit)") }
         Badge { visible: root.info.checksFailed > 0; icon: "󰀦"; text: root.info.checksFailed + " failing"; tone: Colors.red
                 tip: (root.info.checks ?? []).filter(c => !c.ok).map(c => c.name + ": " + c.detail).join("\n") }
         Badge { visible: root.info.containersBad > 0; icon: "󰡨"; text: root.info.containersBad + " unhealthy"; tone: Colors.red }
         Badge { visible: root.info.stale === true; icon: "󰔟"; text: "rescan"; tone: Colors.fade(0.6); tip: "Updated since the last scan: scan again for the current state" }
-        Badge { visible: root.info.scanOk === true && root.info.reachable !== false && root.info.packages + root.info.containers === 0 && !root.info.reboot
+        Badge { visible: root.info.scanOk === true && root.info.reachable !== false && root.info.packages + root.info.containers + (root.info.restartPending ?? 0) === 0 && !root.info.reboot
                 icon: "󰄬"; text: "up to date"; tone: Colors.green }
         Badge { visible: root.info.scanned === true && root.info.scanOk !== true && root.info.reachable !== false
                 icon: "󰅙"; text: "scan failed"; tone: Colors.fade(0.6); tip: root.info.scanError || "the scan couldn't get in" }
-        Badge { visible: root.info.scanned !== true && root.info.reachable !== false; icon: "󰔟"; text: "not scanned"; tone: Colors.fade(0.55) }
+        Badge { visible: root.info.apiOnly === true; icon: "󰌆"; text: "API only"; tone: Colors.fade(0.6)
+                tip: "Reached only through its API, for snapshots of its guests. The tool doesn't log in over SSH, so it doesn't scan or update the host itself" }
+        Badge { visible: root.info.scanned !== true && root.info.reachable !== false && root.info.apiOnly !== true; icon: "󰔟"; text: "not scanned"; tone: Colors.fade(0.55) }
     }
 
     component Actions: RowLayout {
@@ -250,7 +258,7 @@ Pressable {
         // a run is on it: stop this server only (a stuck wait ends right away, a running install finishes first)
         IconButton { implicitWidth: 30; implicitHeight: 30; iconSize: Tokens.icon.sm; icon: "󰜺"
                      tooltip: (root.run?.aborting ?? false) ? "Aborting…" : "Abort this server"
-                     visible: root.working && ServerRuns.busyMode !== "check" && ServerRuns.busyMode !== "snapshots"
+                     visible: root.working && root.runMode !== "check" && root.runMode !== "snapshots"
                      interactive: !(root.run?.aborting ?? false)
                      onClicked: ServerRuns.abortServer(root.server.name) }
         IconButton { implicitWidth: 30; implicitHeight: 30; iconSize: Tokens.icon.sm; icon: "󰑓"; tooltip: "Scan + health checks"
@@ -296,7 +304,7 @@ Pressable {
                 Text {
                     Layout.fillWidth: true
                     text: root.address + (root.info.osName ? "  ·  " + root.info.osName.replace(/ GNU\/Linux| \(.*\)$/g, "") : root.info.pm ? "  ·  " + root.info.pm : "")
-                          + (root.info.proxmox ? "  ·  Proxmox" : "")
+                          + (ServerStore.kindLabel(root.server) !== "" ? "  ·  " + ServerStore.kindLabel(root.server) : root.info.proxmox ? "  ·  Proxmox" : "")
                     color: Colors.textMuted
                     font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily

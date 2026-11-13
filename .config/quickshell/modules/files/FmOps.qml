@@ -8,7 +8,7 @@ import "lib/FmFormat.js" as FmFormat
 // the backend (progress, pause, cancel), the questions they ask (conflicts,
 // errors — the window used last shows them), undo / redo, the clipboard.
 //
-//   run(op, args, label, then) · mount(volume, name, then) · unmount(uri, name, eject) · connect(uri, then)
+//   run(op, args, label, then) · mount(volume, name, then) · unmount(uri, name, eject) · connect(uri, then, cred, remember)
 //   extract(path, dest, then) · compress(paths, dest, name, format, password, then)
 //   copy(sources, dest, mode)   mode: copy | move | link | auto (a move on the same drive)       trash(paths) · remove(paths) (for good)
 //   rename(path, name, cb) · mkdir(dir, name, cb) · newfile(dir, name, template, cb)
@@ -174,7 +174,12 @@ Scope {
     // ── Drives, servers, archives (they may ask for a password: PasswordDialog) ──
     function mount(volume, name, then) { _start("mount", { volume: volume }, "Opening " + name, then) }
     function unmount(uri, name, eject) { _start("unmount", { uri: uri, eject: eject === true }, (eject ? "Ejecting " : "Unmounting ") + name, null) }
-    function connect(uri, then) { return _start("connect", { uri: uri }, "Connecting to " + uri.replace(/^[a-z]+:\/\//, ""), then) }
+    // cred: a saved login's id (FilesApp.logins) — the backend answers the server with it
+    function connect(uri, then, cred, remember) {
+        const args = { uri: uri }
+        if (cred) { args.cred = cred; args.remember = remember === true }
+        return _start("connect", args, "Connecting to " + uri.replace(/^[a-z]+:\/\//, ""), then)
+    }
     function extract(path, dest, then) {
         _start("extract", { path: path, dest: dest }, "Extracting " + names([path]), res => { if (then) then(res) }, { dest: dest })
     }

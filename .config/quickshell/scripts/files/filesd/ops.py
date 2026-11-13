@@ -396,13 +396,20 @@ def _copy_file(job, src, dst, sst, replace):
         try:
             fo = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
             try:
+                fast = True
                 while True:
                     job.check()
-                    try:
-                        n = os.copy_file_range(fi, fo, CHUNK)
-                    except OSError as e:
-                        if e.errno not in (errno.EXDEV, errno.EINVAL, errno.ENOSYS, errno.EOPNOTSUPP):
-                            raise
+                    n = -1
+                    if fast:
+                        try:
+                            n = os.copy_file_range(fi, fo, CHUNK)
+                        except OSError as e:
+                            # not between these two (another drive, a share, a file system without
+                            # it): plain read + write from here on. A real error shows there too
+                            if e.errno not in SOFT and e.errno not in (errno.EXDEV, errno.EBADF, errno.EIO):
+                                raise
+                            fast = False
+                    if n < 0:
                         data = os.read(fi, CHUNK)
                         n = len(data)
                         view = memoryview(data)
@@ -413,12 +420,12 @@ def _copy_file(job, src, dst, sst, replace):
                     copied[0] += n
                     job.bytes += n
                     job.progress()
-                os.fchmod(fo, stat.S_IMODE(sst.st_mode))
+                _soft(lambda: os.fchmod(fo, stat.S_IMODE(sst.st_mode)))
             finally:
                 os.close(fo)
         finally:
             os.close(fi)
-        os.utime(tmp, ns=(sst.st_atime_ns, sst.st_mtime_ns), follow_symlinks=False)
+        _soft(lambda: os.utime(tmp, ns=(sst.st_atime_ns, sst.st_mtime_ns), follow_symlinks=False))
         _place(tmp, dst, replace)
     try:
         return job.guard(dst, work)
@@ -448,9 +455,22 @@ def _rename_new(src, dst):
     os.rename(src, dst)
 
 
+# a file system that can't take a mode or a time (a server through GVfs, FAT, some NAS):
+# the copy itself is fine — keeping the mode / times is best effort, never a failed copy
+SOFT = (errno.EOPNOTSUPP, errno.ENOSYS, errno.EPERM, errno.EACCES, errno.EINVAL, errno.ENOTTY)
+
+
+def _soft(work):
+    try:
+        work()
+    except OSError as e:
+        if e.errno not in SOFT:
+            raise
+
+
 def _copy_meta(sst, dst):
-    os.chmod(dst, stat.S_IMODE(sst.st_mode))
-    os.utime(dst, ns=(sst.st_atime_ns, sst.st_mtime_ns))
+    _soft(lambda: os.chmod(dst, stat.S_IMODE(sst.st_mode)))
+    _soft(lambda: os.utime(dst, ns=(sst.st_atime_ns, sst.st_mtime_ns)))
 
 
 def _count(path):

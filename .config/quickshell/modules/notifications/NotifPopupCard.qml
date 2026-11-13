@@ -191,7 +191,7 @@ Item {
                     Text {
                         text: root.appName
                         color: Colors.fade(0.53)
-                        font { bold: true; pixelSize: Tokens.font.caption }
+                        font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.caption }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                         // leave room for the close button
@@ -202,12 +202,13 @@ Item {
                         text: root.summary
                         textFormat: Text.PlainText
                         color: Colors.fade(0.9)
-                        font { bold: true; pixelSize: Tokens.font.label }
+                        font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.label }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
 
                     Text {
+                        font.family: Properties.fontFamily
                         visible: root.body !== ""
                         text: root.body
                         textFormat: Text.StyledText

@@ -19,7 +19,7 @@ BarButton {
             color: Properties.color
             font.pixelSize: Tokens.font.small
             font.weight: Font.Bold
-            font.family: "Inter"
+            font.family: Properties.fontFamily
             font.letterSpacing: 0.3
         }
 
@@ -29,7 +29,7 @@ BarButton {
             color: Colors.color4
             font.pixelSize: Tokens.font.small
             font.weight: Font.Bold
-            font.family: "Inter"
+            font.family: Properties.fontFamily
 
             // blinks with the seconds: one redraw a second (a smooth pulse
             // redrew the bar on every frame, ~2.5 % CPU per 60 Hz bar)
@@ -42,16 +42,17 @@ BarButton {
             color: Properties.color
             font.pixelSize: Tokens.font.small
             font.weight: Font.Bold
-            font.family: "Inter"
+            font.family: Properties.fontFamily
             font.letterSpacing: 0.3
         }
         Text {
             anchors.verticalCenter: parent.verticalCenter
             text: Time.format("ddd d")
+            leftPadding: Tokens.space.s4   // a gap after the minutes
             color: Properties.color
             font.pixelSize: Tokens.font.micro
             font.weight: Font.Medium
-            font.family: "Inter"
+            font.family: Properties.fontFamily
         }
     }
 }

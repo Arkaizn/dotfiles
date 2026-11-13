@@ -36,6 +36,7 @@ Rectangle {
                 font.family: Properties.fontFamily
             }
             Text {
+                font.family: Properties.fontFamily
                 text: tile.label
                 color: Colors.fade(0.35)
                 font.pixelSize: Tokens.font.micro; font.letterSpacing: 1; font.bold: true
@@ -43,6 +44,7 @@ Rectangle {
             }
         }
         Text {
+            font.family: Properties.fontFamily
             text: tile.value
             color: Colors.fade(0.85)
             font.pixelSize: Tokens.font.subtitle; font.bold: true

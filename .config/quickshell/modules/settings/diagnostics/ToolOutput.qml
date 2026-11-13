@@ -30,7 +30,7 @@ ColumnLayout {
                   + (root.st.running ? "<br><font color='#888888'>…</font>" : "")
             color: Colors.fade(0.8)
             font.pixelSize: Tokens.font.caption
-            font.family: "monospace"
+            font.family: Properties.fontFamily
             wrapMode: Text.WrapAnywhere
         }
     }

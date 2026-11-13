@@ -17,7 +17,7 @@ Grid {
             radius: 3
             color: root.colors?.["color" + index] ?? "transparent"
             border.width: 1
-            border.color: Colors.fade(0.12)
+            border.color: Colors.line(0.12)
         }
     }
 }

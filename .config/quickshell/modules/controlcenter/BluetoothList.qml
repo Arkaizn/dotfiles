@@ -29,6 +29,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Text {
+            font.family: Properties.fontFamily
             Layout.fillWidth: true
             text: !root.adapter ? "No Bluetooth adapter"
                 : !root.adapter.enabled ? "Bluetooth is off"
@@ -123,6 +124,7 @@ ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 0
                             Text {
+                                font.family: Properties.fontFamily
                                 Layout.fillWidth: true
                                 text: row.dev.name || row.dev.address
                                 color: Colors.ink
@@ -131,6 +133,7 @@ ColumnLayout {
                                 elide: Text.ElideRight
                             }
                             Text {
+                                font.family: Properties.fontFamily
                                 Layout.fillWidth: true
                                 text: row.dev.pairing ? "Pairing…"
                                     : row.dev.state === BluetoothDeviceState.Connecting ? "Connecting…"

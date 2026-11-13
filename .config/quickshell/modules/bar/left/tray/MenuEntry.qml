@@ -48,6 +48,7 @@ Rectangle {
         }
 
         Text {
+            font.family: Properties.fontFamily
             text: entry.text ?? ""
             color: (entry.enabled !== false)
                 ? (root.hovered ? Colors.ink : Colors.fade(0.85))
@@ -57,6 +58,7 @@ Rectangle {
         }
 
         Text {
+            font.family: Properties.fontFamily
             visible: entry.hasChildren === true
             text: "›"
             color: Colors.fade(0.4)

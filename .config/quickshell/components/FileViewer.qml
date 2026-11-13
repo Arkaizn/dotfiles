@@ -119,7 +119,7 @@ Item {
             Text {
                 // the kind of file: PDF, picture, text, anything else
                 text: ({ pdf: "\u{F0226}", image: "\u{F021F}", text: "\u{F0219}" })[root.item?.kind] ?? "\u{F0214}"
-                color: Colors.color6
+                color: Colors.accent
                 font.pixelSize: Tokens.font.subtitle
                 font.family: Properties.fontFamily
                 Layout.leftMargin: Tokens.space.s6
@@ -142,7 +142,7 @@ Item {
                                         root.item?.kind === "pdf" ? root.item.pageCount + (root.item.pageCount === 1 ? " page" : " pages")
                                                                    + (root.item.pages.length < root.item.pageCount ? " (first " + root.item.pages.length + " shown)" : "") : "",
                                         root.list.length > 1 ? (root.at + 1) + " of " + root.list.length : ""].filter(x => x).join("  ·  ")
-                    color: root.note ? Colors.color6 : Colors.fade(0.5)
+                    color: root.note ? Colors.accent : Colors.fade(0.5)
                     font.pixelSize: Tokens.font.caption
                     font.family: Properties.fontFamily
                     elide: Text.ElideRight

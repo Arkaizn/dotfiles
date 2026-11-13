@@ -102,11 +102,12 @@ Item {
                         Text {
                             text: root.model.appName
                             color: Colors.fade(0.9)
-                            font { bold: true; pixelSize: Tokens.font.body }
+                            font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.body }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
                         Text {
+                            font.family: Properties.fontFamily
                             text: (root.itemCount > 1 ? root.itemCount + " notifications · " : "")
                                   + Notifs.relativeTime(root.model.time)
                             color: Colors.fade(0.44)

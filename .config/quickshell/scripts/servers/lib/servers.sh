@@ -32,6 +32,8 @@ excluded_ct() {
 # the new image) | pull (only download the image; they restart when you say so) | never.
 # servers.json "containers"; without it a server that must never reboot is "pull".
 declare -A CT_MODE
+KNOWN=()                    # every server in servers.json that isn't archived (SERVERS: the ones scanned and updated)
+PVE_KIND=()                 # servers said to be a Proxmox VE host / Backup Server (servers.json "kind": pve | pbs)
 PLAIN_OK=()                 # servers whose `docker run` containers may be updated (servers.json "plainContainers")
 ct_mode() {
   if [ -n "${CT_MODE[$1]}" ]; then echo "${CT_MODE[$1]}"
@@ -46,8 +48,22 @@ load_servers_json() {
   local code
   code=$(jq -r '
     def ok: type == "string" and test("^[A-Za-z0-9][A-Za-z0-9._-]*$");
-    def active: [.servers[]? | select(.archived != true and (.name | ok))];
-    active as $a | ($a | map(.name)) as $names |
+    def known: [.servers[]? | select(.archived != true and (.name | ok))];
+    # a Proxmox host that is only reached through its API is not scanned or updated here
+    def active: known | map(select((.pve.apiOnly // false) != true or .kind != "pve" or .pve.access != "api"));
+    known as $k | active as $a | ($a | map(.name)) as $names |
+    "KNOWN=(" + ($k | map(.name | @sh) | join(" ")) + ")",
+    # what the Servers app set in Settings → Servers (it wins over svs.conf; absent = svs.conf decides)
+    ((.policy // {}) as $p |
+      (if ($p.maxParallel | type) == "number" and $p.maxParallel >= 1 and $p.maxParallel <= 16 then "MAX_PARALLEL=\($p.maxParallel | floor)" else empty end),
+      (if ($p.stopOnFailure | type) == "boolean" then "STOP_ON_FAILURE=\(if $p.stopOnFailure then "yes" else "no" end)" else empty end),
+      (if $p.autoRollback == "none" or $p.autoRollback == "containers" or $p.autoRollback == "snapshot" then "AUTO_ROLLBACK=\($p.autoRollback)" else empty end),
+      (if ($p.snapshotKeepDays | type) == "number" and $p.snapshotKeepDays >= 0 and $p.snapshotKeepDays <= 365 then "SNAPSHOT_KEEP_DAYS=\($p.snapshotKeepDays | floor)" else empty end),
+      (if ($p.rollbackKeepDays | type) == "number" and $p.rollbackKeepDays >= 0 and $p.rollbackKeepDays <= 365 then "ROLLBACK_KEEP_DAYS=\($p.rollbackKeepDays | floor)" else empty end)),
+    ($k[] | select(.kind == "pve" and .pve.access == "api" and ((.pve.url // "") | test("^https://[A-Za-z0-9.-]+(:[0-9]+)?$"))
+                   and ((.pve.tokenId // "") | test("^[A-Za-z0-9._@!-]+$")) and ((.pve.node // "") | test("^[A-Za-z0-9-]*$"))
+                   and ((.pve.pin // "") | test("^(sha256//[A-Za-z0-9+/=]+)?$")))
+          | "PVE_API[\(.name | @sh)]=\("\(.pve.url)|\(.pve.tokenId)|\(.pve.node // "")|\(.pve.pin // "")" | @sh)"),
     "SERVERS=(" + ($names | map(@sh) | join(" ")) + ")",
     ($a[] | select((.port // 22) != 22) | "PORTS[\(.name | @sh)]=\(.port | tostring | @sh)"),
     ($a[] | select(((.host // "") != "") or ((.user // "") != ""))
@@ -62,11 +78,12 @@ load_servers_json() {
     ($a[] | select((.excludeContainers // []) | length > 0)
           | "EXCL_CT[\(.name | @sh)]=\(.excludeContainers | join("\n") | @sh)"),
     ($a[] | "CT_MODE[\(.name | @sh)]=\((.containers // (if .noReboot == true then "pull" else "update" end)) | @sh)"),
+    "PVE_KIND=(" + ($a | map(select(.kind == "pve" or .kind == "pbs") | .name | @sh) | join(" ")) + ")",
     "PLAIN_OK=(" + ($a | map(select(.plainContainers == true) | .name | @sh) | join(" ")) + ")",
     "WAVES=(" + ([.waves[]? | map(select(. as $n | $names | index($n))) | select(length > 0) | join(" ") | @sh] | join(" ")) + ")"
   ' "$SERVERS_FILE") || { echo "servers.json is not valid: $SERVERS_FILE" >&2; exit 1; }
   SERVERS=() NO_REBOOT_SERVERS=() NO_SNAPSHOT_SERVERS=() WAVES=() EXCLUDE_CONTAINERS=()
-  PORTS=() GUESTS=() CHECKS=() SSH_DEST=() EXCL_CT=() CT_MODE=() PLAIN_OK=()
+  PORTS=() GUESTS=() CHECKS=() SSH_DEST=() EXCL_CT=() CT_MODE=() PLAIN_OK=() PVE_KIND=() PVE_API=() KNOWN=()
   eval "$code"
 }
 

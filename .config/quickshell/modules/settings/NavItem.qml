@@ -34,7 +34,7 @@ Item {
         anchors.fill: parent
         radius: Tokens.radius.lg
         border.width: face.own || mouse.containsMouse ? 1.5 : 0
-        border.color: Colors.fade(face.own ? 0.24 : 0.14)
+        border.color: Colors.line(face.own ? 0.24 : 0.14)
         gradient: ButtonGradient { hovered: face.own }
         opacity: face.own ? 1 : mouse.containsMouse && !root.selected ? 0.6 : 0
         Behavior on opacity { NumberAnimation { duration: Anim.fast } }

@@ -106,11 +106,22 @@ def run(base, query, opts, cancelled, emit):
     skip = opts.get("skip") or frozenset()
     found, batch, scanned = 0, [], 0
     last = time.monotonic()
+
+    def flush(force=False):
+        # what's found goes out on the clock, not only when the next match turns up: the
+        # first match at once, then every BATCH_EVERY (a match found early used to wait for
+        # the end of the whole search when nothing else matched)
+        nonlocal batch, last
+        now = time.monotonic()
+        if batch and (force or now - last >= BATCH_EVERY):
+            emit(batch)
+            batch, last = [], now
     queue = collections.deque([(base, 0)])
     while queue:
         folder, depth = queue.popleft()
         if cancelled():
             return None
+        flush()
         try:
             entries = list(os.scandir(folder))
         except OSError:
@@ -119,8 +130,10 @@ def run(base, query, opts, cancelled, emit):
         budget = [listing.SNIFF_MAX]
         for e in entries:
             scanned += 1
-            if scanned % 2000 == 0 and cancelled():
-                return None
+            if scanned % 500 == 0:
+                if cancelled():
+                    return None
+                flush()
             name = e.name
             is_hidden = listing.is_hidden(name, hidden_names)
             if is_hidden and not hidden:
@@ -148,10 +161,6 @@ def run(base, query, opts, cancelled, emit):
             if found >= MAX_RESULTS:
                 emit(batch)
                 return {"count": found, "more": True, "scanned": scanned}
-            now = time.monotonic()
-            if now - last >= BATCH_EVERY:
-                emit(batch)
-                batch, last = [], now
-    if batch:
-        emit(batch)
+            flush(found == 1)
+    flush(True)
     return {"count": found, "more": False, "scanned": scanned}

@@ -9,6 +9,8 @@ import "lib/FmFormat.js" as FmFormat
 import "lib/FmPath.js" as FmPath
 import "lib/FmColumns.js" as FmColumns
 import "lib/FmDrop.js" as FmDrop
+import "lib/FmAddress.js" as FmAddress
+import "lib/FmChooser.js" as FmChooser
 
 // One file manager window: the places sidebar (its width saved like Mail's),
 // the path bar, the tabs (FolderTab: a folder each; the strip shows from two
@@ -34,6 +36,12 @@ import "lib/FmDrop.js" as FmDrop
 // Drag files: to a folder, a tab, a sidebar place (on the same drive a move, else a copy;
 //   Ctrl: copy, Shift: move, Ctrl+Shift: link — as far as the compositor tells), to other apps (a copy).
 //   Ctrl + wheel, Ctrl +/−/0: icon size over the folder, the whole window elsewhere (D0-9)
+//
+// As another app's Open / Save dialog (`chooser`: a request from filesd/portal.py, FilesApp.choose):
+//   the same window with a bar under the folder (ChooserBar: name, type filter, the app's options,
+//   Cancel + the answer). Enter / double-click on a file answers, a folder is walked into, Esc or
+//   closing the window cancels. It floats at one fixed size (not the "Files — " title: the tiling
+//   rule doesn't match), is never restored after a restart and never takes folders from outside.
 FloatingWindow {
     id: win
 
@@ -42,6 +50,8 @@ FloatingWindow {
     property int startActive: 0
     property var startSize: null         // { width, height } (restored), else the last window's
     signal finished()                    // the window was closed
+    property var chooser: null           // another app's Open / Save request, else a normal window
+    readonly property bool choosing: chooser !== null
 
     readonly property var backend: app.backend
     readonly property var state: app.state
@@ -137,10 +147,17 @@ FloatingWindow {
     function tabOn(p) { return tabs.findIndex(t => t.path === p) }
 
     // set before the window maps: niri matches the rules (prefix "Files — ") when it opens
-    title: app.titlePrefix + (tab ? tab.title : app.folderName(startTabs[0]?.path ?? home))
-    implicitWidth: startSize?.width ?? state.get("window", {}).width ?? 1100
-    implicitHeight: startSize?.height ?? state.get("window", {}).height ?? 720
-    minimumSize: Qt.size(560, 400)
+    title: choosing ? FmChooser.title(chooser, app.titlePrefix)
+                    : app.titlePrefix + (tab ? tab.title : app.folderName(startTabs[0]?.path ?? home))
+    implicitWidth: choosing ? chooseSize.width : startSize?.width ?? state.get("window", {}).width ?? 1100
+    implicitHeight: choosing ? chooseSize.height : startSize?.height ?? state.get("window", {}).height ?? 720
+    // a dialog has one fixed size: compositors float such a window by themselves, no window rule
+    // needed (niri doesn't every time: then it's asked to — Compositor.floatWindow). Fixed for
+    // good: letting go of it later made niri apply the size it had wanted for a tiled window
+    readonly property size chooseSize: Qt.size(1000, 680)
+    minimumSize: choosing ? chooseSize : Qt.size(560, 400)
+    maximumSize: choosing ? chooseSize : Qt.size(16384, 16384)
+    onBackingWindowVisibleChanged: if (choosing && backingWindowVisible) Compositor.floatWindow(title, chooseSize.width, chooseSize.height)
     color: "transparent"
     visible: true
     onVisibleChanged: if (!visible) finished()
@@ -149,12 +166,12 @@ FloatingWindow {
     Timer {
         id: saveSize
         interval: Anim.slower
-        onTriggered: { win.state.set("window", { width: Math.round(win.width), height: Math.round(win.height) }); win.app.saveWindows() }
+        onTriggered: { if (win.choosing) return; win.state.set("window", { width: Math.round(win.width), height: Math.round(win.height) }); win.app.saveWindows() }
     }
 
     // the window last used: where folders from outside open (FilesApp.show)
     readonly property bool focused: bg.Window.active
-    onFocusedChanged: if (focused) app.lastWindow = win
+    onFocusedChanged: if (focused) { app.front = win; if (!choosing) app.lastWindow = win }
 
     // what `qs ipc … call files info` reports (tests, scripts): the current tab, plus the tabs
     function info() {
@@ -177,6 +194,10 @@ FloatingWindow {
         for (const t of list) newTab(t.path, { select: t.select, end: true, background: true })
         selectTab(Math.max(0, Math.min(startActive, tabs.length - 1)))
         Jobs.which(["nautilus"], have => win.haveNautilus = have.nautilus === true)
+        if (choosing) {
+            chooserBar.name = chooser.name ?? ""
+            if (chooser.mode === "save") Qt.callLater(chooserBar.focusName)
+        }
     }
 
     ZoomArea {
@@ -235,6 +256,14 @@ FloatingWindow {
                 Keys.onPressed: event => {
                     const t = win.tab
                     if (address.visible || !t) return
+                    // a held key repeats moving, paging and typing — never an action (a paste held a
+                    // moment too long started the copy again and again: "File exists")
+                    if (event.isAutoRepeat) {
+                        const moving = [Qt.Key_Down, Qt.Key_Up, Qt.Key_Left, Qt.Key_Right, Qt.Key_PageDown, Qt.Key_PageUp].includes(event.key)
+                        const typing = event.text.length === 1 && event.text.charCodeAt(0) >= 32 && event.text.charCodeAt(0) !== 127
+                                       && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier)) && event.key !== Qt.Key_Space
+                        if (!((moving && !(event.modifiers & Qt.AltModifier)) || typing)) { event.accepted = true; return }
+                    }
                     const view = t.view
                     const ctrl = event.modifiers & Qt.ControlModifier, alt = event.modifiers & Qt.AltModifier
                     const shift = (event.modifiers & Qt.ShiftModifier) !== 0
@@ -305,13 +334,21 @@ FloatingWindow {
                     case Qt.Key_PageUp: view.page(-1, shift); break
                     case Qt.Key_Home: view.first(shift); break
                     case Qt.Key_End: view.last(shift); break
-                    case Qt.Key_Return: case Qt.Key_Enter: t.activate(view.currentIndex); break
+                    case Qt.Key_Return: case Qt.Key_Enter:
+                        if (win.choosing && view.currentIndex < 0) win.chooseAccept()
+                        else t.activate(view.currentIndex)
+                        break
                     case Qt.Key_Backspace: t.up(); break
                     case Qt.Key_F5: t.folder.reload(); break
                     case Qt.Key_F2: win.renameCurrent(); break
                     case Qt.Key_Delete: if (shift) win.deleteSel(); else win.trashSel(); break
                     // (a folder still loading — a slow server —: Esc goes back where you were)
-                    case Qt.Key_Escape: if (t.searching) win.endSearch(); else if (t.folder.loading && t.history.length) t.back(); else view.clearSelection(); break
+                    case Qt.Key_Escape:
+                        if (t.searching) win.endSearch()
+                        else if (win.choosing) win.chooseCancel()
+                        else if (t.folder.loading && t.history.length) t.back()
+                        else view.clearSelection()
+                        break
                     case Qt.Key_Space: win.preview(); break
                     default: {
                         // "/" and "~" open the address bar; other text starts a search (like Nautilus)
@@ -349,7 +386,10 @@ FloatingWindow {
                         anchors.margins: Tokens.space.s12
                         spacing: Tokens.space.s10
 
-                        AppTitle { icon: FmIcons.g.folder; title: "Files" }
+                        AppTitle {
+                            icon: !win.choosing ? FmIcons.g.folder : win.chooser.mode === "open" || win.chooser.mode === "folder" ? FmIcons.g.folderOpen : "\u{F0193}"
+                            title: win.choosing ? FmChooser.verb({ mode: win.chooser.mode }) : "Files"
+                        }
 
                         Places {
                             Layout.fillWidth: true
@@ -367,7 +407,7 @@ FloatingWindow {
                                 win.app.ops.unmount(m.uri, m.name, m.canEject)
                             }
                             onServerPicked: uri => win.connectTo(uri, false)
-                            onConnectRequested: connectDialog.open()
+                            onConnectRequested: connectDialog.start("")
                             onDropped: (p, drop) => win.handleDrop(drop, p)
                             onContext: (place, item, x, y) => {
                                 // hiding it (Preferences → Sidebar brings it back)
@@ -384,6 +424,7 @@ FloatingWindow {
                                 if (place?.server) {
                                     menu.show(item, x, y, place.name, [
                                         { icon: "\u{F0318}", label: "Connect", run: () => win.connectTo(place.server, false) },
+                                        { icon: "󰀄", label: "Connect as…", run: () => connectDialog.start(place.server) },
                                         { icon: "󰆏", label: "Copy address", run: () => win.copy(place.server) },
                                         { icon: FmIcons.g.bookmark, label: "Add to bookmarks", run: () => win.backend.request("bookmark", { action: "add", uri: place.server },
                                               { done: () => win.toast("Bookmarked — a click connects", "info"), error: msg => win.toast(msg) }) },
@@ -404,6 +445,7 @@ FloatingWindow {
                                 if (place?.bookmark && place.remote) {
                                     menu.show(item, x, y, place.name, [
                                         { icon: "\u{F0318}", label: "Connect", run: () => win.connectTo(place.uri, false) },
+                                        { icon: "󰀄", label: "Connect as…", run: () => connectDialog.start(place.uri) },
                                         { icon: "󰆏", label: "Copy address", run: () => win.copy(place.uri) }].concat(marks, hide))
                                     return
                                 }
@@ -413,7 +455,8 @@ FloatingWindow {
                                     { icon: FmIcons.g.tab, label: "Open in new tab", run: () => win.newTab(place.path) },
                                     { icon: FmIcons.g.window, label: "Open in new window", run: () => win.app.newWindow(place.path) },
                                     { icon: "󰆍", label: "Open in terminal", run: () => win.terminal(place.path) }
-                                ].concat(place.remote ? [] : [{ icon: FmIcons.g.drive, label: "Disk usage (ncdu)", run: () => win.diskUsage(place.path) }], [
+                                ].concat(place.remote ? [{ icon: "󰀄", label: "Connect as another user…", run: () => connectDialog.start(place.uri) }]
+                                                      : [{ icon: FmIcons.g.drive, label: "Disk usage (ncdu)", run: () => win.diskUsage(place.path) }], [
                                     { sep: true },
                                     { icon: "󰆏", label: place.remote ? "Copy address" : "Copy location", run: () => win.copy(place.remote ? place.uri : place.path) }
                                 ].concat(place.bookmark ? [] : [
@@ -509,7 +552,7 @@ FloatingWindow {
                             visible: win.tab?.searching === true
                             Layout.fillWidth: true
                             here: win.tab ? win.tab.title : ""
-                            onSearch: (q, opts) => win.tab.search(q, opts)
+                            onSearch: (q, opts) => { win.openWhenFound = false; win.tab.search(q, opts) }
                             onFinished: win.endSearch()
                             onToResults: { keys.forceActiveFocus(); if (win.tab.view.currentIndex < 0) win.tab.view.first(false) }
                             onOpenFirst: win.openFirstResult()
@@ -656,6 +699,22 @@ FloatingWindow {
                             Accessible.name: text
                         }
                     }
+
+                    // another app's Open / Save dialog: the name, the type filter, the answer
+                    ChooserBar {
+                        id: chooserBar
+                        visible: win.choosing
+                        Layout.fillWidth: true
+                        req: win.chooser ?? ({ mode: "open", filters: [], choices: [] })
+                        filterIndex: win.filterIndex
+                        choiceValues: win.choiceValues
+                        hint: win.chooseHint
+                        canAccept: win.chooseReady
+                        onAccept: win.chooseAccept()
+                        onCancel: win.chooseCancel()
+                        onFilterPicked: i => win.filterIndex = i
+                        onChoicePicked: (id, value) => { const v = Object.assign({}, win.choiceValues); v[id] = value; win.choiceValues = v }
+                    }
                 }
             }
 
@@ -710,13 +769,16 @@ FloatingWindow {
                           onOpenLocation: p => win.tab.go(FmPath.parent(p), { select: FmPath.base(p) }) }
             OpenWithDialog { id: openWith; anchors.fill: parent; z: 60; backend: win.backend; onClosed: keys.forceActiveFocus(); onFailed: msg => win.toast(msg) }
             ConnectDialog { id: connectDialog; anchors.fill: parent; z: 60; known: win.app.knownServers; history: win.app.serverHistory
-                            onForget: uri => win.app.forgetHistory(uri); onClosed: keys.forceActiveFocus(); onConnect: (uri, keep) => win.connectTo(uri, keep) }
+                            logins: win.app.logins; onShownChanged: if (shown) win.app.loadLogins()
+                            onForget: uri => win.app.forgetHistory(uri); onClosed: keys.forceActiveFocus()
+                            onConnect: (uri, keep, login) => win.connectTo(uri, keep, login) }
             CompressDialog { id: compressDialog; anchors.fill: parent; z: 60; onClosed: keys.forceActiveFocus()
                              property var paths: []
                              onCreate: (name, format, password) => win.app.ops.compress(paths, win.tab.path, name, format, password,
                                                                                         res => win.selectIn(win.tab.path, res.path)) }
             // a mount / a server / an archive asks for a password (or a choice)
-            PasswordDialog { anchors.fill: parent; z: 70; ops: win.app.ops; mine: win.app.target === win; onClosed: keys.forceActiveFocus() }
+            PasswordDialog { anchors.fill: parent; z: 70; ops: win.app.ops; mine: win.app.owner === win; onClosed: keys.forceActiveFocus()
+                             logins: win.app.logins; onShownChanged: if (shown) win.app.loadLogins() }
             FmPrefs { id: prefs; anchors.fill: parent; z: 60; onClosed: keys.forceActiveFocus() }
             // Space: the selected / current file over the window; ←/→ go through the folder
             FileViewer {
@@ -730,7 +792,7 @@ FloatingWindow {
                 onShownChanged: if (!shown) keys.forceActiveFocus()
             }
             // an operation's questions show in the window used last
-            AskDialog { anchors.fill: parent; z: 70; ops: win.app.ops; mine: win.app.target === win; onClosed: keys.forceActiveFocus() }
+            AskDialog { anchors.fill: parent; z: 70; ops: win.app.ops; mine: win.app.owner === win; onClosed: keys.forceActiveFocus() }
 
             PopupMenu { id: menu; parent: bg; backdrop: content; onClosed: win.refocus() }
             // a second menu: what "New document" offers
@@ -944,13 +1006,17 @@ FloatingWindow {
     // (answers the job: the address bar shows it running)
     // (the window can be gone when the server answers — closed, or a reload: the app, kept here,
     // still remembers it; only the folder isn't opened then)
-    function connectTo(uri, keep) {
+    // login: nothing (the keyring's login for it, or the server asks) · { user, domain } another
+    // user · { cred, user, domain, remember } a saved login (also another server's): the user goes
+    // into the address — each user is a connection of its own — and the saved password answers
+    function connectTo(uri, keep, login) {
         const a = app
+        if (login && login.user) uri = FmAddress.withUser(uri, login.user, login.domain ?? "")
         return a.ops.connect(uri, res => {
             a.addHistory(uri)
             if (keep) a.rememberServer(uri)
             try { if (win.tab) win.tab.go(res.path) } catch (e) {}
-        })
+        }, login?.cred ?? "", login?.remember === true)
     }
     // a result (an archive, an extracted folder) selected where it is, if that's open here
     function selectIn(dir, path) { for (const t of tabs) if (t.path === dir) t.selectSoon([FmPath.base(path)]) }
@@ -984,9 +1050,10 @@ FloatingWindow {
     function viewMenuFor(t, i, item, x, y) {
         if (t.special === "network") {
             if (i < 0) { menu.show(item, x, y, "Network", [{ icon: FmIcons.g.refresh, label: "Look again", run: () => t.folder.reload() },
-                                                         { icon: "\u{F0415}", label: "Connect to server…", run: () => connectDialog.open() }]); return }
+                                                         { icon: "\u{F0415}", label: "Connect to server…", run: () => connectDialog.start("") }]); return }
             const it = t.folder.at(i)
             menu.show(item, x, y, it.name, [{ icon: "\u{F0318}", label: "Connect", run: () => t.open(i) },
+                                          { icon: "󰀄", label: "Connect as…", run: () => connectDialog.start(it.uri) },
                                           { icon: "\u{F0415}", label: "Connect and keep in the sidebar", run: () => win.connectTo(it.uri, true) },
                                           { icon: "󰆏", label: "Copy address", run: () => win.copy(it.uri) },
                                           { icon: FmIcons.g.bookmark, label: "Add to bookmarks", run: () => backend.request("bookmark", { action: "add", uri: it.uri, label: it.name },
@@ -1037,22 +1104,133 @@ FloatingWindow {
     function trashEntries(items) { return items.map(it => ({ file: it.path, info: it.info, orig: it.orig })) }
 
     // ── Search, preview, properties ──
-    // Enter in the search field: the first result opens (once the results are in)
+    // Enter in the search field: the best result opens at once — the best of what's found so
+    // far while the search still runs (a share can take long), the first one in if none is yet
     property bool openWhenFound: false
     function openFirstResult() {
         const t = tab
         if (!t) return
         keys.forceActiveFocus()
-        if (t.folder.loading || t.folder.query === undefined) { openWhenFound = true; return }
-        if (t.folder.count > 0) { t.view.first(false); t.activate(0) }
+        openWhenFound = !_openBest()
+    }
+    function _openBest() {
+        const t = tab, f = t ? t.folder : null
+        if (!f || f.query === undefined) return false         // (the results haven't taken the view yet)
+        const i = f.best()
+        if (i < 0) return !f.loading                          // nothing found (and nothing coming): done
+        t.view.setCurrent(i)
+        t.activate(i)
+        return true
     }
     Connections {
         target: win.tab ? win.tab.folder : null
-        function onLoaded() {
-            if (!win.openWhenFound) return
-            win.openWhenFound = false
-            if (win.tab.folder.count > 0 && win.tab.folder.query !== undefined) { win.tab.view.first(false); win.tab.activate(0) }
+        function onLoaded() { if (win.openWhenFound) win.openWhenFound = !win._openBest() }
+        function onChanged() { if (win.openWhenFound) win.openWhenFound = !win._openBest() }
+    }
+
+    // ── Another app's Open / Save dialog (chooser) ──
+    property int filterIndex: chooser ? (chooser.filter >= 0 ? chooser.filter : (chooser.filters ?? []).length ? 0 : -1) : -1
+    property var choiceValues: {
+        const v = {}
+        for (const c of chooser?.choices ?? []) v[c.id] = c.value
+        return v
+    }
+    // what the type filter lets show (item => bool, or null): the tabs' folders and searches read it
+    readonly property var chooseFilter: choosing && filterIndex >= 0 ? FmChooser.matcher(chooser.filters[filterIndex]) : null
+    // what the answer would be, in words (the bar shows it), and whether there is one
+    readonly property var choosePicked: {
+        const t = tab
+        if (!choosing || !t) return []
+        const v = t.view, sel = v.selCount > 0 ? v.selectedItems() : []
+        if (sel.length) return sel
+        const cur = v.currentIndex >= 0 && t.folder.count >= 0 ? t.folder.at(v.currentIndex) : null
+        return cur ? [cur] : []
+    }
+    readonly property bool chooseReady: {
+        if (!choosing || !tab) return false
+        const m = chooser.mode, real = tab.special === "" && tab.dir.path.startsWith("/")
+        if (m === "save") return real && FmChooser.cleanName(chooserBar.name) !== ""
+        if (m === "saveFiles") return real
+        if (m === "folder") return choosePicked.some(x => x.dir) || real
+        return choosePicked.length > 0 && tab.special !== "trash" && tab.special !== "network"
+    }
+    readonly property string chooseHint: {
+        if (!choosing || !tab) return ""
+        const m = chooser.mode, p = choosePicked, here = "“" + tab.title + "”"
+        if (m === "saveFiles") return (chooser.files ?? []).length + " files go into " + here
+        if (m === "folder") {
+            const dirs = tab.view.selCount > 0 ? p.filter(x => x.dir) : []
+            return dirs.length > 1 ? dirs.length + " folders selected" : dirs.length === 1 ? "Folder “" + FmFormat.shown(dirs[0].name) + "”" : "This folder: " + here
         }
+        if (p.length > 1) return p.length + " selected"
+        if (p.length === 1) return p[0].dir ? "Folder “" + FmFormat.shown(p[0].name) + "” — " + FmChooser.verb({ mode: "open" }) + " goes into it" : "“" + FmFormat.shown(p[0].name) + "”"
+        return chooser.multiple ? "Select one or more files" : "Select a file"
+    }
+    // save: a click on a file takes its name (to save over it, or to change it a little)
+    Connections {
+        target: win.choosing && win.chooser.mode === "save" && win.tab ? win.tab.view : null
+        function onSelectionChanged() {
+            const sel = win.tab.view.selCount === 1 ? win.tab.view.selectedItems() : []
+            if (sel.length === 1 && !sel[0].dir) chooserBar.name = sel[0].name
+        }
+    }
+    // Enter / double-click on an item: true when that was the answer (or nothing to do), false
+    // to go on as the file manager does (a folder is walked into)
+    function chooseActivate(it) {
+        const sel = tab.view.selection[it.key] ? tab.view.selectedItems() : [it]
+        if (sel.length === 1 && it.dir) return false
+        const m = chooser.mode
+        if (m === "save" && sel.length === 1) chooserBar.name = it.name
+        if (m === "open" || m === "save") chooseAccept()
+        return true
+    }
+    function chooseCancel() { app.chooserDone(win, false, []) }
+    function chooseAccept() {
+        const t = tab, c = chooser
+        if (!t || !c) return
+        const done = paths => app.chooserDone(win, true, paths)
+        const real = t.special === "" && t.dir.path.startsWith("/")
+        const picked = choosePicked
+        if (c.mode === "open") {
+            if (t.special === "trash" || t.special === "network") { toast("Open a folder and pick the file there", "info"); return }
+            if (picked.length === 1 && picked[0].dir) { t.open(t.folder.indexOf(picked[0].key)); return }
+            const files = picked.filter(x => !x.dir && !x.broken)
+            if (files.length === 0) { toast(c.multiple ? "Select one or more files first" : "Select a file first", "info"); return }
+            if (!c.multiple && files.length > 1) { toast("This dialog takes one file — " + files.length + " are selected"); return }
+            done(files.map(x => t.folder.pathOf(x)))
+            return
+        }
+        if (c.mode === "folder") {
+            const sel = t.view.selCount > 0 ? picked : []
+            const dirs = sel.filter(x => x.dir)
+            if (sel.length && dirs.length !== sel.length) { toast("Select folders only (or nothing, for the folder shown)"); return }
+            if (dirs.length > 1 && !c.multiple) { toast("This dialog takes one folder — " + dirs.length + " are selected"); return }
+            if (dirs.length) done(dirs.map(x => t.folder.pathOf(x)))
+            else if (real) done([t.dir.path])
+            else toast("Open the folder to select first", "info")
+            return
+        }
+        // saving: into the folder shown
+        if (!real) { toast("Open the folder to save in first", "info"); return }
+        if (c.mode === "saveFiles") { done([t.dir.path]); return }
+        const name = FmChooser.cleanName(chooserBar.name)
+        if (name === "") {
+            chooserBar.focusName()
+            toast(chooserBar.name.trim() === "" ? "Enter a name for the file" : "That can't be a file name (no “/”)")
+            return
+        }
+        const p = FmPath.join(t.dir.path, name)
+        backend.request("info", { paths: [p] }, {
+            done: res => {
+                const it = res.items[0]
+                if (!it) { done([p]); return }
+                if (it.dir) { t.go(p); return }                 // a folder's name: into it
+                confirm.start({ icon: FmIcons.g.alert, tone: "warning", title: "Replace “" + FmFormat.shown(name) + "”?",
+                                text: "A file with that name is already in “" + t.title + "”. Saving replaces what's in it.",
+                                buttons: [{ label: "Replace", variant: "danger", run: () => done([p]) }] })
+            },
+            error: () => done([p])
+        })
     }
     // a press in the files: the keys go to them (an empty search bar then closes itself)
     Connections {
@@ -1065,6 +1243,7 @@ FloatingWindow {
         searchBar.start(text)
     }
     function endSearch() {
+        openWhenFound = false
         if (tab) tab.endSearch()
         keys.forceActiveFocus()
     }

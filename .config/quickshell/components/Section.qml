@@ -23,7 +23,7 @@ ColumnLayout {
         Text {
             visible: root.icon !== ""
             text: root.icon
-            color: Colors.color6
+            color: Colors.accent
             font.pixelSize: Tokens.font.body
             font.family: Properties.fontFamily
         }

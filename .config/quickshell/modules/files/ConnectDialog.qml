@@ -4,6 +4,7 @@ import QtQuick.Controls
 import qs.components
 import qs.services
 import "lib/FmIcons.js" as FmIcons
+import "lib/FmAddress.js" as FmAddress
 
 // Connect to a server: an address (smb://, sftp://, ftp://, dav(s)://, nfs://);
 // GVfs mounts it, the password is asked for if needed (and kept in the keyring
@@ -12,15 +13,37 @@ import "lib/FmIcons.js" as FmIcons
 // text in them, newest first): the top one is picked and shows greyed after
 // the text — Enter connects to it, Tab fills it in, ↑/↓ pick another (↑ from
 // the top: just what's typed); × forgets one.
-//   ConnectDialog { known: [{ uri, name }]; history: [uri]; onConnect: (uri, keep) => …; onForget: uri => … }   open()
+// "Sign in as": the keyring's login for that server (or the server asks) — or another user,
+// or one of the logins saved in the keyring, also one saved for a different server (its
+// password is read by the backend, never here).
+//   ConnectDialog { known: [{ uri, name }]; history: [uri]; logins: [{ id, user, domain, server, protocol }]
+//                   onConnect: (uri, keep, login) => …; onForget: uri => … }
+//   start(uri)   open it, the address filled in ("": empty) — "Connect as…" on a saved server
+//   login: null · { user, domain } · { cred, user, domain, remember }
 Modal {
     id: root
 
-    signal connect(string uri, bool keep)
+    signal connect(string uri, bool keep, var login)
     signal forget(string uri)
-    cardWidth: 480
+    cardWidth: 520
     property var known: []
     property var history: []
+    property var logins: []
+
+    // ── Sign in as ──
+    property string who: "auto"          // "auto" · "user" · a saved login's id
+    readonly property string scheme: (/^([a-z][a-z0-9+.-]*):\/\//i.exec(field.text.trim()) ?? ["", ""])[1].toLowerCase()
+    readonly property string host: (/^[a-z][a-z0-9+.-]*:\/\/(?:[^@\/]*@)?([^\/:]+)/i.exec(field.text.trim()) ?? ["", ""])[1].toLowerCase()
+    // the saved logins that fit the address: its kind of server (none typed yet: all), this server's first
+    readonly property var fitting: {
+        const kind = scheme === "ssh" ? "sftp" : scheme
+        const list = logins.filter(l => kind === "" || l.protocol === kind || (kind !== "smb" && kind !== "sftp"))
+        const mine = list.filter(l => l.server.toLowerCase() === host), rest = list.filter(l => l.server.toLowerCase() !== host)
+        return mine.concat(rest).slice(0, 8)
+    }
+    readonly property var chosen: logins.find(l => l.id === who) ?? null
+    onFittingChanged: if (who !== "auto" && who !== "user" && !fitting.some(l => l.id === who)) who = "auto"
+    function loginText(l) { return l.user + (l.domain ? "  ·  " + l.domain : "") + "  —  " + l.server }
 
     // the history first (newest first), then saved servers not in it
     readonly property var offers: {
@@ -36,12 +59,27 @@ Modal {
     }
 
     readonly property bool valid: /^(smb|sftp|ssh|ftp|ftps|dav|davs|nfs|afp):\/\/[^\s]+$/i.test(field.text.trim())
-    onShownChanged: if (shown) { field.text = ""; keep.checked = true; Qt.callLater(() => field.forceActiveFocus()) }
+    readonly property bool ready: (valid || picked >= 0) && (who !== "user" || userField.text.trim() !== "")
+    function start(uri) {
+        open()
+        field.text = uri ?? ""
+        keep.checked = uri === "" || uri === undefined
+        // an address with a user in it: that's "another user", ready to change
+        const u = FmAddress.userOf(field.text)
+        who = field.text !== "" ? "user" : "auto"
+        userField.text = u.user
+        domainField.text = u.domain
+        remember.checked = true
+        Qt.callLater(() => (field.text === "" ? field : userField).forceActiveFocus())
+    }
     function go() {
         if (picked >= 0 && offers[picked]) field.text = offers[picked]
-        if (!valid) return
+        if (!ready || !valid) { if (who === "user" && userField.text.trim() === "") userField.forceActiveFocus(); return }
+        const l = chosen
+        const login = who === "user" ? { user: userField.text.trim(), domain: domainField.text.trim() }
+                    : l ? { cred: l.id, user: l.user, domain: l.domain, remember: remember.checked } : null
         close()
-        connect(field.text.trim(), keep.checked)
+        connect(field.text.trim(), keep.checked, login)
     }
 
     ColumnLayout {
@@ -133,12 +171,69 @@ Modal {
             text: "smb://host/share  ·  sftp://user@host/path  ·  ftp://host  ·  davs://host/path  ·  nfs://host/export"
             color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; wrapMode: Text.Wrap
         }
+
+        // who to sign in as
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Tokens.space.s6
+            Text {
+                text: "Sign in as"
+                color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
+            }
+            Flow {
+                Layout.fillWidth: true
+                spacing: Tokens.space.s6
+                FilterChip { icon: FmIcons.g.key; text: "Saved login, or ask"; checked: root.who === "auto"; onClicked: root.who = "auto" }
+                FilterChip {
+                    icon: "󰀄"; text: "Another user"; checked: root.who === "user"
+                    onClicked: { root.who = "user"; userField.forceActiveFocus() }
+                }
+                Repeater {
+                    model: root.fitting
+                    FilterChip {
+                        required property var modelData
+                        icon: FmIcons.g.key
+                        text: root.loginText(modelData)
+                        checked: root.who === modelData.id
+                        onClicked: root.who = modelData.id
+                    }
+                }
+            }
+            RowLayout {
+                visible: root.who === "user"
+                Layout.fillWidth: true
+                spacing: Tokens.space.s8
+                SearchField { id: userField; Layout.fillWidth: true; icon: "󰀄"; placeholderText: "User"; onAccepted: root.go() }
+                SearchField {
+                    id: domainField
+                    visible: root.scheme === "smb" || root.scheme === ""
+                    Layout.fillWidth: true
+                    icon: "󰒍"; placeholderText: "Domain / workgroup (optional)"
+                    onAccepted: root.go()
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                text: root.who === "auto" ? "The login your keyring has for this server is used; without one the server asks."
+                    : root.who === "user" ? "Connects as this user, next to any other connection to the server. The password is asked for unless the keyring has this user's."
+                    : root.chosen && root.chosen.server.toLowerCase() === root.host ? "This server's saved login."
+                    : "Signs in with the user and password saved for " + (root.chosen?.server ?? "another server") + ". The password stays in the keyring."
+                color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; wrapMode: Text.Wrap
+            }
+            Checkbox {
+                id: remember
+                visible: root.chosen !== null && root.chosen.server.toLowerCase() !== root.host
+                Layout.fillWidth: true
+                label: "Remember it for this server too"
+                onClicked: checked = !checked
+            }
+        }
         Checkbox { id: keep; Layout.fillWidth: true; label: "Show it in the sidebar"; onClicked: checked = !checked }
         RowLayout {
             Layout.fillWidth: true
             Item { Layout.fillWidth: true }
             ActionButton { text: "Cancel"; variant: "ghost"; onClicked: root.close() }
-            ActionButton { text: "Connect"; variant: "primary"; interactive: root.valid || root.picked >= 0; onClicked: root.go() }
+            ActionButton { text: "Connect"; variant: "primary"; interactive: root.ready; onClicked: root.go() }
         }
     }
 }

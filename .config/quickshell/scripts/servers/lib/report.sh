@@ -97,6 +97,8 @@ write_markdown() {
       [ -n "${R_PKGS[$s]}${R_CT[$s]}${R_ISSUES[$s]}${R_NOTES[$s]}" ] || continue
       echo ""
       echo "## $s"
+      echo ""
+      server_json "$s" | jq -r .summary
       if [ -n "${R_ISSUES[$s]}" ]; then
         echo ""; echo "**Problems**"; echo ""
         printf '%s' "${R_ISSUES[$s]}" | sed 's/^/- /'
@@ -120,16 +122,47 @@ write_markdown() {
   } > "$file"
 }
 
-# server_json <server> — one server's report fields as a JSON object
+# server_json <server> — one server's report fields as a JSON object. Besides the raw
+# fields: `summary`, one plain sentence of how it went (what the app and the Markdown
+# report show first), and `look`, where to look when something isn't right:
+#   [{ kind: container | check | snapshot | log, name }]
 server_json() {
   local s="$1"
   jq -cn --arg server "$s" --arg status "${R_STATUS[$s]}" --arg reboot "${R_REBOOT[$s]}" \
     --arg snapshot "${R_SNAP[$s]}" --arg pkgs "${R_PKGS[$s]}" --arg cts "${R_CT[$s]}" \
     --arg issues "${R_ISSUES[$s]}" --arg notes "${R_NOTES[$s]}" '
     def lines: split("\n") | map(select(length > 0));
-    {server: $server, status: $status, reboot: $reboot, snapshot: $snapshot,
-     packages: ($pkgs | lines), containers: ($cts | lines),
-     problems: ($issues | lines), notes: ($notes | lines)}'
+    def clean: sub("^(after update|after rollback|needs a look|not updated|skipped): "; "");
+    def n($k; $one; $many): if $k == 0 then empty elif $k == 1 then "1 \($one)" else "\($k) \($many)" end;
+    def few: map(clean) | unique | (.[0:2] | join("; ")) + (if length > 2 then " (and \(length - 2) more)" else "" end);
+    ($pkgs | lines) as $p | ($cts | lines) as $c | ($issues | lines) as $i | ($notes | lines) as $no |
+    ([n($p | length; "package"; "packages"), n($c | length; "container"; "containers"),
+      (if $reboot == "rebooted" then "rebooted" else empty end)] | join(", ")) as $did |
+    (if $reboot == "pending" then " A reboot is still needed." elif $reboot == "manual" then " Reboot it by hand (never done automatically here)." else "" end) as $rb |
+    ($no | map(select(startswith("needs a look: ")))) as $soft |
+    ($no | map(select(test("downloaded, containers not restarted"))) | length > 0) as $pulled |
+    (if $status == "ok" then ((if $did == "" then (if $pulled then "New images downloaded; the containers keep running until you restart them." else "Nothing had to change." end)
+                               else "Updated: \($did)." + (if $pulled then " New images downloaded, containers not restarted." else "" end) end) + $rb)
+     elif $status == "up-to-date" then "Already up to date." + $rb
+     elif $status == "needs-look" then (if $did == "" then "" else "Updated: \($did). " end) + "Needs a look: \($soft | few). Nothing was rolled back."
+     elif $status == "rolled-back" then "Broke after the update: \($i | map(select(startswith("after update: "))) | few). "
+          + (if ($no | any(test("rolled back to snapshot"))) then "The whole server was rolled back to its snapshot and works again." else "The containers were put back on their previous images and it works again." end)
+     elif $status == "failed" then "Failed: \($i | few)." + (if ($no | any(test("rolled back"))) then " A rollback was tried and did not fix it." else "" end)
+     elif $status == "skipped" then "Not updated: \(($i + $no) | few)."
+     elif $status == "aborted" then "Aborted: \($no | few)."
+     elif $status == "busy" then "Left alone: another run was updating it."
+     elif $status == "unreachable" then "Could not be reached: \($i | few)."
+     elif $status == "healthy" then "All checks pass."
+     elif $status == "unhealthy" then "Not healthy: \($i | few)."
+     elif $status == "pending" then "Has updates waiting: \([n($p | length; "package"; "packages"), n($c | length; "container"; "containers")] | join(", "))." + $rb
+     else $status end) as $summary |
+    ([($i + $soft)[] | clean
+      | (capture("^container (?<name>[^: ]+)") | {kind: "container", name: .name})
+        // (if test("snapshot") then {kind: "snapshot", name: ""}
+            elif test("system update failed|did not come back|see the log|downloading the images|unreachable") then {kind: "log", name: ""}
+            else ((capture("^(?<name>[A-Za-z0-9._-]+): ") | {kind: "check", name: .name}) // {kind: "log", name: ""}) end)] | unique) as $look |
+    {server: $server, status: $status, summary: $summary, look: $look, reboot: $reboot, snapshot: $snapshot,
+     packages: $p, containers: $c, problems: $i, notes: $no}'
 }
 
 write_json() {

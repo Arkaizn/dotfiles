@@ -94,6 +94,7 @@ ColumnLayout {
                     Layout.fillWidth: true
                     spacing: Tokens.space.s1
                     Text {
+                        font.family: Properties.fontFamily
                         Layout.fillWidth: true
                         text: cell.c.name
                         color: cell.isCurrent ? Colors.ink : Colors.fade(0.85)
@@ -154,6 +155,7 @@ ColumnLayout {
         }
 
         Text {
+            font.family: Properties.fontFamily
             anchors.centerIn: parent
             visible: root.shown.length === 0
             text: RemoteConnections.all.length === 0 ? "No saved connections: add or import them in Settings → Connections"

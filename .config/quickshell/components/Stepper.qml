@@ -26,6 +26,7 @@ RowLayout {
         Layout.preferredWidth: 30
         horizontalAlignment: Text.AlignHCenter
         text: st.value
+        font.features: Tokens.font.tnum
         color: Colors.ink
         font.pixelSize: Tokens.font.body
         font.bold: true

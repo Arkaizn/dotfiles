@@ -91,11 +91,12 @@ Item {
                             text: root.model.summary
                             textFormat: Text.PlainText
                             color: Colors.fade(0.88)
-                            font { bold: true; pixelSize: Tokens.font.body }
+                            font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.body }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
                         Text {
+                            font.family: Properties.fontFamily
                             text: Notifs.relativeTime(root.model.time)
                             color: Colors.fade(0.33)
                             font.pixelSize: Tokens.font.micro
@@ -103,6 +104,7 @@ Item {
                     }
 
                     Text {
+                        font.family: Properties.fontFamily
                         visible: root.model.body !== ""
                         text: root.model.body
                         textFormat: Text.StyledText

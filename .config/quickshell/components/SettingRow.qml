@@ -61,7 +61,7 @@ Item {
                 }
                 Rectangle {
                     width: 6; height: 6; radius: 3
-                    color: Colors.color6
+                    color: Colors.accent
                     opacity: root.changed ? 1 : 0
                     scale: root.changed ? 1 : 0.2
                     Behavior on opacity { NumberAnimation { duration: Anim.normal } }
@@ -72,7 +72,7 @@ Item {
                 Layout.fillWidth: true
                 visible: text !== ""
                 text: root.desc
-                color: root.descError ? Colors.red : Colors.fade(0.5)
+                color: root.descError ? Colors.red : Colors.textMuted
                 font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 wrapMode: Text.WordWrap

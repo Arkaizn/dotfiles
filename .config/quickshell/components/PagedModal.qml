@@ -125,7 +125,7 @@ Modal {
         RowLayout {
             Layout.fillWidth: true
             spacing: Tokens.space.s10
-            Text { text: root.icon; color: Colors.color6; font.pixelSize: Tokens.font.titleLarge; font.family: Properties.fontFamily }
+            Text { text: root.icon; color: Colors.accent; font.pixelSize: Tokens.font.titleLarge; font.family: Properties.fontFamily }
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 0
@@ -172,7 +172,7 @@ Modal {
                         height: 34
                         radius: Tokens.radius.lg
                         border.width: 1.5
-                        border.color: Colors.fade(0.24)
+                        border.color: Colors.line(0.24)
                         gradient: ButtonGradient { hovered: true }
                         opacity: target && root.query === "" ? 1 : 0
                         scale: travel.running ? 0.97 : 1
@@ -223,7 +223,7 @@ Modal {
                                         anchors.fill: parent
                                         radius: Tokens.radius.lg
                                         border.width: 1.5
-                                        border.color: Colors.fade(0.14)
+                                        border.color: Colors.line(0.14)
                                         gradient: ButtonGradient { hovered: false }
                                         opacity: !navRow.selected && navMouse.containsMouse ? 0.6 : 0
                                         Behavior on opacity { NumberAnimation { duration: Anim.fast } }
@@ -256,7 +256,7 @@ Modal {
                                                 visible: !navRow.modelData.color
                                                 anchors.centerIn: parent
                                                 text: navRow.modelData.icon ?? ""
-                                                color: navRow.selected || (navRow.modelData.action && navMouse.containsMouse) ? Colors.color6 : Colors.fade(0.55)
+                                                color: navRow.selected || (navRow.modelData.action && navMouse.containsMouse) ? Colors.accent : Colors.fade(0.55)
                                                 Behavior on color { ColorAnimation { duration: Anim.normal } }
                                                 font.pixelSize: 15
                                                 font.family: Properties.fontFamily
@@ -336,7 +336,7 @@ Modal {
                                 visible: root.results.length === 0
                                 Layout.leftMargin: Tokens.space.s4
                                 text: "No setting matches \"" + root.query.trim() + "\""
-                                color: Colors.fade(0.45)
+                                color: Colors.textMuted
                                 font.pixelSize: Tokens.font.small
                                 font.family: Properties.fontFamily
                             }
@@ -460,9 +460,9 @@ Modal {
                             z: 10
                             radius: Tokens.radius.xl
                             opacity: 0
-                            color: Colors.alpha(Colors.color6, 0.16)
+                            color: Colors.alpha(Colors.accent, 0.16)
                             border.width: 1.5
-                            border.color: Colors.alpha(Colors.color6, 0.5)
+                            border.color: Colors.alpha(Colors.accent, 0.5)
                             SequentialAnimation {
                                 id: flashAnim
                                 NumberAnimation { target: flash; property: "opacity"; to: 1; duration: Anim.normal }

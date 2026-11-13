@@ -173,7 +173,7 @@ Flickable {
         height: target ? target.height : last.height
         radius: Tokens.radius.lg
         border.width: Tokens.border.control
-        border.color: Colors.fade(0.24)
+        border.color: Colors.line(0.24)
         gradient: ButtonGradient { hovered: true }
         opacity: on ? 1 : 0
         scale: travel.running ? 0.97 : 1

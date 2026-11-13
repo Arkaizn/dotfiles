@@ -805,7 +805,7 @@ Without it there is no way back to before the update if something breaks (its co
       snap_cleanup "$s"
       # --drop-snapshot: this run's snapshot isn't needed any more (the update and its checks passed)
       if [ "$DROP_SNAPSHOT" = 1 ] && [ "${R_SNAP[$s]}" = "$SNAP_NAME" ] && guest_info "$s"; then
-        if ssh_run "$G_NODE" "$G_TOOL delsnapshot $G_VMID $SNAP_NAME" &>/dev/null; then
+        if node_snap_delete "$G_NODE" "$G_TOOL" "$G_VMID" "$SNAP_NAME" &>/dev/null; then
           say 8 "  removed this run's snapshot $SNAP_NAME (update passed)"
           R_SNAP[$s]="$SNAP_NAME (deleted after success)"
         else
@@ -1132,6 +1132,69 @@ run_connect() {
   gum style --foreground 2 "Session to $SERVER closed."
 }
 
+# pve-pin --url https://host:8006 — the key of the certificate that host shows right now
+# (what curl is told to insist on from then on) and its fingerprint, for you to compare
+# with the one in the Proxmox web interface before trusting it:
+#   { event: "pin", pin: "sha256//…", fingerprint: "AA:BB:…" } | { event: "error", error }
+run_pve_pin() {
+  local hp=${URL_ARG#https://} cert pin fp
+  hp=${hp%%/*}
+  [[ "$hp" == *:* ]] || hp="$hp:8006"
+  [[ "$hp" =~ ^[A-Za-z0-9.-]+:[0-9]+$ ]] || { jq -cn '{event: "error", error: "the address isn\u0027t https://host:port"}'; return 1; }
+  cert=$(echo | timeout 12 openssl s_client -connect "$hp" -servername "${hp%%:*}" 2>/dev/null | openssl x509 2>/dev/null)
+  [ -n "$cert" ] || { jq -cn --arg h "$hp" '{event: "error", error: "no answer from \($h) (is the address right, is the host up?)"}'; return 1; }
+  pin=$(openssl x509 -pubkey -noout <<< "$cert" | openssl pkey -pubin -outform der 2>/dev/null | openssl dgst -sha256 -binary | base64)
+  fp=$(openssl x509 -noout -fingerprint -sha256 <<< "$cert" | cut -d= -f2)
+  jq -cn --arg p "sha256//$pin" --arg f "$fp" '{event: "pin", pin: $p, fingerprint: $f}'
+}
+
+# pve-info --servers <host> — can the tool work with this Proxmox host the way it is set
+# up (SSH or API token), and its guests:
+#   { event: "pve", host, access, node, nodes: [..], checks: [{ key, ok, text, hint }],
+#     guests: [{ type, vmid, name }] }
+run_pve_info() {
+  local h=${SERVER_ARG%%,*} checks=() ver nodes="" node="" perms p missing=() out glist="" good=1 access=ssh user
+  in_list "$h" "${KNOWN[@]}" || { jq -cn --arg h "$h" '{event: "error", error: "no server called \($h)"}'; return 1; }
+  add() { checks+=("$(jq -cn --arg k "$1" --argjson ok "$2" --arg t "$3" --arg h "$4" '{key: $k, ok: $ok, text: $t, hint: $h}')"); [ "$2" = true ] || good=0; }
+  if uses_api "$h"; then
+    access=api
+    node=$(api_node "$h")
+    if ver=$(pve_api "$h" GET /version 2>&1); then
+      add api true "The API answers (Proxmox VE $(jq -r '.version // "?"' <<< "$ver")) and accepts the token" ""
+      nodes=$(pve_api "$h" GET /nodes 2>/dev/null | jq -r '.[].node' | paste -sd' ')
+      if [ -n "$node" ] && [[ " $nodes " == *" $node "* ]]; then add node true "Its node is called $node" ""
+      else add node false "Which node is it? It has: ${nodes:-none it may see}" "Pick this host's node below, then check again."
+      fi
+      perms=$(pve_api "$h" GET /access/permissions --get --data-urlencode "path=/vms" 2>/dev/null | jq -r '[.[]? | to_entries[] | select(.value == 1) | .key] | unique | join(" ")')
+      for p in VM.Audit VM.Snapshot VM.Snapshot.Rollback; do [[ " $perms " == *" $p "* ]] || missing+=("$p"); done
+      if [ ${#missing[@]} -eq 0 ]; then add rights true "The token may look at guests, snapshot them and roll them back" ""
+      else add rights false "The token is missing: ${missing[*]}" "Give its role these privileges on /vms (the commands are shown in the dialog)."
+      fi
+    else
+      add api false "The API doesn't work with this token" "${ver#API: }"
+    fi
+  else
+    if out=$(ssh_run "$h" 'echo "USER|$(id -un)|$(id -u)"; command -v pveversion >/dev/null 2>&1 && echo "PVE|$(pveversion 2>/dev/null | head -n1)"; qm list >/dev/null 2>&1 && echo "QM|ok"; pct list >/dev/null 2>&1 && echo "PCT|ok"; command -v proxmox-backup-manager >/dev/null 2>&1 && echo "PBS|1"; true' 2>&1) && grep -q '^USER|' <<< "$out"; then
+      user=$(sed -n 's/^USER|\([^|]*\)|.*/\1/p' <<< "$out")
+      add ssh true "SSH login works, as $user" ""
+      if grep -q '^PVE|.' <<< "$out"; then add pve true "$(sed -n 's/^PVE|//p' <<< "$out")" ""
+      elif grep -q '^PBS|' <<< "$out"; then add pve false "Not a Proxmox VE host" "It is a Proxmox Backup Server: set \"What is it\" to that (it has no guests)."
+      else add pve false "Not a Proxmox VE host" "pveversion isn't there. Is this the right machine?"
+      fi
+      if grep -q '^QM|ok' <<< "$out" && grep -q '^PCT|ok' <<< "$out"; then add qm true "Can list and snapshot its VMs and containers" ""
+      elif [ "$user" = root ]; then add qm false "Can't use qm / pct" "They failed although the login is root: look at the host."
+      else add qm false "Can't use qm / pct" "They need root. Set the server's user to root (Edit → User), give this user passwordless sudo for qm and pct, or use an API token."
+      fi
+    else
+      add ssh false "Can't log in over SSH" "$(tail -n1 <<< "$out" | cut -c1-200). The tool only uses SSH keys: copy yours to it (the card's menu → Copy SSH key to it), or use an API token."
+    fi
+  fi
+  [ "$good" = 1 ] && glist=$(node_guests "$h" 2>/dev/null)
+  printf '%s\n' "${checks[@]}" | jq -sc --arg h "$h" --arg a "$access" --arg n "$node" --arg nodes "$nodes" --arg g "$glist" '
+    {event: "pve", host: $h, access: $a, node: $n, nodes: ($nodes | split(" ") | map(select(length > 0))), checks: .,
+     guests: [$g | split("\n")[] | select(length > 0) | capture("^(?<type>qemu|lxc) (?<vmid>[0-9]+) ?(?<name>.*)$") | .vmid |= tonumber]}'
+}
+
 usage() {
   cat << EOF
 Usage: $(basename "$0") [command] [options]
@@ -1145,6 +1208,8 @@ Commands (no command = interactive menu):
   ssh-copy    make sure your SSH key is on the servers
   connect     open an SSH session to a server
   migrate     move the server lists from svs.conf into servers.json (--force overwrites it)
+  pve-info    --servers HOST: can the tool work with that Proxmox host, and its guests (JSON)
+  pve-pin     --url https://HOST:8006: the certificate key of that host, to pin (JSON)
   conf-json   print what servers.json would get from svs.conf (SVS_CONFIG=other.conf), change nothing
 
 Options:
@@ -1198,6 +1263,7 @@ SERVER_ARG=""
 DELETE=0
 OLDER_THAN=0
 ONLY=""
+URL_ARG=""
 CT_PICK=""
 RESTART_PULLED=0
 IDS=""
@@ -1205,7 +1271,8 @@ FORCE=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    update|check|scan|snapshots|ssh-copy|connect|migrate|conf-json) COMMAND="$1" ;;
+    update|check|scan|snapshots|ssh-copy|connect|migrate|conf-json|pve-info|pve-pin) COMMAND="$1" ;;
+    --url) URL_ARG="$2"; shift ;;
     --delete) DELETE=1 ;;
     --json) JSON=1 ;;
     --ask) ASK_JSON=1 ;;
@@ -1255,6 +1322,11 @@ if [ "$COMMAND" = conf-json ]; then
   exit $?
 fi
 load_servers_json
+# a server that is said to be a Proxmox machine is one before any scan saw it: never rebooted
+for s in "${PVE_KIND[@]}"; do IS_PROXMOX[$s]=1; done
+# what the Servers app asks about a Proxmox host (JSON on stdout, nothing is changed)
+if [ "$COMMAND" = pve-pin ]; then run_pve_pin; exit $?; fi
+if [ "$COMMAND" = pve-info ]; then run_pve_info; exit $?; fi
 [ "$COMMAND" = scan ] && { COMMAND=update; DRY_RUN=1; }
 [ "$JSON" = 1 ] || ASK_JSON=0
 

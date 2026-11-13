@@ -80,6 +80,7 @@ Item {
         id: folderObj
         backend: tab.app.backend
         showHidden: tab.app.showHidden
+        only: tab.win.chooseFilter
         countItems: FmSettings.allowed(Settings.files.counts ?? "local", fs)
         onLoaded: {
             tab.placeCursor()
@@ -118,7 +119,12 @@ Item {
     property bool searching: false
     property string query: ""
     property var searchOpts: ({ kinds: [], since: 0 })
-    FmSearch { id: searchObj; backend: tab.app.backend }
+    FmSearch { id: searchObj; backend: tab.app.backend; only: tab.win.chooseFilter }
+    // a file dialog's type filter changed while searching: the results follow
+    Connections {
+        target: tab.win
+        function onChooseFilterChanged() { if (tab.searching && tab.query !== "") tab.search(tab.query) }
+    }
     function search(q, opts) {
         searching = true
         query = q
@@ -229,6 +235,8 @@ Item {
     function activate(i) {
         const it = folder.at(i)
         if (!it) return
+        // another app's Open / Save dialog: a file is the answer (a folder is still walked into)
+        if (win.choosing && win.chooseActivate(it)) return
         const sel = viewObj.selection[it.key] ? viewObj.selectedItems() : [it]
         if (sel.length === 1) { open(folder.indexOf(sel[0].key)); return }
         const files = sel.filter(x => !x.dir && !x.broken), dirs = sel.filter(x => x.dir)

@@ -152,6 +152,7 @@ BarPopup {
                     implicitSize: 16
                 }
                 Text {
+                    font.family: Properties.fontFamily
                     Layout.fillWidth: true
                     text: root.stack.length > 0
                         ? root.stack[root.stack.length - 1].text.replace(/_/g, "")

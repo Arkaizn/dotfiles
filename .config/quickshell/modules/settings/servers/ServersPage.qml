@@ -54,6 +54,11 @@ ColumnLayout {
             ToggleSwitch { checked: ServerRuns.notifyOn; onToggled: v => ServerStore.setPref("notify", v) }
         }
         SettingRow {
+            label: "Updates at boot"
+            desc: "once after you log in: what the servers have waiting (also in Settings → Notifications)"
+            ToggleSwitch { checked: ServerRuns.bootNotify; onToggled: v => ServerStore.setPref("bootNotify", v) }
+        }
+        SettingRow {
             label: "Notify again about everything critical now"
             desc: "forgets what it already told you"
             ActionButton { icon: "󰂚"; text: "Remind me"; onClicked: { ServerStore.setPref("seenCritical", {}); ServerRuns.checkCritical() } }
@@ -108,31 +113,69 @@ ColumnLayout {
                 onEdited: v => ServerStore.setPref("snapshotFail", v)
             }
         }
-        SettingRow {
-            wide: true
-            label: "Waves, snapshots, rollback, ntfy"
-            desc: "come from manage-svs.sh's svs.conf (MAX_PARALLEL, SNAPSHOT_KEEP_DAYS, AUTO_ROLLBACK, NOTIFY_URL, …) and servers.json (waves)"
-        }
     }
 
-    // what Update → Choose preselects; per server or for all of them
+    // what the script does when nobody decides (these win over svs.conf)
     Section {
         Layout.fillWidth: true
-        title: "Update defaults"
-        icon: "󰒆"
+        title: "When nobody decides"
+        icon: "󰒓"
         SettingRow {
             first: true
-            label: "The Update button"
-            desc: ServerStore.updateButton === "choose" ? "opens Choose what to update straight away: a choice per server, your defaults preselected"
-                                                        : "shows the quick choices (security only, critical, everything), with Choose what to update at the top"
+            label: "Something broke after an update"
+            desc: (ServerRuns.askOnFailure ? "when you don't answer in time (and for runs outside the app): " : "")
+                  + (ServerStore.policy.autoRollback === "none" ? "left as it is, reported as failed"
+                   : ServerStore.policy.autoRollback === "snapshot" ? "the whole server goes back to its snapshot (containers only, where there is none)"
+                   : "the updated containers go back to their previous images; packages stay")
+                  + ". Only when the update touched what broke: anything else is \"needs a look\", never rolled back"
+            wide: true
             Segmented {
                 small: true
-                options: [{ label: "Quick menu", value: "menu" }, { label: "Choose per server", value: "choose" }]
-                value: ServerStore.updateButton
-                onEdited: v => ServerStore.setPref("updateButton", v)
+                options: [{ label: "Leave it", value: "none" }, { label: "Roll back the containers", value: "containers" }, { label: "Roll back to the snapshot", value: "snapshot" }]
+                value: ServerStore.policy.autoRollback
+                onEdited: v => ServerStore.setPolicy("autoRollback", v)
             }
         }
         SettingRow {
+            label: "A server failed"
+            desc: ServerStore.policy.stopOnFailure ? "the servers of the next waves aren't started (the ones running finish)" : "the next waves go on anyway"
+            Segmented {
+                small: true
+                options: [{ label: "Stop before the next wave", value: "stop" }, { label: "Go on", value: "go" }]
+                value: ServerStore.policy.stopOnFailure ? "stop" : "go"
+                onEdited: v => ServerStore.setPolicy("stopOnFailure", v === "stop")
+            }
+        }
+        SettingRow {
+            label: "Servers at once"
+            desc: "over all runs that are going, not per run"
+            NumberField { from: 1; to: 16; value: ServerStore.policy.maxParallel; onEdited: v => ServerStore.setPolicy("maxParallel", Math.round(v)) }
+        }
+        SettingRow {
+            label: "Keep update snapshots"
+            desc: "days; older ones of this tool (svsupd_…) are deleted after a successful update of that guest. Never your own snapshots"
+            NumberField { from: 0; to: 90; value: ServerStore.policy.snapshotKeepDays; onEdited: v => ServerStore.setPolicy("snapshotKeepDays", Math.round(v)) }
+        }
+        SettingRow {
+            label: "Keep old container images"
+            desc: "days; what a container rollback needs (svs-rollback/…)"
+            NumberField { from: 0; to: 90; value: ServerStore.policy.rollbackKeepDays; onEdited: v => ServerStore.setPolicy("rollbackKeepDays", Math.round(v)) }
+        }
+        SettingRow {
+            wide: true
+            label: "Timeouts and ntfy"
+            desc: "stay in svs.conf in the data folder (VERIFY_TIMEOUT, REBOOT_WAIT_TIMEOUT, NOTIFY_URL, NOTIFY_TOKEN, …): scripts/servers/svs.conf.sample lists them all"
+        }
+    }
+
+    // every server and how it updates: what the confirmation preselects (here), and its
+    // own rules in words (changed in its editor)
+    Section {
+        Layout.fillWidth: true
+        title: "Every server, and how it updates"
+        icon: "󰒆"
+        SettingRow {
+            first: true
             label: "Every server, unless set below"
             desc: ServerStore.updateDefault === "pending" ? "What's pending: everything on servers where the last scan found something, the rest skipped"
                 : ServerStore.updateDefault === "skip" ? "nothing preselected: you tick what to update each time"
@@ -151,7 +194,10 @@ ColumnLayout {
                 required property var modelData
                 readonly property string own: ServerStore.updatePerOf(modelData.name)
                 label: modelData.name
-                desc: own ? ServerStore.choiceLabel(own) + "  ·  its own default" : "the default above (" + ServerStore.choiceLabel(ServerStore.updateDefault).toLowerCase() + ")"
+                desc: (own ? "" : "the default above (" + ServerStore.choiceLabel(ServerStore.updateDefault).toLowerCase() + ")  ·  ") + ServerStore.howItUpdates(modelData)
+                wide: true
+                ActionButton { variant: "ghost"; icon: "󰏫"; text: "Its rules…"; tooltip: "Containers, reboot, snapshot and wave of " + modelData.name + ", in its editor"
+                               onClicked: Panels.call("servers", "edit", modelData.name) }
                 Segmented {
                     small: true
                     options: [{ label: "Default", value: "" }, { label: "Pending", value: "pending" }].concat(ServerStore.updateChoices.map(o => ({ label: o.label, value: o.value })))
@@ -163,7 +209,7 @@ ColumnLayout {
         SettingRow {
             wide: true
             label: "Servers that can't be reached are always skipped"
-            desc: "and \"Save as defaults\" in the Choose dialog writes these too. Snapshots and reboots: in Updates above"
+            desc: "and \"Save as defaults\" in the update confirmation writes these choices too"
         }
     }
 

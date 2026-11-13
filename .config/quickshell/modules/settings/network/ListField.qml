@@ -81,7 +81,7 @@ ColumnLayout {
                 radius: Tokens.radius.md
                 color: Colors.fade(pm.containsMouse ? 0.12 : 0.06)
                 border.width: 1
-                border.color: Colors.fade(0.1)
+                border.color: Colors.line(0.1)
                 Behavior on color { ColorAnimation { duration: Anim.fast } }
                 Text {
                     id: pl

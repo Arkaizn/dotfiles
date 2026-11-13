@@ -52,7 +52,7 @@ Item {
                 visible: root.overline !== ""
                 Layout.fillWidth: true
                 text: root.overline + "  ›"
-                color: Colors.fade(0.45)
+                color: Colors.textMuted
                 font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight

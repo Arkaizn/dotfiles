@@ -156,6 +156,8 @@ cmd_scan() {
   ( . /etc/os-release 2>/dev/null && echo "OS|${ID:-}|${PRETTY_NAME:-}" )
   has_docker && echo "DOCKER|1"
   is_proxmox && echo "PROXMOX|1"
+  # a Backup Server is a Proxmox machine (never rebooted here), but not a host of guests
+  command -v proxmox-backup-manager &>/dev/null && ! command -v pveversion &>/dev/null && echo "PBS|1"
   os_pending
   if reboot_needed; then echo "REBOOT|1"; else echo "REBOOT|0"; fi
   has_docker || return 0

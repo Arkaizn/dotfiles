@@ -171,10 +171,10 @@ ColumnLayout {
                 ColumnLayout {
                     Layout.fillWidth: true
                     spacing: Tokens.space.s1
-                    Text { Layout.fillWidth: true; text: row.modelData.title; color: Colors.ink; font.pixelSize: Tokens.font.label; font.weight: Font.Medium; elide: Text.ElideRight }
+                    Text { font.family: Properties.fontFamily; Layout.fillWidth: true; text: row.modelData.title; color: Colors.ink; font.pixelSize: Tokens.font.label; font.weight: Font.Medium; elide: Text.ElideRight }
                     Text { Layout.fillWidth: true; text: row.modelData.subtitle; color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
                 }
-                Text { visible: row.isCurrent && !row.modelData.disabled; text: "↵"; color: Colors.fade(0.5); font.pixelSize: Tokens.font.label }
+                Text { font.family: Properties.fontFamily; visible: row.isCurrent && !row.modelData.disabled; text: "↵"; color: Colors.fade(0.5); font.pixelSize: Tokens.font.label }
             }
         }
     }

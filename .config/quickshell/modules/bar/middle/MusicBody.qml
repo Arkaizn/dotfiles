@@ -113,6 +113,7 @@ Item {
         }
 
         Text {
+            font.family: Properties.fontFamily
             anchors.left: parent.left
             anchors.leftMargin: Tokens.space.s10
             anchors.verticalCenter: parent.verticalCenter
@@ -130,6 +131,7 @@ Item {
             width: 13; height: 13; radius: 7
             color: Colors.color6
             Text {
+                font.family: Properties.fontFamily
                 anchors.centerIn: parent
                 text: Icons.get("mediaRemote")
                 font.pixelSize: Tokens.font.micro
@@ -195,6 +197,7 @@ Item {
 
             // Previous
             Text {
+                font.family: Properties.fontFamily
                 anchors.verticalCenter: parent.verticalCenter
                 text: Icons.get("previous")
                 font.pixelSize: Properties.pixelSize +7 //music.height * 0.38
@@ -214,6 +217,7 @@ Item {
 
             // Play / Pause
             Text {
+                font.family: Properties.fontFamily
                 anchors.verticalCenter: parent.verticalCenter
                 text: music.isPlaying ? Icons.get("pause") : Icons.get("play")
                 font.pixelSize: Properties.pixelSize + 3
@@ -237,6 +241,7 @@ Item {
 
             // Next
             Text {
+                font.family: Properties.fontFamily
                 anchors.verticalCenter: parent.verticalCenter
                 text: Icons.get("next")
                 font.pixelSize: Properties.pixelSize +7

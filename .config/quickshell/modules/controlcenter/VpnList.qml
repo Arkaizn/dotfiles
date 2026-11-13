@@ -33,6 +33,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Text {
+            font.family: Properties.fontFamily
             Layout.fillWidth: true
             text: Vpn.message !== "" ? Vpn.message : root.rows.length === 0 ? "No VPN found" : Vpn.upNames.length + " of " + root.rows.length + " connected"
             color: Vpn.message !== "" ? Colors.red : Colors.fade(0.55)
@@ -70,8 +71,9 @@ ColumnLayout {
                 anchors { fill: parent; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s10 }
                 spacing: Tokens.space.s8
                 Text { text: "󰖂"; color: row.modelData.on ? Colors.color6 : Colors.fade(0.4); font.pixelSize: Tokens.font.label; font.family: Properties.fontFamily }
-                Text { Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.small; elide: Text.ElideRight }
+                Text { font.family: Properties.fontFamily; Layout.fillWidth: true; text: row.modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.small; elide: Text.ElideRight }
                 Text {
+                    font.family: Properties.fontFamily
                     text: row.busy ? (row.modelData.login ? "log in in the browser…" : "…") : row.modelData.login ? "Log in" : row.modelData.detail
                     color: row.modelData.login ? Colors.color6 : Colors.fade(0.55)
                     font.pixelSize: Tokens.font.caption

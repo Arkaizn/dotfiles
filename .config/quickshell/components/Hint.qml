@@ -7,7 +7,7 @@ import qs.services
 Text {
     Layout.fillWidth: true
     Layout.leftMargin: Tokens.space.s6
-    color: Colors.textFaint
+    color: Colors.textMuted
     font.pixelSize: Tokens.font.caption
     font.family: Properties.fontFamily
     wrapMode: Text.Wrap

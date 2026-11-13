@@ -327,6 +327,7 @@ Item {
             }
 
             Text {
+                font.family: Properties.fontFamily
                 anchors.centerIn: parent
                 text: "󰎇"
                 font.pixelSize: 46
@@ -348,6 +349,7 @@ Item {
                     anchors.centerIn: parent
                     spacing: 4
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.kindNote === "view only" ? "󰈈" : "󰅤"
                         color: "white"
@@ -355,6 +357,7 @@ Item {
                         font.pixelSize: Tokens.font.caption
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.verticalCenter: parent.verticalCenter
                         text: root.kindNote
                         color: "white"
@@ -472,6 +475,7 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: Anim.normal } }
                 Text {
                     id: volLabel
+                    font.family: Properties.fontFamily
                     anchors.centerIn: parent
                     text: "󰕾  " + Math.round(artBox.shownVolume * 100) + "%"
                     color: "white"
@@ -496,6 +500,7 @@ Item {
                 spacing: Tokens.space.s2
 
                 Text {
+                    font.family: Properties.fontFamily
                     Layout.fillWidth: true
                     text: root.player ? (root.player.trackTitle || "Unknown title") : ""
                     color: Properties.color
@@ -506,6 +511,7 @@ Item {
                 // always takes its line (even without an artist), so the
                 // buttons below don't move between tracks / players
                 Text {
+                    font.family: Properties.fontFamily
                     Layout.fillWidth: true
                     text: root.errorText !== "" ? root.errorText : root.player ? (root.player.trackArtist || " ") : " "
                     color: root.errorText !== "" ? Colors.red : Colors.fade(0.55)
@@ -526,7 +532,7 @@ Item {
                 implicitHeight: 26
                 implicitWidth: pillRow.implicitWidth + 18
                 radius: Tokens.radius.md
-                border.color: Colors.fade(sourceHover.containsMouse ? 0.28 : 0.18)
+                border.color: Colors.line(sourceHover.containsMouse ? 0.28 : 0.18)
                 border.width: 0.5
                 gradient: ButtonGradient { hovered: sourceHover.containsMouse }
                 Rectangle {
@@ -563,6 +569,7 @@ Item {
                     }
 
                     Text {
+                        font.family: Properties.fontFamily
                         text: root.player?.remote ? Icons.get("mediaRemote") : "󰝚"
                         font.pixelSize: Tokens.font.small
                         color: root.player?.remote ? Colors.color6 : Properties.color
@@ -571,6 +578,7 @@ Item {
 
                     Text {
                         id: sourceLabel
+                        font.family: Properties.fontFamily
                         Layout.maximumWidth: 84
                         elide: Text.ElideRight
                         text: !root.player ? "No player" : (root.player.identity || "Player")
@@ -580,18 +588,21 @@ Item {
                     }
                     // where it plays: the phone (or another remote device) or this PC
                     Text {
+                        font.family: Properties.fontFamily
                         visible: root.player !== null
                         text: "·"
                         color: Colors.fade(0.35)
                         font.pixelSize: Tokens.font.caption
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         visible: root.player !== null
                         text: root.player?.deviceKind === "phone" ? "󰄜" : "󰍹"
                         color: root.player?.remote ? Colors.color6 : Colors.fade(0.6)
                         font.pixelSize: Tokens.font.caption
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         visible: root.player !== null
                         Layout.maximumWidth: 92
                         elide: Text.ElideRight
@@ -602,6 +613,7 @@ Item {
                     }
                     // more players: this opens the list
                     Text {
+                        font.family: Properties.fontFamily
                         visible: root.canSwitch
                         text: "󰅀"
                         color: Colors.fade(0.5)
@@ -651,7 +663,7 @@ Item {
                 visible: root.player !== null && !root.player.remote
                 implicitWidth: 26; implicitHeight: 26
                 radius: Tokens.radius.md
-                border.color: Colors.fade(jumpHover.containsMouse ? 0.28 : 0.18)
+                border.color: Colors.line(jumpHover.containsMouse ? 0.28 : 0.18)
                 border.width: 0.5
                 gradient: ButtonGradient { hovered: jumpHover.containsMouse }
                 Rectangle {
@@ -659,6 +671,7 @@ Item {
                     radius: Tokens.radius.md; color: Colors.dim(0.1)
                 }
                 Text {
+                    font.family: Properties.fontFamily
                     anchors.centerIn: parent
                     text: "󰏌"
                     font.pixelSize: Tokens.font.body
@@ -681,6 +694,7 @@ Item {
 
             // the bridge is on in settings but not reachable right now
             Text {
+                font.family: Properties.fontFamily
                 visible: root.bridgeOffline
                 text: "mediasync offline"
                 color: Colors.fade(0.45)
@@ -723,7 +737,7 @@ Item {
                     width: 34
                     height: 34
                     radius: Tokens.radius.md
-                    border.color: Colors.fade(shuffleHover.containsMouse ? 0.28 : 0.18)
+                    border.color: Colors.line(shuffleHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: shuffleHover.containsMouse }
                     Rectangle {
@@ -731,6 +745,7 @@ Item {
                         radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         text: "󰒝"
                         font.pixelSize: 15
@@ -759,7 +774,7 @@ Item {
                 Rectangle {
                     visible: root.showPrev
                     width: 34; height: 34; radius: Tokens.radius.md
-                    border.color: Colors.fade(prevHover.containsMouse ? 0.28 : 0.18)
+                    border.color: Colors.line(prevHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: prevHover.containsMouse }
                     Rectangle {
@@ -767,6 +782,7 @@ Item {
                         radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         text: "󰒮"
                         font.pixelSize: Tokens.font.title
@@ -793,7 +809,7 @@ Item {
                     id: skipBack
                     visible: root.showBack
                     width: 34; height: 34; radius: Tokens.radius.md
-                    border.color: Colors.fade(skipBackHover.containsMouse ? 0.28 : 0.18)
+                    border.color: Colors.line(skipBackHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: skipBackHover.containsMouse }
                     Rectangle {
@@ -801,6 +817,7 @@ Item {
                         radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         text: String.fromCodePoint(0xF0D2A)
                         font.pixelSize: Tokens.font.title
@@ -826,7 +843,7 @@ Item {
                 Rectangle {
                     visible: root.showPlay
                     width: 34; height: 34; radius: Tokens.radius.md
-                    border.color: Colors.fade(playHover.containsMouse ? 0.28 : 0.18)
+                    border.color: Colors.line(playHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: playHover.containsMouse }
                     Rectangle {
@@ -834,6 +851,7 @@ Item {
                         radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         text: root.player && root.player.isPlaying ? "󰏤" : "󰐊"
                         font.pixelSize: Tokens.font.titleLarge
@@ -866,7 +884,7 @@ Item {
                 Rectangle {
                     visible: root.showNext
                     width: 34; height: 34; radius: Tokens.radius.md
-                    border.color: Colors.fade(nextHover.containsMouse ? 0.28 : 0.18)
+                    border.color: Colors.line(nextHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: nextHover.containsMouse }
                     Rectangle {
@@ -874,6 +892,7 @@ Item {
                         radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         text: "󰒭"
                         font.pixelSize: Tokens.font.title
@@ -900,7 +919,7 @@ Item {
                     id: skipFwd
                     visible: root.showFwd
                     width: 34; height: 34; radius: Tokens.radius.md
-                    border.color: Colors.fade(skipFwdHover.containsMouse ? 0.28 : 0.18)
+                    border.color: Colors.line(skipFwdHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: skipFwdHover.containsMouse }
                     Rectangle {
@@ -908,6 +927,7 @@ Item {
                         radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         text: String.fromCodePoint(0xF0D71)
                         font.pixelSize: Tokens.font.title
@@ -934,7 +954,7 @@ Item {
                 Rectangle {
                     visible: root.showLoop
                     width: 34; height: 34; radius: Tokens.radius.md
-                    border.color: Colors.fade(repeatHover.containsMouse ? 0.28 : 0.18)
+                    border.color: Colors.line(repeatHover.containsMouse ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: repeatHover.containsMouse }
                     Rectangle {
@@ -942,6 +962,7 @@ Item {
                         radius: Tokens.radius.md; color: Colors.dim(0.1)
                     }
                     Text {
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         font.pixelSize: 15
                         // Icon: repeat-one for Track, repeat-all for All, repeat (dimmed) for None

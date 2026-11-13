@@ -57,7 +57,7 @@ ColumnLayout {
         horizontalAlignment: Text.AlignHCenter
         wrapMode: Text.Wrap
         text: root.hint
-        color: Colors.textFaint
+        color: Colors.textMuted
         font.pixelSize: Tokens.font.caption
         font.family: Properties.fontFamily
     }

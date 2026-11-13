@@ -28,7 +28,7 @@ Rectangle {
     implicitHeight: 56
     radius: Tokens.radius.xl
     border.width: 1.5
-    border.color: Colors.fade(mouse.containsMouse || active ? 0.28 : 0.14)
+    border.color: Colors.line(mouse.containsMouse || active ? 0.28 : 0.14)
     gradient: ButtonGradient { hovered: root.active || mouse.containsMouse }
     scale: mouse.pressed ? Properties.onPressedButtonScale : 1
     Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
@@ -60,6 +60,7 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 0
             Text {
+                font.family: Properties.fontFamily
                 Layout.fillWidth: true
                 text: root.title
                 color: root.active || !root.expandable ? Colors.ink : Colors.fade(0.4)
@@ -69,6 +70,7 @@ Rectangle {
                 elide: Text.ElideRight
             }
             Text {
+                font.family: Properties.fontFamily
                 Layout.fillWidth: true
                 text: root.subtitle
                 color: Colors.fade(root.active || !root.expandable ? 0.55 : 0.3)

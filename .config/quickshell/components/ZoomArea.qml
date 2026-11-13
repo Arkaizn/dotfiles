@@ -115,12 +115,12 @@ Item {
             id: pillRow
             anchors.centerIn: parent
             spacing: Tokens.space.s8
-            Text { text: "󰍉"; color: Colors.color6; font.pixelSize: 15; font.family: Properties.fontFamily; anchors.verticalCenter: parent.verticalCenter }
+            Text { text: "󰍉"; color: Colors.accent; font.pixelSize: 15; font.family: Properties.fontFamily; anchors.verticalCenter: parent.verticalCenter }
             Text { text: AppZoom.percent(root.app) + "%"; color: Colors.ink; font.pixelSize: Tokens.font.body; font.bold: true; font.family: Properties.fontFamily; anchors.verticalCenter: parent.verticalCenter }
             Text {
                 visible: AppZoom.percent(root.app) !== 100
                 text: "Ctrl 0 resets"
-                color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
+                color: Colors.textMuted; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
                 anchors.verticalCenter: parent.verticalCenter
             }
         }

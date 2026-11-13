@@ -192,10 +192,10 @@ Scope {
           desc: "Font, text and icons used all over the shell",
           sections: [
             { title: "Text", items: [
-                { key: "fontFamily", type: "font", label: "Font", desc: "A Nerd Font (the icons come from it); used by the bar, popups and widgets" },
-                { key: "pixelSize", type: "int", min: 8, max: 24, label: "Text size", desc: "Bar labels and stats" },
+                { key: "fontFamily", type: "font", label: "Font", desc: "A Nerd Font (the icons come from it); used for every text in the shell" },
+                { key: "pixelSize", type: "int", min: 8, max: 24, label: "Text size", desc: "Every text in the shell scales with it" },
                 { key: "fontBold", type: "bool", label: "Bold button text" },
-                { key: "color", keywords: "text color font colour icon tint", type: "color", label: "Text & icon color", desc: "Buttons, fields and bar icons" } ] },
+                { key: "color", keywords: "text color font colour icon tint", type: "color", label: "Text & icon color", desc: "Buttons, fields and bar icons; an unreadable pick falls back to the scheme's" } ] },
             { title: "Icons", items: [
                 { key: "iconSize", type: "int", min: 10, max: 32, label: "Icon size", desc: "Bar buttons, tray and profile" } ] } ] },
 
@@ -699,6 +699,7 @@ Scope {
         { page: "dotfiles", label: "Pull dotfiles", desc: "pull.sh + update.sh", keywords: "pull update git sync", icon: "󰇚" },
         { page: "dotfiles", label: "What differs from the repo", desc: "check.sh", keywords: "diff check changes compare", icon: "󰦒" },
         { page: "notifications", label: "Do not disturb", desc: "Also a schedule, e.g. 22:00 → 07:00", keywords: "dnd quiet mute silence night", icon: "󰂛" },
+        { page: "notifications", label: "Server updates at boot", desc: "A summary of what your servers have waiting, once after login", keywords: "servers homelab updates startup login boot notify summary", icon: "󰒋" },
         { page: "notifications", label: "Notification position", keywords: "popup corner top bottom left right", icon: "󰂚" },
         { page: "notifications", label: "Mute an app's notifications", keywords: "rule silent hide block app", icon: "󰂭" },
         { page: "notifications", label: "Send a test notification", keywords: "test try notify-send", icon: "󰂚" },
@@ -1026,7 +1027,7 @@ Scope {
                                         height: target?.height ?? 0
                                         radius: Tokens.radius.lg
                                         border.width: 1.5
-                                        border.color: Colors.fade(0.24)
+                                        border.color: Colors.line(0.24)
                                         gradient: ButtonGradient { hovered: true }
                                         opacity: on ? 1 : 0
                                         scale: travel.running ? 0.97 : 1

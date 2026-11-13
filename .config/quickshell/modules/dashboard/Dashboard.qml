@@ -32,7 +32,7 @@ BarPopup {
     // room for the edit bar, so the surface doesn't resize while it slides in
     maxHeight: Math.min(cardsHeight + padding * 2 + 50, (screen?.height ?? 1440) - 70)
     // inner cards: panel radius minus the padding, so the corners nest concentrically
-    property int radius: Properties.panelRadius - padding
+    property int radius: Tokens.radius.inner(Properties.panelRadius, padding)
 
     readonly property bool editing: EditMode.target === "dashboard"
     autoClose: !editing

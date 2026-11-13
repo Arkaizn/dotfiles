@@ -211,7 +211,7 @@ ColumnLayout {
             text: page.pushLog.lines.slice(-20).map(l => l.text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "")).filter(t => t.trim() !== "").join("\n")
             color: Colors.fade(0.7)
             font.pixelSize: Tokens.font.caption
-            font.family: "monospace"
+            font.family: Properties.fontFamily
             wrapMode: Text.WrapAnywhere
         }
     }

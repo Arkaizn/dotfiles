@@ -175,7 +175,7 @@ ColumnLayout {
                                     width: 20; height: 20; radius: 6
                                     color: modelData
                                     border.width: 1.5
-                                    border.color: Colors.fade(chip.containsMouse ? 0.6 : 0.15)
+                                    border.color: Colors.line(chip.containsMouse ? 0.6 : 0.15)
                                     MouseArea {
                                         id: chip
                                         anchors.fill: parent

@@ -27,7 +27,7 @@ Pressable {
         anchors.fill: parent
         radius: height / 2
         border.width: Tokens.border.control
-        border.color: Colors.fade(root.checked || root.hovered ? 0.28 : 0.16)
+        border.color: Colors.line(root.checked || root.hovered ? 0.28 : 0.16)
         gradient: ButtonGradient { hovered: root.checked || root.hovered }
         Behavior on border.color { ColorAnimation { duration: Anim.fast } }
 

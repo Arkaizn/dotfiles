@@ -127,7 +127,7 @@ Rectangle {
             radius: Tokens.radius.xl
             color: "transparent"
             border.width: 1
-            border.color: Colors.fade(0.15)
+            border.color: Colors.line(0.15)
             Text {
                 anchors.centerIn: parent
                 text: card.editing ? "Drag buttons here" : "Empty card — long-press to edit"

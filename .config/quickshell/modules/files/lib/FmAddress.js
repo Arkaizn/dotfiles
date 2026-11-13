@@ -13,6 +13,9 @@
 //   toServer(path, mounts)      that path as its server address ("smb://srv/share/dir"), or ""
 //   fromServer(text, mounts)    a typed address inside a mounted server → its local path, or ""
 //   encodeUri(text)             a typed address with each path part percent-encoded (once)
+//   withUser(uri, user, domain) the address for that user ("" takes the user out):
+//                               sftp://user@host/…, smb://DOMAIN;user@host/share (what GVfs reads)
+//   userOf(uri)                 { user, domain } named in an address ("" when none)
 // Saved servers ([{ uri, name }]):
 //   serverOffers(text, servers) those matching what's typed: [{ server, continues }]. A typed
 //                               scheme is kept: "ssh://srv" never offers smb://srv (only ssh /
@@ -150,4 +153,21 @@ function encodeUri(text) {
     const m = /^([a-z][a-z0-9+.-]*:\/\/[^/]*)(.*)$/i.exec(t)
     if (!m) return t
     return m[1] + m[2].split("/").map(x => encodeURIComponent(_dec(x))).join("/")
+}
+
+function withUser(uri, user, domain) {
+    const m = /^([a-z][a-z0-9+.-]*):\/\/([^\/]*)(.*)$/i.exec(String(uri).trim())
+    if (!m) return String(uri)
+    const host = m[2].slice(m[2].lastIndexOf("@") + 1)
+    const u = String(user ?? "").trim(), d = String(domain ?? "").trim()
+    if (u === "") return m[1] + "://" + host + m[3]
+    const who = (m[1].toLowerCase() === "smb" && d !== "" ? encodeURIComponent(d) + ";" : "") + encodeURIComponent(u)
+    return m[1] + "://" + who + "@" + host + m[3]
+}
+
+function userOf(uri) {
+    const m = /^[a-z][a-z0-9+.-]*:\/\/([^\/]*)@/i.exec(String(uri).trim())
+    if (!m) return { user: "", domain: "" }
+    const who = m[1].split(":")[0], semi = who.indexOf(";")
+    return { user: _dec(semi >= 0 ? who.slice(semi + 1) : who), domain: semi >= 0 ? _dec(who.slice(0, semi)) : "" }
 }

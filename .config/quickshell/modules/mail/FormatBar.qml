@@ -285,7 +285,7 @@ RowLayout {
                         width: 20; height: 20; radius: Tokens.radius.lg
                         color: modelData
                         border.width: swatch.containsMouse ? 2 : 1
-                        border.color: Colors.fade(swatch.containsMouse ? 0.8 : 0.3)
+                        border.color: Colors.line(swatch.containsMouse ? 0.8 : 0.3)
                         MouseArea {
                             id: swatch
                             anchors.fill: parent

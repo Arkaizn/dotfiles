@@ -590,12 +590,6 @@ Scope {
                                 subtitle: win.subtitle
                                 wrapSubtitle: false
 
-                                // greyed out while today is already shown (clicking would do nothing)
-                                ActionButton {
-                                    text: "Today"
-                                    interactive: !win.showingToday
-                                    onClicked: win.goToday()
-                                }
                                 IconButton {
                                     icon: "󰅁"
                                     tooltip: "Previous  (←)"

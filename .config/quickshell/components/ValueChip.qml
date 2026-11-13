@@ -64,7 +64,7 @@ Pressable {
         Text {
             visible: root.label !== ""
             text: root.label
-            color: Colors.fade(0.45)
+            color: Colors.textMuted
             font.pixelSize: Tokens.font.micro
             font.bold: true
             font.family: Properties.fontFamily

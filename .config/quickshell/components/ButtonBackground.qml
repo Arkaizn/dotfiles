@@ -30,7 +30,7 @@ Item {
         anchors.fill: parent
         radius: Tokens.radius.md
         color: Colors.light ? Colors.neutral(1, 0.35) : Colors.dim(0.18)
-        border.color: Colors.fade(root.hovered ? 0.28 : 0.18)
+        border.color: Colors.line(root.hovered ? 0.28 : 0.18)
         border.width: 1.5
 
         gradient: ButtonGradient {

@@ -141,6 +141,7 @@ ColumnLayout {
 
 
     Text {
+        font.family: Properties.fontFamily
         visible: root.statusText.length > 0
         Layout.fillWidth: true
         text: root.statusText
@@ -227,6 +228,7 @@ ColumnLayout {
                             spacing: Tokens.space.s8
 
                             Text {
+                                font.family: Properties.fontFamily
                                 text: folderSection.label + "  (" + folderSection.items.length + ")"
                                 color: Properties.color
                                 font.pixelSize: Tokens.font.body

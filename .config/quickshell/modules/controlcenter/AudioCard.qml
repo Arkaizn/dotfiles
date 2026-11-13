@@ -149,7 +149,7 @@ Card {
                 Text {
                     text: "Apps"
                     color: Colors.fade(0.55)
-                    font { bold: true; pixelSize: Tokens.font.small }
+                    font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.small }
                 }
                 Rectangle {
                     visible: root.streams.length > 0
@@ -160,11 +160,12 @@ Card {
                         anchors.centerIn: parent
                         text: root.streams.length
                         color: Colors.fade(0.87)
-                        font { bold: true; pixelSize: Tokens.font.micro }
+                        font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.micro }
                     }
                 }
                 // collapsed: which apps are playing
                 Text {
+                    font.family: Properties.fontFamily
                     Layout.fillWidth: true
                     text: root.streams.length === 0 ? "Nothing is playing"
                         : [...new Set(root.streams.map(n => root.appName(n)))].join(", ")
@@ -224,12 +225,14 @@ Card {
                                     Layout.preferredHeight: 18
                                 }
                                 Text {
+                                    font.family: Properties.fontFamily
                                     text: root.appName(app.modelData)
                                     color: Colors.ink
                                     font.pixelSize: Tokens.font.small
                                     font.bold: true
                                 }
                                 Text {
+                                    font.family: Properties.fontFamily
                                     Layout.fillWidth: true
                                     text: app.modelData.properties?.["media.name"] ?? ""
                                     color: Colors.fade(0.45)
@@ -272,9 +275,10 @@ Card {
             Text {
                 text: dh.label
                 color: Colors.fade(0.55)
-                font { bold: true; pixelSize: Tokens.font.small }
+                font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.small }
             }
             Text {
+                font.family: Properties.fontFamily
                 Layout.fillWidth: true
                 text: dh.current
                 color: dhMouse.containsMouse ? Colors.ink : Colors.fade(0.87)
@@ -320,6 +324,7 @@ Card {
                 RowLayout {
                     anchors { fill: parent; leftMargin: Tokens.space.s10; rightMargin: Tokens.space.s10 }
                     Text {
+                        font.family: Properties.fontFamily
                         Layout.fillWidth: true
                         text: dp.nameOf(opt.modelData)
                         color: Colors.ink

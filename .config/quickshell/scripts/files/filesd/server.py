@@ -19,7 +19,7 @@ gi.require_version("Gio", "2.0")
 gi.require_version("GLibUnix", "2.0")
 from gi.repository import Gio, GLib, GLibUnix  # noqa: E402
 
-from . import archives, devices, info, listing, ops, places, search, views, watch  # noqa: E402
+from . import archives, creds, devices, info, listing, ops, places, portal, search, views, watch  # noqa: E402
 from . import thumbs  # noqa: E402
 from .proto import VERSION, Fail, choice_arg, error_reply, from_os, path_arg, send  # noqa: E402
 
@@ -72,7 +72,10 @@ class Server:
             "trashEmpty": self.op_trash_empty, "recent": self.op_recent, "addRecent": self.op_add_recent,
             "scripts": self.op_scripts, "runScript": self.op_run_script,
             "bookmark": self.op_bookmark, "fileManager1": self.op_fm1,
+            "logins": self.op_logins,
+            "fileChooser": self.op_chooser, "chooserAck": self.op_chooser_ack, "chooserDone": self.op_chooser_done,
         }
+        self.chooser = portal.Chooser(os.path.join(HERE, "files.sh"))
 
     # ── Plumbing ──────────────────────────────────────────────────────────────
 
@@ -129,34 +132,70 @@ class Server:
         except Exception as e:  # noqa: BLE001  (one bad request must not end the backend)
             send(error_reply(rid, e))
 
-    def in_pool(self, rid, work):
-        """run work(cancelled) in a worker; its return value is the "done" reply"""
+    def in_pool(self, rid, work, touched=None):
+        """run work(cancelled) in a worker; its return value is the "done" reply.
+        touched(res | None) → the paths it changed (see touch)"""
         flag = threading.Event()
         self.cancels[rid] = flag
 
         def job():
+            res = None
             try:
                 if flag.is_set():
                     raise Fail("cancelled", "cancelled")
                 res = work(flag.is_set)
                 if flag.is_set():
                     raise Fail("cancelled", "cancelled")
+                self._touched(touched, res)
                 send({"id": rid, **(res or {}), "type": "done"})        # last: a result can't replace it
             except Exception as e:  # noqa: BLE001
+                self._touched(touched, None)
                 send(error_reply(rid, e))
             finally:
                 self.cancels.pop(rid, None)
         self.pool.submit(job)
 
-    def in_thread(self, rid, work):
-        """a long operation: a thread of its own, an ops.Job for progress / pause / answers"""
+    def _touched(self, touched, res):
+        if touched is None:
+            return
+        try:
+            self.touch(touched(res))
+        except Exception:  # noqa: BLE001  (only a refresh hint)
+            pass
+
+    def touch(self, paths):
+        """an operation changed these paths: the open folders they are in look at them now.
+        Local folders hear it from their monitor anyway; servers through GVfs and network
+        drives don't (a deleted file stayed in the view until F5). Any thread."""
+        by = {}
+        for p in paths or ():
+            if isinstance(p, str) and p.startswith("/") and p != "/":
+                p = p.rstrip("/")
+                by.setdefault(os.path.dirname(p), set()).add(os.path.basename(p))
+        if not by:
+            return
+
+        def go():
+            for w in list(self.watches.values()):
+                names = by.get(w.folder)
+                if names:
+                    w.poke(names)
+            return False
+        GLib.idle_add(go)
+
+    def in_thread(self, rid, work, touched=None):
+        """a long operation: a thread of its own, an ops.Job for progress / pause / answers.
+        touched(res | None) → the paths it changed (also when it failed half way)"""
         job = ops.Job(rid)
         self.jobs[rid] = job
 
         def run():
             try:
-                send({"id": rid, **(work(job) or {}), "type": "done"})
+                res = work(job) or {}
+                self._touched(touched, res)
+                send({"id": rid, **res, "type": "done"})
             except Exception as e:  # noqa: BLE001
+                self._touched(touched, None)
                 send(error_reply(rid, e))
             finally:
                 self.jobs.pop(rid, None)
@@ -210,8 +249,10 @@ class Server:
                 send(b)
             if streamed and not items:
                 send({"id": rid, "type": "batch", "reset": True, "items": []})
+            # (a server's mode bits say little — ACLs decide there: writing is tried, and the
+            # server's own answer shown, instead of refusing up front)
             return {"count": len(items), "hiddenCount": hidden, "path": path,
-                    "canWrite": os.access(path, os.W_OK), "fs": fs}
+                    "canWrite": fs in listing.REMOTE_FS or os.access(path, os.W_OK), "fs": fs}
         self.in_pool(rid, work)
 
     def op_dirs(self, rid, args):
@@ -230,10 +271,10 @@ class Server:
             raise Fail("This isn't a folder", "notdir")
         wid = self.next_watch
         self.next_watch += 1
-        try:
-            self.watches[wid] = watch.Watch(wid, path, lambda w: self.watches.pop(w, None))
-        except GLib.Error as e:
-            raise Fail(e.message, "unsupported")
+        # (a server through GVfs / a network drive has no change notification: such a watch
+        # polls, and our own operations tell it what they touched — touch())
+        self.watches[wid] = watch.Watch(wid, path, lambda w: self.watches.pop(w, None),
+                                        self.fs_of(path) in listing.REMOTE_FS, self.pool)
         send({"id": rid, "type": "done", "watch": wid})
 
     def op_unwatch(self, rid, args):
@@ -316,11 +357,14 @@ class Server:
             # a drag without keys, like Nautilus: a move on the same drive, else a copy
             mode = "move" if all(ops.same_dev(s, dest) for s in sources) else "copy"
 
+        pairs = []
+
         def work(job):
-            res = ops.run_transfer(job, ops.plan(sources, dest, mode), mode)
+            pairs.extend(ops.plan(sources, dest, mode))
+            res = ops.run_transfer(job, pairs, mode)
             res["mode"] = mode
             return res
-        self.in_thread(rid, work)
+        self.in_thread(rid, work, lambda res: sources + [d for _, d in pairs] + [m["dst"] for m in (res or {}).get("made", [])])
 
     def op_save(self, rid, args):
         """something dropped from another app that isn't a file (a browser's image,
@@ -351,7 +395,7 @@ class Server:
             with open(res["path"], "wb") as f:
                 f.write(data)
             return res
-        self.in_pool(rid, work)
+        self.in_pool(rid, work, lambda res: [res["path"]] if res else [])
 
     def op_open_uri(self, rid, args):
         u = args.get("uri")
@@ -371,37 +415,39 @@ class Server:
         if not isinstance(pairs, list) or not pairs or len(pairs) > MAX_PATHS:
             raise Fail("pairs: a list of {from, to}", "invalid")
         checked = [(path_arg(p, "from"), path_arg(p, "to")) for p in pairs if isinstance(p, dict)]
-        self.in_thread(rid, lambda job: ops.run_transfer(job, checked, "move", explicit=True))
+        self.in_thread(rid, lambda job: ops.run_transfer(job, checked, "move", explicit=True),
+                       lambda res: [p for pair in checked for p in pair])
 
     def op_trash(self, rid, args):
         paths = self.paths_arg(args)
-        self.in_thread(rid, lambda job: ops.run_trash(job, paths, Gio))
+        self.in_thread(rid, lambda job: ops.run_trash(job, paths, Gio), lambda res: paths)
 
     def op_restore(self, rid, args):
         paths = self.paths_arg(args)
-        self.in_thread(rid, lambda job: ops.run_restore(job, paths))
+        self.in_thread(rid, lambda job: ops.run_restore(job, paths), lambda res: paths + (res or {}).get("restored", []))
 
     def op_delete(self, rid, args):
         paths = self.paths_arg(args)
         if "/" in paths or os.path.expanduser("~") in paths:
             raise Fail("That can't be deleted from here", "invalid")
-        self.in_thread(rid, lambda job: ops.run_delete(job, paths))
+        self.in_thread(rid, lambda job: ops.run_delete(job, paths), lambda res: paths)
 
     def op_rename(self, rid, args):
         path = path_arg(args)
         name = args.get("name")
-        self.in_pool(rid, lambda c: ops.rename(path, name, self.fs_of(os.path.dirname(path))))
+        self.in_pool(rid, lambda c: ops.rename(path, name, self.fs_of(os.path.dirname(path))),
+                     lambda res: [path, res["path"]] if res else [path])
 
     def op_mkdir(self, rid, args):
         folder = path_arg(args, "dir")
         name = args.get("name")
-        self.in_pool(rid, lambda c: ops.mkdir(folder, name, self.fs_of(folder)))
+        self.in_pool(rid, lambda c: ops.mkdir(folder, name, self.fs_of(folder)), lambda res: [res["path"]] if res else [])
 
     def op_newfile(self, rid, args):
         folder = path_arg(args, "dir")
         name = args.get("name")
         template = path_arg(args, "template") if args.get("template") else None
-        self.in_pool(rid, lambda c: ops.newfile(folder, name, template, self.fs_of(folder)))
+        self.in_pool(rid, lambda c: ops.newfile(folder, name, template, self.fs_of(folder)), lambda res: [res["path"]] if res else [])
 
     def op_templates(self, rid, args):
         self.in_pool(rid, lambda c: ops.templates(GLib))
@@ -421,7 +467,12 @@ class Server:
         if job:
             job.give(a)
         if asker:
-            asker.give(a)
+            cred = args.get("cred")
+            if isinstance(cred, str) and a["action"] == "ok":
+                # a saved login picked in the password dialog: its password is read here
+                self._login(cred, a["remember"])(asker)
+            else:
+                asker.give(a)
         send({"id": rid, "type": "done", "found": job is not None or asker is not None})
 
     def op_pause(self, rid, args):
@@ -577,7 +628,46 @@ class Server:
         uri = args.get("uri")
         if not isinstance(uri, str):
             raise Fail("uri: a server address", "invalid")
-        devices.connect(uri.strip(), rid, self.mount_asks, self._finish(rid))
+        cred = args.get("cred")
+        login = self._login(cred, args.get("remember") is True) if isinstance(cred, str) else None
+        devices.connect(uri.strip(), rid, self.mount_asks, self._finish(rid), login)
+
+    def _login(self, cred, remember):
+        """answers a mount's password question with a saved login (keyring item `cred`): read in
+        the pool (the keyring may prompt to unlock), given on the loop; on a failure the UI asks"""
+        def answer(asker):
+            def work():
+                try:
+                    user, domain, password = creds.secret_of(cred)
+                except Exception as e:  # noqa: BLE001
+                    why = str(e) if isinstance(e, Fail) else "The saved login couldn't be read"
+                    GLib.idle_add(lambda: asker.ask_again(why) and False)
+                    return
+                a = {"action": "ok", "user": user, "domain": domain, "password": password, "remember": remember}
+                GLib.idle_add(lambda: asker.give(a) and False)
+            self.pool.submit(work)
+        return answer
+
+    def op_logins(self, rid, args):
+        self.in_pool(rid, lambda c: {"logins": creds.logins()})
+
+    # ── Other apps' Open / Save dialogs (portal.py) ───────────────────────────
+
+    def op_chooser(self, rid, args):
+        send({"id": rid, "type": "done", **self.chooser.set(args.get("on") is True)})
+
+    def op_chooser_ack(self, rid, args):
+        send({"id": rid, "type": "done", "found": self.chooser.ack(args.get("chooser"))})
+
+    def op_chooser_done(self, rid, args):
+        paths = args.get("paths")
+        if not isinstance(paths, list) or len(paths) > 10000:
+            raise Fail("paths: a list", "invalid")
+        checked = [path_arg({"path": p}) for p in paths]
+        choices = args.get("choices") if isinstance(args.get("choices"), dict) else {}
+        flt = args.get("filter") if isinstance(args.get("filter"), int) else -1
+        send({"id": rid, "type": "done",
+              "found": self.chooser.done(args.get("chooser"), args.get("ok") is True, checked, choices, flt)})
 
     def op_network(self, rid, args):
         devices.network(self._finish(rid))
@@ -592,12 +682,14 @@ class Server:
         name = args.get("name")
         fmt = choice_arg(args, "format", archives.FORMATS, "zip")
         password = args.get("password") if isinstance(args.get("password"), str) and args.get("password") else None
-        self.in_thread(rid, lambda job: archives.compress(job, paths, dest, name, fmt, password))
+        self.in_thread(rid, lambda job: archives.compress(job, paths, dest, name, fmt, password),
+                       lambda res: [res["path"]] if res and res.get("path") else [])
 
     def op_extract(self, rid, args):
         path = path_arg(args)
         dest = path_arg(args, "dest")
-        self.in_thread(rid, lambda job: archives.extract(job, path, dest))
+        self.in_thread(rid, lambda job: archives.extract(job, path, dest),
+                       lambda res: [res["path"]] if res and res.get("path") else [])
 
     def _entries(self, args):
         es = args.get("items")
@@ -616,7 +708,7 @@ class Server:
 
     def op_trash_restore(self, rid, args):
         es = self._entries(args)
-        self.in_thread(rid, lambda job: views.trash_restore(job, es, Gio))
+        self.in_thread(rid, lambda job: views.trash_restore(job, es, Gio), lambda res: [e["orig"] for e in es])
 
     def op_trash_delete(self, rid, args):
         es = self._entries(args)

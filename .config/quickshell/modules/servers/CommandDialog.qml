@@ -106,7 +106,7 @@ Modal {
                         placeholderTextColor: Colors.fade(0.35)
                         selectionColor: Colors.fade(0.28)
                         font.pixelSize: Tokens.font.small
-                        font.family: "monospace"
+                        font.family: Properties.fontFamily
                         leftPadding: Tokens.space.s14; rightPadding: Tokens.space.s14; topPadding: Tokens.space.s10
                         background: FieldBackground { focused: area.activeFocus }
                     }

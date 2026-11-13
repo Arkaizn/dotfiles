@@ -160,7 +160,7 @@ ColumnLayout {
                 radius: 6
                 visible: cell.isCurrent
                 color: Colors.fade(0.13)
-                border.color: Colors.fade(0.22)
+                border.color: Colors.line(0.22)
                 border.width: 0.5
             }
             Rectangle {
@@ -178,11 +178,13 @@ ColumnLayout {
                 spacing: Tokens.space.s8
 
                 Text {
+                    font.family: Properties.fontFamily
                     text: cell.entry.isImage ? "🖼" : "📋"
                     font.pixelSize: Tokens.font.label
                 }
 
                 Text {
+                    font.family: Properties.fontFamily
                     text: cell.entry.preview
                     color: cell.isCurrent ? Colors.ink : Colors.fade(0.75)
                     font.pixelSize: Tokens.font.label

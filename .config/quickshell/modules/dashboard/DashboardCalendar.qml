@@ -145,7 +145,7 @@ Item {
                     anchors.fill: parent
                     radius: 6
                     color: "transparent"
-                    border.color: Colors.fade(prevHover.hovered ? 0.28 : 0.14)
+                    border.color: Colors.line(prevHover.hovered ? 0.28 : 0.14)
                     border.width: 0.5
 
                     gradient: ButtonGradient {
@@ -153,6 +153,7 @@ Item {
                         }
                 }
                 Text {
+                    font.family: Properties.fontFamily
                     anchors.centerIn: parent
                     text: "‹"
                     font.pixelSize: Tokens.font.titleLarge
@@ -192,7 +193,7 @@ Item {
                     anchors.fill: parent
                     radius: 7
                     color: Colors.ink   // filled by the gradient layer below
-                    border.color: Colors.fade(monthPillItem.hovered ? 0.28 : 0.18)
+                    border.color: Colors.line(monthPillItem.hovered ? 0.28 : 0.18)
                     border.width: 0.5
                     
                     gradient: ButtonGradient {
@@ -204,6 +205,7 @@ Item {
                 // full-length name, only measured
                 Text {
                     id: longName
+                    font.family: Properties.fontFamily
                     visible: false
                     text: root.monthNames[root.curMonth] + "   " + root.curYear
                     font.pixelSize: Tokens.font.body
@@ -211,6 +213,7 @@ Item {
                 }
                 Text {
                     id: monthLabel
+                    font.family: Properties.fontFamily
                     anchors.centerIn: parent
                     text: (monthPillItem.width < longName.implicitWidth + 28 ? root.monthNames[root.curMonth].slice(0, 3)
                                                                              : root.monthNames[root.curMonth]) + "   " + root.curYear
@@ -242,12 +245,13 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     radius: 7
-                    border.color: Colors.fade(todayHover.hovered || todayBtn.away ? 0.28 : 0.18)
+                    border.color: Colors.line(todayHover.hovered || todayBtn.away ? 0.28 : 0.18)
                     border.width: 0.5
                     gradient: ButtonGradient { hovered: todayHover.hovered || todayBtn.away }
                 }
                 Text {
                     id: todayLabel
+                    font.family: Properties.fontFamily
                     anchors.centerIn: parent
                     text: "Today"
                     color: Colors.ink
@@ -279,7 +283,7 @@ Item {
                     anchors.fill: parent
                     radius: 6
                     color: "transparent"
-                    border.color: Colors.fade(nextHover.hovered ? 0.28 : 0.14)
+                    border.color: Colors.line(nextHover.hovered ? 0.28 : 0.14)
                     border.width: 0.5
                     gradient: ButtonGradient {
                             hovered: nextHover.hovered
@@ -287,6 +291,7 @@ Item {
                 }
 
                 Text {
+                    font.family: Properties.fontFamily
                     anchors.centerIn: parent
                     text: "›"
                     font.pixelSize: Tokens.font.titleLarge
@@ -307,6 +312,7 @@ Item {
             Repeater {
                 model: ["Mo","Tu","We","Th","Fr","Sa","Su"]
                 Text {
+                    font.family: Properties.fontFamily
                     required property string modelData
                     required property int index
                     Layout.fillWidth: true
@@ -340,6 +346,7 @@ Item {
                     // Week number — resolved from the actual date of the first cell
                     // so Jan/Dec cross-year edge cases are handled correctly.
                     Text {
+                        font.family: Properties.fontFamily
                         width: 28
                         Layout.fillHeight: true
                         text: {
@@ -389,7 +396,7 @@ Item {
                                 radius: 6
                                 visible: dayCell.isToday && !dayCell.isSelected
                                 color: Colors.fade(0.13)
-                                border.color: Colors.fade(0.22)
+                                border.color: Colors.line(0.22)
                                 border.width: 0.5
                             }
 
@@ -417,6 +424,7 @@ Item {
                             }
 
                             Text {
+                                font.family: Properties.fontFamily
                                 anchors.centerIn: parent
                                 text: dayCell.cell.d
                                 font.pixelSize: Tokens.font.small

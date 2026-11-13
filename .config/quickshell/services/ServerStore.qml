@@ -113,6 +113,21 @@ Singleton {
             groups: Array.isArray(s.groups) ? s.groups.map(String) : [], tags: Array.isArray(s.tags) ? s.tags.map(String) : [],
             notes: String(s.notes ?? ""), archived: s.archived === true, sftp: s.sftp !== false, noReboot: s.noReboot === true,
             noSnapshot: s.noSnapshot === true,
+            // what an update does with its containers: "" = automatic (only download on a server
+            // that never reboots, else update) | update | pull | never; plainContainers: also
+            // update the ones started with docker run (through Watchtower, run once)
+            containers: ["update", "pull", "never"].includes(s.containers) ? s.containers : "",
+            plainContainers: s.plainContainers === true,
+            // what it is: "" = a server (a scan may still find it to be a Proxmox machine) |
+            // pve (a Proxmox VE host: has guests, never rebooted) | pbs (Proxmox Backup Server)
+            kind: ["pve", "pbs"].includes(s.kind) ? s.kind : "",
+            noSnapshotReason: String(s.noSnapshotReason ?? ""),
+            // how a Proxmox VE host is reached for snapshots: over SSH (qm / pct, needs root), or
+            // through its API with a token that may only snapshot. The token's secret is in the
+            // keyring, never here. apiOnly: no SSH to it at all (then the tool doesn't update the host itself)
+            pve: s.kind === "pve" && s.pve && typeof s.pve === "object"
+                 ? { access: s.pve.access === "api" ? "api" : "ssh", url: String(s.pve.url ?? ""), tokenId: String(s.pve.tokenId ?? ""),
+                     node: String(s.pve.node ?? ""), pin: String(s.pve.pin ?? ""), apiOnly: s.pve.apiOnly === true } : null,
             icon: String(s.icon ?? ""),
             guest: s.guest && s.guest.vmid !== undefined && s.guest.vmid !== null ? { node: String(s.guest.node ?? ""), type: s.guest.type === "lxc" ? "lxc" : "qemu", vmid: Number(s.guest.vmid) } : null,
             checks: Array.isArray(s.checks) ? s.checks.filter(c => c && c.type && c.name && c.target)
@@ -123,6 +138,10 @@ Singleton {
             tunnels: Array.isArray(s.tunnels) ? s.tunnels : []
         }
     }
+
+    // the container mode that applies (the script decides the same way: lib/servers.sh ct_mode)
+    function ctMode(s) { return s?.containers || (s?.noReboot ? "pull" : "update") }
+    readonly property var ctModeLabels: ({ update: "updated", pull: "only downloaded", never: "never touched" })
 
     // ssh destination parts: host defaults to the name (an ~/.ssh/config alias or DNS name)
     function hostOf(s) { return s.host || s.name }
@@ -207,6 +226,65 @@ Singleton {
     }
     function archiveAnimated(name, on) { animateOut(name, () => archive(name, on)) }
     function removeAnimated(name) { animateOut(name, () => remove(name)) }
+    // ── Policy and waves (servers.json; the script reads both) ──────────────
+    // What happens when nobody decides: set in Settings → Servers, it wins over svs.conf.
+    // A key that isn't set leaves the decision to svs.conf (its defaults are these).
+    readonly property var policyDefaults: ({ maxParallel: 4, stopOnFailure: true, autoRollback: "containers", snapshotKeepDays: 3, rollbackKeepDays: 7 })
+    readonly property var policy: Object.assign({}, policyDefaults, data.policy ?? {})
+    function policySet(key) { return (data.policy ?? {})[key] !== undefined }
+    function setPolicy(key, value) {
+        const d = copy()
+        d.policy = Object.assign({}, d.policy ?? {})
+        if (value === undefined) delete d.policy[key]; else d.policy[key] = value
+        save(d)
+    }
+    // the wave a server is updated in (0 = the first; -1 = with the rest, after every wave)
+    readonly property var waves: data.waves ?? []
+    function waveOf(name) { return waves.findIndex(w => w.includes(name)) }
+    function setWave(name, index) {
+        const d = copy()
+        let w = (d.waves ?? []).map(x => x.filter(n => n !== name))
+        if (index >= 0) { while (w.length <= index) w.push([]); w[index].push(name) }
+        d.waves = w.filter(x => x.length > 0)
+        save(d)
+    }
+    // how a server is updated, in words (Settings → Servers lists every one)
+    function howItUpdates(s) {
+        const own = updatePerOf(s.name), w = waveOf(s.name), i = info[s.name] ?? {}
+        const parts = [own ? choiceLabel(own).toLowerCase() + " by default" : ""]
+        if (i.docker || s.containers) parts.push("containers " + (ctModeLabels[ctMode(s)] ?? "updated") + (s.plainContainers ? ", plain ones too" : ""))
+        parts.push(isHost(s) || isPbs(s) ? "never rebooted (Proxmox)" : s.noReboot ? "never rebooted" : "reboots when you allow it")
+        if (s.guest) parts.push(s.noSnapshot ? "no snapshot" + (s.noSnapshotReason ? " (" + s.noSnapshotReason + ")" : "") : "snapshot on " + s.guest.node)
+        parts.push(w < 0 ? (waves.length ? "after every wave" : "") : "wave " + (w + 1))
+        return parts.filter(x => x).join("  ·  ")
+    }
+
+    // ── Order ───────────────────────────────────────────────────────────────
+    // "worst" (what needs attention first, as before) or "mine": the order I dragged the
+    // cards into, kept per group in servers.json ("order": { "<group id>": [names] }; the
+    // script doesn't read it). Dragging a card inside its group switches to "mine".
+    readonly property string sortMode: prefs.sort === "mine" ? "mine" : "worst"
+    readonly property var order: data.order ?? ({})
+    function ordered(list, gid) {
+        const bySeverity = list.slice().sort((a, b) => severity(b.name) - severity(a.name))
+        if (sortMode !== "mine") return bySeverity
+        const mine = order[gid] ?? []
+        const at = n => { const i = mine.indexOf(n); return i < 0 ? 1e6 : i }
+        // (the ones never placed keep their place among themselves, after the placed ones)
+        return list.slice().sort((a, b) => at(a.name) - at(b.name))
+    }
+    // put a server before another one of the same group ("" = at the end)
+    function placeIn(gid, name, before, shown) {
+        const names = (shown ?? []).filter(n => n !== name)
+        const i = before === "" ? -1 : names.indexOf(before)
+        if (i < 0) names.push(name); else names.splice(i, 0, name)
+        const d = copy()
+        d.order = Object.assign({}, d.order ?? {})
+        d.order[gid] = names
+        save(d)
+        if (sortMode !== "mine") setPref("sort", "mine")
+    }
+
     // a card dropped on a group (drag): moves it from the group it came from
     //   to: group id | "__ungrouped" (leave `from`) | "__archived"
     function dropOn(name, from, to) {
@@ -291,7 +369,10 @@ Singleton {
                 // ask ssh where the alias really goes (HostName / Port from ~/.ssh/config)
                 Jobs.run(["ssh", "-G"].concat(s.port !== 22 ? ["-p", String(s.port)] : []).concat(["--", hostOf(s)]), (c, out) => {
                     const h = /^hostname (.+)$/m.exec(out), p = /^port (\d+)$/m.exec(out)
-                    Jobs.run(["nc", "-z", "-w", "2", "--", h && !Valid.host(h[1]) ? h[1] : hostOf(s), p ? p[1] : String(s.port)], done)
+                    // a Proxmox host that only offers its API: that port, not SSH
+                    const api = s.pve?.apiOnly && s.pve.access === "api" ? /^https:\/\/([^:\/]+)(?::(\d+))?/.exec(s.pve.url) : null
+                    if (api) Jobs.run(["nc", "-z", "-w", "2", "--", api[1], api[2] ?? "8006"], done)
+                    else Jobs.run(["nc", "-z", "-w", "2", "--", h && !Valid.host(h[1]) ? h[1] : hostOf(s), p ? p[1] : String(s.port)], done)
                 })
             }
         })
@@ -302,7 +383,12 @@ Singleton {
         const m = {}
         for (const s of servers) {
             const sc = scans[s.name] ?? null, ck = checks[s.name] ?? null
-            const pk = sc?.packages ?? [], cts = sc?.containers ?? []
+            const pk = sc?.packages ?? [], allCts = sc?.containers ?? []
+            // on a "download only" server an image that is already there is nothing an update
+            // would do: it waits for a restart by hand
+            const waiting = ctMode(s) === "update" ? [] : allCts.filter(c => c.state === "pulled")
+            const cts = ctMode(s) === "never" ? [] : allCts.filter(c => !waiting.includes(c))
+            const skipped = sc?.skipped ?? []
             const r = reach[s.name]
             const reachable = r === "up" ? true : r === "down" ? false : (sc ? sc.reachable : ck ? ck.reachable : null)
             const security = pk.filter(p => p.security).length
@@ -313,13 +399,17 @@ Singleton {
                 scanned: !!sc, lastScan: sc ? Date.parse(sc.time) || 0 : 0, stale: sc?.stale === true,
                 // the last scan got through (being online — port open — isn't enough: ssh can still fail)
                 scanOk: sc?.reachable === true, scanError: sc && sc.reachable !== true ? (sc.error ?? "unreachable") : "",
-                error: sc?.error ?? "", pm: sc?.pm ?? "", proxmox: sc?.proxmox === true, reboot: sc?.reboot === true,
+                error: sc?.error ?? "", pm: sc?.pm ?? "", proxmox: sc?.proxmox === true, pbs: sc?.pbs === true, reboot: sc?.reboot === true,
                 os: sc?.os?.id ?? "", osName: sc?.os?.name ?? "", docker: sc?.docker === true || (ck?.containers ?? []).length > 0,
                 packages: pk.length, security: security, normal: pk.length - security, containers: cts.length,
                 critical: security > 0 || sc?.reboot === true,
                 checks: ck?.checks ?? [], checksFailed: failed.length, containersBad: bad.length,
                 ctTotal: (ck?.containers ?? []).length, lastCheck: ck ? Date.parse(ck.time) || 0 : 0,
-                warnings: (sc?.warnings ?? []).length
+                warnings: (sc?.warnings ?? []).length,
+                restartPending: waiting.length, ctMode: ctMode(s),
+                apiOnly: s.kind === "pve" && s.pve?.access === "api" && s.pve.apiOnly === true,
+                plain: skipped.filter(k => k.kind === "plain").length, plainNew: (sc?.plain ?? []).length,
+                aio: skipped.filter(k => k.kind === "aio").length
             }
         }
         return m
@@ -506,11 +596,42 @@ Singleton {
     // the newest update / scan report that has this server
     function lastReport(name, cb) {
         Jobs.run(["sh", "-c", 'for f in $(ls -1t "$1"/reports/*.json 2>/dev/null | head -n 60); do\n'
-                    + '  jq -ce --arg s "$2" --arg f "$f" \'select(.mode == "update") | {time, mode, result, file: $f, server: (.servers[] | select(.server == $s))}\' "$f" 2>/dev/null && exit 0\n'
+                    + '  jq -ce --arg s "$2" --arg f "$f" \'select(.mode == "update") | {time, mode, result, log, file: $f, server: (.servers[] | select(.server == $s))}\' "$f" 2>/dev/null && exit 0\n'
                     + 'done; exit 1', "sh", dataDir, name], (code, out) => {
             try { cb(code === 0 ? JSON.parse(out.trim().split("\n")[0]) : null) } catch (e) { cb(null) }
         })
     }
+    // The past updates, newest first: cb([{ file, time, mode, result, log, servers: [{ server,
+    // status, summary, look, reboot, snapshot, packages (count), containers (count),
+    // problems, notes }] }]); name: only the ones that had this server (and only its row).
+    // (reports from before 2026-11 have no summary: the views fall back to status + problems)
+    function history(name, limit, cb) {
+        Jobs.run(["sh", "-c", 'for f in $(ls -1t "$1"/reports/*-update.json 2>/dev/null | head -n "$3"); do\n'
+                    + '  jq -c --arg f "$f" --arg s "$2" \'{file: $f, time, mode, result, log, servers: [.servers[] | select($s == "" or .server == $s)\n'
+                    + '    | {server, status, summary: (.summary // ""), look: (.look // []), reboot, snapshot, packages: (.packages | length), containers: (.containers | length), problems, notes}]}\n'
+                    + '    | select(.servers | length > 0)\' "$f" 2>/dev/null\n'
+                    + 'done', "sh", dataDir, name ?? "", String(limit ?? 60)], (code, out) => {
+            const list = []
+            for (const l of out.split("\n")) { if (!l.trim()) continue; try { list.push(JSON.parse(l)) } catch (e) {} }
+            cb(list)
+        })
+    }
+    // a run's or a server's log (only files in the data folder's logs/): cb(text | null)
+    function readLog(path, cb) {
+        if (!String(path).startsWith(dataDir + "/logs/") || /\.\.\//.test(path)) return cb(null)
+        Jobs.run(["tail", "-n", "5000", "--", path], (code, out) => cb(code === 0 ? out.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "").replace(/\r/g, "") : null))
+    }
+    // where a server's log of a run is: next to the run's own log, "<run>.<server>.log"
+    function serverLogOf(runLog, name) { return String(runLog ?? "").replace(/\.log$/, "." + name + ".log") }
+    // a container's own output, in a terminal on that server (the last 300 lines, then it follows)
+    function containerLog(name, ct) {
+        const s = get(name)
+        if (!s || !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(ct)) return
+        DefaultApps.inTerminal(s.name + " · " + ct, ["bash", "-c",
+            'ssh -t "$@"; printf "\\nPress Enter to close."; read -r _', "bash"].concat(s.port !== 22 ? ["-p", String(s.port)] : [])
+            .concat(["--", destOf(s), "sudo -n docker logs --tail 300 -f " + ct + " 2>&1 || docker logs --tail 300 -f " + ct]))
+    }
+
     // cb({ snapshots: [{ id, node, tool, vmid, name, snapshot, ageDays }], pools, unreachable, error })
     property bool snapshotsLoading: false
     function loadSnapshots(cb) {
@@ -527,7 +648,14 @@ Singleton {
     // Proxmox: the guests on a host / the host of a guest
     function guestsOf(name) { return servers.filter(s => s.guest && s.guest.node === name) }
     // the Proxmox hosts: scanned as Proxmox, or holding a guest already
-    readonly property var proxmoxHosts: servers.filter(s => !s.archived && (info[s.name]?.proxmox === true || servers.some(x => x.guest?.node === s.name)))
+    // a Proxmox VE host: said to be one (kind), or found to be one by a scan, or one a guest
+    // points at. A Backup Server is a Proxmox machine too, but nothing runs on it.
+    function isHost(s) {
+        return !!s && !isPbs(s) && (s.kind === "pve" || info[s.name]?.proxmox === true || servers.some(x => x.guest?.node === s.name))
+    }
+    function isPbs(s) { return !!s && (s.kind === "pbs" || (s.kind === "" && info[s.name]?.pbs === true)) }
+    function kindLabel(s) { return isPbs(s) ? "Proxmox Backup Server" + (s.guest ? "  ·  " + (s.guest.type === "lxc" ? "LXC" : "VM") + " " + s.guest.vmid + " on " + s.guest.node : "") : isHost(s) ? "Proxmox VE host" : s?.guest ? (s.guest.type === "lxc" ? "LXC" : "VM") + " " + s.guest.vmid + " on " + s.guest.node : "" }
+    readonly property var proxmoxHosts: servers.filter(s => !s.archived && isHost(s))
                                                .map(s => s.name)
     function setGuest(name, guest) { patch(name, { guest: guest }) }
     function setNoSnapshot(name, on) { patch(name, { noSnapshot: on }) }
@@ -555,6 +683,77 @@ Singleton {
             })
         }
     }
+    // Can the tool work with this Proxmox host? cb([{ key, ok, text, hint }]) — over SSH,
+    // the way snapshots are taken today (keys only, never a password prompt).
+    property bool checking: false
+    function pveCheck(name, cb) {
+        const s = get(name)
+        if (!s) return cb([])
+        checking = true
+        Jobs.run(["sh", "-c", 'ssh -n -o BatchMode=yes -o ConnectTimeout=8 "$@" 2>&1', "sh"].concat(s.port !== 22 ? ["-p", String(s.port)] : []).concat(["--", destOf(s),
+                  'echo "USER|$(id -un)|$(id -u)"; command -v pveversion >/dev/null 2>&1 && echo "PVE|$(pveversion 2>/dev/null | head -n1)" || echo "PVE|"; '
+                  + 'qm list >/dev/null 2>&1 && echo "QM|ok" || echo "QM|no"; pct list >/dev/null 2>&1 && echo "PCT|ok" || echo "PCT|no"; '
+                  + 'command -v proxmox-backup-manager >/dev/null 2>&1 && echo "PBS|yes"']), (code, out) => {
+            checking = false
+            const line = k => { const m = new RegExp("^" + k + "\\|(.*)$", "m").exec(out); return m ? m[1] : null }
+            const user = line("USER")
+            if (user === null) return cb([{ key: "ssh", ok: false, text: "Can't log in over SSH",
+                                           hint: (out.trim().split("\n").pop() || "no answer") + ". The tool only uses SSH keys: copy yours to it (the card's menu → Copy SSH key to it), then check again." }])
+            const root = user.split("|")[1] === "0", pve = line("PVE") ?? "", qm = line("QM") === "ok", pct = line("PCT") === "ok"
+            cb([{ key: "ssh", ok: true, text: "SSH login works, as " + user.split("|")[0], hint: "" },
+                { key: "pve", ok: pve !== "", text: pve !== "" ? pve : "Not a Proxmox VE host",
+                  hint: pve !== "" ? "" : line("PBS") ? "It is a Proxmox Backup Server: set \"What is it\" to that (it has no guests)." : "pveversion isn't there. Is this the right machine?" },
+                { key: "qm", ok: qm && pct, text: qm && pct ? "Can list and snapshot its VMs and containers" : "Can't use qm / pct",
+                  hint: qm && pct ? "" : root ? "qm / pct failed although the login is root: look at the host." : "They need root. Set the server's user to root (Edit → User), or give this user passwordless sudo for qm and pct." }])
+        })
+    }
+    // What the script says about a Proxmox host, the way it is set up (SSH or API token):
+    // cb({ access, node, nodes, checks: [{ key, ok, text, hint }], guests: [{ type, vmid, name }], error })
+    function pveInfo(name, cb) {
+        checking = true
+        Jobs.run(engine(["pve-info", "--servers", name]), (code, out) => {
+            checking = false
+            let e = null
+            try { e = JSON.parse(out.trim().split("\n").pop()) } catch (x) {}
+            if (!e || e.event !== "pve") return cb({ access: "", node: "", nodes: [], guests: [], error: e?.error ?? "the script gave no answer",
+                                                    checks: [{ key: "run", ok: false, text: "Couldn't ask", hint: e?.error ?? "the script gave no answer" }] })
+            cb(Object.assign({ error: "" }, e))
+        })
+    }
+    // the key of the certificate a host shows right now, and its fingerprint to compare by eye:
+    // cb({ pin, fingerprint, error })
+    function pvePin(url, cb) {
+        Jobs.run(engine(["pve-pin", "--url", url]), (code, out) => {
+            let e = null
+            try { e = JSON.parse(out.trim().split("\n").pop()) } catch (x) {}
+            cb(e && e.event === "pin" ? { pin: e.pin, fingerprint: e.fingerprint, error: "" } : { pin: "", fingerprint: "", error: e?.error ?? "couldn't read the certificate" })
+        })
+    }
+    function setPve(name, pve) { patch(name, { pve: pve }) }
+    // the token's secret: into the keyring through stdin (never an argument, never a file)
+    function storePveToken(name, secret, cb) {
+        Jobs.runInput(["secret-tool", "store", "--label", "Quickshell Servers: Proxmox API token for " + name,
+                       "service", "quickshell-servers", "kind", "pve-token", "host", name], secret, code => cb(code === 0))
+    }
+    function hasPveToken(name, cb) {
+        Jobs.run(["sh", "-c", 'secret-tool lookup service quickshell-servers kind pve-token host "$1" >/dev/null 2>&1', "sh", name], code => cb(code === 0))
+    }
+    function forgetPveToken(name) { Jobs.run(["secret-tool", "clear", "service", "quickshell-servers", "kind", "pve-token", "host", name], () => {}) }
+
+    // link guests of a host to servers in one go. picks: [{ guest: { type, vmid, name }, server: "<name>" | "+" (add it) }]
+    // returns the names it couldn't add ("name: why")
+    function takeGuests(host, picks) {
+        const failed = []
+        for (const p of picks) {
+            const g = { node: host, type: p.guest.type, vmid: p.guest.vmid }
+            if (p.server === "+") {
+                const e = put({ name: p.guest.name, groups: [], guest: g }, "")
+                if (e) failed.push(p.guest.name + ": " + e)
+            } else if (get(p.server)) setGuest(p.server, g)
+        }
+        return failed
+    }
+
     function findGuest(name, cb) {
         const s = get(name)
         listGuests(r => {

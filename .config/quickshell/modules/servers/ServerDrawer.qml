@@ -29,6 +29,11 @@ Item {
     signal menu(var server, Item item, real x, real y)
     signal confirmDelete(string title, string text, var run)
     signal rebootRequested(var server)
+    signal historyRequested(string name)
+    signal pveSetupRequested(string name)
+    signal logRequested(string title, string path)
+    signal containerLogRequested(string name, string container)
+    signal restartPulledRequested(var server, var names)   // containers whose new image is only downloaded
 
     // a list of "name  old → new" lines
     component PkgList: ColumnLayout {
@@ -45,8 +50,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.maximumWidth: col.width
                 spacing: Tokens.space.s8
-                Text { Layout.preferredWidth: Math.min(200, col.width * 0.42); Layout.minimumWidth: 60; text: modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.caption; font.family: "monospace"; elide: Text.ElideRight }
-                Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: modelData.from + "  →  " + modelData.to; color: parent.parent.tone; font.pixelSize: Tokens.font.caption; font.family: "monospace"; elide: Text.ElideMiddle }
+                Text { Layout.preferredWidth: Math.min(200, col.width * 0.42); Layout.minimumWidth: 60; text: modelData.name; color: Colors.ink; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; elide: Text.ElideRight }
+                Text { Layout.fillWidth: true; Layout.minimumWidth: 0; text: modelData.from + "  →  " + modelData.to; color: parent.parent.tone; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; elide: Text.ElideMiddle }
             }
         }
     }
@@ -253,21 +258,55 @@ Item {
                                    text: root.showAllPkgs ? "Fewer" : "All"; onClicked: root.showAllPkgs = !root.showAllPkgs }
                 }
                 PkgList { Layout.fillWidth: true; limit: root.showAllPkgs ? 999 : 8; items: col.pkgs.filter(p => !p.security).map(p => ({ name: p.name, from: p.old, to: p.new })) }
+                // containers: what an update would recreate, what only waits for a restart,
+                // and the ones the tool doesn't manage (said by kind)
+                readonly property string ctMode: root.info.ctMode ?? "update"
+                readonly property var allCts: root.scan?.containers ?? []
+                readonly property var waiting: ctMode === "update" ? [] : allCts.filter(c => c.state === "pulled")
+                readonly property var newCts: allCts.filter(c => !waiting.includes(c))
+                readonly property var skipped: root.scan?.skipped ?? []
+                function shortId(id) { return (id ?? "").replace(/^sha256:/, "").slice(0, 12) }
                 Text {
-                    visible: (root.scan?.containers ?? []).length > 0
-                    text: "󰡨  Containers with a new image: " + (root.scan?.containers ?? []).length
-                    color: Colors.orange; font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily
+                    visible: col.newCts.length > 0
+                    text: "󰡨  Containers with a new image: " + col.newCts.length
+                          + (col.ctMode === "pull" ? "  ·  an update only downloads it here" : col.ctMode === "never" ? "  ·  never touched here" : "")
+                    color: col.ctMode === "update" ? Colors.orange : Colors.textSecondary
+                    font.pixelSize: Tokens.font.small; font.bold: true; font.family: Properties.fontFamily
                 }
                 PkgList {
                     Layout.fillWidth: true
                     tone: Colors.orange
-                    items: (root.scan?.containers ?? []).map(c => ({ name: c.name, from: c.oldVersion || c.oldId.replace(/^sha256:/, "").slice(0, 12),
-                                                                     to: c.newVersion || c.newId.replace(/^sha256:/, "").slice(0, 12) }))
+                    items: col.newCts.map(c => ({ name: c.name, from: c.oldVersion || col.shortId(c.oldId),
+                                                  to: c.newVersion || col.shortId(c.newId) || "newer image" }))
+                }
+                Banner {
+                    Layout.fillWidth: true
+                    visible: col.waiting.length > 0
+                    tone: "info"
+                    title: col.waiting.length + (col.waiting.length === 1 ? " container waits for a restart" : " containers wait for a restart")
+                    text: col.waiting.map(c => c.name).join(", ") + "\nThe new image is downloaded; " + (col.waiting.length === 1 ? "it still runs" : "they still run")
+                          + " the old one, because containers are " + (ServerStore.ctModeLabels[col.ctMode] ?? "") + " on this server."
+                    actionText: "Restart…"
+                    onAction: root.restartPulledRequested(root.server, col.waiting.map(c => c.name))
                 }
                 Text {
                     Layout.fillWidth: true
-                    visible: (root.scan?.warnings ?? []).length + (root.scan?.skipped ?? []).length > 0
-                    text: (root.scan?.warnings ?? []).map(w => "⚠ " + w).concat((root.scan?.skipped ?? []).map(k => "· " + k.name + ": " + k.reason)).join("\n")
+                    visible: (root.scan?.plain ?? []).length > 0
+                    text: "󰡨  Plain containers with a newer image: " + (root.scan?.plain ?? []).map(p => p.name).join(", ")
+                          + (root.server?.plainContainers ? (col.ctMode === "update" ? "\nUpdated with the next update, through Watchtower (run once)." : "\nNot updated: containers are " + (ServerStore.ctModeLabels[col.ctMode] ?? "") + " on this server.")
+                                                          : "\nNot updated: plain containers are off for this server (Edit → Update plain containers).")
+                    color: root.server?.plainContainers && col.ctMode === "update" ? Colors.orange : Colors.textSecondary
+                    font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily; wrapMode: Text.Wrap
+                }
+                Text {
+                    Layout.fillWidth: true
+                    visible: text !== ""
+                    readonly property var plain: col.skipped.filter(k => k.kind === "plain").map(k => k.name)
+                    readonly property int aio: col.skipped.filter(k => k.kind === "aio").length
+                    text: (root.scan?.warnings ?? []).map(w => "⚠ " + w)
+                          .concat(plain.length ? ["· Plain (started with docker run, not from Compose): " + plain.join(", ")] : [])
+                          .concat(aio ? ["· " + aio + " managed by Nextcloud AIO: it updates them itself, the tool leaves them alone"] : [])
+                          .concat(col.skipped.filter(k => k.kind !== "plain" && k.kind !== "aio").map(k => "· " + k.name + ": " + k.reason)).join("\n")
                     color: Colors.textMuted; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; wrapMode: Text.Wrap
                 }
 
@@ -316,6 +355,17 @@ Item {
                                                      .concat(g && !ServerStore.proxmoxHosts.includes(g.node) ? [g.node] : [])
                     SettingRow {
                         first: true
+                        visible: ServerStore.isHost(root.server) || root.server?.kind === "pbs"
+                        label: ServerStore.kindLabel(root.server)
+                        desc: root.server?.kind === "pbs" ? "updated like the others; never rebooted by the tool"
+                            : root.guests.length + (root.guests.length === 1 ? " of your servers runs" : " of your servers run") + " on it; snapshots before their updates are taken here. Never rebooted by the tool"
+                        ActionButton { visible: root.server?.kind !== "pbs"; icon: "󰒓"; text: "Access and guests…"
+                                       tooltip: "Check that the tool can work with it, and link its VMs and containers to your servers"
+                                       onClicked: root.pveSetupRequested(root.name) }
+                    }
+                    SettingRow {
+                        first: !(ServerStore.isHost(root.server) || root.server?.kind === "pbs")
+                        visible: !ServerStore.isHost(root.server) && root.server?.kind !== "pbs"
                         label: "Runs on"
                         desc: root.guestMsg !== "" ? root.guestMsg
                             : pmx.g ? (pmx.g.type === "lxc" ? "LXC container " : "VM ") + pmx.g.vmid + " on " + pmx.g.node
@@ -380,7 +430,7 @@ Item {
                         RowLayout {
                             anchors.fill: parent
                             spacing: Tokens.space.s8
-                            Text { text: "  └"; color: Colors.textFaint; font.pixelSize: Tokens.font.caption; font.family: "monospace" }
+                            Text { text: "  └"; color: Colors.textFaint; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily }
                             Rectangle { implicitWidth: 7; implicitHeight: 7; radius: 3.5
                                         color: ServerStore.statusColor(gr.modelData.name) }
                             Text { Layout.fillWidth: true; text: gr.modelData.name + "   " + (gr.modelData.guest.type === "lxc" ? "LXC " : "VM ") + gr.modelData.guest.vmid
@@ -442,14 +492,24 @@ Item {
                         color: ["failed", "unreachable"].includes(parent.r.status) ? Colors.red : parent.r.status === "rolled-back" ? Colors.orange : Colors.textSecondary
                         font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
                     }
+                    ResultRow {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: col.width
+                        name: root.name
+                        result: parent.r
+                        logPath: root.report ? ServerStore.serverLogOf(root.report.log, root.name) : ""
+                        onLogRequested: (t, f) => root.logRequested(t, f)
+                        onCheckRequested: n => ServerRuns.start("check", [n], {}, "alongside")
+                        onContainerLogRequested: (n, c) => root.containerLogRequested(n, c)
+                        onDetailsRequested: n => {}
+                    }
                     Text {
                         Layout.fillWidth: true
-                        visible: (parent.r.problems ?? []).length + (parent.r.notes ?? []).length > 0
-                        text: (parent.r.problems ?? []).map(p => "✗ " + p).concat((parent.r.notes ?? []).map(n => "· " + n)).join("\n")
+                        visible: (parent.r.notes ?? []).length > 0 && (parent.r.summary ?? "") === ""
+                        text: (parent.r.notes ?? []).map(n => "· " + n).join("\n")
                         color: Colors.textMuted; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; wrapMode: Text.Wrap
                     }
-                    ActionButton { variant: "ghost"; icon: "󰈙"; text: "Open the report"
-                                   onClicked: Qt.openUrlExternally("file://" + root.report.file.replace(/\.json$/, ".md")) }
+                    ActionButton { variant: "ghost"; icon: "󰋚"; text: "All its updates…"; onClicked: root.historyRequested(root.name) }
                 }
 
                 // ── links / notes ──

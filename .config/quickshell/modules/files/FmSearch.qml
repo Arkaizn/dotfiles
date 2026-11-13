@@ -9,6 +9,9 @@ import "lib/FmSort.js" as FmSort
 //
 //   run(base, query, { depth, hidden, kinds, since })   stop()
 //   relevance: sorted by match (true) or by sortBy / reverse / dirsFirst
+//   best()   the row of the best match so far, -1 if none yet (while it runs the rows are in
+//            the order they were found; Enter in the search field opens this one at once)
+//   only     item => bool, or null: a file dialog's type filter (FmChooser.matcher)
 Item {
     id: root
 
@@ -19,6 +22,7 @@ Item {
     property string sortBy: "name"
     property bool reverse: false
     property bool dirsFirst: true
+    property var only: null
     readonly property bool showHidden: true
     readonly property bool live: false
 
@@ -47,6 +51,15 @@ Item {
     function _order(a, b) {
         if (relevance) return (b.score - a.score) || FmSort.compare(a, b, { by: "name", dirsFirst: false })
         return FmSort.compare(a, b, { by: sortBy, reverse: reverse, dirsFirst: dirsFirst })
+    }
+    function best() {
+        let b = -1
+        for (let i = 0; i < _items.length; i++) {
+            if (b < 0) { b = i; continue }
+            const x = _items[i], y = _items[b]
+            if (((y.score - x.score) || FmSort.compare(x, y, { by: "name", dirsFirst: false })) < 0) b = i
+        }
+        return b
     }
     function _refill() {
         _items.sort(_order)
@@ -86,7 +99,8 @@ Item {
             // batches go in at once (the first matches show while it goes on), sorted when it ends
             batch: items => {
                 if (id !== root._id) return
-                const add = items.map(root._norm)
+                let add = items.map(root._norm)
+                if (root.only !== null) add = add.filter(r => root.only(r) === true)
                 root._items = root._items.concat(add)
                 list.append(add)
                 root.count = root._items.length

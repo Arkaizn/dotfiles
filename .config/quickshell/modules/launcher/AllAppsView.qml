@@ -98,6 +98,7 @@ Item {
 
                 // letter header of the group
                 Text {
+                    font.family: Properties.fontFamily
                     visible: row.groupStart
                     x: 10
                     height: 26
@@ -148,6 +149,7 @@ Item {
                             }
                         }
                         Text {
+                            font.family: Properties.fontFamily
                             Layout.fillWidth: true
                             text: row.modelData.entry.name
                             color: row.isCurrent || rowHover.hovered ? Colors.ink : Colors.fade(0.75)
@@ -156,6 +158,7 @@ Item {
                             Behavior on color { ColorAnimation { duration: Anim.fast } }
                         }
                         Text {
+                            font.family: Properties.fontFamily
                             Layout.maximumWidth: 220
                             text: row.modelData.entry.comment || ""
                             color: Colors.fade(0.38)
@@ -231,6 +234,7 @@ Item {
                             Behavior on scale { NumberAnimation { duration: Anim.medium; easing.type: Anim.pop } }
                         }
                         Text {
+                            font.family: Properties.fontFamily
                             anchors.centerIn: parent
                             text: cell.modelData
                             color: cell.current ? Colors.color6 : cell.hovered ? Colors.ink : Colors.fade(cell.has ? 0.6 : 0.2)

@@ -38,7 +38,7 @@ Slider {
         height: 14
         radius: width / 2
         color: root.pressed ? Colors.ink : Colors.fade(0.93)
-        border.color: Colors.fade(0.33)
+        border.color: Colors.line(0.33)
         border.width: 1
         scale: root.pressed ? 1.15 : root.hovered ? 1.08 : 1
         Behavior on scale { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }

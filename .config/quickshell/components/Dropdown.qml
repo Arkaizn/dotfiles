@@ -121,7 +121,7 @@ Pressable {
                         Layout.maximumWidth: entry.width * 0.55
                         elide: Text.ElideMiddle
                         text: entry.modelData.hint ?? ""
-                        color: Colors.fade(0.4)
+                        color: Colors.textMuted
                         font.pixelSize: Tokens.font.micro
                         font.family: Properties.fontFamily
                     }

@@ -43,9 +43,9 @@ Singleton {
     // Panels — the bar and every popup attached to it (BarPopup)
     // (defaults follow the pywal colors and light / dark: see themeDefaults below)
     property color panelColor: Qt.rgba(Colors.background.r, Colors.background.g, Colors.background.b, 0.86)
-    property color panelBorder: Colors.fade(0.13)
+    property color panelBorder: Colors.line(0.13)
     property real panelBorderWidth: 1
-    property color cardBorder: Colors.fade(0.10)   // outline of inner cards (dashboard, notif center)
+    property color cardBorder: Colors.line(0.10)   // outline of inner cards (dashboard, notif center)
     property int barRadius: 15       // bar corners
     property int popupRadius: 12     // notification popup cards
     property int panelRadius: 30     // big widgets: dashboard, notification center, wallpapers, launcher
@@ -87,7 +87,17 @@ Singleton {
     // A link is a binding, so it follows Colors on every wallpaper change.
     function walColor(link) {
         const c = Colors[link.wal] ?? Colors.foreground
-        return Qt.rgba(c.r, c.g, c.b, link.alpha ?? 1)
+        // borders drawn in the ink: stronger on a light scheme (Colors.lineGain)
+        const gain = link.wal === "ink" && link.alpha !== undefined ? Colors.lineGain : 1
+        return Qt.rgba(c.r, c.g, c.b, Math.min(1, (link.alpha ?? 1) * gain))
+    }
+
+    // A fixed "Text & icon color" that can't be read on the current scheme
+    // (white picked in a dark scheme, then the wallpaper turns it light) gives
+    // way to the scheme's own ink. The stored setting isn't touched.
+    function readable(c) {
+        const lum = x => 0.2126 * x.r + 0.7152 * x.g + 0.0722 * x.b
+        return Math.abs(lum(c) - lum(Colors.background)) < 0.35 ? Colors.ink : c
     }
 
     function applySettings() {
@@ -108,6 +118,10 @@ Singleton {
             if (v?.wal !== undefined) {
                 root[k] = Qt.binding(() => root.walColor(v))
                 linked[k] = true
+            } else if (k === "color" && typeof v === "string") {
+                const fixed = Qt.color(v)
+                root[k] = Qt.binding(() => root.readable(fixed))
+                linked[k] = true   // a binding too: replaced on the next change
             } else if (walLinked[k] || root[k] !== v) {
                 root[k] = v   // also drops a previous pywal binding
             }

@@ -49,21 +49,38 @@ class Asker(Gio.MountOperation):
     are overridden (do_*), not the signals connected: GIO's own default handlers run after
     connected ones and answer "unhandled" at once — the mount then fails with "Password
     dialog cancelled" before anyone could type"""
-    def __init__(self, rid, cancellable=None):
+    def __init__(self, rid, cancellable=None, login=None):
         super().__init__()
         self.rid = rid
         # a connect that hangs (a server that doesn't answer) asks nothing: stopping it
         # cancels the call itself
         self.cancellable = cancellable
+        # a saved login picked for this connection: login(asker) answers the first password
+        # question instead of the UI (the server gives it; the password never leaves the backend)
+        self.login = login
+        self.last = None
 
     def do_ask_password(self, message, user, domain, flags):
-        send({"id": self.rid, "type": "ask", "kind": "password", "message": message or "",
-              "user": user or "", "domain": domain or "",
-              "needUser": bool(flags & Gio.AskPasswordFlags.NEED_USERNAME),
-              "needDomain": bool(flags & Gio.AskPasswordFlags.NEED_DOMAIN),
-              "needPassword": bool(flags & Gio.AskPasswordFlags.NEED_PASSWORD),
-              "anonymous": bool(flags & Gio.AskPasswordFlags.ANONYMOUS_SUPPORTED),
-              "canSave": bool(flags & Gio.AskPasswordFlags.SAVING_SUPPORTED)})
+        self.last = {"id": self.rid, "type": "ask", "kind": "password", "message": message or "",
+                     "user": user or "", "domain": domain or "",
+                     "needUser": bool(flags & Gio.AskPasswordFlags.NEED_USERNAME),
+                     "needDomain": bool(flags & Gio.AskPasswordFlags.NEED_DOMAIN),
+                     "needPassword": bool(flags & Gio.AskPasswordFlags.NEED_PASSWORD),
+                     "anonymous": bool(flags & Gio.AskPasswordFlags.ANONYMOUS_SUPPORTED),
+                     "canSave": bool(flags & Gio.AskPasswordFlags.SAVING_SUPPORTED)}
+        if self.login is not None and flags & Gio.AskPasswordFlags.NEED_PASSWORD:
+            login, self.login = self.login, None
+            login(self)
+            return
+        send(self.last)
+
+    def ask_again(self, why=""):
+        """the saved login couldn't be used (keyring locked, gone): the UI asks after all"""
+        if self.last is not None:
+            m = dict(self.last)
+            if why:
+                m["message"] = why + "\n" + m["message"]
+            send(m)
 
     def do_ask_question(self, message, choices):
         send({"id": self.rid, "type": "ask", "kind": "question", "message": message or "", "choices": list(choices)})
@@ -151,14 +168,15 @@ def unmount(monitor, uri, eject, rid, asks, done):
         m.unmount_with_operation(Gio.MountUnmountFlags.NONE, op, None, cb)
 
 
-def connect(uri, rid, asks, done):
-    """a server (smb://, sftp://, …): mounted through GVfs; answers its FUSE folder"""
+def connect(uri, rid, asks, done, login=None):
+    """a server (smb://, sftp://, …): mounted through GVfs; answers its FUSE folder.
+    login: see Asker (a saved login answers the password question)"""
     scheme = uri.split(":", 1)[0].lower()
     if scheme not in SCHEMES or len(uri) > 2048 or "\0" in uri or "\n" in uri:
         raise Fail("Not a server address (smb://, sftp://, ftp://, dav://, nfs://)", "invalid")
     f = Gio.File.new_for_uri(uri)
     cancel = Gio.Cancellable()
-    op = Asker(rid, cancel)
+    op = Asker(rid, cancel, login)
     asks[rid] = op
 
     def finish():

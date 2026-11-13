@@ -54,7 +54,7 @@ Item {
         radius: Tokens.radius.lg
         color: Colors.dim(Colors.light ? 0.06 : 0.25)
         border.width: Tokens.border.thin
-        border.color: Colors.fade(0.08)
+        border.color: Colors.line(0.08)
     }
 
     // the sliding highlight (segmented)

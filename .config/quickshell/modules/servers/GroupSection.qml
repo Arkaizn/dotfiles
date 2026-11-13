@@ -33,6 +33,33 @@ ColumnLayout {
     signal cardDragEnded()
     property string dragName: ""             // the card being dragged
     property bool hot: false                 // a dragged card is over this group: drop target
+    // a card of this group is being dragged over its own cards: where it would go
+    property bool reordering: false
+    property string dropBefore: ""           // the card it lands before ("" = at the end)
+    // where a card dropped at this point (scene coordinates) would go: the name of the card
+    // it lands before, "" for the end
+    function dropTarget(scenePos) {
+        const p = flow.mapFromItem(null, scenePos.x, scenePos.y)
+        const cells = []
+        for (let i = 0; i < flow.children.length; i++) {
+            const c = flow.children[i]
+            if (c.modelData && c.visible && c.modelData.name !== root.dragName) cells.push(c)
+        }
+        for (let i = 0; i < cells.length; i++) {
+            const c = cells[i]
+            const inRow = p.y < c.y + c.height + flow.spacing / 2
+            // above this row, or in it and left of the card's middle: before it
+            if (inRow && (p.y < c.y - flow.spacing / 2 || p.x < c.x + c.width / 2)) return c.modelData.name
+        }
+        return ""
+    }
+    // the names of its cards as they are shown now (the order a drop is worked out in)
+    readonly property string lastShown: { const n = shownNames().filter(x => x !== dragName); return reordering && n.length ? n[n.length - 1] : "" }
+    function shownNames() {
+        const out = []
+        for (let i = 0; i < flow.children.length; i++) if (flow.children[i].modelData && flow.children[i].visible) out.push(flow.children[i].modelData.name)
+        return out
+    }
 
     visible: visibleServers.length > 0 || (editable && servers.length === 0 && shownEmpty)
     property bool shownEmpty: true          // an empty group still shows (so you can fill it)
@@ -211,6 +238,21 @@ ColumnLayout {
                         Behavior on x { enabled: cell.glide; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
                         Behavior on y { enabled: cell.glide; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
                         Behavior on width { enabled: cell.glide; NumberAnimation { duration: Anim.slow; easing.type: Anim.emphasized } }
+                        // where the dragged card would land: a line in the gap before this one
+                        // (after the last one when it goes to the end)
+                        Rectangle {
+                            readonly property bool before: root.reordering && root.dropBefore === cell.modelData.name
+                            readonly property bool atEnd: root.reordering && root.dropBefore === "" && cell.modelData.name === root.lastShown
+                            visible: opacity > 0
+                            opacity: before || atEnd ? 1 : 0
+                            Behavior on opacity { NumberAnimation { duration: Anim.fast; easing.type: Anim.standard } }
+                            x: atEnd ? parent.width + flow.spacing / 2 - width / 2 : -flow.spacing / 2 - width / 2
+                            width: 3
+                            height: parent.height
+                            radius: width / 2
+                            color: Colors.accent
+                            z: 2
+                        }
                         ServerCard {
                             id: card
                             anchors.fill: parent

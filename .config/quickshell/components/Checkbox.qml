@@ -33,7 +33,7 @@ Pressable {
         spacing: Tokens.space.s8
         Text {
             text: check.checked ? "󰄵" : "󰄱"
-            color: check.checked ? Colors.accent : Colors.fade(0.35)
+            color: check.checked ? Colors.accent : Colors.textMuted
             font.pixelSize: Tokens.font.label
             font.family: Properties.fontFamily
         }

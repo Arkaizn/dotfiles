@@ -72,7 +72,7 @@ Item {
                 anchors.fill: parent
                 color: Colors.surfaceWell
                 visible: thumb.status !== Image.Ready
-                Text { anchors.centerIn: parent; text: "…"; color: Colors.textFaint; font.pixelSize: Tokens.font.subtitle }
+                Text { font.family: Properties.fontFamily; anchors.centerIn: parent; text: "…"; color: Colors.textFaint; font.pixelSize: Tokens.font.subtitle }
             }
         }
 
@@ -82,6 +82,7 @@ Item {
             color: tileArea.containsMouse || delegateRoot.isSelected ? Colors.shade(0.6) : "transparent"
 
             Text {
+                font.family: Properties.fontFamily
                 anchors { bottom: parent.bottom; left: parent.left; right: parent.right; margins: 5 }
                 visible: tileArea.containsMouse || delegateRoot.isSelected
                 text: delegateRoot.name
@@ -90,6 +91,7 @@ Item {
                 elide: Text.ElideMiddle
             }
             Text {
+                font.family: Properties.fontFamily
                 anchors.centerIn: parent
                 visible: delegateRoot.applying
                 text: "Applying…"

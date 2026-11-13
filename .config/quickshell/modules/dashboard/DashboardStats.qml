@@ -72,6 +72,7 @@ ColumnLayout {
     // ── Header ────────────────────────────────────────────────────
 
     Text {
+        font.family: Properties.fontFamily
         Layout.alignment: Qt.AlignHCenter
         text: "SYSTEM"
         color: Colors.fade(0.35)
@@ -234,16 +235,19 @@ ColumnLayout {
                 anchors.centerIn: parent
                 spacing: 0
                 Text {
+                    font.family: Properties.fontFamily
                     text: "NET"
                     color: Colors.fade(0.4)
                     font.pixelSize: Tokens.font.caption; font.letterSpacing: 2; font.bold: true
                 }
                 Text {
+                    font.family: Properties.fontFamily
                     text: "↓ " + (netGauge.rxKb >= 1024 ? (netGauge.rxKb/1024).toFixed(1)+"M" : netGauge.rxKb+"K")
                     color: Colors.chartGreen
                     font.pixelSize: Tokens.font.small; font.bold: true
                 }
                 Text {
+                    font.family: Properties.fontFamily
                     text: "↑ " + (netGauge.txKb >= 1024 ? (netGauge.txKb/1024).toFixed(1)+"M" : netGauge.txKb+"K")
                     color: Colors.chartRed
                     font.pixelSize: Tokens.font.small; font.bold: true
@@ -404,12 +408,14 @@ ColumnLayout {
             anchors.centerIn: parent
             spacing: Tokens.space.s1
             Text {
+                font.family: Properties.fontFamily
                 Layout.alignment: Qt.AlignHCenter
                 text: gauge.label
                 color: Colors.fade(0.4)
                 font.pixelSize: Tokens.font.caption; font.letterSpacing: 2; font.bold: true
             }
             Text {
+                font.family: Properties.fontFamily
                 Layout.alignment: Qt.AlignHCenter
                 text: gauge.primaryLabel
                 color: gauge.primaryColor
@@ -417,6 +423,7 @@ ColumnLayout {
                 font.bold: true
             }
             Text {
+                font.family: Properties.fontFamily
                 visible: gauge.secondaryLabel !== ""
                 Layout.alignment: Qt.AlignHCenter
                 text: gauge.secondaryLabel

@@ -33,7 +33,7 @@ RowLayout {
         Layout.fillWidth: true
         Layout.leftMargin: Tokens.space.s4
         text: root.text
-        color: root.error && !root.busy ? Colors.danger : Colors.fade(0.4)
+        color: root.error && !root.busy ? Colors.danger : Colors.textMuted
         font.pixelSize: Tokens.font.micro
         font.family: Properties.fontFamily
         elide: Text.ElideRight

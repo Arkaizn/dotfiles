@@ -412,7 +412,7 @@ Rectangle {
             radius: 9
             color: Colors.fade(0.035)
             border.width: 1
-            border.color: Colors.fade(0.06)
+            border.color: Colors.line(0.06)
             ColumnLayout {
                 id: srcCol
                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 11 }
@@ -664,7 +664,7 @@ Rectangle {
                     radius: 9
                     color: attMouse.containsMouse ? Colors.fade(0.08) : Colors.fade(0.04)
                     border.width: 1
-                    border.color: Colors.fade(0.06)
+                    border.color: Colors.line(0.06)
                     RowLayout {
                         id: attRow
                         anchors.verticalCenter: parent.verticalCenter

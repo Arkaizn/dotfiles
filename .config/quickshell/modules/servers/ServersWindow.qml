@@ -8,7 +8,7 @@ import qs.services
 import qs.services.lib
 
 // Servers app: your homelab servers (services/ServerStore.qml, the engine is
-// ~/scripts/System/manage-svs.sh). Groups as foldable sections of cards (or a
+// scripts/servers/manage-svs.sh). Groups as foldable sections of cards (or a
 // compact list), search + quick filters, terminal / files / web links per
 // server, add / edit / archive, groups.
 //
@@ -42,7 +42,10 @@ Scope {
         // the update confirmation (a notification's "Update critical"): never starts by itself
         confirmUpdate: (kind, servers) => { root.pending = { update: { kind: kind, servers: servers ?? [] } }; root.show() },
         transfer: mode => { root.pending = { transfer: mode }; root.show() },
-        details: name => { root.pending = { details: name }; root.show() }
+        details: name => { root.pending = { details: name }; root.show() },
+        history: name => { root.pending = { history: name ?? "" }; root.show() },
+        log: name => { root.pending = { log: name }; root.show() },
+        pve: name => { root.pending = { pve: name }; root.show() }
     })
     Component.onCompleted: Panels.register("servers", api)
     Component.onDestruction: Panels.unregister("servers", api)
@@ -56,6 +59,19 @@ Scope {
         function edit(name: string): void { root.api.edit(name) }
         // servers: comma separated ("" = every one that has something); only opens the confirmation
         function details(name: string): void { root.api.details(name) }
+        // the past updates ("" = all, or one server's), and the log of a server's last update
+        function history(name: string): void { root.api.history(name) }
+        function log(name: string): void { root.api.log(name) }
+        // a Proxmox host's access check and its guests
+        function pve(name: string): void { root.api.pve(name) }
+        // put a server before another one of the same group ("" = at the end; group id, or
+        // __ungrouped): what dragging a card inside its group does
+        function place(group: string, name: string, before: string): string {
+            const g = group === "__ungrouped" ? ServerStore.active.filter(s => !s.groups.some(x => ServerStore.groupMap[x])) : ServerStore.active.filter(s => s.groups.includes(group))
+            if (!g.some(s => s.name === name) || (before !== "" && !g.some(s => s.name === before))) return "no such server in that group"
+            ServerStore.placeIn(group, name, before, ServerStore.ordered(g, group).map(s => s.name))
+            return ServerStore.ordered(g, group).map(s => s.name).join(" ")
+        }
         function transfer(mode: string): void { root.api.transfer(mode) }
         function confirmUpdate(kind: string, servers: string): void { root.api.confirmUpdate(kind, servers.split(",").filter(x => x !== "")) }
         function list(): string {
@@ -80,10 +96,12 @@ Scope {
             property string query: ""
             property string filter: "all"          // all | updates | critical | offline | reboot | failing
             // the activity panel: opens by itself when something starts
-            property bool showRun: ServerRuns.busy
+            property bool showRun: ServerRuns.anyBusy
             Connections {
                 target: ServerRuns
-                function onBusyChanged() { if (ServerRuns.busy) win.showRun = true }
+                function onAnyBusyChanged() { if (ServerRuns.anyBusy) win.showRun = true }
+                // another run started next to one that is going: it is the one shown now
+                function onCurIdChanged() { if (ServerRuns.busy) win.showRun = true }
                 // the script asks something: open the panel on it
                 function onAsksChanged() { if (ServerRuns.asks.length) win.showRun = true }
             }
@@ -115,6 +133,11 @@ Scope {
             property point dragAt: Qt.point(0, 0)      // pointer, in bg coordinates
             property point dragGrab: Qt.point(0, 0)
             property string dragOver: ""               // group id under the pointer
+            // inside its own group: the card it would land before ("" = at the end), and the
+            // names shown there (the order the drop is worked out in)
+            property string dragBefore: ""
+            property var dragShown: []
+            readonly property bool reordering: dragName !== "" && dragOver !== "" && dragOver === dragFrom && dragOver !== "__archived"
             function dragStart(s, from, scenePos, grab) {
                 dragName = s.name; dragFrom = from
                 dragGrab = Qt.point(Math.min(grab.x, 200), Math.min(grab.y, 40))
@@ -126,12 +149,16 @@ Scope {
                 const q = bg.mapToItem(sections, dragAt.x, dragAt.y)
                 const it = sections.childAt(q.x, q.y)
                 dragOver = it && it.gid !== undefined && it.visible ? it.gid : ""
+                if (dragOver !== "" && dragOver === dragFrom && it.dropTarget) { dragBefore = it.dropTarget(scenePos); dragShown = it.shownNames() }
             }
             function dragEnd() {
                 const to = dragOver, name = dragName, from = dragFrom
-                const ok = name !== "" && to !== "" && to !== from
-                ghost.finish(ok)
-                if (ok) ServerStore.dropOn(name, from, to)
+                const move = name !== "" && to !== "" && to !== from
+                // dropped among the cards of its own group: that's its place from now on
+                const place = reordering && dragBefore !== name
+                ghost.finish(move || place)
+                if (move) ServerStore.dropOn(name, from, to)
+                else if (place) ServerStore.placeIn(to, name, dragBefore, dragShown)
                 dragName = ""; dragOver = ""
             }
             // near the top / bottom edge while dragging: scroll
@@ -161,8 +188,7 @@ Scope {
             // the header's Update: the quick menu, or straight to Choose (Settings → Servers)
             function updateButton(item) {
                 if (ServerStore.selecting && ServerStore.selection.length) updateDialog.start("custom", ServerStore.selection)
-                else if (ServerStore.updateButton === "choose") updateDialog.start("custom", [])
-                else updateMenu(item, item.width / 2, item.height, [])
+                else updateDialog.start("all", [])
             }
 
             function updateMenu(item, x, y, servers) {
@@ -204,6 +230,9 @@ Scope {
                 if (p.update) updateDialog.start(p.update.kind, p.update.servers)
                 else if (p.transfer) transfer.start(p.transfer)
                 else if (p.details) drawer.show(p.details)
+                else if (p.history !== undefined) historyDialog.start(p.history)
+                else if (p.pve) { if (ServerStore.get(p.pve)) pveDialog.start(p.pve) }
+                else if (p.log) ServerStore.lastReport(p.log, r => { if (r) logDialog.start(p.log, ServerStore.serverLogOf(r.log, p.log)) })
                 else if (p.add) editor.start(null)
                 else if (p.edit) { const s = ServerStore.get(p.edit); if (s) editor.start(s) }
             }
@@ -223,6 +252,8 @@ Scope {
                 case "offline": return i.reachable === false
                 case "reboot": return i.reboot === true
                 case "failing": return (i.checksFailed ?? 0) > 0 || (i.containersBad ?? 0) > 0
+                case "restart": return (i.restartPending ?? 0) > 0
+                case "fine": return i.scanOk === true && i.reachable !== false && !i.critical && (i.packages ?? 0) + (i.containers ?? 0) + (i.restartPending ?? 0) + (i.checksFailed ?? 0) + (i.containersBad ?? 0) === 0
                 }
                 return true
             }
@@ -234,34 +265,53 @@ Scope {
                 return words.every(w => h.includes(w))
             }
             function count(f) { return ServerStore.active.filter(s => passes(s, f)).length }
+            // what needs attention, worst first, in words: the chips under the header (each one
+            // filters) and the header's line
+            readonly property var needs: [
+                { id: "offline", icon: "󰅛", one: "offline", many: "offline", tone: Colors.textSecondary },
+                { id: "failing", icon: "󰀦", one: "failing check", many: "with failing checks", tone: Colors.red },
+                { id: "critical", icon: "󰒃", one: "needs attention", many: "need attention", tone: Colors.red, tip: "Security updates, or a reboot that is needed" },
+                { id: "updates", icon: "󰚰", one: "has updates", many: "have updates", tone: Colors.orange },
+                { id: "restart", icon: "󰜉", one: "waits for a restart", many: "wait for a restart", tone: Colors.orange, tip: "New images are downloaded, the containers still run the old ones" }
+            ].map(x => Object.assign({ n: win.count(x.id) }, x)).filter(x => x.n > 0)
+            readonly property int nUpdates: count("updates")
+            readonly property string statusLine: {
+                const n = ServerStore.active.length
+                if (n === 0) return ""
+                const when = ServerStore.lastScan ? "last scan " + Format.hm(ServerStore.lastScan) + " (" + Format.ago(ServerStore.lastScan) + ")" : ""
+                if (!ServerStore.lastScan) return n + (n === 1 ? " server" : " servers") + ", not scanned yet"
+                if (needs.length === 0) return (n === 1 ? "It is" : "All " + n + " are") + " up to date and healthy  ·  " + when
+                return needs.slice(0, 3).map(x => x.n + " " + (x.n === 1 ? x.one : x.many)).join("  ·  ") + (needs.length > 3 ? "  ·  …" : "") + "  ·  " + when
+            }
+            // one primary action: update when something is waiting, else scan
+            readonly property bool wantsUpdate: (ServerStore.selecting && ServerStore.selection.length > 0) || nUpdates > 0
+            // a narrow window: the header keeps what is needed most, the rest is in its menu
+            readonly property bool compact: width / zoomArea.zoom < 1060
             readonly property bool searching: query.trim() !== "" || filter !== "all"
             readonly property int matches: ServerStore.servers.filter(s => shown(s)).length
 
             // ── menus ──
+            // What one does with a server from its card. Kept short: its details open with a
+            // click, its groups are in Edit (and by dragging the card), selecting is the header's
+            // Select, "choose what to update" is in the update confirmation.
             function cardMenu(s, item, x, y) {
-                const e = [
-                    { icon: "󰋼", label: "Details", run: () => drawer.show(s.name) },
-                    { icon: "󰆍", label: "Terminal (SSH)", run: () => ServerStore.ssh(s.name) }
-                ]
+                const e = [{ icon: "󰆍", label: "Terminal (SSH)", run: () => ServerStore.ssh(s.name) }]
                 if (s.sftp) e.push({ icon: "󰉋", label: "Files (SFTP)", run: () => ServerStore.sftp(s.name) })
-                for (const l of ServerStore.webLinks(s).slice(0, 6))
+                for (const l of ServerStore.webLinks(s).slice(0, 3))
                     e.push({ icon: "󰖟", label: "Open " + l.name, run: () => ServerStore.openUrl(l.url) })
                 e.push({ sep: true })
                 if (!s.archived) {
                     e.push({ icon: "󰑓", label: "Scan + health checks", run: () => ServerRuns.scanAll([s.name]) })
-                    e.push({ icon: "󰓙", label: "Health checks only", run: () => ServerRuns.start("check", [s.name]) })
+                    e.push({ icon: "󰓙", label: "Health checks only", run: () => ServerRuns.start("check", [s.name], {}, "alongside") })
                     e.push({ icon: "󰚰", label: "Update…", run: () => updateDialog.start("all", [s.name]) })
-                    e.push({ icon: "󰒆", label: "Choose what to update…", run: () => updateDialog.start("custom", [s.name]) })
-                    e.push({ icon: "󰄲", label: ServerStore.isSelected(s.name) ? "Unselect" : "Select", run: () => { if (ServerStore.selecting) ServerStore.toggleSelected(s.name); else win.startSelecting(s.name) } })
                     e.push({ icon: "󰆍", label: "Run command…", run: () => commandDialog.start([s.name]) })
                     e.push({ icon: "󰜉", label: "Reboot…", run: () => win.askReboot(s) })
                     if (s.wol) e.push({ icon: "󰐥", label: "Wake-on-LAN", run: () => ServerStore.wake(s.name, (ok, t) => ServerStore.notify(s.name, t)) })
+                    if (ServerStore.isHost(s)) e.push({ icon: "󰒓", label: "Access and guests…", run: () => pveDialog.start(s.name) })
                     e.push({ sep: true })
                 }
                 e.push({ icon: "󰏫", label: "Edit…", run: () => editor.start(s) })
-                for (const g of ServerStore.groups)
-                    e.push({ icon: s.groups.includes(g.id) ? "󰄵" : "󰄱", label: "In " + g.name, run: () => ServerStore.toggleGroup(s.name, g.id) })
-                e.push({ icon: "󰐕", label: "New group with it…", run: () => groupDialog.start(null, s.name) })
+                e.push({ icon: "󰋚", label: "Its updates…", run: () => historyDialog.start(s.name) })
                 e.push({ icon: "󰌆", label: "Copy SSH key to it", run: () => ServerStore.copyKey(s.name) })
                 e.push({ sep: true })
                 e.push(s.archived ? { icon: "󰀦", label: "Restore (track it again)", run: () => ServerStore.archiveAnimated(s.name, false) }
@@ -297,7 +347,7 @@ Scope {
                         id: keys
                         focus: true
                         Keys.onPressed: event => {
-                            if (editor.shown || groupDialog.shown || confirm.shown || updateDialog.shown || commandDialog.shown || transfer.shown) return
+                            if (editor.shown || groupDialog.shown || confirm.shown || updateDialog.shown || commandDialog.shown || transfer.shown || historyDialog.shown || logDialog.shown || pveDialog.shown) return
                             if (event.key === Qt.Key_Escape && drawer.open) { drawer.hide(); event.accepted = true; return }
                             if (event.key === Qt.Key_Escape && ServerStore.selecting) { ServerStore.selecting = false; event.accepted = true; return }
                             const ctrl = event.modifiers & Qt.ControlModifier
@@ -322,10 +372,9 @@ Scope {
                         AppHeader {
                             Layout.fillWidth: true
                             title: "Servers"
-                            subtitle: ServerStore.active.length + (ServerStore.active.length === 1 ? " server" : " servers")
-                                      + (ServerStore.archived.length ? " (+" + ServerStore.archived.length + " archived)" : "")
-                                      + "  ·  " + ServerStore.groups.length + (ServerStore.groups.length === 1 ? " group" : " groups")
-                                      + (ServerStore.lastScan ? "  ·  last scan " + Format.hm(ServerStore.lastScan) + " (" + Format.ago(ServerStore.lastScan) + ")" : "  ·  not scanned yet")
+                            // what needs attention, in words (never wrapped: it shortens when the window is narrow)
+                            subtitle: win.statusLine
+                            wrapSubtitle: false
                             Segmented {
                                 small: true
                                 accessibleName: "View"
@@ -341,17 +390,18 @@ Scope {
                             }
                             IconButton {
                                 icon: "󰦪"
-                                tooltip: ServerRuns.busy ? "Running: show what it does  (Ctrl+L)" : "Last run  (Ctrl+L)"
+                                tooltip: ServerRuns.busyRuns.length > 1 ? ServerRuns.busyRuns.length + " runs going: show them  (Ctrl+L)" : ServerRuns.anyBusy ? "Running: show what it does  (Ctrl+L)" : "Last run  (Ctrl+L)"
                                 interactive: ServerRuns.run !== null
                                 active: win.showRun && !ServerRuns.dismissed
-                                busy: ServerRuns.busy && !win.showRun
+                                busy: ServerRuns.anyBusy && !win.showRun
                                 // (a finished run that went away by itself comes back with this)
                                 onClicked: { if (ServerRuns.dismissed) { ServerRuns.dismissed = false; win.showRun = true } else win.showRun = !win.showRun }
                             }
                             ActionButton {
                                 icon: "󰑓"
-                                text: ServerRuns.busyMode === "scan" ? "Scanning…" : ServerRuns.busyMode === "check" ? "Checking…" : "Scan"
-                                busy: ServerRuns.busyMode === "scan" || ServerRuns.busyMode === "check"
+                                text: ServerRuns.running("scan") ? "Scanning…" : ServerRuns.running("check") ? "Checking…" : "Scan"
+                                variant: !win.wantsUpdate && !ServerRuns.anyBusy && ServerStore.active.length > 0 ? "primary" : "default"
+                                busy: ServerRuns.running("scan") || ServerRuns.running("check")
                                 tooltip: "Scan every server for updates, then run the health checks  (Ctrl+R)"
                                 onClicked: ServerRuns.scanAll()
                             }
@@ -363,25 +413,33 @@ Scope {
                             }
                             ActionButton {
                                 icon: "󰚰"
-                                text: ServerRuns.busyMode === "update" ? "Updating…"
-                                    : ServerStore.selecting && ServerStore.selection.length ? "Update " + ServerStore.selection.length + "…" : "Update"
-                                busy: ServerRuns.busyMode === "update"
+                                // says what it will take: "Update 3 servers…"; nothing waiting: it rests
+                                text: ServerStore.selecting && ServerStore.selection.length ? "Update " + ServerStore.selection.length + " selected…"
+                                    : win.nUpdates > 0 ? "Update " + win.nUpdates + (win.nUpdates === 1 ? " server…" : " servers…")
+                                    : ServerRuns.running("update") ? "Updating…" : "Update"
+                                variant: win.wantsUpdate ? "primary" : "default"
+                                interactive: win.wantsUpdate
+                                tooltip: win.wantsUpdate ? "Choose what gets updated and see what it does, before anything starts" : "Nothing to update at the last scan"
                                 onClicked: win.updateButton(this)
                             }
-                            ActionButton { icon: "󰉋"; text: "New group"; onClicked: groupDialog.start(null) }
+                            ActionButton { visible: !win.compact; icon: "󰉋"; text: "New group"; onClicked: groupDialog.start(null) }
                             IconButton {
                                 icon: "󰇘"
                                 tooltip: "Run command, import, export, settings"
                                 onClicked: menu.show(this, width / 2, height, "Servers", [
                                     { icon: "󰆍", label: "Run a command…", run: () => commandDialog.start([]) },
+                                    { icon: "󰉋", label: "New group…", run: () => groupDialog.start(null), hide: !win.compact },
+                                    { sep: true },
+                                    { icon: "󰋚", label: "Past updates…", run: () => historyDialog.start("") },
                                     { sep: true },
                                     { icon: "󰋺", label: "Import…", run: () => transfer.start("import") },
                                     { icon: "󰈝", label: "Export…", run: () => transfer.start("export") },
                                     { sep: true },
                                     { icon: "󰒓", label: "Settings", run: () => Panels.call("settings", "openPage", "servers") }
-                                ])
+                                ].filter(x => !x.hide))
                             }
-                            ActionButton { icon: "󰐕"; text: "Add server"; variant: "primary"; onClicked: editor.start(null) }
+                            ActionButton { visible: !win.compact; icon: "󰐕"; text: "Add server"; tooltip: "Ctrl+N"; onClicked: editor.start(null) }
+                            IconButton { visible: win.compact; icon: "󰐕"; tooltip: "Add server  (Ctrl+N)"; onClicked: editor.start(null) }
                         }
 
                         // search + quick filters
@@ -390,36 +448,48 @@ Scope {
                             spacing: Tokens.space.s10
                             SearchField {
                                 id: search
-                                Layout.preferredWidth: 340
-                                placeholderText: "Search servers, groups, tags, notes  (Ctrl+F)"
+                                Layout.preferredWidth: win.compact ? 220 : 340
+                                placeholderText: win.compact ? "Search  (Ctrl+F)" : "Search servers, groups, tags, notes  (Ctrl+F)"
                                 onTextChanged: win.query = text
                                 Keys.onEscapePressed: { text = ""; keys.forceActiveFocus() }
                             }
                             Flow {
                                 Layout.fillWidth: true
                                 spacing: Tokens.space.s6
+                                FilterChip {
+                                    icon: "󰒋"
+                                    text: "All " + ServerStore.active.length
+                                    checked: win.filter === "all"
+                                    onToggled: win.filter = "all"
+                                }
                                 Repeater {
-                                    model: [
-                                        { id: "all", icon: "󰒋", label: "All" },
-                                        { id: "updates", icon: "󰚰", label: "Updates" },
-                                        { id: "critical", icon: "󰒃", label: "Critical" },
-                                        { id: "reboot", icon: "󰜉", label: "Reboot" },
-                                        { id: "failing", icon: "󰀦", label: "Failing checks" },
-                                        { id: "offline", icon: "󰅛", label: "Offline" }
-                                    ]
+                                    model: win.needs
                                     FilterChip {
                                         required property var modelData
-                                        readonly property int n: modelData.id === "all" ? ServerStore.active.length : win.count(modelData.id)
-                                        visible: modelData.id === "all" || n > 0 || win.filter === modelData.id
                                         icon: modelData.icon
-                                        text: modelData.label + (modelData.id === "all" ? "" : "  " + n)
+                                        text: modelData.n + " " + (modelData.n === 1 ? modelData.one : modelData.many)
+                                        tooltip: modelData.tip ?? ""
                                         checked: win.filter === modelData.id
-                                        onToggled: win.filter = (win.filter === modelData.id && modelData.id !== "all") ? "all" : modelData.id
+                                        onToggled: win.filter = win.filter === modelData.id ? "all" : modelData.id
                                     }
                                 }
+                                // the filter that is on although nothing matches any more (it emptied while you looked)
+                                FilterChip {
+                                    visible: win.filter !== "all" && !win.needs.some(x => x.id === win.filter)
+                                    icon: "󰅖"; text: "Nothing left here"; checked: true
+                                    onToggled: win.filter = "all"
+                                }
+                            }
+                            Segmented {
+                                small: true
+                                accessibleName: "Order of the servers"
+                                options: [{ label: "Worst first", value: "worst" }, { label: "My order", value: "mine" }]
+                                value: ServerStore.sortMode
+                                onEdited: v => ServerStore.setPref("sort", v)
                             }
                         }
 
+                        // (the order of the cards: what needs attention first, or the one I dragged them into)
                         // Select mode: what's ticked, and what to do with it
                         Item {
                             Layout.fillWidth: true
@@ -527,8 +597,9 @@ Scope {
                                             icon: modelData.icon
                                             editable: true
                                             shownEmpty: !win.searching
-                                            servers: ServerStore.active.filter(s => s.groups.includes(modelData.id))
-                                                        .sort((a, b) => ServerStore.severity(b.name) - ServerStore.severity(a.name))
+                                            servers: ServerStore.ordered(ServerStore.active.filter(s => s.groups.includes(modelData.id)), modelData.id)
+                                            reordering: win.reordering && win.dragOver === modelData.id
+                                            dropBefore: win.dragBefore
                                             shown: s => win.shown(s)
                                             animateMoves: !drawer.resizing
                                             onEdit: s => win.details(s.name)
@@ -555,8 +626,9 @@ Scope {
                                         onCardDragEnded: win.dragEnd()
                                         title: ServerStore.groups.length ? "Ungrouped" : "Servers"
                                         icon: "󰒋"
-                                        servers: ServerStore.active.filter(s => !s.groups.some(g => ServerStore.groupMap[g]))
-                                                    .sort((a, b) => ServerStore.severity(b.name) - ServerStore.severity(a.name))
+                                        servers: ServerStore.ordered(ServerStore.active.filter(s => !s.groups.some(g => ServerStore.groupMap[g])), "__ungrouped")
+                                        reordering: win.reordering && win.dragOver === gid
+                                        dropBefore: win.dragBefore
                                         shown: s => win.shown(s)
                                         animateMoves: !drawer.resizing
                                         onEdit: s => win.details(s.name)
@@ -599,6 +671,16 @@ Scope {
                                 onMenu: (s, item, x, y) => win.cardMenu(s, item, x, y)
                                 onConfirmDelete: (t, body, fn) => confirm.ask(t, body, "Delete", fn)
                                 onRebootRequested: s => win.askReboot(s)
+                                onHistoryRequested: n => historyDialog.start(n)
+                                onPveSetupRequested: n => pveDialog.start(n)
+                                onLogRequested: (t, f) => logDialog.start(t, f)
+                                onContainerLogRequested: (n, c) => ServerStore.containerLog(n, c)
+                                // says what goes down, then restarts just those (the script's --restart-pulled)
+                                onRestartPulledRequested: (s, names) => confirm.ask("Restart " + names.length + (names.length === 1 ? " container" : " containers") + " on " + s.name + "?",
+                                    names.join(", ") + "\n" + (names.length === 1 ? "It goes" : "They go") + " down for a moment and come back on the new image. Health checks run before and after"
+                                    + (s.guest && !s.noSnapshot && ServerStore.snapshotMode !== "off" ? ", and a snapshot is taken on " + s.guest.node + " first" : "") + ". The server itself isn't rebooted.",
+                                    "Restart", () => ServerRuns.start("update", [s.name], { only: "containers", restartPulled: true, reboot: "none",
+                                                                                           containers: names.map(n => s.name + ":" + n) }, "alongside"))
                             }
                         }
 
@@ -609,6 +691,10 @@ Scope {
                             onOpenRequested: win.showRun = true
                             onAbortRequested: win.abortRun()
                             onRetryRequested: names => updateDialog.start(ServerRuns.run?.opts?.only === "security" ? "security" : "all", names)
+                            onLogRequested: (t, f) => logDialog.start(t, f)
+                            onContainerLogRequested: (n, c) => ServerStore.containerLog(n, c)
+                            onDetailsRequested: n => drawer.show(n)
+                            onHistoryRequested: historyDialog.start("")
                             maxHeight: Math.max(240, win.height / zoomArea.zoom - 320)
                         }
                     }
@@ -660,8 +746,18 @@ Scope {
                     UpdateDialog { id: updateDialog }
                     CommandDialog { id: commandDialog }
                     TransferDialog { id: transfer }
-                    ServerEditor { id: editor; anchors.fill: parent }
+                    ServerEditor { id: editor; anchors.fill: parent; onPveSetupRequested: n => pveDialog.start(n) }
+                    PveDialog { id: pveDialog; anchors.fill: parent }
                     GroupDialog { id: groupDialog; anchors.fill: parent }
+                    HistoryDialog {
+                        id: historyDialog
+                        anchors.fill: parent
+                        onLogRequested: (t, f) => logDialog.start(t, f)
+                        onCheckRequested: n => ServerRuns.start("check", [n], {}, "alongside")
+                        onContainerLogRequested: (n, c) => ServerStore.containerLog(n, c)
+                        onDetailsRequested: n => { historyDialog.close(); drawer.show(n) }
+                    }
+                    LogDialog { id: logDialog; anchors.fill: parent }
                     ConfirmDialog { id: confirm; anchors.fill: parent }
                 }
             }

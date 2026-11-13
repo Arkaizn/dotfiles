@@ -16,4 +16,9 @@ QtObject {
     readonly property int headline: base + 9    // 22 — big numbers, hero headings
     readonly property int page: base + 11       // 24 — the title of an app page (AppHeader)
     readonly property int display: base + 15    // 28 — hero numbers (wizard, polkit, stats)
+
+    // font.features: Tokens.font.tnum — digits of one width for numbers that
+    // change or sit in a column (no visible effect with a mono font, matters
+    // as soon as the Font setting is a proportional one)
+    readonly property var tnum: ({ "tnum": 1 })
 }

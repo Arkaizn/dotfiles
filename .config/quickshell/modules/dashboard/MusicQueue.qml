@@ -64,7 +64,7 @@ Item {
         radius: Tokens.radius.lg
         color: Colors.fade(0.05)
         border.width: Tokens.border.thin
-        border.color: Colors.fade(0.08)
+        border.color: Colors.line(0.08)
 
         RowLayout {
             anchors { fill: parent; leftMargin: Tokens.space.s8; rightMargin: Tokens.space.s8 }

@@ -60,6 +60,7 @@ Item {
 
                     Text {
                         id: text
+                        font.family: Properties.fontFamily
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.verticalCenter: parent.verticalCenter
                         font.pixelSize: Tokens.font.body

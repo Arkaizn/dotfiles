@@ -9,14 +9,29 @@ import "lib/FmIcons.js" as FmIcons
 // question): a LUKS passphrase, a server's user / domain / password (anonymous
 // where it may; "Remember" lets GVfs keep it in the keyring), an archive's
 // password, or one of a few choices ("still in use: unmount anyway?").
+// A server's question also offers the logins saved in the keyring (`logins`): one click
+// signs in with it — the backend reads its password, this dialog never sees it.
 // The password goes back over the backend's stdin only — never into a file,
 // a command line or a log.
-//   PasswordDialog { ops; mine }
+//   PasswordDialog { ops; mine; logins: [{ id, user, domain, server, protocol }] }
 Modal {
     id: root
 
     required property var ops
     property bool mine: true
+    property var logins: []
+    // only for a server (never a drive's passphrase or an archive); a question that fixes the
+    // user (sftp://me@host) offers that user's logins only
+    readonly property var offers: {
+        if (!q || q.kind !== "password" || ops.job(q.job)?.op !== "connect") return []
+        const fixed = q.needUser ? "" : (q.user ?? "")
+        return logins.filter(l => fixed === "" || l.user === fixed).slice(0, 6)
+    }
+    function useLogin(l) {
+        if (!q) return
+        pass.text = ""
+        ops.answer("ok", false, "", { cred: l.id, remember: remember.checked })
+    }
     readonly property var q: mine && ops.question && ["password", "question"].includes(ops.question.kind) ? ops.question : null
     cardWidth: 460
     keepOpen: true
@@ -108,6 +123,45 @@ Modal {
                 Layout.fillWidth: true
                 label: "Remember it (in your keyring)"
                 onClicked: checked = !checked
+            }
+        }
+
+        // the keyring's saved logins: sign in with one of them
+        Column {
+            visible: root.offers.length > 0 && !anonymous.checked
+            Layout.fillWidth: true
+            spacing: Tokens.space.s1
+            Text {
+                text: "Or use a saved login"
+                color: Colors.fade(0.45); font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily
+                bottomPadding: Tokens.space.s4
+            }
+            Repeater {
+                model: root.offers
+                Pressable {
+                    id: offer
+                    required property var modelData
+                    width: parent.width
+                    height: Tokens.size.controlSmall
+                    accessibleName: "Sign in as " + modelData.user + ", saved for " + modelData.server
+                    onClicked: root.useLogin(modelData)
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Tokens.radius.md
+                        color: offer.pressed ? Colors.fillPressed : offer.hovered ? Colors.fillHover : "transparent"
+                        Behavior on color { ColorAnimation { duration: Anim.fast } }
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: Tokens.space.s10
+                        width: parent.width - 2 * Tokens.space.s10
+                        text: FmIcons.g.key + "  " + offer.modelData.user + (offer.modelData.domain ? "  ·  " + offer.modelData.domain : "")
+                              + "  —  " + offer.modelData.server
+                        color: Colors.fade(0.8)
+                        font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily
+                        elide: Text.ElideMiddle; textFormat: Text.PlainText
+                    }
+                }
             }
         }
 

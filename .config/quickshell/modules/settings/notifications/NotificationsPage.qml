@@ -176,6 +176,26 @@ ColumnLayout {
         }
     }
 
+    // ── Servers ─────────────────────────────────────────────────────────────
+    // (kept with the Servers app's own settings: this device only, not in settings.json)
+    Section {
+        Layout.fillWidth: true
+        title: "Servers"
+        icon: "󰒋"
+        SettingRow {
+            first: true
+            label: "Server updates at boot"
+            desc: "once after you log in: which servers have updates waiting, need a reboot or are offline" + (ServerRuns.autoScan ? " (after the scan that runs at start)" : " (from the last scan: automatic scans are off)")
+            ActionButton { variant: "ghost"; icon: "󰂚"; text: "Show it now"; onClicked: ServerRuns.notifyBoot(true) }
+            ToggleSwitch { checked: ServerRuns.bootNotify; onToggled: v => ServerStore.setPref("bootNotify", v) }
+        }
+        SettingRow {
+            label: "Critical updates and finished updates"
+            desc: "when a scan finds new security updates or a needed reboot, and when an update finishes (also in Settings → Servers)"
+            ToggleSwitch { checked: ServerRuns.notifyOn; onToggled: v => ServerStore.setPref("notify", v) }
+        }
+    }
+
     // ── Test ────────────────────────────────────────────────────────────────
     Section {
         Layout.fillWidth: true

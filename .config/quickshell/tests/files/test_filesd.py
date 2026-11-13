@@ -4,15 +4,18 @@ JSON-lines protocol like FmBackend.qml does.
 
 Run: PYTHONDONTWRITEBYTECODE=1 python3 -I -m unittest discover -s tests/files
 """
+import errno
 import json
 import os
 import queue
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
 import unittest
+import warnings
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILESD = os.path.join(HERE, "..", "..", "scripts", "files", "filesd.py")
@@ -23,7 +26,7 @@ SORT_EXPECT = ["a9", "a09b", "a10", "b", "file1.txt", "File2.txt", "file10.txt",
 
 
 class Backend:
-    def __init__(self, home):
+    def __init__(self, home, extra=None):
         env = {
             "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": home, "LANG": "C.UTF-8",
             "XDG_CONFIG_HOME": os.path.join(home, ".config"), "XDG_DATA_HOME": os.path.join(home, ".local/share"),
@@ -32,6 +35,7 @@ class Backend:
             "GIO_USE_VFS": "local", "GVFS_DISABLE_FUSE": "1",
             "QS_SETTINGS_REMOTE": "1",
         }
+        env.update(extra or {})
         self.p = subprocess.Popen(["python3", "-I", FILESD], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                   stderr=subprocess.DEVNULL, env=env)
         self.q = queue.Queue()
@@ -744,6 +748,308 @@ class FilesdTest(unittest.TestCase):
     def test_state_dir(self):
         st = os.stat(os.path.join(self.home, ".local/state/quickshell/files"))
         self.assertEqual(st.st_mode & 0o777, 0o700)
+
+# ── Round 11: shares (no modes / times, no change notification), saved logins, the portal ──
+
+sys.path.insert(0, os.path.join(HERE, "..", "..", "scripts", "files"))
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="gi")      # (PyGObject on a new Python)
+
+
+class SoftMetaTest(unittest.TestCase):
+    """a server through GVfs can't take a mode or a time: the copy still succeeds"""
+    def test_copy_without_modes_and_times(self):
+        from unittest import mock
+        from filesd import ops
+        home = tempfile.mkdtemp(prefix="filesd-test-")
+        try:
+            src, dst = os.path.join(home, "src"), os.path.join(home, "dst")
+            os.makedirs(os.path.join(src, "sub"))
+            os.makedirs(dst)
+            with open(os.path.join(src, "sub", "a.txt"), "w") as f:
+                f.write("hello")
+            no = OSError(errno.EOPNOTSUPP, "Operation not supported")
+            asked = []
+            job = ops.Job(1)
+            job.ask = lambda kind, key=None, **info: asked.append((kind, info)) or {"action": "skip"}
+            with mock.patch("os.fchmod", side_effect=no), mock.patch("os.chmod", side_effect=no), \
+                    mock.patch("os.utime", side_effect=no), mock.patch("os.copy_file_range", side_effect=no), \
+                    mock.patch.object(ops, "send", lambda m: None):
+                res = ops.run_transfer(job, ops.plan([src], dst, "copy"), "copy")
+            self.assertEqual(asked, [])
+            self.assertEqual(res["skipped"], 0)
+            with open(os.path.join(dst, "src", "sub", "a.txt")) as f:
+                self.assertEqual(f.read(), "hello")
+            self.assertEqual([n for n in os.listdir(os.path.join(dst, "src", "sub")) if "qsfm-part" in n], [])
+            # a real error still asks
+            with mock.patch("os.fchmod", side_effect=OSError(errno.EIO, "I/O error")), mock.patch.object(ops, "send", lambda m: None):
+                res = ops.run_transfer(job, [(os.path.join(src, "sub", "a.txt"), os.path.join(dst, "b.txt"))], "copy")
+            self.assertEqual(len(asked), 1)
+            self.assertEqual(res["skipped"], 1)
+        finally:
+            shutil.rmtree(home)
+
+
+class PolledWatchTest(unittest.TestCase):
+    """a folder without change notification: our operations name what they touched, and a
+    change from elsewhere is seen by looking at the folder now and then"""
+    def test_poke_and_poll(self):
+        import concurrent.futures
+        from gi.repository import GLib
+        from filesd import watch
+        home = tempfile.mkdtemp(prefix="filesd-test-")
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        sent = []
+        old_send, old_poll = watch.send, watch.POLL_S
+        watch.send, watch.POLL_S = sent.append, 1
+        ctx = GLib.MainContext.default()
+
+        def spin(until, timeout=6):
+            end = time.monotonic() + timeout
+            while not until() and time.monotonic() < end:
+                ctx.iteration(False)
+                time.sleep(0.01)
+            return until()
+        try:
+            with open(os.path.join(home, "gone.txt"), "w"):
+                pass
+            w = watch.Watch(7, home, lambda wid: None, True, pool)
+            w.monitor.cancel()               # as on a server: nothing arrives by itself
+            w.monitor = None
+            self.assertTrue(w.polled)
+            spin(lambda: w.stamp is not None)
+            os.unlink(os.path.join(home, "gone.txt"))
+            with open(os.path.join(home, "new.txt"), "w"):
+                pass
+            w.poke({"gone.txt", "new.txt"})
+            self.assertTrue(spin(lambda: len(sent) > 0))
+            kinds = {(c["kind"], c.get("name") or c["item"]["name"]) for c in sent[0]["changes"]}
+            self.assertEqual(kinds, {("delete", "gone.txt"), ("upsert", "new.txt")})
+            self.assertEqual(sent[0]["watch"], 7)
+            # our own change doesn't come back as a rescan …
+            spin(lambda: False, 2.5)
+            self.assertEqual(len(sent), 1)
+            # … one from elsewhere does
+            with open(os.path.join(home, "elsewhere.txt"), "w"):
+                pass
+            os.utime(home, ns=(1, time.time_ns() + 5_000_000_000))
+            self.assertTrue(spin(lambda: len(sent) > 1))
+            self.assertEqual(sent[1], {"event": "changed", "watch": 7, "rescan": True})
+            w.close()
+        finally:
+            watch.send, watch.POLL_S = old_send, old_poll
+            pool.shutdown(wait=False)
+            shutil.rmtree(home)
+
+
+class SearchStreamTest(unittest.TestCase):
+    """a match found early is sent at once, not when the whole search is over"""
+    def test_first_match_goes_out_at_once(self):
+        from filesd import search
+        home = tempfile.mkdtemp(prefix="filesd-test-")
+        try:
+            with open(os.path.join(home, "needle.txt"), "w"):
+                pass
+            for i in range(30):
+                os.makedirs(os.path.join(home, "d%02d" % i))
+            got, scanned_at_first = [], []
+            real = os.scandir
+
+            def slow(path):
+                if got and not scanned_at_first:
+                    scanned_at_first.append(path)
+                return real(path)
+            from unittest import mock
+            with mock.patch("os.scandir", side_effect=slow):
+                res = search.run(home, "needle", {"depth": 64}, lambda: False, got.append)
+            self.assertEqual(res["count"], 1)
+            self.assertEqual([[i["name"] for i in b] for b in got], [["needle.txt"]])
+            # it was sent while folders were still to be read (the first subfolder), not at the end
+            self.assertTrue(scanned_at_first and os.path.dirname(scanned_at_first[0]) == home)
+        finally:
+            shutil.rmtree(home)
+
+
+class LoginsTest(unittest.TestCase):
+    def test_only_keyring_item_ids(self):
+        from filesd import creds
+        from filesd.proto import Fail
+        for bad in ("", "/etc/passwd", "/org/freedesktop/secrets/collection/login", "/org/freedesktop/secrets/collection/a/../b", 7, None):
+            with self.assertRaises(Fail):
+                creds.secret_of(bad)
+
+
+class PortalConfTest(unittest.TestCase):
+    def test_conf_round_trip(self):
+        from filesd import portal
+        plain = "[preferred]\ndefault=gtk\norg.freedesktop.impl.portal.ScreenCast=gnome\n"
+        on = portal.conf_set(plain, True)
+        self.assertIn("org.freedesktop.impl.portal.FileChooser=quickshell", on)
+        self.assertEqual(portal.conf_set(on, True), on)
+        self.assertEqual(portal.conf_set(on, False), plain)
+        had = "[preferred]\ndefault=gnome\norg.freedesktop.impl.portal.FileChooser=gtk\n\n[other]\nx=1\n"
+        on = portal.conf_set(had, True)
+        self.assertEqual(on.count("FileChooser="), 1)
+        self.assertIn("before = gtk", on)
+        self.assertLess(on.index("FileChooser=quickshell"), on.index("[other]"))
+        off = portal.conf_set(on, False)
+        self.assertIn("org.freedesktop.impl.portal.FileChooser=gtk", off)
+        self.assertNotIn("quickshell", off)
+        self.assertEqual(portal.conf_set("", False), "")
+
+    def test_parse_and_results(self):
+        from gi.repository import GLib
+        from filesd import portal
+        opts = GLib.Variant("a{sv}", {
+            "accept_label": GLib.Variant("s", "_Open it\nnow"), "multiple": GLib.Variant("b", True),
+            "filters": GLib.Variant("a(sa(us))", [("Images", [(0, "*.png"), (1, "image/jpeg")]), ("All", [(0, "*")])]),
+            "current_filter": GLib.Variant("(sa(us))", ("All", [(0, "*")])),
+            "choices": GLib.Variant("a(ssa(ss)s)", [("enc", "Encoding", [("utf8", "UTF-8"), ("l1", "Latin 1")], "utf8"), ("ro", "Read only", [], "false")]),
+            "current_folder": GLib.Variant("ay", b"/tmp/some dir\0"),
+        })
+        req = portal.parse("OpenFile", "Pick", opts)
+        self.assertEqual((req["mode"], req["multiple"], req["accept"], req["folder"], req["filter"]),
+                         ("open", True, "Open it now", "/tmp/some dir", 1))
+        self.assertEqual(req["filters"][0], {"name": "Images", "globs": ["*.png"], "mimes": ["image/jpeg"]})
+        self.assertEqual(req["choices"][1], {"id": "ro", "label": "Read only", "options": [], "value": "false"})
+        raw = [opts.lookup_value("filters", None).get_child_value(i) for i in range(2)]
+        code, res = portal.results(req, raw, True, ["/tmp/a b.txt"], {"enc": "l1", "ro": "true", "nope": "x", "enc2": 3}, 0).unpack()
+        self.assertEqual(code, 0)
+        self.assertEqual(res["uris"], ["file:///tmp/a%20b.txt"])
+        self.assertEqual(sorted(res["choices"]), [("enc", "l1"), ("ro", "true")])
+        self.assertEqual(res["current_filter"][0], "Images")
+        self.assertEqual(portal.results(req, raw, False, ["/x"], {}, -1).unpack(), (1, {}))
+        self.assertEqual(portal.parse("OpenFile", "x", GLib.Variant("a{sv}", {"directory": GLib.Variant("b", True)}))["mode"], "folder")
+        save = portal.parse("SaveFile", "x", GLib.Variant("a{sv}", {"current_name": GLib.Variant("s", "../a/b.txt"),
+                                                                 "current_file": GLib.Variant("ay", b"/home/u/old.txt\0")}))
+        self.assertEqual((save["mode"], save["name"], save["file"]), ("save", "..ab.txt", "/home/u/old.txt"))
+        many = portal.parse("SaveFiles", "x", GLib.Variant("a{sv}", {"files": GLib.Variant("aay", [b"one.txt\0", b"../two.txt\0"])}))
+        self.assertEqual(many["files"], ["one.txt", "two.txt"])
+        code, res = portal.results(many, [], True, ["/dest"], {}, -1).unpack()
+        self.assertEqual(res["uris"], ["file:///dest/one.txt", "file:///dest/two.txt"])
+
+
+@unittest.skipUnless(shutil.which("dbus-daemon") and shutil.which("gdbus"), "needs dbus-daemon and gdbus")
+class PortalBusTest(unittest.TestCase):
+    """the backend as xdg-desktop-portal's FileChooser, on a private session bus"""
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="filesd-test-")
+        self.bus = subprocess.Popen(["dbus-daemon", "--session", "--nofork", "--print-address"], stdout=subprocess.PIPE, text=True)
+        self.addr = self.bus.stdout.readline().strip()
+        os.makedirs(os.path.join(self.home, ".config", "xdg-desktop-portal"))
+        with open(os.path.join(self.home, ".config", "xdg-desktop-portal", "portals.conf"), "w") as f:
+            f.write("[preferred]\ndefault=gtk\n")
+        Backend.later = []
+        self.b = Backend(self.home, {"DBUS_SESSION_BUS_ADDRESS": self.addr, "XDG_CURRENT_DESKTOP": "niri"})
+        self.helpers = []
+
+    def tearDown(self):
+        self.b.close()
+        for h in self.helpers:
+            h.kill()
+            h.wait()
+        self.bus.kill()
+        self.bus.wait()
+        self.bus.stdout.close()
+        shutil.rmtree(self.home)
+
+    def gdbus(self, method, options="{}", handle="/org/freedesktop/portal/desktop/request/1_1/t"):
+        return subprocess.Popen(["gdbus", "call", "--address", self.addr, "--dest", "org.freedesktop.impl.portal.desktop.quickshell",
+                                 "--object-path", "/org/freedesktop/portal/desktop", "--timeout", "30",
+                                 "--method", "org.freedesktop.impl.portal.FileChooser." + method, handle, "app", "", "A title", options],
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+    def files(self):
+        data = os.path.join(self.home, ".local/share")
+        return (os.path.join(data, "dbus-1/services/org.freedesktop.impl.portal.desktop.quickshell.service"),
+                os.path.join(data, "xdg-desktop-portal/portals/quickshell.portal"),
+                os.path.join(self.home, ".config/xdg-desktop-portal/portals.conf"))
+
+    def test_on_off_writes_and_removes(self):
+        _, r = self.b.call("fileChooser", on=True)
+        self.assertEqual((r["on"], r["problem"]), (True, ""))
+        service, portal_file, conf = self.files()
+        with open(service) as f:
+            self.assertIn("files.sh --start", f.read())
+        with open(portal_file) as f:
+            self.assertIn("Interfaces=org.freedesktop.impl.portal.FileChooser", f.read())
+        with open(conf) as f:
+            self.assertIn("org.freedesktop.impl.portal.FileChooser=quickshell", f.read())
+        _, r = self.b.call("fileChooser", on=False)
+        self.assertFalse(r["on"])
+        self.assertFalse(os.path.exists(service) or os.path.exists(portal_file))
+        with open(conf) as f:
+            self.assertEqual(f.read(), "[preferred]\ndefault=gtk\n")
+
+    def test_someone_elses_files_stay(self):
+        service, portal_file, _ = self.files()
+        os.makedirs(os.path.dirname(portal_file))
+        with open(portal_file, "w") as f:
+            f.write("[portal]\nDBusName=other\n")
+        self.b.call("fileChooser", on=True)
+        self.b.call("fileChooser", on=False)
+        with open(portal_file) as f:
+            self.assertEqual(f.read(), "[portal]\nDBusName=other\n")
+
+    def test_open_and_cancel(self):
+        self.b.call("fileChooser", on=True)
+        time.sleep(0.3)
+        g = self.gdbus("OpenFile", "{'multiple': <true>, 'accept_label': <'_Pick'>}")
+        ev = self.b.event("chooser")
+        self.assertEqual((ev["mode"], ev["multiple"], ev["title"], ev["accept"]), ("open", True, "A title", "Pick"))
+        self.assertTrue(self.b.call("chooserAck", chooser=ev["chooser"])[1]["found"])
+        self.assertTrue(self.b.call("chooserDone", chooser=ev["chooser"], ok=True, paths=["/tmp/one.txt", "/tmp/t wo.txt"])[1]["found"])
+        out = g.communicate(timeout=10)[0]
+        self.assertIn("uint32 0", out)
+        self.assertIn("file:///tmp/one.txt", out)
+        self.assertIn("file:///tmp/t%20wo.txt", out)
+        # answered twice: nothing there any more
+        self.assertFalse(self.b.call("chooserDone", chooser=ev["chooser"], ok=True, paths=["/x"])[1]["found"])
+        g = self.gdbus("SaveFile", "{'current_name': <'new.txt'>}")
+        ev = self.b.event("chooser")
+        self.assertEqual((ev["mode"], ev["name"]), ("save", "new.txt"))
+        self.b.call("chooserAck", chooser=ev["chooser"])
+        self.b.call("chooserDone", chooser=ev["chooser"], ok=False, paths=[])
+        self.assertIn("uint32 1", g.communicate(timeout=10)[0])
+
+    def test_request_closed_by_the_app(self):
+        self.b.call("fileChooser", on=True)
+        time.sleep(0.3)
+        handle = "/org/freedesktop/portal/desktop/request/1_1/closeme"
+        g = self.gdbus("OpenFile", handle=handle)
+        ev = self.b.event("chooser")
+        self.b.call("chooserAck", chooser=ev["chooser"])
+        subprocess.run(["gdbus", "call", "--address", self.addr, "--dest", "org.freedesktop.impl.portal.desktop.quickshell",
+                        "--object-path", handle, "--method", "org.freedesktop.impl.portal.Request.Close"], capture_output=True, timeout=10)
+        self.assertEqual(self.b.event("chooserClosed")["chooser"], ev["chooser"])
+        self.assertIn("uint32 1", g.communicate(timeout=10)[0])
+
+    def test_no_window_passes_the_call_on(self):
+        # a stand-in for GTK's backend on the private bus
+        code = (
+            "import gi\nfrom gi.repository import Gio, GLib\n"
+            "xml='<node><interface name=\"org.freedesktop.impl.portal.FileChooser\"><method name=\"OpenFile\">"
+            "<arg type=\"o\" direction=\"in\"/><arg type=\"s\" direction=\"in\"/><arg type=\"s\" direction=\"in\"/>"
+            "<arg type=\"s\" direction=\"in\"/><arg type=\"a{sv}\" direction=\"in\"/>"
+            "<arg type=\"u\" direction=\"out\"/><arg type=\"a{sv}\" direction=\"out\"/></method></interface></node>'\n"
+            "info=Gio.DBusNodeInfo.new_for_xml(xml).interfaces[0]\n"
+            "def call(c,s,p,i,m,a,inv): inv.return_value(GLib.Variant('(ua{sv})',(0,{'uris':GLib.Variant('as',['file:///from/gtk'])})))\n"
+            "def got(c,n): c.register_object('/org/freedesktop/portal/desktop',info,call); print('up',flush=True)\n"
+            "Gio.bus_own_name(Gio.BusType.SESSION,'org.freedesktop.impl.portal.desktop.gtk',0,got,None,None)\n"
+            "GLib.MainLoop().run()\n")
+        h = subprocess.Popen(["python3", "-I", "-c", code], stdout=subprocess.PIPE, text=True,
+                             env={"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "DBUS_SESSION_BUS_ADDRESS": self.addr})
+        self.helpers.append(h)
+        self.assertEqual(h.stdout.readline().strip(), "up")
+        self.b.call("fileChooser", on=True)
+        time.sleep(0.3)
+        g = self.gdbus("OpenFile")
+        ev = self.b.event("chooser")
+        # no chooserAck: after a moment the call goes to the next backend, and the UI is told to drop it
+        self.assertEqual(self.b.event("chooserClosed", timeout=8)["chooser"], ev["chooser"])
+        self.assertIn("file:///from/gtk", g.communicate(timeout=10)[0])
+        self.assertFalse(self.b.call("chooserDone", chooser=ev["chooser"], ok=True, paths=["/late"])[1]["found"])
+        h.stdout.close()
+
 
 if __name__ == "__main__":
     unittest.main()

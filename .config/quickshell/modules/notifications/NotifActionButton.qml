@@ -23,7 +23,7 @@ Pressable {
         anchors.fill: parent
         radius: Tokens.radius.md
         border.width: Tokens.border.thin
-        border.color: Colors.fade(root.hovered || root.active ? 0.28 : 0.14)
+        border.color: Colors.line(root.hovered || root.active ? 0.28 : 0.14)
         gradient: ButtonGradient { hovered: root.hovered || root.active }
         Behavior on border.color { ColorAnimation { duration: Anim.fast } }
     }

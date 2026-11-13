@@ -96,7 +96,7 @@ Popup {
             topPadding: 3
             bottomPadding: 5
             text: root.title
-            color: Colors.fade(0.4)
+            color: Colors.textMuted
             font.pixelSize: Tokens.font.micro
             font.bold: true
             font.letterSpacing: 0.6

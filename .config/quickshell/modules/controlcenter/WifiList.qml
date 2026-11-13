@@ -47,6 +47,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Text {
+            font.family: Properties.fontFamily
             Layout.fillWidth: true
             text: NetLink.fallback ? "Restart the shell to list networks"  // NetworkManager wasn't up when it started
                 : !Networking.wifiEnabled ? "Wi-Fi is off"
@@ -142,6 +143,7 @@ ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 0
                                 Text {
+                                    font.family: Properties.fontFamily
                                     Layout.fillWidth: true
                                     text: row.net.name
                                     color: Colors.ink
@@ -150,6 +152,7 @@ ColumnLayout {
                                     elide: Text.ElideRight
                                 }
                                 Text {
+                                    font.family: Properties.fontFamily
                                     Layout.fillWidth: true
                                     visible: text !== ""
                                     text: row.busy ? (row.net.connected ? "Disconnecting…" : "Connecting…")

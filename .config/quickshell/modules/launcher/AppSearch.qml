@@ -243,12 +243,14 @@ ColumnLayout {
 
         Text {
             id: pageTitle
+            font.family: Properties.fontFamily
             text: root.showAll ? "All apps" : "Recommended"
             color: Colors.fade(0.55)
             font.pixelSize: Tokens.font.small
             font.bold: true
         }
         Text {
+            font.family: Properties.fontFamily
             text: root.allApps.length
             visible: root.showAll
             color: Colors.fade(0.35)
@@ -360,6 +362,7 @@ ColumnLayout {
                     }
 
                     Text {
+                        font.family: Properties.fontFamily
                         Layout.fillWidth: true
                         text: recCell.modelData.name
                         color: Colors.fade(0.75)
@@ -465,7 +468,7 @@ ColumnLayout {
                 radius: Tokens.radius.xl
                 visible: resultCell.isCurrent
                 color: Colors.fade(0.13)
-                border.color: Colors.fade(0.22)
+                border.color: Colors.line(0.22)
                 border.width: 0.5
             }
 
@@ -491,6 +494,7 @@ ColumnLayout {
                 }
 
                 Text {
+                    font.family: Properties.fontFamily
                     text: resultCell.entry.name
                     color: resultCell.isCurrent ? Colors.ink : Colors.fade(0.75)
                     font.pixelSize: 15
@@ -536,6 +540,7 @@ ColumnLayout {
 
                     Text {
                         id: switchLabel
+                        font.family: Properties.fontFamily
                         anchors.centerIn: parent
                         text: "Switch to app"
                         font.pixelSize: Tokens.font.caption

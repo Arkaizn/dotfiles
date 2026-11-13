@@ -41,6 +41,7 @@ RowLayout {
             font.family: Properties.fontFamily
         }
         Text {
+            font.family: Properties.fontFamily
             text: root.host.armed !== ""
                 ? "Click again to " + PanelLayout.item(root.host.armed).name.toLowerCase()
                 : Time.format("dddd, d. MMMM")

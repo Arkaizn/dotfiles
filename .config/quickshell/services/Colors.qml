@@ -78,10 +78,15 @@ Singleton {
     readonly property color fillPressed: fade(0.12)   // also "selected"
     readonly property color fillStrong: fade(0.18)
     // lines
-    readonly property color divider: fade(0.06)
-    readonly property color lineSubtle: fade(0.10)
-    readonly property color lineControl: fade(0.18)
-    readonly property color lineHover: fade(0.28)
+    // Lines and borders. Dark ink on a light surface needs more alpha than
+    // white on a dark one to read as the same line, so the light scheme gets
+    // stronger steps. line(a) is fade(a) for a border: use it for border.color.
+    readonly property real lineGain: light ? 1.7 : 1
+    function line(a) { return fade(Math.min(1, a * lineGain)) }
+    readonly property color divider: line(0.06)
+    readonly property color lineSubtle: line(0.10)
+    readonly property color lineControl: line(0.18)
+    readonly property color lineHover: line(0.28)
     // surfaces
     readonly property color surfacePopover: alpha(background, 0.97)   // menus, dropdowns, tooltips
     readonly property color surfaceCardRaised: shade(0.27)            // the darker dashboard / keybinds card

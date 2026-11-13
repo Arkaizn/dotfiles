@@ -18,7 +18,11 @@ Item {
     signal closeRequested()
     signal openRequested()
     signal abortRequested()                  // the window confirms an update's abort
-    signal retryRequested(var names)         // the update confirmation again, for the ones that didn't go through
+    signal retryRequested(var names)
+    signal logRequested(string title, string path)
+    signal containerLogRequested(string name, string container)
+    signal detailsRequested(string name)
+    signal historyRequested()         // the update confirmation again, for the ones that didn't go through
     readonly property var run: ServerRuns.run
     readonly property bool busy: ServerRuns.busy
     readonly property var asks: ServerRuns.asks
@@ -49,9 +53,12 @@ Item {
                    : run.mode === "snapshots" ? "Deleting " + (run.opts?.ids ?? []).length + " snapshots"
                    : run.mode === "update" ? (run.opts?.only === "security" ? "Security updates on " : "Updating ") + n + (n === 1 ? " server" : " servers")
                    : (modeName[run.mode] ?? run.mode) + " of " + n + (n === 1 ? " server" : " servers")
-        if (busy) return (asks.length ? "Needs your decision  ·  " : run.aborting ? "Aborting  ·  " : "") + what
+        const more = ServerRuns.busyRuns.filter(r => r.id !== run.id).length
+        // over: what it was, then how it went
+        const was = what.replace(/^Updating /, "Update of ").replace(/^Security updates on /, "Security updates of ")
+        if (busy) return (asks.length ? "Needs your decision  ·  " : run.aborting ? "Aborting  ·  " : "") + what + (more ? "  ·  +" + more + " more running" : "")
                          + (queue.length ? "  ·  then " + queue.length + " more" : "")
-        return what + "  ·  " + (run.error ? "stopped: " + run.error : run.result === "OK" ? "all good" : run.result === "FAILED" ? "problems found" : run.result === "ATTENTION" ? "updated, something needs a look" : "done")
+        return was + "  ·  " + (run.error ? "stopped: " + run.error : run.mode === "update" || run.mode === "check" ? (ServerRuns.tally(run) || "nothing to do") : run.result === "OK" ? "all good" : run.result === "FAILED" ? "problems found" : "done")
     }
     readonly property color tone: !run ? Colors.accent : busy && asks.length ? Colors.orange : busy ? Colors.accent : run.error || run.result === "FAILED" ? Colors.red : run.result === "ATTENTION" ? Colors.orange : Colors.green
 
@@ -102,6 +109,22 @@ Item {
             anchors.margins: Tokens.space.s12
             spacing: Tokens.space.s8
 
+            // several runs: one chip each, the shown one marked; a click shows another
+            Flow {
+                Layout.fillWidth: true
+                visible: root.open && ServerRuns.runs.length > 1
+                spacing: Tokens.space.s6
+                Repeater {
+                    model: ServerRuns.runs
+                    delegate: RunChip {
+                        required property var modelData
+                        run: modelData
+                        current: root.run !== null && modelData.id === root.run.id
+                        onPicked: ServerRuns.show(modelData.id)
+                    }
+                }
+            }
+
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Tokens.space.s8
@@ -144,6 +167,10 @@ Item {
                     tooltip: root.run?.aborting ? "It's stopping at the next safe point; this cuts it off right now (asks first)"
                            : root.run?.mode === "update" ? "Stop every server at its next safe point (asks first)" : "Stop it now"
                     onClicked: root.abortRequested()
+                }
+                IconButton {
+                    icon: "󰋚"; tooltip: "Past updates"
+                    onClicked: root.historyRequested()
                 }
                 ActionButton {
                     visible: ServerRuns.retryable.length > 0
@@ -300,7 +327,9 @@ Item {
                 // each server: its step / result
                 ListView {
                     id: servers
-                    Layout.preferredWidth: 330
+                    // wider once an update is over: the sentences need the room more than the log does
+                    Layout.preferredWidth: !root.busy && root.run?.mode === "update" ? Math.min(560, root.width * 0.5) : 330
+                    Behavior on Layout.preferredWidth { NumberAnimation { duration: Anim.medium; easing.type: Anim.standard } }
                     Layout.fillHeight: true
                     clip: true
                     model: root.run?.servers ?? []
@@ -314,11 +343,28 @@ Item {
                         readonly property string st: p.status ?? ""
                         readonly property color c: st === "" ? Colors.textMuted
                             : ["ok", "up-to-date", "healthy"].includes(st) ? Colors.green
-                            : ["rolled-back", "skipped", "pending", "aborted", "needs-look"].includes(st) ? Colors.orange : Colors.red
+                            : ["rolled-back", "skipped", "pending", "aborted", "needs-look", "busy"].includes(st) ? Colors.orange : Colors.red
+                        // an update that is over: the sentence about it and the ways to the place to look
+                        readonly property bool told: st !== "" && root.run?.mode === "update" && !["ok", "up-to-date"].includes(st) || (st !== "" && (p.summary ?? "") !== "" && root.run?.mode === "update")
                         width: servers.width - 14   // room for the scroll bar (12 px), so it never sits on a button
-                        height: 24
+                        height: told ? 24 + more.implicitHeight + Tokens.space.s6 : 24
+                        ResultRow {
+                            id: more
+                            visible: srow.told
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                            anchors.leftMargin: 22; anchors.topMargin: 24
+                            name: srow.modelData
+                            result: srow.p
+                            logPath: srow.p.log ?? ""
+                            quietWhenGood: true
+                            onLogRequested: (t, f) => root.logRequested(t, f)
+                            onCheckRequested: n => ServerRuns.start("check", [n], {}, "alongside")
+                            onContainerLogRequested: (n, c) => root.containerLogRequested(n, c)
+                            onDetailsRequested: n => root.detailsRequested(n)
+                        }
                         RowLayout {
-                            anchors.fill: parent
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+                            height: 24
                             spacing: Tokens.space.s6
                             Item {
                                 implicitWidth: 16; implicitHeight: 16
@@ -327,7 +373,7 @@ Item {
                                     id: mark
                                     anchors.centerIn: parent
                                     visible: srow.st !== "" || (srow.p.phase ?? "") === "" || !root.busy
-                                    text: srow.st === "" ? "·" : ["ok", "up-to-date", "healthy"].includes(srow.st) ? "󰄬" : srow.st === "aborted" ? "󰜺" : srow.st === "needs-look" ? "󰀦" : ["rolled-back", "skipped", "pending"].includes(srow.st) ? "󰜉" : "󰅖"
+                                    text: srow.st === "" ? "·" : ["ok", "up-to-date", "healthy"].includes(srow.st) ? "󰄬" : srow.st === "aborted" ? "󰜺" : srow.st === "needs-look" ? "󰀦" : srow.st === "busy" ? "󰔟" : ["rolled-back", "skipped", "pending"].includes(srow.st) ? "󰜉" : "󰅖"
                                     color: srow.c
                                     font.pixelSize: Tokens.font.small
                                     font.family: Properties.fontFamily
@@ -351,8 +397,9 @@ Item {
                             }
                             Text {
                                 Layout.fillWidth: true
-                                text: srow.st !== "" ? srow.st + ((srow.p.problems ?? []).length ? ": " + srow.p.problems[0] : "")
-                                                       + (srow.p.reboot === "pending" || srow.p.reboot === "manual" ? " · reboot by hand" : "")
+                                text: srow.st !== "" ? (srow.told ? srow.st.replace("needs-look", "needs a look").replace("rolled-back", "rolled back")
+                                                                    : srow.st + ((srow.p.problems ?? []).length ? ": " + srow.p.problems[0] : "")
+                                                                      + (srow.p.reboot === "pending" || srow.p.reboot === "manual" ? " · reboot by hand" : ""))
                                     : (srow.p.aborting ? "aborting · " : "") + ((srow.p.phase ?? "") || (root.busy ? (root.run.mode === "update" ? "waiting" : "running") : ""))
                                 color: srow.st === "" ? Colors.textMuted : srow.c
                                 font.pixelSize: Tokens.font.caption
@@ -370,10 +417,10 @@ Item {
                                 onClicked: ServerRuns.abortServer(srow.modelData)
                             }
                             IconButton {
-                                visible: (srow.p.log ?? "") !== ""
+                                visible: (srow.p.log ?? "") !== "" && (!srow.told || ["ok", "up-to-date"].includes(srow.st))
                                 implicitWidth: 22; implicitHeight: 22; iconSize: Tokens.icon.xs
                                 icon: "󰦪"; tooltip: "This server's log"
-                                onClicked: Qt.openUrlExternally("file://" + srow.p.log)
+                                onClicked: root.logRequested(srow.modelData, srow.p.log)
                             }
                         }
                     }
@@ -403,7 +450,7 @@ Item {
                              : modelData.level === "ok" ? Colors.green : modelData.level === "title" ? Colors.ink : Colors.textSecondary
                         font.pixelSize: Tokens.font.caption
                         font.bold: modelData.level === "title"
-                        font.family: "monospace"
+                        font.family: Properties.fontFamily
                         wrapMode: Text.WrapAnywhere
                     }
                 }

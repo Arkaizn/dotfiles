@@ -17,7 +17,10 @@ import qs.services
 Modal {
     id: root
 
-    cardWidth: kind === "custom" ? 800 : 600
+    // (never wider than the window: at its narrowest the rows wrap instead of being cut off)
+    cardWidth: Math.min(kind === "custom" ? 800 : 600, root.width - 2 * Tokens.space.s24)
+    // a narrow window: controls go under their labels, the per-server choice becomes a list
+    readonly property bool narrow: cardWidth < 740
     Behavior on cardWidth { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
     property string kind: "all"
     property var picked: []                 // server names (security / all / critical)
@@ -45,6 +48,7 @@ Modal {
 
     function start(k, servers) {
         kind = ["custom", "security", "all", "critical"].includes(k) ? k : "all"
+        showIdle = false
         snapshot = ServerStore.snapshotMode
         snapshotFail = ServerStore.snapshotFail
         if (kind === "custom") {
@@ -133,7 +137,11 @@ Modal {
         const k = what ?? kind
         const n = []
         if (k === "skip") return ""
-        if (s?.guest) n.push(root.snapshot === "off" || s.noSnapshot ? "no snapshot" + (s.noSnapshot && root.snapshot !== "off" ? " (off for this server)" : "")
+        const withCt = k !== "security" && k !== "os" && (i.containers ?? 0) > 0 && i.ctMode === "update"
+        const withPk = k !== "containers" && (k === "security" ? (i.security ?? 0) > 0 : (i.packages ?? 0) > 0)
+        const withPlain = k !== "security" && k !== "os" && (i.plainNew ?? 0) > 0 && s?.plainContainers && i.ctMode === "update"
+        // (only downloading images changes nothing that runs: no snapshot for that)
+        if (s?.guest && (withCt || withPk || withPlain)) n.push(root.snapshot === "off" || s.noSnapshot ? "no snapshot" + (s.noSnapshot && root.snapshot !== "off" ? " (off for this server" + (s.noSnapshotReason ? ": " + s.noSnapshotReason : "") + ")" : "")
                                                        : "󰆓 snapshot on " + s.guest.node + " first" + (root.snapshot === "drop" ? ", deleted if it passes" : ""))
         // its snapshot needs the Proxmox host: say so now when that can't be reached
         if (s?.guest && root.snapshot !== "off" && !s.noSnapshot) {
@@ -142,10 +150,49 @@ Modal {
             else if (h && (h.reachable === false || (h.scanned && !h.scanOk))) n.push("⚠ " + s.guest.node + " can't be reached: the snapshot will fail"
                                                                                        + (root.snapshotFail === "skip" ? " and this server is skipped" : ""))
         }
+        if (k !== "security" && k !== "os" && (i.containers ?? 0) > 0 && i.ctMode === "pull") n.push("containers: images only downloaded, nothing restarts")
+        if (k !== "security" && k !== "os" && (i.plainNew ?? 0) > 0 && s?.plainContainers && i.ctMode === "update") n.push(i.plainNew + " plain " + (i.plainNew === 1 ? "container" : "containers") + " through Watchtower")
+        // what goes down, and when (the things one wants to know before pressing the button)
+        const mayReboot = root.reboot === "auto" && !i.proxmox && !s?.noReboot && k !== "containers" && (withPk || i.reboot)
+        if (withCt) n.push("restarts " + i.containers + (i.containers === 1 ? " container" : " containers") + (mayReboot ? " (once, with the reboot if there is one)" : ""))
+        if (mayReboot) n.push(i.reboot ? "reboots" : "reboots if the update needs it")
+        else if (i.reboot && !i.proxmox && !s?.noReboot && k !== "containers") n.push("the reboot it needs stays for you")
+        const ahead = root.waitsFor(name)
+        if (ahead.length) n.push("waits for " + ahead.join(", ") + " (updating now, an earlier wave)")
         if (i.proxmox) n.push("Proxmox: never rebooted automatically")
         else if (s?.noReboot) n.push("never rebooted automatically")
         if ((s?.excludeContainers ?? []).length && k !== "security" && k !== "os") n.push("skips " + s.excludeContainers.join(", "))
         return n.join("  ·  ")
+    }
+
+    // servers of an earlier wave that a running update is still working on: this one waits for them
+    function waitsFor(name) {
+        const waves = ServerStore.data.waves ?? []
+        const mine = waves.findIndex(w => w.includes(name))
+        if (mine <= 0) return []
+        const early = waves.slice(0, mine).reduce((a, w) => a.concat(w), [])
+        return ServerRuns.busyRuns.filter(r => r.mode === "update").reduce((a, r) => a.concat(r.servers.filter(x => early.includes(x) && (r.per[x]?.status ?? "") === "" && !a.includes(x))), [])
+    }
+    // custom: servers with nothing waiting and nothing chosen are folded away
+    property bool showIdle: false
+    function idle(name) {
+        const i = ServerStore.info[name] ?? {}
+        return (choice[name] ?? "skip") === "skip" && i.reachable !== false && (i.packages ?? 0) + (i.containers ?? 0) === 0 && !i.reboot
+    }
+    readonly property int idleCount: kind === "custom" ? ServerStore.active.filter(s => idle(s.name)).length : 0
+
+    // Something is running: can this start next to it (no server in both, D5)?
+    readonly property var clash: ServerRuns.busyRuns.filter(r => r.mode === "update").reduce((a, r) => a.concat(r.servers.filter(s => root.chosen.includes(s) && !a.includes(s))), [])
+    readonly property bool alongside: ServerRuns.anyBusy && root.chosen.length > 0 && ServerRuns.canAlongside("update", root.chosen)
+    // how: "alongside" = next to what is running; "" = start, or wait in the queue when something runs
+    function go(how) {
+        const o = { reboot: root.reboot, snapshot: root.snapshot, snapshotFail: root.snapshotFail }
+        if (root.kind === "custom")
+            // one run per choice: next to each other when asked for, else the first starts and the others queue
+            for (const r of root.runs) ServerRuns.start("update", r.servers, Object.assign({ only: r.only === "all" ? "" : r.only }, o), how)
+        else ServerRuns.start("update", root.picked, Object.assign({ only: root.kind === "security" ? "security" : "" }, o), how)
+        ServerStore.selecting = false
+        root.close()
     }
 
     readonly property var title: ({ custom: "Choose what to update", security: "Install security updates", all: "Update servers",
@@ -196,6 +243,7 @@ Modal {
             visible: root.anyGuest
             SettingRow {
                 first: true
+                wide: root.narrow
                 label: "󰆓  Proxmox snapshots"
                 desc: root.snapshot === "off" ? "none this time: a broken update can only roll its containers back"
                     : root.snapshot === "drop" ? "one before each guest's update, deleted again as soon as it passed"
@@ -209,6 +257,7 @@ Modal {
             }
             SettingRow {
                 visible: root.snapshot !== "off"
+                wide: root.narrow
                 label: "If a snapshot can't be taken"
                 desc: root.snapshotFail === "skip" ? "that server isn't updated (safe; e.g. its Proxmox host is unreachable)" : "it's updated anyway, without a rollback point"
                 Segmented {
@@ -221,16 +270,16 @@ Modal {
         }
 
         // custom: set every server at once, or back to the defaults
-        RowLayout {
+        // (a Flow: in a narrow window the buttons go onto a second line instead of widening the dialog)
+        Flow {
             Layout.fillWidth: true
             visible: root.kind === "custom"
             spacing: Tokens.space.s6
-            Text { text: "All servers:"; color: Colors.textMuted; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
+            Text { height: 28; verticalAlignment: Text.AlignVCenter; text: "All servers:"; color: Colors.textSecondary; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
             ActionButton { implicitHeight: 28; variant: "ghost"; icon: "󰚰"; text: "What's pending"; tooltip: "Everything on servers where the last scan found something, the rest skipped"; onClicked: root.setAll("pending") }
             ActionButton { implicitHeight: 28; variant: "ghost"; icon: "󰒃"; text: "Security"; onClicked: root.setAll("security") }
             ActionButton { implicitHeight: 28; variant: "ghost"; icon: "󰜺"; text: "None"; onClicked: root.setAll("skip") }
             ActionButton { implicitHeight: 28; variant: "ghost"; icon: "󰦛"; text: "My defaults"; tooltip: "What Settings → Servers → Update defaults says"; onClicked: root.setAll("defaults") }
-            Item { Layout.fillWidth: true }
             ActionButton {
                 implicitHeight: 28
                 variant: "ghost"
@@ -253,6 +302,13 @@ Modal {
                 id: list
                 width: parent.width - 14
                 spacing: Tokens.space.s2
+                ActionButton {
+                    visible: root.kind === "custom" && root.idleCount > 0
+                    variant: "ghost"; implicitHeight: Tokens.size.controlSmall
+                    icon: root.showIdle ? "󰅃" : "󰅀"
+                    text: root.showIdle ? "Hide the " + root.idleCount + " with nothing waiting" : root.idleCount + (root.idleCount === 1 ? " server has" : " servers have") + " nothing waiting: show"
+                    onClicked: root.showIdle = !root.showIdle
+                }
                 Repeater {
                     model: root.kind === "custom" ? [] : root.candidates
                     Checkbox {
@@ -273,6 +329,7 @@ Modal {
                         readonly property bool off: ServerStore.info[name]?.reachable === false
                         readonly property string own: ServerStore.updatePerOf(name)
                         Layout.fillWidth: true
+                        visible: root.showIdle || !root.idle(name)
                         implicitHeight: rowL.implicitHeight + 2 * Tokens.space.s8
                         radius: Tokens.radius.md
                         color: c !== "skip" ? Colors.alpha(Colors.accent, 0.06) : "transparent"
@@ -311,9 +368,18 @@ Modal {
                                 }
                             }
                             Segmented {
+                                visible: !root.narrow
                                 small: true
                                 opacity: row.off ? 0.5 : 1
                                 accessibleName: "Update of " + row.name
+                                options: ServerStore.updateChoices.map(o => ({ label: o.label, value: o.value }))
+                                value: row.c
+                                onEdited: v => root.setChoice(row.name, v)
+                            }
+                            Dropdown {
+                                visible: root.narrow
+                                Layout.preferredWidth: 150
+                                opacity: row.off ? 0.5 : 1
                                 options: ServerStore.updateChoices.map(o => ({ label: o.label, value: o.value }))
                                 value: row.c
                                 onEdited: v => root.setChoice(row.name, v)
@@ -333,6 +399,7 @@ Modal {
             Layout.fillWidth: true
             SettingRow {
                 first: true
+                wide: root.narrow
                 label: "Reboots"
                 desc: root.reboot === "auto" ? "servers that need one reboot, one after the other, and must come back" : "a needed reboot is only reported"
                 Segmented {
@@ -350,25 +417,28 @@ Modal {
             Text {
                 Layout.fillWidth: true
                 text: (root.runs.length > 1 ? root.runs.length + " runs, one after the other (" + root.runs.map(r => ServerStore.choiceLabel(r.only).toLowerCase() + " " + r.servers.length).join(", ") + ")  ·  " : "")
-                      + (ServerRuns.busy ? "Something is running: this goes into the queue" + (ServerRuns.queue.length ? " (place " + (ServerRuns.queue.length + 1) + ")" : "")
-                                         : "Runs in the background; you can close the window")
+                      + (!ServerRuns.anyBusy ? "Runs in the background; you can close the window"
+                         : root.alongside ? "Something is running on other servers: this can run next to it (Enter), or after it"
+                         : "Something is running" + (root.clash.length ? " on " + root.clash.slice(0, 3).join(", ") + (root.clash.length > 3 ? ", …" : "") : "")
+                           + ": this waits until it is done" + (ServerRuns.queue.length ? " (place " + (ServerRuns.queue.length + 1) + " in the queue)" : ""))
                 color: Colors.textMuted; font.pixelSize: Tokens.font.caption; font.family: Properties.fontFamily; wrapMode: Text.Wrap
             }
             ActionButton { text: "Cancel"; variant: "ghost"; onClicked: root.close() }
             ActionButton {
+                visible: root.alongside
+                icon: "󰔟"
+                text: "Run after it"
+                tooltip: "Wait in the queue until nothing is running any more"
+                interactive: root.chosen.length > 0
+                onClicked: root.go("")
+            }
+            ActionButton {
                 icon: "󰚰"
-                text: "Update " + root.chosen.length + (root.chosen.length === 1 ? " server" : " servers")
+                text: (root.alongside ? "Run now alongside  ·  " : ServerRuns.anyBusy ? "Queue  ·  " : "Update ") + root.chosen.length + (root.chosen.length === 1 ? " server" : " servers")
+                tooltip: root.alongside ? "Start right away, next to what is running. Servers of a later wave still wait for the earlier ones." : ""
                 variant: "primary"
                 interactive: root.chosen.length > 0
-                onClicked: {
-                    const o = { reboot: root.reboot, snapshot: root.snapshot, snapshotFail: root.snapshotFail }
-                    if (root.kind === "custom")
-                        // the first starts, the others queue behind it (ServerRuns.start while busy)
-                        for (const r of root.runs) ServerRuns.start("update", r.servers, Object.assign({ only: r.only === "all" ? "" : r.only }, o))
-                    else ServerRuns.start("update", root.picked, Object.assign({ only: root.kind === "security" ? "security" : "" }, o))
-                    ServerStore.selecting = false
-                    root.close()
-                }
+                onClicked: root.go(root.alongside ? "alongside" : "")
             }
         }
     }

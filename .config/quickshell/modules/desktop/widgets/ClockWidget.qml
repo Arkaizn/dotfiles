@@ -59,7 +59,7 @@ ColumnLayout {
             radius: width / 2
             color: "transparent"
             border.width: Math.max(1, face.r * 0.025)
-            border.color: Colors.fade(0.25)
+            border.color: Colors.line(0.25)
         }
         Repeater {
             model: 12

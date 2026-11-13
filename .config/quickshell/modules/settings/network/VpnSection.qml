@@ -27,6 +27,7 @@ ColumnLayout {
     }
 
     Text {
+        font.family: Properties.fontFamily
         visible: Vpn.message !== ""
         Layout.fillWidth: true
         wrapMode: Text.Wrap

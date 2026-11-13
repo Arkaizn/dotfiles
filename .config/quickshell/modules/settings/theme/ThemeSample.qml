@@ -10,7 +10,7 @@ Rectangle {
     radius: Tokens.radius.lg
     color: scheme?.special?.background ?? "#000"
     border.width: 1
-    border.color: Colors.fade(0.12)
+    border.color: Colors.line(0.12)
     Column {
         anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: Tokens.space.s12 }
         spacing: Tokens.space.s4

@@ -16,6 +16,7 @@ import "lib/FmPath.js" as FmPath
 //   path · loading · error ("" or the message) · errorCode · count · hiddenCount
 //   canWrite · fs (its file system type: name rules) · free / size (bytes of its drive, -1 = unknown)
 //   sortBy · reverse · dirsFirst   (through load / setSort) · showHidden (filters here)
+//   only                  item => bool, or null: what a file dialog's type filter lets show (FmChooser.matcher)
 //   signal loaded()       a listing is complete (the window puts the cursor)
 //   signal changed()      live changes came in
 //   signal gone()         the folder itself was deleted or unmounted
@@ -31,6 +32,9 @@ Item {
     property bool reverse: false
     property bool dirsFirst: true
     property bool showHidden: false
+    property var only: null
+    onOnlyChanged: _refill()
+    function _visible(r) { return (showHidden || !r.hidden) && (only === null || only(r) === true) }
     property bool countItems: false
     property var counts: ({})
 
@@ -118,7 +122,7 @@ Item {
                     const add = items.map(root._norm)
                     if (!root.streaming) { root.streaming = true; root._all = []; list.clear(); root.started() }
                     root._all = root._all.concat(add)
-                    const shown = root.showHidden ? add : add.filter(r => !r.hidden)
+                    const shown = add.filter(root._visible)
                     root._shown = root._shown.concat(shown)
                     list.append(shown)
                     root.count = root._shown.length
@@ -185,7 +189,7 @@ Item {
     }
 
     function _refill() {
-        const shown = showHidden ? _all.slice() : _all.filter(r => !r.hidden)
+        const shown = _all.filter(_visible)
         _shown = shown
         list.clear()
         for (let i = 0; i < shown.length; i += 2000) list.append(shown.slice(i, i + 2000))
@@ -232,7 +236,7 @@ Item {
     function _update(item) {
         const s = _shown.findIndex(r => r.name === item.name)
         const a = _all.findIndex(r => r.name === item.name)
-        if (s < 0 || a < 0 || (item.hidden && !showHidden)) return false
+        if (s < 0 || a < 0 || !_visible(item)) return false
         const rest = _shown.slice(0, s).concat(_shown.slice(s + 1))
         if (FmSort.insertIndex(rest.length, i => rest[i], item, opts) !== s) return false
         _all[a] = item
@@ -250,7 +254,7 @@ Item {
 
     function _insert(item) {
         _all.splice(FmSort.insertIndex(_all.length, i => _all[i], item, opts), 0, item)
-        if (item.hidden && !showHidden) return
+        if (!_visible(item)) return
         const s = FmSort.insertIndex(_shown.length, i => _shown[i], item, opts)
         _shown.splice(s, 0, item)
         list.insert(s, item)

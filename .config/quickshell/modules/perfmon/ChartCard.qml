@@ -20,7 +20,7 @@ PerfCard {
             readonly property bool off: cc.hidden[modelData.label] === true
             implicitWidth: chipRow.implicitWidth + 16
             implicitHeight: 24
-            Rectangle { anchors.fill: parent; radius: height / 2; color: chipMouse.containsMouse ? Colors.fade(0.08) : "transparent"; border.width: 1; border.color: Colors.fade(chip.off ? 0.06 : 0.12) }
+            Rectangle { anchors.fill: parent; radius: height / 2; color: chipMouse.containsMouse ? Colors.fade(0.08) : "transparent"; border.width: 1; border.color: Colors.line(chip.off ? 0.06 : 0.12) }
             Row {
                 id: chipRow
                 anchors.centerIn: parent

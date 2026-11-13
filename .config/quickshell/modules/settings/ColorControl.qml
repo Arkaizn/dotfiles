@@ -39,7 +39,7 @@ RowLayout {
             clip: true
             color: Colors.neutral(0.5)
             border.width: 1.5
-            border.color: Colors.fade(swatchMouse.containsMouse || picker.visible ? 0.4 : 0.2)
+            border.color: Colors.line(swatchMouse.containsMouse || picker.visible ? 0.4 : 0.2)
 
             // checkerboard so transparency shows
             Grid {
@@ -72,7 +72,7 @@ RowLayout {
             width: 14; height: 14; radius: 7
             color: Colors.background
             border.width: 1
-            border.color: Colors.fade(0.3)
+            border.color: Colors.line(0.3)
             Text {
                 anchors.centerIn: parent
                 text: "󰸉"

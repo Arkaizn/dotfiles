@@ -56,7 +56,7 @@ ColumnLayout {
                     radius: 5
                     color: Colors.fade(0.08)
                     border.width: 1
-                    border.color: Colors.fade(0.14)
+                    border.color: Colors.line(0.14)
                     Text { id: kt; anchors.centerIn: parent; text: modelData[0]; color: Colors.ink; font.pixelSize: Tokens.font.micro; font.bold: true; font.family: Properties.fontFamily }
                 }
                 Text { text: modelData[1]; color: Colors.fade(0.45); font.pixelSize: Tokens.font.micro; font.family: Properties.fontFamily }

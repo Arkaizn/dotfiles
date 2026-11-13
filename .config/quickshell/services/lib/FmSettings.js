@@ -49,8 +49,10 @@ var items = [
     // Mod+E and a folder from another app (files.sh [PATH], xdg-open): a tab in the window used last, or a window
     { key: "openFrom", type: "choice", def: "tab", options: ["tab", "window"], label: "New folders open in",
       desc: "Mod+E and folders from other apps · tab: a new tab in the Files window you used last · window: a window of their own" },
-    { key: "fileManager1", type: "bool", def: false, label: "Show in folder from other apps",
-      desc: "Browsers' and other apps' \"Show in folder\" land in Files instead of Nautilus (it takes the D-Bus name org.freedesktop.FileManager1 and puts a small activation file in ~/.local/share/dbus-1/services; off removes it again)" },
+    { key: "fileManager1", type: "bool", def: true, label: "Show in folder from other apps",
+      desc: "Browsers' and other apps' \"Show in folder\" (a download's folder button) land in Files instead of Nautilus (it takes the D-Bus name org.freedesktop.FileManager1 and puts a small activation file in ~/.local/share/dbus-1/services; off removes it again)" },
+    { key: "fileChooser", type: "bool", def: false, label: "Open / Save dialogs of other apps",
+      desc: "Other apps' and browsers' file dialogs are a Files window instead of the GTK / GNOME one (a portal backend: three small marked files under ~/.local/share and ~/.config/xdg-desktop-portal; off removes them). After switching, run once: systemctl --user restart xdg-desktop-portal — or log in again. If Files can't show the dialog, the one from before opens" },
     // the sidebar: what it shows (right-click an entry → Hide; here to bring it back)
     { key: "sideRecent", type: "bool", def: true, label: "Recent" },
     { key: "sideStarred", type: "bool", def: true, label: "Starred" },
@@ -72,7 +74,7 @@ var pageSections = [
     { title: "Search and thumbnails", keys: ["searchDepth", "thumbs", "thumbMax"] },
     { title: "Safety", keys: ["executables", "confirmTrash"] },
     { title: "Window", keys: ["solid", "sidebarWidth", "openFrom"] },
-    { title: "Other apps", keys: ["fileManager1"] },
+    { title: "Other apps", keys: ["fileManager1", "fileChooser"] },
     { title: "Sidebar", keys: ["sideRecent", "sideStarred", "sideHome", "sideDesktop", "sideDocuments", "sideDownloads", "sideMusic", "sidePictures", "sideVideos", "sideTrash", "sideBookmarks", "sideDrives", "sideNetwork"] }
 ]
 // the sections with their items (spec-shaped, for SettingsWindow's `sections`)

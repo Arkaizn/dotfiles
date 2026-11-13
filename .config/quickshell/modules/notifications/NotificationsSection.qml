@@ -24,7 +24,7 @@ ColumnLayout {
         Text {
             text: "Notifications"
             color: Colors.ink
-            font { bold: true; pixelSize: Tokens.font.label }
+            font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.label }
         }
 
         Rectangle {
@@ -40,7 +40,7 @@ ColumnLayout {
                 anchors.centerIn: parent
                 text: Notifs.count
                 color: Colors.fade(0.87)
-                font { bold: true; pixelSize: Tokens.font.micro }
+                font { family: Properties.fontFamily; bold: true; pixelSize: Tokens.font.micro }
             }
         }
 

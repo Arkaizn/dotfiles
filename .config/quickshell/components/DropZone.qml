@@ -8,7 +8,7 @@ Rectangle {
     property bool hot: false
     property bool shown: EditMode.dragging
 
-    readonly property color accent: Colors.color6
+    readonly property color accent: Colors.accent
     visible: opacity > 0
     opacity: shown ? 1 : 0
     radius: Tokens.radius.lg

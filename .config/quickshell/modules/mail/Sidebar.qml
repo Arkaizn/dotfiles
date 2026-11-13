@@ -25,7 +25,7 @@ Flickable {
         anchors.fill: parent
         radius: Tokens.radius.lg
         border.width: 1.5
-        border.color: Colors.fade(0.14)
+        border.color: Colors.line(0.14)
         gradient: ButtonGradient { hovered: false }
         opacity: shown ? 0.6 : 0
         Behavior on opacity { NumberAnimation { duration: Anim.fast } }
@@ -54,7 +54,7 @@ Flickable {
         height: target?.height ?? 0
         radius: Tokens.radius.lg
         border.width: 1.5
-        border.color: Colors.fade(0.24)
+        border.color: Colors.line(0.24)
         gradient: ButtonGradient { hovered: true }
         opacity: on ? 1 : 0
         scale: travel.running ? 0.97 : 1

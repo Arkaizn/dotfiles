@@ -1158,5 +1158,57 @@ test("FmAddress: completion", () => {
     assert.equal(FmAddress.common([]), "")
 })
 
+test("FmAddress: an address for another user", () => {
+    assert.equal(FmAddress.withUser("smb://nas/share", "anna", "CORP"), "smb://CORP;anna@nas/share")
+    assert.equal(FmAddress.withUser("smb://old@nas/share/dir", "anna", ""), "smb://anna@nas/share/dir")
+    assert.equal(FmAddress.withUser("sftp://root@host:2222/srv", "me", "CORP"), "sftp://me@host:2222/srv")    // a domain is smb's
+    assert.equal(FmAddress.withUser("smb://CORP;old@nas/share", "", ""), "smb://nas/share")
+    assert.equal(FmAddress.withUser("smb://nas", "a b@x", "D;1"), "smb://D%3B1;a%20b%40x@nas")
+    assert.equal(FmAddress.withUser("not an address", "x", ""), "not an address")
+    assert.equal(JSON.stringify(FmAddress.userOf("smb://CORP;anna@nas/share")), JSON.stringify({ user: "anna", domain: "CORP" }))
+    assert.equal(JSON.stringify(FmAddress.userOf("sftp://me:pw@host/x@y")), JSON.stringify({ user: "me", domain: "" }))
+    assert.equal(JSON.stringify(FmAddress.userOf("smb://nas/a@b")), JSON.stringify({ user: "", domain: "" }))
+    assert.equal(JSON.stringify(FmAddress.userOf(FmAddress.withUser("smb://nas", "a b@x", "D;1"))), JSON.stringify({ user: "a b@x", domain: "D;1" }))
+})
+
+const FmChooser = loadFm("FmChooser.js")
+test("FmChooser: what a file dialog's filter shows", () => {
+    const img = { name: "Images", globs: ["*.png", "*.[jJ][pP][gG]"], mimes: ["image/webp"] }
+    const yes = n => FmChooser.accepts(img, { name: n, type: "", dir: false })
+    assert.ok(yes("a.png") && yes("A.PNG") && yes("b.jpg") && yes("new\nline.png"))
+    assert.ok(!yes("a.png.txt") && !yes("png") && !yes("a.gif"))
+    assert.ok(FmChooser.accepts(img, { name: "x", type: "image/webp", dir: false }))
+    assert.ok(FmChooser.accepts(img, { name: "notes", type: "inode/directory", dir: true }))      // folders always
+    assert.ok(FmChooser.accepts({ name: "Pictures", globs: [], mimes: ["image/*"] }, { name: "x", type: "image/x-foo", dir: false }))
+    assert.ok(!FmChooser.accepts({ name: "Pictures", globs: [], mimes: ["image/*"] }, { name: "x", type: "text/plain", dir: false }))
+    // nothing to filter by: everything shows (no function to run per row)
+    assert.equal(FmChooser.matcher({ name: "All", globs: ["*"], mimes: [] }), null)
+    assert.equal(FmChooser.matcher({ name: "All", globs: ["*.png", "*"], mimes: [] }), null)
+    assert.equal(FmChooser.matcher({ name: "x", globs: [], mimes: [] }), null)
+    assert.equal(FmChooser.matcher(null), null)
+    // regex characters in a glob are literal; a broken class too
+    assert.ok(FmChooser.accepts({ globs: ["a+(1).txt"], mimes: [] }, { name: "a+(1).txt", dir: false }))
+    assert.ok(!FmChooser.accepts({ globs: ["a+(1).txt"], mimes: [] }, { name: "aa(1).txt", dir: false }))
+    assert.ok(FmChooser.accepts({ globs: ["x[1.txt"], mimes: [] }, { name: "x[1.txt", dir: false }))
+    assert.ok(FmChooser.accepts({ globs: ["[!a]?.c"], mimes: [] }, { name: "bx.c", dir: false }))
+    assert.ok(!FmChooser.accepts({ globs: ["[!a]?.c"], mimes: [] }, { name: "ax.c", dir: false }))
+})
+test("FmChooser: labels, titles, typed names", () => {
+    assert.equal(FmChooser.label({ name: "Images", globs: ["*.png", "*.jpg"] }), "Images (*.png, *.jpg)")
+    assert.equal(FmChooser.label({ name: "Text (*.txt)", globs: ["*.txt"] }), "Text (*.txt)")
+    assert.equal(FmChooser.label({ name: "All files", globs: ["*"] }), "All files")
+    assert.equal(FmChooser.label({ name: "", globs: [] }), "All files")
+    assert.equal(FmChooser.label({ name: "Many", globs: ["*.a", "*.b", "*.c", "*.d", "*.e"] }), "Many (*.a, *.b, *.c, *.d, …)")
+    assert.equal(FmChooser.verb({ mode: "open", accept: "" }), "Open")
+    assert.equal(FmChooser.verb({ mode: "save", accept: "" }), "Save")
+    assert.equal(FmChooser.verb({ mode: "folder", accept: " " }), "Select")
+    assert.equal(FmChooser.verb({ mode: "open", accept: "Upload" }), "Upload")
+    assert.equal(FmChooser.title({ mode: "open", multiple: true, title: "" }, "Files — "), "Open files")
+    assert.equal(FmChooser.title({ mode: "save", title: "Save As" }, "Files — "), "Save As")
+    assert.equal(FmChooser.title({ mode: "open", title: "Files — x" }, "Files — "), "Dialog: Files — x")
+    assert.equal(FmChooser.cleanName("  report.pdf "), "report.pdf")
+    for (const bad of ["", " ", ".", "..", "a/b", "/etc/passwd", "a\0b"]) assert.equal(FmChooser.cleanName(bad), "")
+})
+
 console.log(passed + " passed, " + failed + " failed")
 process.exit(failed ? 1 : 0)

@@ -51,7 +51,7 @@ Item {
                 visible: root.subtitle !== ""
                 Layout.fillWidth: true
                 text: root.subtitle
-                color: Colors.textFaint
+                color: Colors.textMuted
                 font.pixelSize: Tokens.font.caption
                 font.family: Properties.fontFamily
                 elide: Text.ElideRight

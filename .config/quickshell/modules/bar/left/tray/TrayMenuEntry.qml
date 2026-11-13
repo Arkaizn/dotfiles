@@ -66,6 +66,7 @@ Item {
             }
 
             Text {
+                font.family: Properties.fontFamily
                 Layout.fillWidth: true
                 // DBus menus mark mnemonics with "_" — drop them
                 text: (root.entry?.text ?? "").replace(/_(?=\S)/g, "")

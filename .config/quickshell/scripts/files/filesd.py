@@ -22,7 +22,8 @@ Events (no id):
     {"event": "ready", "pid": n, "version": 1}
     {"event": "changed", "watch": w, "changes": [{"kind": "upsert", "item": item} |
                                                  {"kind": "delete", "name": name}]}
-    {"event": "changed", "watch": w, "rescan": true}     (too many at once: list again)
+    {"event": "changed", "watch": w, "rescan": true}     (too many at once, or a folder without change
+                                                          notification — a server — changed: list again)
     {"event": "gone", "watch": w}                         (the folder itself went away)
     {"event": "places"}                                   (bookmarks / mounts / XDG dirs changed)
 
@@ -82,7 +83,10 @@ Reaching (Phase 5; filesd/devices.py has the password "ask" lines):
     places                                 (+ volumes: [{id, name, canMount, canEject, icon, device, encrypted}])
     mount    {volume}                      -> {path, name}       (may ask: password / question)
     unmount  {uri, eject?}                 -> {}                 (a disk image's loop device goes too)
-    connect  {uri}                         -> {path, uri}        smb / sftp / ftp / dav / nfs …: GVfs' FUSE folder
+    connect  {uri, cred?, remember?}       -> {path, uri}        smb / sftp / ftp / dav / nfs …: GVfs' FUSE folder
+             (cred: a saved login's id — its password answers the server's question, read by the backend itself)
+    logins                                 -> {logins: [{id, user, domain, server, protocol, share}]}   the keyring's
+             saved network logins, attributes only (filesd/creds.py); "answer" takes {cred} the same way
     network                                -> {items: [{name, uri, icon}]}
     mountImage {path}                      -> {path, device}     (.iso / .img read-only, udisksctl)
     compress {paths, dest, name, format: zip|tar.xz|tar.gz|tar.zst|7z, password?} -> {path}   (a job)
@@ -90,6 +94,9 @@ Reaching (Phase 5; filesd/devices.py has the password "ask" lines):
     trashList -> {items (+ path in the trash, info, orig, deleted)} · trashRestore / trashDelete {items: [{file, info, orig}]}
     bookmark {action: add {path, label?} | remove {uri} | rename {uri, label} | move {uri, step: ±1} | order {uris}}
     fileManager1 {on}                      -> {on}   own org.freedesktop.FileManager1 (events "fm1")
+    fileChooser {on}                       -> {on, problem}   be other apps' Open / Save dialog (filesd/portal.py:
+             events "chooser" / "chooserClosed", answered with chooserAck {chooser} and
+             chooserDone {chooser, ok, paths, choices: {id: value}, filter: index})
     trashEmpty · recent -> {items} · addRecent {path, type} · scripts -> {dir, scripts} · runScript {script, paths, cwd}
     save     {dir, name, text | base64}   -> {path}   (a drop that isn't a file; ≤ 50 MB, a free name)
     openUri  {uri}                        -> {}   (http(s) / mailto only: a saved web link)

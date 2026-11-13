@@ -90,7 +90,7 @@ Pressable {
         anchors.fill: parent
         radius: Tokens.radius.lg
         border.width: Tokens.border.control
-        border.color: Colors.fade(0.14)
+        border.color: Colors.line(0.14)
         gradient: ButtonGradient { hovered: false }
         opacity: e.hovered && !e.current ? 0.6 : 0
         Behavior on opacity { NumberAnimation { duration: Anim.fast } }

@@ -27,7 +27,7 @@ RowLayout {
             width: 58; height: 32; radius: 7
             color: "transparent"
             border.width: 2
-            border.color: Colors.fade(0.5)
+            border.color: Colors.line(0.5)
             Rectangle {
                 x: 4; y: 4
                 width: (parent.width - 8) * Math.min(1, root.level / 100)

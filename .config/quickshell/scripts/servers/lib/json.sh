@@ -17,7 +17,7 @@
 #                skipped: [{ name, kind: plain | aio | missing, reason }], warnings, time }
 #   check      { server, reachable, checks: [{ type, name, target, ok, detail }],
 #                containers: [{ name, status, health }], issues, time }
-#   result     { server, status, reboot, snapshot, packages, containers, problems,
+#   result     { server, status, summary (one sentence), look: [{ kind, name }], reboot, snapshot, packages, containers, problems,
 #                notes, log }                         (update: one per finished server)
 #   snapshots  { snapshots: [{ id, node, tool, vmid, name, snapshot, ageDays }], pools }
 #   deleted    { id, ok }
@@ -61,6 +61,7 @@ scan_json() {
       os: (f("OS")[0] // "" | split("|") | {id: (.[0] // ""), name: (.[1:] | join("|"))}),
       docker: (f("DOCKER") | length > 0),
       proxmox: (f("PROXMOX") | length > 0),
+      pbs: (f("PBS") | length > 0),
       reboot: (f("REBOOT")[0] == "1"),
       packages: [f("PKG")[] | (capture("^(?<name>\\S+) (?<old>\\S+) -> (?<new>\\S+)") // {name: ., old: "", new: ""})
                  | . + {security: (.name as $n | $sec | any(. == $n))}],

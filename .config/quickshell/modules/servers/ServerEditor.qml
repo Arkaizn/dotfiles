@@ -29,6 +29,12 @@ Modal {
     property bool fSftp: true
     property bool fNoReboot: false
     property bool fNoSnapshot: false
+    property string fKind: ""               // "" a server | pve | pbs
+    property string fWhy: ""                // why it can't be snapshotted
+    signal pveSetupRequested(string name)
+    property int fWave: -1                  // the wave it is updated in (-1 = with the rest, last)
+    property string fCt: ""                 // "" automatic | update | pull | never
+    property bool fPlain: false
     property string fIcon: ""               // "" = automatic, a logo name, or the path of an image
     property string fNode: ""
     property string fType: "qemu"
@@ -51,6 +57,11 @@ Modal {
         fSftp = s ? s.sftp : true
         fNoReboot = s?.noReboot ?? false
         fNoSnapshot = s?.noSnapshot ?? false
+        fCt = s?.containers ?? ""
+        fWave = s ? ServerStore.waveOf(s.name) : -1
+        fKind = s?.kind ?? ""
+        fWhy = s?.noSnapshotReason ?? ""
+        fPlain = s?.plainContainers ?? false
         fIcon = s?.icon ?? ""
         fNode = s?.guest?.node ?? ""
         fType = s?.guest?.type ?? "qemu"
@@ -105,14 +116,18 @@ Modal {
         if (fNode !== "" && fVmid < 100) { error = "Proxmox guest: the ID is 100 or higher"; return }
         const s = Object.assign({}, base ?? {}, {
             name: name, host: fHost.trim(), port: fPort, user: fUser.trim(), groups: fGroups,
-            tags: csv(fTags), sftp: fSftp, noReboot: fNoReboot, noSnapshot: fNoSnapshot, icon: fIcon,
+            tags: csv(fTags), sftp: fSftp, noReboot: fNoReboot, noSnapshot: fNoSnapshot, containers: fCt, plainContainers: fPlain, kind: fKind, noSnapshotReason: fNoSnapshot ? fWhy.trim() : "", icon: fIcon,
             guest: fNode !== "" ? { node: fNode, type: fType, vmid: fVmid } : null,
             checks: ck.list, links: parseLinks(fLinks), excludeContainers: csv(fExclude),
             wol: fWol.trim(), notes: fNotes, archived: base?.archived ?? false
         })
         const e = ServerStore.put(s, oldName)
         if (e) { error = "Name: " + e; return }
+        if (ServerStore.waveOf(name) !== fWave) ServerStore.setWave(name, fWave)
+        // a new Proxmox host (or one that just became one): on to its access check and its guests
+        const becameHost = fKind === "pve" && (base?.kind ?? "") !== "pve"
         close()
+        if (becameHost) pveSetupRequested(name)
     }
 
     // ── small form pieces ──
@@ -142,7 +157,7 @@ Modal {
             placeholderTextColor: Colors.fade(0.35)
             selectionColor: Colors.fade(0.28)
             font.pixelSize: Tokens.font.small
-            font.family: lines.mono ? "monospace" : Properties.fontFamily
+            font.family: Properties.fontFamily
             leftPadding: Tokens.space.s14
             rightPadding: Tokens.space.s14
             topPadding: Tokens.space.s10
@@ -276,6 +291,19 @@ Modal {
                     Layout.fillWidth: true
                     SettingRow {
                         first: true
+                        label: "What is it"
+                        desc: root.fKind === "pve" ? "a Proxmox VE host: your other servers can run on it, snapshots are taken here, and it is never rebooted by the tool. Saving goes on to its access check and its guests"
+                            : root.fKind === "pbs" ? "a Proxmox Backup Server: updated like the others, never rebooted by the tool, no guests"
+                            : "a normal server (a VM, a container or a machine of its own)"
+                        wide: true
+                        Segmented {
+                            small: true
+                            options: [{ label: "Server", value: "" }, { label: "Proxmox VE host", value: "pve" }, { label: "Proxmox Backup Server", value: "pbs" }]
+                            value: root.fKind
+                            onEdited: v => { root.fKind = v; if (v !== "") root.fNoReboot = true }
+                        }
+                    }
+                    SettingRow {
                         label: "Files (SFTP)"
                         desc: "the Files button opens it in your default file manager"
                         ToggleSwitch { checked: root.fSftp; onToggled: v => root.fSftp = v }
@@ -286,10 +314,47 @@ Modal {
                         ToggleSwitch { checked: root.fNoReboot; onToggled: v => root.fNoReboot = v }
                     }
                     SettingRow {
+                        label: "Update order"
+                        desc: "servers of one wave update together; the next wave starts when they are done. Put what others need (DNS, the proxy) in a later wave of its own"
+                        Dropdown {
+                            Layout.preferredWidth: 220
+                            options: ServerStore.waves.map((w, i) => ({ label: "Wave " + (i + 1), value: i, hint: w.filter(n => n !== root.oldName).slice(0, 3).join(", ") + (w.length > 4 ? ", …" : "") }))
+                                     .concat([{ label: "A new wave, after those", value: ServerStore.waves.length }, { label: "With the rest (last)", value: -1 }])
+                            value: root.fWave
+                            onEdited: v => root.fWave = v
+                        }
+                    }
+                    SettingRow {
+                        label: "Containers on an update"
+                        desc: root.fCt === "update" || (root.fCt === "" && !root.fNoReboot) ? "recreated on their new images"
+                            : root.fCt === "never" ? "never touched; the scan still shows what is new"
+                            : "only the new images are downloaded: they keep running until you restart them from the details" + (root.fCt === "" ? " (automatic: this server never reboots)" : "")
+                        wide: true
+                        Segmented {
+                            small: true
+                            options: [{ label: "Automatic", value: "" }, { label: "Update", value: "update" }, { label: "Download only", value: "pull" }, { label: "Never", value: "never" }]
+                            value: root.fCt
+                            onEdited: v => root.fCt = v
+                        }
+                    }
+                    SettingRow {
+                        label: "Update plain containers"
+                        desc: "the ones started with docker run, not from Compose: through Watchtower, run once on the server for each update (a helper with access to Docker there). No automatic rollback for these"
+                        ToggleSwitch { checked: root.fPlain; onToggled: v => root.fPlain = v }
+                    }
+                    SettingRow {
                         visible: root.fNode !== ""
                         label: "Never take a Proxmox snapshot"
                         desc: "for guests Proxmox can't snapshot (an LXC with a bind mount, passed-through disks): updated without one instead of skipped"
                         ToggleSwitch { checked: root.fNoSnapshot; onToggled: v => root.fNoSnapshot = v }
+                    }
+                    SettingRow {
+                        visible: root.fNode !== "" && root.fNoSnapshot
+                        label: "Why not"
+                        desc: "shown wherever the missing snapshot matters, so nobody wonders later"
+                        wide: true
+                        SearchField { Layout.preferredWidth: 340; icon: ""; clearable: false; placeholderText: "e.g. LXC with a bind mount; a 3 TB disk would be part of it"
+                                      text: root.fWhy; onTextChanged: root.fWhy = text }
                     }
                 }
 
