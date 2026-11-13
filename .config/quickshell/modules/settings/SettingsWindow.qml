@@ -47,13 +47,16 @@ Scope {
         id: persist
         reloadableId: "settingsWindow"
         property bool open: false
-        property string pageId: "appearance"
+        property string pageId: "home"
     }
 
     // open, or bring the already open window to the front (the compositor
     // focuses it, switching workspace / monitor if needed)
-    function show() {
+    // opened without a page (keepPage: openPage / editKeybind chose one): the home page,
+    // i.e. only the search and the folded sidebar
+    function show(keepPage) {
         if (root.open) Compositor.focusWindow(NiriSettings.windowTitle)
+        else if (!keepPage) root.pageId = "home"
         root.open = true
     }
 
@@ -63,15 +66,16 @@ Scope {
         if (id === "vpn" || id === "wifi") { root.pendingAnchor = id; id = "network" }    // its tab (control center lists)
         const layoutTab = { barlayout: "bar", dashlayout: "dashboard", cclayout: "cc" }[id]      // merged into Layouts
         if (layoutTab) { id = "layouts"; root.pendingAnchor = layoutTab }
-        if (root.visiblePages.some(p => p.id === id)) root.pageId = id
-        root.show()
+        const known = root.visiblePages.some(p => p.id === id)
+        if (known) root.pageId = id
+        root.show(known)
     }
     // the cheatsheet's edit button: Keybinds page with that bind's editor
     // (keys normalized like Keybinds.normKeys, e.g. "mod+shift+s")
     function editKeybind(keys) {
         root.pendingKeybind = keys
         root.pageId = "keybinds"
-        root.show()
+        root.show(true)
     }
 
     // what the IPC target and the rest of the shell (Panels.call("settings", …)) can do
@@ -133,7 +137,8 @@ Scope {
         "connections": "connections/ConnectionsPage.qml",
         "servers": "servers/ServersPage.qml",
         "health": "HealthPage.qml",
-        "profile": "ProfilePage.qml"
+        "profile": "ProfilePage.qml",
+        "home": "HomePage.qml"
     })
 
     // ── Pages ────────────────────────────────────────────────────────────────
@@ -171,6 +176,9 @@ Scope {
     }
 
     readonly property var pages: [
+        // where Settings opens: in no group, so every sidebar group stays folded (not in the search)
+        { id: "home", group: "", nav: false, icon: "󰒓", title: "Settings", custom: "home",
+          desc: "Everything about the shell, the system and its apps" },
         { id: "profile", group: "Shell", icon: "󰀄", title: "Profile", custom: "profile",
           desc: "Your picture and name on the dashboard and lockscreen" },
         { id: "lockscreen", group: "Shell", icon: "󰌾", title: "Lockscreen", custom: "lockscreen",
@@ -769,6 +777,7 @@ Scope {
     readonly property var searchIndex: {
         const out = []
         for (const p of visiblePages) {
+            if (p.id === "home") continue
             const where = p.parent ? pages.find(x => x.id === p.parent)?.title ?? p.group : p.group
             out.push({ kind: "page", pageId: p.id, label: p.title, desc: p.desc ?? "", keywords: (p.keywords ?? "") + " page",
                        page: where, crumb: where, icon: p.icon, boost: 3 })
