@@ -611,7 +611,8 @@ Singleton {
             else { d.servers.push(n); added++ }
         }
         // groups the imported servers use
-        const used = new Set(chosen.flatMap(x => x.groups ?? []))
+        const used = new Set()                                    // no Array.flatMap in Qt's JS engine
+        for (const x of chosen) for (const g of x.groups ?? []) used.add(g)
         for (const g of doc.groups ?? []) if (used.has(g.id) && !d.groups.some(x => x.id === g.id)) d.groups.push(g)
         for (const c of doc.commands ?? []) if (c && c.id && !d.commands.some(x => x.id === c.id)) d.commands.push(c)
         if (how === "replace") d.waves = (doc.waves ?? []).map(w => w.filter(n => names.includes(n))).filter(w => w.length)
@@ -669,7 +670,9 @@ Singleton {
         printErrors: false
         onLoaded: { try { root.prefs = JSON.parse(text()) || {} } catch (e) { root.prefs = {} } }
     }
-    Component.onCompleted: Quickshell.execDetached(["mkdir", "-p", root.stateDir])
+    // servers.json can't be written into a folder that isn't there (a fresh device, before any scan)
+    Component.onCompleted: Quickshell.execDetached(["mkdir", "-p", root.stateDir, root.dataDir])
+    onDataDirChanged: Quickshell.execDetached(["mkdir", "-p", root.dataDir])
     // once the list is read: drop state entries of servers that don't exist any more
     property bool _tidied: false
     onLoadedChanged: if (loaded && exists && !_tidied && servers.length > 0) { _tidied = true; Jobs.later(4000, () => tidyState("", "")) }

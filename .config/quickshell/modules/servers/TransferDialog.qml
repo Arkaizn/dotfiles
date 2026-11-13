@@ -60,8 +60,8 @@ Modal {
     function importNow() {
         if (!cands?.doc || picked.length === 0) return
         const r = ServerStore.importDoc(cands.doc, picked, how)
+        load()                              // clears the message, so it's set after
         message = "Imported: " + r.added + " added" + (r.replaced ? ", " + r.replaced + " replaced" : "")
-        load()
     }
 
     ColumnLayout {
