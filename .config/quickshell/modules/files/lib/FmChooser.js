@@ -9,8 +9,8 @@
 //   matcher(filter)          item => bool for a view, or null when everything shows
 //   label(filter)            "Images (*.png, *.jpg)": its name, with its patterns when the name doesn't say
 //   verb(req)                the accept button's text: the app's, else Open / Save / Select
-//   title(req, prefix)       the window's title: the app's, else "Open a file" …; never one
-//                            starting with `prefix` (the file manager's own windows: their rules)
+//   title(req, prefix)       the window's title: `prefix` (FmSettings.dialogPrefix: what the
+//                            compositor's rule for the dialogs matches) + the app's, else "Open a file" …
 //   cleanName(text)          a typed file name: trimmed; "" when it can't be one (/, ., ..)
 
 function pattern(glob) {
@@ -82,7 +82,7 @@ function title(req, prefix) {
     let t = String(req?.title ?? "").trim()
     if (t === "") t = req?.mode === "save" ? "Save a file" : req?.mode === "saveFiles" ? "Save files to a folder"
                     : req?.mode === "folder" ? "Select a folder" : req?.multiple ? "Open files" : "Open a file"
-    return prefix && t.startsWith(prefix) ? "Dialog: " + t : t
+    return (prefix ?? "") + t
 }
 
 function cleanName(text) {

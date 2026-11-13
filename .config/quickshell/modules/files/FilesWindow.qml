@@ -40,8 +40,9 @@ import "lib/FmChooser.js" as FmChooser
 // As another app's Open / Save dialog (`chooser`: a request from filesd/portal.py, FilesApp.choose):
 //   the same window with a bar under the folder (ChooserBar: name, type filter, the app's options,
 //   Cancel + the answer). Enter / double-click on a file answers, a folder is walked into, Esc or
-//   closing the window cancels. It floats at one fixed size (not the "Files — " title: the tiling
-//   rule doesn't match), is never restored after a restart and never takes folders from outside.
+//   closing the window cancels. Its title starts with FmSettings.dialogPrefix: the compositor's
+//   rule for that floats it (resizable, blurred like the other windows; NiriSettings / HyprSettings).
+//   It is never restored after a restart and never takes folders from outside.
 FloatingWindow {
     id: win
 
@@ -147,17 +148,11 @@ FloatingWindow {
     function tabOn(p) { return tabs.findIndex(t => t.path === p) }
 
     // set before the window maps: niri matches the rules (prefix "Files — ") when it opens
-    title: choosing ? FmChooser.title(chooser, app.titlePrefix)
+    title: choosing ? FmChooser.title(chooser, FmSettings.dialogPrefix)
                     : app.titlePrefix + (tab ? tab.title : app.folderName(startTabs[0]?.path ?? home))
-    implicitWidth: choosing ? chooseSize.width : startSize?.width ?? state.get("window", {}).width ?? 1100
-    implicitHeight: choosing ? chooseSize.height : startSize?.height ?? state.get("window", {}).height ?? 720
-    // a dialog has one fixed size: compositors float such a window by themselves, no window rule
-    // needed (niri doesn't every time: then it's asked to — Compositor.floatWindow). Fixed for
-    // good: letting go of it later made niri apply the size it had wanted for a tiled window
-    readonly property size chooseSize: Qt.size(1000, 680)
-    minimumSize: choosing ? chooseSize : Qt.size(560, 400)
-    maximumSize: choosing ? chooseSize : Qt.size(16384, 16384)
-    onBackingWindowVisibleChanged: if (choosing && backingWindowVisible) Compositor.floatWindow(title, chooseSize.width, chooseSize.height)
+    implicitWidth: choosing ? FmSettings.dialogSize.width : startSize?.width ?? state.get("window", {}).width ?? 1100
+    implicitHeight: choosing ? FmSettings.dialogSize.height : startSize?.height ?? state.get("window", {}).height ?? 720
+    minimumSize: Qt.size(560, 400)
     color: "transparent"
     visible: true
     onVisibleChanged: if (!visible) finished()

@@ -263,6 +263,10 @@ Singleton {
             + windowRule("quickshell-mail", "Quickshell Mail")
             + windowRule("quickshell-servers", "Quickshell Servers")
             + windowRuleTiled("quickshell-files", FmSettings.titlePrefix)
+            // its Open / Save dialogs for other apps: floating, centred (matched by their title prefix)
+            + Syntax.fmt("hypr.windowRule", { name: Compositor.luaString("quickshell-files-dialog"),
+                                              title: Compositor.luaString("^" + Compositor.escapeRegex(FmSettings.dialogPrefix)),
+                                              width: String(FmSettings.dialogSize.width), height: String(FmSettings.dialogSize.height) }) + "\n\n"
             + Syntax.fmt("hypr.bind", { keys: Syntax.luaString(Syntax.hyprKeys(["Mod", "S"])),
                                         action: Syntax.fmt("hypr.exec", { cmd: Syntax.luaString("qs ipc call settings toggle") }),
                                         opts: Syntax.lua({ description: "Settings" }) }) + "\n\n"

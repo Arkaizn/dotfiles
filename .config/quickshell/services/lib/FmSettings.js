@@ -11,6 +11,10 @@
 // the file manager's window titles start with this ("Files — Downloads"): the
 // niri window rule (NiriSettings) and focusing match it; FilesApp sets it
 var titlePrefix = "Files \u2014 "
+// …and its Open / Save dialogs for other apps with this ("Files dialog — Save as"): their own
+// rule floats them at dialogSize, with the same corners and blur
+var dialogPrefix = "Files dialog \u2014 "
+var dialogSize = { width: 1000, height: 680 }
 
 // Mod+E (NiriSettings / HyprSettings put it in the generated binds): the file
 // manager's launcher, and Nautilus when it can't start (files.sh exits 1).

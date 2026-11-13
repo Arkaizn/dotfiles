@@ -53,22 +53,6 @@ Singleton {
                 + '[ -n "$id" ] && niri msg action focus-window --id "$id"', "sh", title])
     }
 
-    // a window of ours that should float (a dialog) but that the compositor tiled: floated, sized
-    // and centred once it's up (up to ~2 s). niri only — it floats a window that opens with one
-    // fixed size by itself, but not every time; Hyprland does that reliably
-    function floatWindow(title, width, height) {
-        if (!isNiri) return
-        Quickshell.execDetached(["sh", "-c",
-            'for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do '
-            + 'ids=$(niri msg -j windows | jq -r --arg t "$1" \'.[] | select(.title == $t and .app_id == "org.quickshell") | "\\(.id) \\(.is_floating)"\'); '
-            + '[ -n "$ids" ] && break; sleep 0.1; done; '
-            + 'printf "%s\\n" "$ids" | while read -r id floating; do '
-            + '[ -n "$id" ] && [ "$floating" = false ] || continue; '
-            + 'niri msg action move-window-to-floating --id "$id"; niri msg action set-window-width --id "$id" "$2"; '
-            + 'niri msg action set-window-height --id "$id" "$3"; niri msg action center-window --id "$id"; done',
-            "sh", title, String(Math.round(width)), String(Math.round(height))])
-    }
-
     // `after`: shell command to run once it's done (or when nothing was found)
     // after: called once that's done (whether a window was found or not)
     function focusAppWindow(app, title, after) {

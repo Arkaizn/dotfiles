@@ -323,6 +323,15 @@ Singleton {
         }) + "\n\n"
     }
 
+    // the file manager's Open / Save dialogs for other apps: floating at that size, matched by
+    // their title prefix (FmSettings.dialogPrefix)
+    function windowRuleDialog(prefix, w, h) {
+        return Syntax.fmt("niri.windowRule", {
+            title: Syntax.kdlString("^" + Compositor.escapeRegex(prefix)), width: String(w), height: String(h), radius: String(root.appRadius),
+            blur: (Settings.niri.appBlur ?? true) ? Syntax.fmt("niri.windowBlur", {}) : ""
+        }) + "\n\n"
+    }
+
     function generate() {
         const tree = { children: new Map(), lines: [] }
         const o = Settings.niri
@@ -349,6 +358,7 @@ Singleton {
             + windowRule("Quickshell Mail")
             + windowRule("Quickshell Servers")
             + windowRuleTiled(FmSettings.titlePrefix)
+            + windowRuleDialog(FmSettings.dialogPrefix, FmSettings.dialogSize.width, FmSettings.dialogSize.height)
             + Syntax.fmt("niri.bindsBlock", { body: indented(
                   Syntax.fmt("niri.bind", { keys: Syntax.niriKeys(["Mod", "S"]),
                                             title: Syntax.fmt("niri.title", { title: Syntax.kdlString("Settings") }),

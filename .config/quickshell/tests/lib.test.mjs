@@ -1203,9 +1203,10 @@ test("FmChooser: labels, titles, typed names", () => {
     assert.equal(FmChooser.verb({ mode: "save", accept: "" }), "Save")
     assert.equal(FmChooser.verb({ mode: "folder", accept: " " }), "Select")
     assert.equal(FmChooser.verb({ mode: "open", accept: "Upload" }), "Upload")
-    assert.equal(FmChooser.title({ mode: "open", multiple: true, title: "" }, "Files — "), "Open files")
-    assert.equal(FmChooser.title({ mode: "save", title: "Save As" }, "Files — "), "Save As")
-    assert.equal(FmChooser.title({ mode: "open", title: "Files — x" }, "Files — "), "Dialog: Files — x")
+    assert.equal(FmChooser.title({ mode: "open", multiple: true, title: "" }, "Files dialog — "), "Files dialog — Open files")
+    assert.equal(FmChooser.title({ mode: "save", title: "Save As" }, "Files dialog — "), "Files dialog — Save As")
+    // the dialogs' rule must not be the file manager's own (tiled) one
+    assert.ok(!FmSettings.dialogPrefix.startsWith(FmSettings.titlePrefix) && !FmSettings.titlePrefix.startsWith(FmSettings.dialogPrefix))
     assert.equal(FmChooser.cleanName("  report.pdf "), "report.pdf")
     for (const bad of ["", " ", ".", "..", "a/b", "/etc/passwd", "a\0b"]) assert.equal(FmChooser.cleanName(bad), "")
 })
