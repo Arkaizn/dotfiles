@@ -145,8 +145,29 @@ Singleton {
     function acquireVisualizer() { _visualizerUsers++ }
     function releaseVisualizer() { _visualizerUsers = Math.max(0, _visualizerUsers - 1) }
 
-    property var visualizer: [3, 3, 3]
+    // The bars move `visualizerFps` times a second, whatever the monitor's refresh
+    // rate. (Animated per frame they made each bar window redraw 360 / 165 times
+    // a second while music played: about 38 % of a core for three small bars.)
+    readonly property int visualizerFps: 30
+    property var visualizer: [3, 3, 3]            // what cava hears, gliding (heights 3 … 17)
+    property var _heard: [3, 3, 3]                // cava's last frame
     property bool visualizerLive: false
+    // the bars' own animation while a player plays that cava can't hear
+    // (MediaSources.bounce); only runs while a bar shows it
+    property var bounce: [4, 4, 4]
+    property int _bounceUsers: 0
+    property real _bounceMs: 0
+    function acquireBounce() { _bounceUsers++ }
+    function releaseBounce() { _bounceUsers = Math.max(0, _bounceUsers - 1) }
+    Timer {
+        interval: Math.round(1000 / root.visualizerFps)
+        repeat: true
+        running: root._bounceUsers > 0 && Anim.ambient
+        onTriggered: {
+            root._bounceMs += interval
+            root.bounce = [0, 1, 2].map(i => MediaSources.bounce(i, root._bounceMs))
+        }
+    }
     // no sound for a second (remote source, muted player): not live
     Timer { id: visualizerQuiet; interval: 1000; onTriggered: root.visualizerLive = false }
 
@@ -157,10 +178,14 @@ Singleton {
             onRead: line => {
                 const parts = line.trim().split(" ")
                 if (parts.length !== 3) return
-                root.visualizer = parts.map(v => { const n = parseInt(v); return isNaN(n) ? 3 : Math.max(3, n) })
-                if (root.visualizer.some(n => n > 3)) { root.visualizerLive = true; visualizerQuiet.restart() }
+                // cava sends a frame 30 times a second (its own setting); each one moves the
+                // bars a step towards it. Nothing is assigned while nothing changes (silence)
+                root._heard = parts.map(v => { const n = parseInt(v); return isNaN(n) ? 3 : Math.max(3, n) })
+                const next = MediaSources.glide(root.visualizer, root._heard, 30)
+                if (next.some((v, i) => v !== root.visualizer[i])) root.visualizer = next
+                if (root._heard.some(n => n > 3)) { root.visualizerLive = true; visualizerQuiet.restart() }
             }
         }
-        onRunningChanged: if (!running) { root.visualizer = [3, 3, 3]; root.visualizerLive = false }
+        onRunningChanged: if (!running) { root.visualizer = [3, 3, 3]; root._heard = [3, 3, 3]; root.visualizerLive = false }
     }
 }

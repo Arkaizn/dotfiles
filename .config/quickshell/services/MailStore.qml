@@ -92,7 +92,9 @@ Singleton {
     // folders of a role shown together ("unified:sent" …)
     readonly property var roleViews: ["sent", "drafts", "archive", "trash", "junk"]
     // a unified view switched on: its folders get checked right away
-    onFavoritesChanged: if (root.lastSync > 0) Qt.callLater(root.check)
+    // (by content: the list is a new array whenever any mail setting is read again)
+    readonly property string favoritesKey: favorites.join(",")
+    onFavoritesKeyChanged: if (root.lastSync > 0) Qt.callLater(root.check)
 
     // ── Local changes laid over the server's state ───────────────────────────
     // id → { seen?, flagged?, answered?, gone?, done: ms (0 = still being sent) }
@@ -471,11 +473,15 @@ Singleton {
         running: root.activeAccounts.length > 0
         onTriggered: root.check()
     }
-    // first check a little after startup
+    // first check a little after startup. Once: `running` is a binding on the
+    // accounts, and a check that lists the folders assigns the accounts again, so
+    // without the flag this timer re-armed itself after every check it started
+    // (a full check of every account every 14 s, for as long as the shell ran)
+    property bool firstCheckDone: false
     Timer {
         interval: 10000
-        running: root.activeAccounts.length > 0
-        onTriggered: root.check(true)
+        running: root.activeAccounts.length > 0 && !root.firstCheckDone
+        onTriggered: { root.firstCheckDone = true; root.check(true) }
     }
 
     // ── New mail ─────────────────────────────────────────────────────────────

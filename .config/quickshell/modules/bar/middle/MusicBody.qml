@@ -30,8 +30,11 @@ Item {
     // else (remote session, muted player) the bars play their own animation
     readonly property bool hearsIt: isPlaying && !(player?.remote ?? false) && Media.visualizerLive
 
-    Component.onCompleted: Media.acquireVisualizer()
-    Component.onDestruction: Media.releaseVisualizer()
+    // the bars' own animation is only computed while this bar shows it
+    readonly property bool bouncing: visible && isPlaying && !hearsIt
+    onBouncingChanged: bouncing ? Media.acquireBounce() : Media.releaseBounce()
+    Component.onCompleted: { Media.acquireVisualizer(); if (bouncing) Media.acquireBounce() }
+    Component.onDestruction: { Media.releaseVisualizer(); if (bouncing) Media.releaseBounce() }
 
     readonly property bool shown: player !== null     // Music.qml shows / hides by this
     visible: shown
@@ -153,25 +156,15 @@ Item {
                     required property int index
                     width: 3
                     anchors.verticalCenter: parent.verticalCenter  // parent is the Row
-                    height: music.hearsIt ? (Media.visualizer[index] ?? 3) : music.isPlaying ? bounce : 3
+                    // real levels (Media.visualizer) or the "playing" animation (Media.bounce):
+                    // both are stepped by the Media service, not animated per display frame
+                    height: music.hearsIt ? (Media.visualizer[index] ?? 3) : music.isPlaying ? Media.bounce[index] : 3
                     radius: width / 2
                     color: Properties.color
                     opacity: music.isPlaying ? 1.0 : 0.6
 
-                    // the "playing" animation: each bar its own speed and height
-                    property real bounce: 4
-                    SequentialAnimation on bounce {
-                        id: bounceAnim
-                        running: music.visible && music.isPlaying && !music.hearsIt && Anim.ambient
-                        loops: Animation.Infinite
-                        NumberAnimation { to: [13, 17, 11][index]; duration: [540, 430, 650][index]; easing.type: Anim.loop }
-                        NumberAnimation { to: [5, 7, 4][index]; duration: [480, 580, 450][index]; easing.type: Anim.loop }
-                        NumberAnimation { to: [9, 12, 15][index]; duration: [420, 500, 560][index]; easing.type: Anim.loop }
-                        NumberAnimation { to: 4; duration: [510, 390, 480][index]; easing.type: Anim.loop }
-                    }
-
                     Behavior on height {
-                        enabled: !bounceAnim.running      // the bounce is smooth already
+                        enabled: !music.isPlaying         // settling when it stops; while playing the steps are the motion
                         NumberAnimation { duration: Anim.fast; easing.type: Anim.standard }
                     }
                     Behavior on opacity {

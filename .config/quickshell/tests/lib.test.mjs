@@ -1216,6 +1216,26 @@ test("FmChooser: labels, titles, typed names", () => {
     for (const bad of ["", " ", ".", "..", "a/b", "/etc/passwd", "a\0b"]) assert.equal(FmChooser.cleanName(bad), "")
 })
 
+test("MediaSources.bounce: the bars' own animation as a function of time", () => {
+    for (let i = 0; i < 3; i++) {
+        const total = MS.bounceSteps.reduce((a, s) => a + s.ms[i], 0)
+        assert.ok(Math.abs(MS.bounce(i, 0) - 4) < 1e-9)
+        // at the end of each step it is at that step's height; it loops
+        let t = 0
+        for (const s of MS.bounceSteps) { t += s.ms[i]; assert.ok(Math.abs(MS.bounce(i, t - 0.001) - s.to[i]) < 0.01, i + " at " + t) }
+        assert.ok(Math.abs(MS.bounce(i, total + 123) - MS.bounce(i, 123)) < 1e-9)
+        // smooth and inside 4 … 17
+        let prev = 4
+        for (let ms = 0; ms < total * 2; ms += 33) { const v = MS.bounce(i, ms); assert.ok(v >= 3.99 && v <= 17.01); assert.ok(Math.abs(v - prev) < 2.2, "jump at " + ms); prev = v }
+    }
+    // gliding to what cava hears: most of the way in 120 ms, then exactly there
+    let cur = [3, 3, 3]
+    for (let f = 0; f < 4; f++) cur = [...MS.glide(cur, [17, 3, 10], 30)]
+    assert.ok(cur[0] > 16 && cur[0] <= 17 && cur[1] === 3 && cur[2] > 9.5)
+    for (let f = 0; f < 20; f++) cur = [...MS.glide(cur, [17, 3, 10], 30)]
+    assert.deepEqual(cur, [17, 3, 10])
+})
+
 // ── pixel art, pets, the offline game ───────────────────────────────────────
 const PixelArt = load("PixelArt.js"), PixelBits = load("PixelBits.js"), PetBrain = load("PetBrain.js"), Runner = load("Runner.js")
 const animals = ["Cat", "Dog", "Bunny", "Hamster", "Dino"].map(n => load("Pet" + n + ".js").def)

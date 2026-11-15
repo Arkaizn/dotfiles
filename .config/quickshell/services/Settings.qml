@@ -205,8 +205,15 @@ Singleton {
         if (sendProc.running) { _missed = true; return }     // read again once it's sent
         try {
             const o = migrate(text.trim() === "" ? {} : JSON.parse(text))
-            // a group that isn't an object (hand edit) falls back to defaults
-            for (const g of root.groups) root[g] = (o[g] !== null && typeof o[g] === "object" && !Array.isArray(o[g])) ? o[g] : {}
+            // a group that isn't an object (hand edit) falls back to defaults.
+            // Only groups whose content really differs are assigned: the file is read
+            // again after every save of ours, and assigning all ~40 groups each time made
+            // everything bound to any setting run again (a mail check, a network refresh,
+            // the visualizer restarting … after changing one unrelated switch)
+            for (const g of root.groups) {
+                const v = (o[g] !== null && typeof o[g] === "object" && !Array.isArray(o[g])) ? o[g] : {}
+                if (JSON.stringify(v) !== JSON.stringify(root[g])) root[g] = v
+            }
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }

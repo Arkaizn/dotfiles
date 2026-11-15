@@ -131,3 +131,42 @@ function clock(ms) {
     const ss = (s < 10 ? "0" : "") + s
     return h > 0 ? h + ":" + (m < 10 ? "0" : "") + m + ":" + ss : m + ":" + ss
 }
+
+// ── the bar's "playing" bars ────────────────────────────────────────────────
+// The three bars' own animation (no sound to show: a remote session, a muted
+// player): each bar goes through four heights at its own pace, eased in and
+// out, for ever. A function of time instead of an animation, so whoever shows
+// it decides how often to look (Media.visualizerFps), not the monitor's
+// refresh rate.
+var bounceSteps = [
+    { to: [13, 17, 11], ms: [540, 430, 650] },
+    { to: [5, 7, 4], ms: [480, 580, 450] },
+    { to: [9, 12, 15], ms: [420, 500, 560] },
+    { to: [4, 4, 4], ms: [510, 390, 480] }
+]
+// bar `index` (0–2) at `ms` since it started → its height
+function bounce(index, ms) {
+    var total = 0
+    for (var i = 0; i < bounceSteps.length; i++) total += bounceSteps[i].ms[index]
+    var t = ((ms % total) + total) % total
+    var from = bounceSteps[bounceSteps.length - 1].to[index]
+    for (var j = 0; j < bounceSteps.length; j++) {
+        var d = bounceSteps[j].ms[index]
+        if (t < d) return from + (bounceSteps[j].to[index] - from) * (0.5 - Math.cos(Math.PI * t / d) / 2)      // in-out sine
+        t -= d
+        from = bounceSteps[j].to[index]
+    }
+    return from
+}
+// one step of the glide towards what cava hears (what a 120 ms ease looked like, at `fps`)
+function glide(cur, target, fps) {
+    var k = 1 - Math.pow(0.02, 1000 / (fps * 120))
+    var out = []
+    for (var i = 0; i < target.length; i++) {
+        var c = cur[i] === undefined ? target[i] : cur[i]
+        var v = c + (target[i] - c) * Math.min(1, k)
+        out.push(Math.abs(target[i] - v) < 0.05 ? target[i] : v)
+    }
+    return out
+}
+

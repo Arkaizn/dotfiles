@@ -36,13 +36,23 @@ Item {
         const db = 20 * Math.log10(p) + 60 * Math.log10(root.volume)
         return Math.max(0, Math.min(1, (db + 60) / 60))
     }
-    // rise instantly, fall back over ~300 ms
+    // rise instantly, fall back over ~300 ms. Stepped 30 times a second, not
+    // animated per display frame: the meter moves all the time while a
+    // microphone is open, and per frame that made the whole control center redraw
+    // 360 times a second on a fast monitor (about 30 % of a core while it was open).
     property real level: 0
-    onTargetChanged: {
-        if (target >= level) { fall.stop(); level = target }
-        else { fall.to = target; fall.restart() }
+    Timer {
+        interval: 33
+        repeat: true
+        running: root.live || root.level > 0
+        onTriggered: {
+            const t = root.target
+            let next = t >= root.level ? t : root.level - Math.max(0.012, (root.level - t) * 0.24)
+            if (next - t < 0.004) next = t
+            // (less than a pixel of the bar isn't worth a redraw)
+            if (Math.abs(next - root.level) * root.width >= 0.5 || next === 0 || next === t) root.level = next
+        }
     }
-    NumberAnimation { id: fall; target: root; property: "level"; duration: Anim.slow; easing.type: Easing.OutQuad }
 
     Rectangle {
         anchors.fill: parent
