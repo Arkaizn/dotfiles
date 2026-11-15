@@ -71,3 +71,5 @@ TokenBorder TokenBorder.qml
 TokenAlpha TokenAlpha.qml
 TokenSize TokenSize.qml
 singleton FileManager FileManager.qml
+singleton Pets Pets.qml
+singleton OfflineGame OfflineGame.qml

@@ -3,7 +3,7 @@ import QtQuick
 import qs.services
 import qs.components
 
-// Left click: control center · right click: Wi-Fi on/off
+// Left click: control center (while offline: with the offline game) · right click: Wi-Fi on/off
 BarButton {
     id: root
 
@@ -29,6 +29,10 @@ BarButton {
     buttons: Qt.LeftButton | Qt.RightButton
     onClicked: mouse => {
         if (mouse.button === Qt.RightButton) NetLink.setWifiEnabled(!NetLink.wifiEnabled)
-        else Panels.toggle("controlCenter", (QsWindow.window as QsWindow)?.screen)
+        else {
+            // offline: the control center opens with the game and the Wi-Fi list (OfflineGame)
+            OfflineGame.request()
+            Panels.toggle("controlCenter", (QsWindow.window as QsWindow)?.screen)
+        }
     }
 }

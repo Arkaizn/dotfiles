@@ -16,6 +16,7 @@ import "perfmon"
 import "desktop"
 import "paneleditor"
 import "servers"
+import "pets"
 
 // Everything in the shell but the lockscreen. A file of its own, loaded by
 // shell.qml's LazyLoader through `source`: inline there, all of these modules
@@ -50,6 +51,7 @@ Scope {
     readonly property bool settingsStore: SettingsStore !== null
 
     DesktopLayer {}
+    PetLayer {}
 
     Variants {
         model: Quickshell.screens

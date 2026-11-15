@@ -32,6 +32,8 @@ import QtQuick
 //                dashboard (MediaSync.qml); its own settings live in the bridge
 //   files      → the file manager (files.qml, its own process): keys and
 //                checks in services/lib/FmSettings.js
+//   pets       → desktop pets and the offline game (Pets.qml, OfflineGame.qml;
+//                checked by services/lib/PetBrain.js)
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
 //   clipboard, connections, capture, dotfiles, netTools, updates,
 //   settingsProfiles, wizard, health, perfmon
@@ -92,6 +94,7 @@ Singleton {
     property var zoom: ({})
     property var iconColors: ({})
     property var files: ({})
+    property var pets: ({})
     property bool loaded: false
     property bool remote: Quickshell.env("QS_SETTINGS_REMOTE") === "1"
 
@@ -101,7 +104,7 @@ Singleton {
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
-                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "zoom", "iconColors", "files"]
+                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "zoom", "iconColors", "files", "pets"]
     // how each group is called in the UI (export / import messages, profiles).
     // A new group needs: a property above, an entry in `groups`, a label here,
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
@@ -114,7 +117,7 @@ Singleton {
         netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
         health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
         monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout",
-        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)", zoom: "App zoom", iconColors: "Icon colors", files: "Files" })
+        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)", zoom: "App zoom", iconColors: "Icon colors", files: "Files", pets: "Desktop pets & offline game" })
     function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────

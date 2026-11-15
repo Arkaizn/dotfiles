@@ -130,9 +130,16 @@ Singleton {
 
     // qs ipc call bar layout ""        → the shared layout (or a monitor's) as JSON
     // qs ipc call bar reset            → default layout everywhere (also drops per-monitor ones)
+    // qs ipc call bar pets toggle      → the desktop pets on / off (also: on, off, status)
     IpcHandler {
         target: "bar"
         function layout(screen: string): string { return JSON.stringify(root.layoutFor(screen)) }
         function reset(): void { Settings.set("bar", "monitors", {}); Settings.set("bar", "layout", root.defaultLayout) }
+        // the pets that live on the bar (services/Pets.qml): on | off | toggle | status
+        function pets(mode: string): string {
+            if (mode === "on" || mode === "off" || mode === "toggle") Pets.setEnabled(mode === "toggle" ? !Pets.enabled : mode === "on")
+            else if (mode !== "status") return "on, off, toggle or status"
+            return Pets.enabled ? "on" : "off"
+        }
     }
 }

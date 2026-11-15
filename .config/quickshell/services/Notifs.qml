@@ -251,6 +251,10 @@ Singleton {
 
     // ── Internals ─────────────────────────────────────────────
 
+    // a new notification that pops up (not hidden, silent or held back by do
+    // not disturb): the desktop pets look up (services/Pets.qml)
+    signal arrived()
+
     function _add(notif) {
         notif.tracked = true
         const name = notif.appName || "Unknown"
@@ -293,6 +297,7 @@ Singleton {
         if (notif.lastGeneration) return
         if (rule === "silent") return
         if (dnd && !(notif.urgency === NotificationUrgency.Critical && (cfg.allowCritical ?? true))) { missed++; return }
+        root.arrived()
         popupModel.insert(0, {
             uid, appName, appIcon, glyph, image,
             summary: notif.summary || "",

@@ -20,8 +20,9 @@ Usage:  mailsync.py <command>   with the request JSON in $MAIL_REQUEST,
   save-eml      {account, folder, uid, cache, dest}         -> {path}   (the whole message as .eml)
                 body / attachment / view / save-eml also take {file, cache}: an .eml from disk
   flags         {account, folder, uids, add, remove}
-  move          {account, folder, uids, to}
-  delete        {account, folder, uids, trash}     (to trash, or for good when already there)
+  move          {account, folder, uids, to, strict, uidvalidity}   -> {to, uidvalidity, uids}   (where they are now, for undo;
+                                            strict: only if folder still has that uidvalidity and one of the uids)
+  delete        {account, folder, uids, trash}     -> {to, uidvalidity, uids}, or {} when deleted for good (already in the trash)
   search        {account, folder, query, known}     -> {uids, messages}
   send          {account, message, sentFolder}      -> {messageId}
   view          {account, folder, uid, cache, index}   -> {kind: image|pdf|text|other, path, name, type, pages, pageCount, text}
