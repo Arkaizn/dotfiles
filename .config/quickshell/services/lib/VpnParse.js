@@ -40,7 +40,13 @@ function netbird(code, out) {
 // (terse output: ":" separates fields, "\:" is a colon inside one)
 function nmVpns(out) {
     return (out ?? "").split("\n").filter(l => l !== "").map(l => {
-        const f = l.split(/(?<!\\):/).map(x => x.replace(/\\:/g, ":"))
+        // split by hand: Qt's JS engine returns nothing for a lookbehind (/(?<!\\):/), node does
+        const f = [""]
+        for (let i = 0; i < l.length; i++) {
+            if (l[i] === "\\" && i + 1 < l.length) f[f.length - 1] += l[++i]
+            else if (l[i] === ":") f.push("")
+            else f[f.length - 1] += l[i]
+        }
         return { name: f[0] ?? "", uuid: f[1] ?? "", type: f[2] ?? "", active: f[3] === "yes" }
     }).filter(c => c.type === "vpn" || c.type === "wireguard")
 }
