@@ -87,6 +87,7 @@ PanelWindow {
         height: r.h
 
         HoverHandler {
+            id: barHover
             onHoveredChanged: BarState.setBarHovered(bar.screen?.name ?? "", hovered)
         }
 
@@ -149,6 +150,22 @@ PanelWindow {
         Left { id: leftSection; screenName: bar.screen?.name ?? ""; editing: bar.editing; dragId: editLayer.dragId }
         Middle { id: middle; screenName: bar.screen?.name ?? ""; editing: bar.editing; dragId: editLayer.dragId }
         Right { id: rightSection; screenName: bar.screen?.name ?? ""; editing: bar.editing; dragId: editLayer.dragId }
+
+        // the desktop pets, walking along the bar (services/Pets.qml, modules/pets/PetRun.qml).
+        // A Loader by file name: a mistake in there can't take the bar down with it
+        // It gets the pointer's place from the HoverHandler above; it has none of its own
+        // (an item over the buttons that takes hover would leave them without)
+        Loader {
+            id: petLane
+            anchors.fill: rectangle
+            active: Pets.active && Pets.onBar && !bar.editing && Pets.showsOnScreen(bar.screen)
+            source: "../pets/PetRun.qml"
+            onLoaded: {
+                item.sections = [leftSection, middle.centerLeftSection, middle.centerSection, middle.centerRightSection, rightSection]
+                item.barX = Qt.binding(() => barHover.point.position.x - petLane.x)
+                item.barHovered = Qt.binding(() => barHover.hovered)
+            }
+        }
 
         BarEditLayer {
             id: editLayer

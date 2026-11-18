@@ -184,8 +184,8 @@ ColumnLayout {
         ListCard {
             PlainRow {
                 Layout.fillWidth: true
-                label: "Undo archive / delete for"
-                desc: "Seconds; the server only gets the change after that (Ctrl+Z)"
+                label: "Undo button after archive / delete for"
+                desc: "Seconds before the server gets the change. Ctrl+Z also works afterwards: it moves the mail back"
                 Segmented { options: ["0", "5", "10", "20"]; value: root.opt("undo", "5"); onEdited: v => root.setOpt("undo", v) }
             }
             Divider {}

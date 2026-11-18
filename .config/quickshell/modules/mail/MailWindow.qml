@@ -15,6 +15,7 @@ import "MailIcons.js" as I
 // Open it with:  qs ipc call mail toggle   (or the "Mail" launcher entry)
 // Keys (like Thunderbird): ↑/↓ move · N next unread · R reply · Shift+R reply all
 //   F forward · A archive · J junk · Del delete · M read / unread · S star · Ctrl+N new
+//   Ctrl+Z undo the last archive / delete / move (MailStore.undo: also after the server has it)
 //   / or Ctrl+F search · F5 check now · Esc close the message
 Scope {
     id: root
@@ -408,22 +409,34 @@ Scope {
                         }
                     }
 
-                    // archived / deleted: undo for a few seconds
+                    // archived / deleted: an Undo button for a few seconds; later Ctrl+Z
+                    // brings the messages back from the server, and this says so
                     Rectangle {
                         id: undoToast
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: MailStore.lastError !== "" ? 74 : 24
-                        // fades and grows in / out (the text stays while it goes)
-                        readonly property bool on: MailStore.undoable !== null
+                        // fades and grows in / out (the text and the button stay while it goes)
+                        readonly property bool on: MailStore.undoable !== null || MailStore.undoNote !== ""
                         property string label: ""
-                        Connections { target: MailStore; function onUndoableChanged() { if (MailStore.undoable) undoToast.label = MailStore.undoable.label } }
+                        property bool button: false
+                        function sync() {
+                            if (MailStore.undoable) { label = MailStore.undoable.label; button = true }
+                            else if (MailStore.undoNote !== "") { label = MailStore.undoNote; button = false }
+                        }
+                        Connections {
+                            target: MailStore
+                            function onUndoableChanged() { undoToast.sync() }
+                            function onUndoNoteChanged() { undoToast.sync() }
+                        }
+                        Component.onCompleted: sync()
                         visible: opacity > 0
                         opacity: on ? 1 : 0
                         scale: on ? 1 : 0.92
                         Behavior on opacity { NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
                         Behavior on scale { NumberAnimation { duration: Anim.medium; easing.type: Anim.pop } }
                         width: undoRow.implicitWidth + 30
+                        Behavior on width { enabled: undoToast.visible; NumberAnimation { duration: Anim.normal; easing.type: Anim.standard } }
                         height: 42
                         radius: 21
                         color: Colors.surfacePopover
@@ -434,8 +447,9 @@ Scope {
                             id: undoRow
                             anchors.centerIn: parent
                             spacing: Tokens.space.s10
+                            Spinner { visible: MailStore.restoring && !undoToast.button; running: visible; size: Tokens.font.small }
                             Text { text: undoToast.label; color: Colors.ink; font.pixelSize: Tokens.font.small; font.family: Properties.fontFamily }
-                            ActionButton { icon: I.back; text: "Undo  (Ctrl+Z)"; onClicked: MailStore.undo() }
+                            ActionButton { visible: undoToast.button; icon: I.back; text: "Undo  (Ctrl+Z)"; onClicked: MailStore.undo() }
                         }
                     }
 

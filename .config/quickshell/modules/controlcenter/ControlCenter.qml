@@ -36,8 +36,9 @@ BarPopup {
     // grows with the content up to the screen height, then scrolls
     maxHeight: (screen?.height ?? 1440) - 90
     panelHeight: Math.min(mainCol.implicitHeight + padding * 2, maxHeight)
-    // don't vanish while typing a Wi-Fi password with the pointer elsewhere, or while editing
-    autoClose: !typingPassword && !editing
+    // don't vanish while typing a Wi-Fi password with the pointer elsewhere, while editing,
+    // or in the middle of a run of the offline game
+    autoClose: !typingPassword && !editing && !offlineGame.playing
     property bool typingPassword: false
     fullscreen: editing
 
@@ -57,7 +58,10 @@ BarPopup {
     readonly property bool editCards: EditMode.target === "controlCenter"
     readonly property bool editButtons: EditMode.target === "controlCenterButtons"
     readonly property bool editing: editCards || editButtons
+    // opened from the bar's offline icon: the game on top, the Wi-Fi list open below it
+    onOpening: if (OfflineGame.wanted && wifiDevice !== null) expanded = "wifi"
     onPopupClosed: {
+        OfflineGame.wanted = false
         expanded = ""
         arm.disarm()
         Notifs.collapseAll()
@@ -347,6 +351,12 @@ BarPopup {
                         }
                     }
                 }
+            }
+
+            // ── offline: a game to pass the time (not one of the cards: it comes and goes) ──
+            RunnerCard {
+                id: offlineGame
+                gap: mainCol.spacing
             }
 
             // ── the cards ──

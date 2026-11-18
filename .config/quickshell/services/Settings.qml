@@ -32,6 +32,8 @@ import QtQuick
 //                dashboard (MediaSync.qml); its own settings live in the bridge
 //   files      → the file manager (files.qml, its own process): keys and
 //                checks in services/lib/FmSettings.js
+//   pets       → desktop pets and the offline game (Pets.qml, OfflineGame.qml;
+//                checked by services/lib/PetBrain.js)
 //   bar, notifications, theme, audio, bluetooth, power, defaultApps,
 //   clipboard, connections, capture, dotfiles, netTools, updates,
 //   settingsProfiles, wizard, health, perfmon
@@ -92,6 +94,7 @@ Singleton {
     property var zoom: ({})
     property var iconColors: ({})
     property var files: ({})
+    property var pets: ({})
     property bool loaded: false
     property bool remote: Quickshell.env("QS_SETTINGS_REMOTE") === "1"
 
@@ -101,7 +104,7 @@ Singleton {
                                    "bar", "notifications", "theme", "audio", "bluetooth", "power", "defaultApps",
                                    "clipboard", "connections", "capture", "dotfiles", "netTools", "updates",
                                    "settingsProfiles", "wizard", "health", "perfmon", "launcher", "icons", "monitorsPage",
-                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "zoom", "iconColors", "files"]
+                                   "dashboard", "controlCenter", "lockscreen", "desktopWidgets", "media", "greeter", "panels", "zoom", "iconColors", "files", "pets"]
     // how each group is called in the UI (export / import messages, profiles).
     // A new group needs: a property above, an entry in `groups`, a label here,
     // and a check in modules/settings/SettingsTransfer.qml (Health → settings.json
@@ -114,7 +117,7 @@ Singleton {
         netTools: "Network tools", updates: "Updates", settingsProfiles: "Profiles", wizard: "First run",
         health: "Health check", perfmon: "Performance monitor", launcher: "Launcher", icons: "Icons",
         monitorsPage: "Monitors page", dashboard: "Dashboard layout", controlCenter: "Control center layout",
-        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)", zoom: "App zoom", iconColors: "Icon colors", files: "Files" })
+        lockscreen: "Lockscreen", desktopWidgets: "Desktop widgets", media: "Media sources", greeter: "Login screen", panels: "Panels (size, place, bar edge)", zoom: "App zoom", iconColors: "Icon colors", files: "Files", pets: "Desktop pets & offline game" })
     function groupLabel(g) { return groupLabels[g] ?? g }
 
     // ── File format ──────────────────────────────────────────────────────────
@@ -202,8 +205,15 @@ Singleton {
         if (sendProc.running) { _missed = true; return }     // read again once it's sent
         try {
             const o = migrate(text.trim() === "" ? {} : JSON.parse(text))
-            // a group that isn't an object (hand edit) falls back to defaults
-            for (const g of root.groups) root[g] = (o[g] !== null && typeof o[g] === "object" && !Array.isArray(o[g])) ? o[g] : {}
+            // a group that isn't an object (hand edit) falls back to defaults.
+            // Only groups whose content really differs are assigned: the file is read
+            // again after every save of ours, and assigning all ~40 groups each time made
+            // everything bound to any setting run again (a mail check, a network refresh,
+            // the visualizer restarting … after changing one unrelated switch)
+            for (const g of root.groups) {
+                const v = (o[g] !== null && typeof o[g] === "object" && !Array.isArray(o[g])) ? o[g] : {}
+                if (JSON.stringify(v) !== JSON.stringify(root[g])) root[g] = v
+            }
         } catch (e) {
             console.warn("settings.json is not valid JSON, using defaults:", e)
         }

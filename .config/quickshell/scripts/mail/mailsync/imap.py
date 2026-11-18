@@ -395,26 +395,92 @@ def flags(req):
     return {}
 
 
+def set_uids(spec):
+    """'3:5,9' -> [3, 4, 5, 9]  (a COPYUID set; an absurdly long one gives [])"""
+    out = []
+    for part in spec.split(","):
+        lo, _, hi = part.partition(":")
+        lo, hi = int(lo), int(hi or lo)
+        if abs(hi - lo) > 100_000:
+            return []
+        out.extend(range(lo, hi + 1) if lo <= hi else range(lo, hi - 1, -1))
+    return out
+
+
+def message_ids(im, uids):
+    """uid -> its Message-ID header, for finding the messages again after a move"""
+    out = {}
+    data = im.uid("FETCH", uid_set(uids), "(UID BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])")
+    for d in parse_fetch(data):
+        hb = next((v for k, v in d.items() if k.startswith("BODY[HEADER")), b"")
+        mid = email.message_from_bytes(hb if isinstance(hb, bytes) else str(hb or "").encode()).get("Message-ID")
+        if "UID" in d and mid and '"' not in mid and "\\" not in mid:
+            out[int(d["UID"])] = " ".join(str(mid).split())
+    return out
+
+
 def move_uids(im, uids, to):
+    """-> (the destination's uidvalidity, the messages' uids there); (0, []) when the
+    server doesn't say and they can't be found again. Only undo needs them."""
     s = uid_set(uids)
+    mids = {}
+    if "UIDPLUS" not in im.caps:
+        try:
+            mids = message_ids(im, uids)
+        except Exception:
+            mids = {}
+    im.c.untagged_responses.pop("COPYUID", None)
     if "MOVE" in im.caps:
         im.uid("MOVE", s, quote_box(to))
-        return
-    im.uid("COPY", s, quote_box(to))
-    im.uid("STORE", s, "+FLAGS.SILENT", "(\\Deleted)")
-    if "UIDPLUS" in im.caps:
-        im.uid("EXPUNGE", s)
     else:
-        im.ok(*im.c.expunge(), "EXPUNGE")
+        im.uid("COPY", s, quote_box(to))
+        im.uid("STORE", s, "+FLAGS.SILENT", "(\\Deleted)")
+        if "UIDPLUS" in im.caps:
+            im.uid("EXPUNGE", s)
+        else:
+            im.ok(*im.c.expunge(), "EXPUNGE")
+    # from here on the move has happened: nothing below may fail it
+    try:
+        got = im.c.untagged_responses.pop("COPYUID", None)
+        if got:
+            uv, _src, dst = got[-1].decode("ascii", "replace").split()[:3]
+            return int(uv), set_uids(dst)
+        if not mids:
+            return 0, []
+        uv, _ = im.select(to, readonly=True)
+        found = []
+        for mid in mids.values():
+            typ, data = im.c.uid("SEARCH", None, "HEADER", "Message-ID", '"' + mid + '"')
+            hits = [int(u) for u in (data[0] or b"").split()] if typ == "OK" and data else []
+            if hits:
+                found.append(max(hits))        # the copy that just arrived
+        return uv, sorted(set(found))
+    except Exception:
+        return 0, []
+
+
+def moved(to, where):
+    return {"to": to, "uidvalidity": where[0], "uids": where[1]}
 
 
 def move(req):
+    """strict (undo: bringing messages back): the folder must still be the one the
+    uids are from, and at least one of them must still be in it"""
     if not req.get("to"):
         raise MailError("No folder to move to")
     with Imap(req["account"]) as im:
-        im.select(req["folder"])
-        move_uids(im, req["uids"], req["to"])
-    return {}
+        uv, _ = im.select(req["folder"])
+        uids = [int(u) for u in req["uids"]]
+        if req.get("strict"):
+            if int(req.get("uidvalidity") or 0) != uv:
+                raise MailError("Can't bring it back: " + req["folder"] + " changed on the server")
+            typ, data = im.c.uid("SEARCH", None, "UID", uid_set(uids))
+            im.ok(typ, data, "SEARCH")
+            there = {int(u) for u in (data[0] or b"").split()}
+            uids = [u for u in uids if u in there]
+            if not uids:
+                raise MailError("Can't bring it back: it isn't in " + req["folder"] + " any more")
+        return moved(req["to"], move_uids(im, uids, req["to"]))
 
 
 def delete(req):
@@ -422,14 +488,13 @@ def delete(req):
         im.select(req["folder"])
         trash = req.get("trash") or ""
         if trash and trash != req["folder"]:
-            move_uids(im, req["uids"], trash)
+            return moved(trash, move_uids(im, req["uids"], trash))
+        s = uid_set(req["uids"])
+        im.uid("STORE", s, "+FLAGS.SILENT", "(\\Deleted)")
+        if "UIDPLUS" in im.caps:
+            im.uid("EXPUNGE", s)
         else:
-            s = uid_set(req["uids"])
-            im.uid("STORE", s, "+FLAGS.SILENT", "(\\Deleted)")
-            if "UIDPLUS" in im.caps:
-                im.uid("EXPUNGE", s)
-            else:
-                im.ok(*im.c.expunge(), "EXPUNGE")
+            im.ok(*im.c.expunge(), "EXPUNGE")
     return {}
 
 

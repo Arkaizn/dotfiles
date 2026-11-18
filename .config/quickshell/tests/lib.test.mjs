@@ -14,8 +14,13 @@ function load(name) {
 }
 
 let failed = 0, passed = 0
+const pending = []
 function test(name, fn) {
-    try { fn(); passed++ } catch (e) { failed++; console.log("FAIL " + name + "\n  " + e.message) }
+    try {
+        const r = fn()
+        if (r && typeof r.then === "function") pending.push(r.then(() => { passed++ }, e => { failed++; console.log("FAIL " + name + "\n  " + e.message) }))
+        else passed++
+    } catch (e) { failed++; console.log("FAIL " + name + "\n  " + e.message) }
 }
 
 const Valid = load("Valid.js")
@@ -1211,5 +1216,293 @@ test("FmChooser: labels, titles, typed names", () => {
     for (const bad of ["", " ", ".", "..", "a/b", "/etc/passwd", "a\0b"]) assert.equal(FmChooser.cleanName(bad), "")
 })
 
+test("MediaSources.bounce: the bars' own animation as a function of time", () => {
+    for (let i = 0; i < 3; i++) {
+        const total = MS.bounceSteps.reduce((a, s) => a + s.ms[i], 0)
+        assert.ok(Math.abs(MS.bounce(i, 0) - 4) < 1e-9)
+        // at the end of each step it is at that step's height; it loops
+        let t = 0
+        for (const s of MS.bounceSteps) { t += s.ms[i]; assert.ok(Math.abs(MS.bounce(i, t - 0.001) - s.to[i]) < 0.01, i + " at " + t) }
+        assert.ok(Math.abs(MS.bounce(i, total + 123) - MS.bounce(i, 123)) < 1e-9)
+        // smooth and inside 4 … 17
+        let prev = 4
+        for (let ms = 0; ms < total * 2; ms += 33) { const v = MS.bounce(i, ms); assert.ok(v >= 3.99 && v <= 17.01); assert.ok(Math.abs(v - prev) < 2.2, "jump at " + ms); prev = v }
+    }
+    // gliding to what cava hears: most of the way in 120 ms, then exactly there
+    let cur = [3, 3, 3]
+    for (let f = 0; f < 4; f++) cur = [...MS.glide(cur, [17, 3, 10], 30)]
+    assert.ok(cur[0] > 16 && cur[0] <= 17 && cur[1] === 3 && cur[2] > 9.5)
+    for (let f = 0; f < 20; f++) cur = [...MS.glide(cur, [17, 3, 10], 30)]
+    assert.deepEqual(cur, [17, 3, 10])
+})
+
+// ── pixel art, pets, the offline game ───────────────────────────────────────
+const PixelArt = load("PixelArt.js"), PixelBits = load("PixelBits.js"), PetBrain = load("PetBrain.js"), Runner = load("Runner.js")
+const animals = ["Cat", "Dog", "Bunny", "Hamster", "Dino"].map(n => load("Pet" + n + ".js").def)
+test("PixelArt: compose, recolor, upside down, clip, flip, runs", () => {
+    const rows = PixelArt.compose(4, 2, [{ rows: ["ab", "cd"], x: 1, y: 0 }, { rows: ["x."], x: 3, y: 1, recolor: { x: "y" } }, { rows: ["zz"], x: 3, y: -1 }])
+    assert.deepEqual([...rows], [".ab.", ".cdy"])
+    assert.deepEqual([...PixelArt.compose(2, 2, [{ rows: ["ab", "cd"], x: 0, y: 0, vflip: true }])], ["cd", "ab"])
+    assert.deepEqual([...PixelArt.flip(rows)], [".ba.", "ydc."])
+    assert.deepEqual(JSON.parse(JSON.stringify(PixelArt.runs(["aa.b", "...."]))), [{ x: 0, y: 0, n: 2, c: "a" }, { x: 3, y: 0, n: 1, c: "b" }])
+    assert.equal(PixelArt.pieces(["aa.b", "a..b"]), 2)
+    assert.equal(PixelArt.pieces(["a.", ".a"]), 2)             // touching only at a corner isn't attached
+    assert.equal(PixelArt.pieces(["aab", "..b"]), 1)
+})
+test("pets: every animal is complete, fits its canvas, has coats and a nature", () => {
+    assert.ok(animals.length >= 5)
+    for (const d of animals) {
+        assert.deepEqual([...PixelArt.check(d, PetBrain.needs)], [], d.id)
+        assert.equal(d.h, 16, d.id + ": 16 pixels high (2 × = a bar button)")
+        for (const f of Object.keys(d.frames)) {
+            const rows = PixelArt.frame(d, f)
+            assert.equal(rows.length, d.h, d.id + " " + f)
+            assert.ok(rows.every(r => r.length === d.w), d.id + " " + f)
+        }
+        assert.ok(d.coats.length >= 4, d.id + " coats")
+        for (const c of d.coats) {
+            const pal = PixelArt.coatPalette(d, c.id)
+            for (const k of Object.keys(d.palette)) assert.match(pal[k], /^#[0-9a-f]{6}$/, d.id + " " + c.id + " " + k)
+            // the outline is darker than the coat it goes round
+            const lum = h => [1, 3, 5].reduce((a, i) => a + parseInt(h.slice(i, i + 2), 16), 0)
+            assert.ok(lum(pal.k) < lum(pal.o), d.id + " " + c.id + " outline")
+        }
+        assert.equal(PixelArt.coatPalette(d, "nope").o, d.palette.o)
+        const n = PetBrain.natureOf(d.nature)
+        assert.ok(n.stepMs >= 30 && n.stepMs <= 200 && n.follow >= 0 && n.follow <= 1 && n.rest >= 0.5, d.id + " nature")
+        for (const i of n.ignores) assert.ok(i === "look" || d.anims[i], d.id + " ignores " + i)
+        assert.ok(["happy", "sit", "sleep"].includes(n.arrive))
+        for (const a of Object.values(d.anims)) if (a.move) assert.equal(a.move.length, a.seq.length)
+    }
+    assert.deepEqual([...PixelArt.check(PixelBits.def, [])], [])
+    assert.deepEqual(JSON.parse(JSON.stringify(PixelBits.size("heart"))), { w: 7, h: 6 })
+})
+test("pets: in every frame everything hangs together (no detached legs, tails, ears)", () => {
+    for (const d of animals) for (const f of Object.keys(d.frames))
+        assert.equal(PixelArt.pieces(PixelArt.frame(d, f)), 1, d.id + " " + f + " has a detached piece")
+})
+test("pets: feet stay on the ground row in every walking / resting frame", () => {
+    for (const d of animals) {
+        const used = new Set(["stand", "walk", "run", "sit", "lie", "sleep", "alert", "hit", "stretch", "roll"].flatMap(a => d.anims[a]?.seq ?? []))
+        // frames that are in the air on purpose: a hop (the animation stands still in some frames and moves in these)
+        const air = new Set(Object.values(d.anims).flatMap(a => a.move && a.move.includes(0) ? a.seq.filter((_, i) => a.move[i] > 0) : []))
+        for (const f of used) {
+            if (air.has(f)) continue
+            const rows = PixelArt.frame(d, f)
+            assert.ok(/[^.]/.test(rows[d.h - 1]), d.id + " " + f + " doesn't touch the ground row")
+        }
+        // the walk doesn't bounce: the lowest pixel is on the same row in each of its frames
+        const low = f => { const r = PixelArt.frame(d, f); for (let y = d.h - 1; y >= 0; y--) if (/[^.]/.test(r[y])) return y }
+        const steps = d.anims.walk.seq.filter(f => !air.has(f))
+        assert.equal(new Set(steps.map(low)).size, 1, d.id + " walk bounces")
+    }
+})
+test("pets: a clean outline (no doubled corner pixels) round every frame", () => {
+    // a "double": an outline pixel that only fills an outer corner, i.e. two of its
+    // outline neighbours (one beside, one above / below) already touch each other diagonally
+    for (const d of animals) for (const f of Object.keys(d.frames)) {
+        const r = PixelArt.frame(d, f), at = (x, y) => (r[y] ?? "")[x] ?? "."
+        let doubles = 0
+        for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) {
+            if (at(x, y) !== "k") continue
+            for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]])
+                // corner pixel on the outside: both neighbours are outline, the diagonal one is empty
+                if (at(x + dx, y) === "k" && at(x, y + dy) === "k" && PixelArt.isEmpty(at(x + dx, y + dy)) && PixelArt.isEmpty(at(x - dx, y - dy))
+                    && PixelArt.isEmpty(at(x - dx, y)) && PixelArt.isEmpty(at(x, y - dy))) doubles++
+        }
+        assert.equal(doubles, 0, d.id + " " + f + ": " + doubles + " doubled outline pixels")
+    }
+})
+test("PixelArt.png: a real PNG with the frame's pixels, made once", async () => {
+    const zlib = await import("node:zlib")
+    const rows = ["a.b", ".c."], cols = { a: "#ff0000", b: "#8000ff00", c: "#123" }
+    const bytes = Buffer.from([...PixelArt.pngBytes(rows, cols)])
+    assert.deepEqual([...bytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10])
+    let at = 8, idat = null, ihdr = null
+    while (at < bytes.length) {
+        const len = bytes.readUInt32BE(at), type = bytes.toString("latin1", at + 4, at + 8), data = bytes.subarray(at + 8, at + 8 + len)
+        assert.equal(bytes.readUInt32BE(at + 8 + len), zlib.crc32(bytes.subarray(at + 4, at + 8 + len)), type + " crc")
+        if (type === "IHDR") ihdr = data
+        if (type === "IDAT") idat = data
+        at += 12 + len
+    }
+    assert.equal(ihdr.readUInt32BE(0), 3); assert.equal(ihdr.readUInt32BE(4), 2); assert.deepEqual([...ihdr.subarray(8)], [8, 6, 0, 0, 0])
+    const px = zlib.inflateSync(idat)           // checks the zlib header and the Adler-32 too
+    assert.deepEqual([...px], [0, 255, 0, 0, 255, 0, 0, 0, 0, 0, 255, 0, 128,   0, 0, 0, 0, 0, 17, 34, 51, 255, 0, 0, 0, 0])
+    const d = animals[0], pal = PixelArt.coatPalette(d, d.coats[0].id)
+    const made = PixelArt.pngMade
+    const url = PixelArt.png(PixelArt.frame(d, "walk0"), pal)
+    assert.match(url, /^data:image\/png;base64,[A-Za-z0-9+\/]+=*$/)
+    assert.equal(Buffer.from(url.split(",")[1], "base64").readUInt32BE(16), d.w)
+    assert.equal(PixelArt.png(PixelArt.frame(d, "walk0"), Object.assign({ unused: "#000000" }, pal)), url)
+    assert.equal(PixelArt.pngMade, made + 1)                                   // the second one came from the cache
+    assert.notEqual(PixelArt.png(PixelArt.frame(d, "walk0"), PixelArt.coatPalette(d, d.coats[1].id)), url)
+    assert.equal(PixelArt.png([], {}), "")
+    assert.deepEqual([...PixelArt.rgba("nonsense")], [255, 0, 255, 255])
+})
+test("PixelArt.check finds what's wrong", () => {
+    const bad = { id: "x", w: 2, h: 1, palette: { a: "#fff" }, parts: { p: ["ab"] }, frames: { f: [["p", 0, 0], ["q", 0, 0]] }, anims: { walk: { seq: ["g"], ms: 10 } } }
+    const got = [...PixelArt.check(bad, ["sleep"])].join(" | ")
+    for (const m of ["colour \"b\"", "no part q", "ms must be", "no frame g", "no animation \"sleep\""]) assert.ok(got.includes(m), m + " in " + got)
+    assert.equal(PixelArt.frameAt(animals[0], "walk", 0), "walk0")
+    assert.equal(PixelArt.frameAt(animals[0], "walk", animals[0].anims.walk.ms * 5.5), "walk1")
+    assert.equal(PixelArt.indexAt(animals[0], "walk", animals[0].anims.walk.ms * 5.5), 1)
+    assert.equal(PixelArt.frameAt(animals[0], "nope", 0), "")
+})
+const lcg = seed => () => (seed = (seed * 16807) % 2147483647) / 2147483647
+test("PetBrain: idle means lie down, then sleep; back means wake up", () => {
+    const rnd = () => 0.5
+    assert.equal(PetBrain.next("walk", { idle: true, dir: 1 }, rnd).state, "lie")
+    const sl = PetBrain.next("lie", { idle: true, dir: -1 }, rnd)
+    assert.equal(sl.state, "sleep"); assert.equal(sl.ms, 0); assert.equal(sl.dir, -1)
+    assert.equal(PetBrain.next("sleep", { idle: true, dir: 1 }, rnd).state, "sleep")
+    assert.equal(PetBrain.next("sleep", { idle: false, dir: 1 }, rnd).state, "lie")
+    for (const s of ["happy", "follow", "alert", "stretch", "roll"]) assert.ok(PetBrain.resting[PetBrain.next(s, { idle: false, dir: 1 }, rnd).state], s)
+})
+test("PetBrain: every animal mostly rests and only walks a little", () => {
+    for (const d of animals) {
+        const rnd = lcg(11)
+        const time = {}
+        let cur = "lie", dir = 1, total = 0, prev = ""
+        for (let i = 0; i < 6000; i++) {
+            const n = PetBrain.next(cur, { idle: false, dir, nature: d.nature }, rnd)
+            assert.ok(PetBrain.states.includes(n.state))
+            assert.ok(n.ms >= 500 && n.ms <= 200000, d.id + " " + n.state + " " + n.ms)
+            assert.ok(!(prev === "walk" && n.state === "walk"), "two walks in a row")
+            time[n.state] = (time[n.state] ?? 0) + n.ms
+            total += n.ms
+            prev = cur = n.state; dir = n.dir
+        }
+        const share = s => (time[s] ?? 0) / total
+        assert.ok(share("walk") < 0.04, d.id + " walks " + (share("walk") * 100).toFixed(1) + " % of the time")
+        assert.ok(share("walk") > 0.001, d.id + " never walks")
+        assert.ok(share("sleep") + share("lie") > 0.8, d.id + " rests " + ((share("sleep") + share("lie")) * 100).toFixed(0) + " %")
+        assert.ok(share("sleep") > 0.5, d.id + " sleeps " + (share("sleep") * 100).toFixed(0) + " %")
+    }
+})
+test("PetBrain.called: the dog always comes, the cat sometimes, each in its own way", () => {
+    const tally = d => { const rnd = lcg(5), t = {}; for (let i = 0; i < 2000; i++) { const r = PetBrain.called(d.nature, d.anims, rnd); t[r.state] = (t[r.state] ?? 0) + 1; assert.ok(r.ms >= 800) } return t }
+    const by = Object.fromEntries(animals.map(d => [d.id, tally(d)]))
+    assert.equal(by.dog.follow, 2000)
+    assert.ok(by.cat.follow > 500 && by.cat.follow < 900, "cat follows " + by.cat.follow)
+    assert.ok(by.cat.stretch > 200 && by.cat.roll > 200 && by.cat.alert > 200)
+    assert.ok(by.bunny.follow > 1000 && by.bunny.alert > 500)
+    assert.ok(by.hamster.follow > 1500)
+    // the dog stays longest, the hamster gives up first; the hamster is the fastest, the dino the slowest
+    const n = Object.fromEntries(animals.map(d => [d.id, PetBrain.natureOf(d.nature)]))
+    assert.ok(n.dog.followMs[0] > n.cat.followMs[0] && n.hamster.followMs[1] < n.cat.followMs[0])
+    assert.ok(n.hamster.stepMs < n.dog.stepMs && n.dog.stepMs < n.cat.stepMs && n.cat.stepMs < n.dino.stepMs)
+    assert.equal(n.hamster.arrive, "sleep")
+    // something that can't stretch only looks
+    assert.equal(PetBrain.called({ follow: 0, ignores: ["stretch"] }, {}, () => 0.5).state, "alert")
+})
+test("PetBrain.walk / toward", () => {
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.walk(10, 1, 3, 0, 100))), { x: 13, dir: 1 })
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.walk(99, 1, 3, 0, 100))), { x: 100, dir: -1 })
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.walk(1, -1, 3, 0, 100))), { x: 0, dir: 1 })
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.walk(50, 1, 3, 20, 20))), { x: 20, dir: 1 })
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.toward(10, 50, 2, 0, 100, 4))), { x: 12, dir: 1, there: false })
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.toward(60, 50, 2, 0, 100, 4))), { x: 58, dir: -1, there: false })
+    assert.equal(PetBrain.toward(48, 50, 2, 0, 100, 4).there, true)
+    assert.equal(PetBrain.toward(98, 500, 2, 0, 100, 0).there, true)        // the pointer is past the end: as far as it goes
+    // it gets there and stays, from any distance, with any step (also 0: a bunny on the ground)
+    let x = 3; for (let i = 0; i < 200; i++) { const t = PetBrain.toward(x, 71, i % 3 ? 4 : 0, 0, 100, 0); x = t.x }
+    assert.ok(Math.abs(x - 71) <= 4)
+})
+test("PetBrain.gaps: places to rest between the bar's buttons", () => {
+    const g = PetBrain.gaps(1000, [[20, 200], [450, 560], [800, 990]], 40, 6)
+    assert.deepEqual(JSON.parse(JSON.stringify(g)), [[206, 404], [566, 754]])      // widest first; a pet 40 wide fits from … to …
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.gaps(300, [], 40, 6))), [[6, 254]])
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.gaps(300, [[0, 290]], 40, 6))), [])
+    assert.deepEqual(JSON.parse(JSON.stringify(PetBrain.gaps(300, [[100, 120], [110, 200], [0, 0]], 40, 0))), [[0, 60], [200, 260]])
+    assert.equal(PetBrain.nearestSpot(300, g), 300)
+    assert.equal(PetBrain.nearestSpot(100, g), 206)
+    assert.equal(PetBrain.nearestSpot(500, g), 566)
+    assert.equal(PetBrain.nearestSpot(900, g), 754)
+    assert.equal(PetBrain.nearestSpot(123, []), 123)
+})
+test("PetBrain.validate (settings import)", () => {
+    const errs = v => { const out = []; PetBrain.validate(v, animals, (p, m) => out.push(m)); return out }
+    assert.deepEqual(errs({ enabled: true, animals: ["cat", "dino"], coats: { cat: "siamese", dog: "husky" }, place: "screen", monitors: [], size: "large",
+                            layer: "bottom", sleepAfter: 5, react: false, game: true, runner: "dino" }), [])
+    assert.deepEqual(errs({}), [])
+    assert.equal(errs({ enabled: "yes", animals: ["fox"], monitors: [""], size: "huge", layer: "overlay", sleepAfter: 0, runner: "fox", place: "moon", nope: 1 }).length, 9)
+    assert.equal(errs({ animals: "cat" }).length, 1)
+    assert.equal(errs({ coats: { cat: "husky", fox: "red" } }).length, 2)
+    assert.equal(errs({ coats: ["orange"] }).length, 1)
+})
+const kinds = PixelBits.obstacles.map(k => ({ kind: k, w: PixelBits.size(k).w, h: PixelBits.size(k).h }))
+test("offline game: four kinds of dead network gear, each one piece, none too high to jump", () => {
+    assert.deepEqual([...PixelBits.obstacles], ["router", "netswitch", "stack", "rack"])
+    for (const k of kinds) {
+        assert.ok(k.w >= 8 && k.w <= 20 && k.h >= 4 && k.h <= 16, k.kind)
+        assert.ok(PixelArt.pieces(PixelBits.def.parts[k.kind].map(r => r.replace(/[^.]/g, "i"))) >= 1)
+    }
+    // every kind turns up
+    const s = Runner.create(200, 20, 16), seen = new Set(), rnd = lcg(9)
+    for (let i = 0; i < 200; i++) { Runner.spawn(s, kinds, rnd); seen.add(s.obstacles[s.obstacles.length - 1].kind) }
+    assert.equal(seen.size, 4)
+})
+test("Runner: start, jump only from the ground, land", () => {
+    const s = Runner.create(180, 20, 16)
+    assert.equal(s.phase, "ready")
+    Runner.step(s, 0.016, kinds, () => 0.5)
+    assert.equal(s.dist, 0)
+    assert.equal(Runner.press(s), "start")
+    assert.equal(Runner.press(s), "jump")
+    assert.equal(Runner.press(s), "")              // already in the air
+    let top = 0, t = 0
+    while (s.y > 0 && t < 3) { Runner.step(s, 1 / 60, [], () => 0.5); top = Math.max(top, s.y); t += 1 / 60 }
+    assert.equal(s.y, 0)
+    assert.ok(top > 36 && top < 52, "jump height " + top)
+    assert.ok(t > 0.6 && t < 0.95, "air time " + t)
+    assert.ok(top > Math.max(...kinds.map(k => k.h)) + 12, "clears the tallest obstacle")
+})
+test("Runner: running into something ends the run; press starts again", () => {
+    const s = Runner.create(180, 20, 16)
+    Runner.press(s)
+    let t = 0
+    while (s.phase === "run" && t < 30) { Runner.step(s, 1 / 60, kinds, () => 0.4); t += 1 / 60 }
+    assert.equal(s.phase, "over")
+    assert.ok(s.score > 0)
+    const score = s.score
+    assert.equal(Runner.press(s), "")              // not in the first half second
+    for (let i = 0; i < 40; i++) Runner.step(s, 1 / 60, kinds, () => 0.4)
+    assert.equal(s.score, score)                   // nothing moves after a hit
+    assert.equal(Runner.press(s), "start")
+    assert.equal(s.phase, "run"); assert.equal(s.score, 0); assert.equal(s.obstacles.length, 0)
+})
+test("Runner: a perfect player gets through, at any speed", () => {
+    // jumps when the next obstacle is close enough: every gap must be passable
+    let seed = 3
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+    const s = Runner.create(200, 20, 16)
+    Runner.press(s)
+    for (let i = 0; i < 60 * 240 && s.phase === "run"; i++) {
+        const o = s.obstacles.find(o => o.x + o.w > s.runner.x)
+        const air = 2 * Runner.jumpSpeed / Runner.gravity
+        if (o && s.y === 0 && o.x - (s.runner.x + s.runner.w) < s.speed * air / 2 - o.w / 2 - 6) Runner.press(s)
+        Runner.step(s, 1 / 60, kinds, rnd)
+    }
+    assert.equal(s.phase, "run", "died at " + s.score + " (speed " + Math.round(s.speed) + ")")
+    assert.ok(s.speed > 180 && s.speed <= Runner.maxSpeed)
+    assert.ok(s.obstacles.length <= 4)             // old ones are dropped
+})
+test("Runner: back online stops the run without a crash", () => {
+    const s = Runner.create(180, 20, 16)
+    Runner.press(s)
+    for (let i = 0; i < 30; i++) Runner.step(s, 1 / 60, kinds, () => 0.4)
+    s.obstacles.push({ x: s.runner.x + 4, w: 11, h: 16, kind: "rack" })      // right in the way
+    Runner.online(s)
+    for (let i = 0; i < 120; i++) Runner.step(s, 1 / 60, kinds, () => 0.4)
+    assert.equal(s.phase, "online")
+    assert.equal(s.speed, 0)
+    assert.equal(Runner.press(s), "")
+    // a huge frame time is capped
+    const d = s.dist; s.speed = 100; s.phase = "run"; Runner.step(s, 5, [], () => 0.4)
+    assert.ok(s.dist - d <= 100 * 0.05 + 0.5)
+})
+
+await Promise.all(pending)
 console.log(passed + " passed, " + failed + " failed")
 process.exit(failed ? 1 : 0)

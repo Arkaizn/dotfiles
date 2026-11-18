@@ -327,7 +327,7 @@ Rectangle {
             Layout.fillWidth: true
             horizontalAlignment: Text.AlignHCenter
             wrapMode: Text.WordWrap
-            text: "↑ ↓ to move  ·  R reply  ·  A archive  ·  N next unread  ·  Ctrl+N new"
+            text: "↑ ↓ to move  ·  R reply  ·  A archive  ·  N next unread  ·  Ctrl+N new  ·  Ctrl+Z undo"
             color: Colors.fade(0.3)
             font.pixelSize: Tokens.font.caption
             font.family: Properties.fontFamily

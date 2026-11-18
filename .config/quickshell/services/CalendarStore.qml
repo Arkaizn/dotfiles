@@ -471,10 +471,12 @@ Singleton {
         onTriggered: { root.ensureRange(new Date()); root.sync() }
     }
     // first sync a little after startup
+    // (once: see MailStore's first check; `running` follows the accounts, which a sync can assign again)
+    property bool firstSyncDone: false
     Timer {
         interval: 8000
-        running: root.activeAccounts.length > 0
-        onTriggered: { root.ensureRange(new Date()); root.sync() }
+        running: root.activeAccounts.length > 0 && !root.firstSyncDone
+        onTriggered: { root.firstSyncDone = true; root.ensureRange(new Date()); root.sync() }
     }
 
     // ── Reminders ────────────────────────────────────────────────────────────

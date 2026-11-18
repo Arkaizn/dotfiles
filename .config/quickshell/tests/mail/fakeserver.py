@@ -3,8 +3,8 @@
 Enough of both protocols for scripts/mail/mailsync.py: LOGIN, LIST (special-use
 flags), SELECT / EXAMINE, STATUS, FETCH / UID FETCH (FLAGS, INTERNALDATE,
 RFC822.SIZE, BODYSTRUCTURE, BODY[HEADER.FIELDS (…)], BODY[section]<0.n>, BODY[]),
-UID STORE, UID COPY / MOVE, EXPUNGE / UID EXPUNGE, APPEND, UID SEARCH (ALL, TEXT,
-CHARSET), LOGOUT. SMTP: EHLO, AUTH PLAIN / LOGIN, MAIL, RCPT, DATA, QUIT.
+UID STORE, UID COPY / MOVE (with COPYUID), EXPUNGE / UID EXPUNGE, APPEND, UID SEARCH
+(ALL, TEXT, UID, HEADER, CHARSET), LOGOUT. srv.caps can lose MOVE / UIDPLUS. SMTP: EHLO, AUTH PLAIN / LOGIN, MAIL, RCPT, DATA, QUIT.
 
     srv = FakeMail(user="me@example.com", password="secret")
     srv.add("INBOX", raw_bytes, flags={"\\Seen"})
@@ -185,7 +185,7 @@ class ImapHandler(socketserver.StreamRequestHandler):
 
     def handle(self):
         srv = self.server.mail
-        self.send("* OK [CAPABILITY IMAP4rev1 MOVE UIDPLUS SPECIAL-USE] fake ready")
+        self.send(f"* OK [CAPABILITY {srv.caps}] fake ready")
         self.box, self.ro, self.authed = None, False, False
         while True:
             got = self.readline()
@@ -220,7 +220,7 @@ class ImapHandler(socketserver.StreamRequestHandler):
             uid, cmd = True, toks[0][1].upper()
             toks = toks[1:]
         if cmd == "CAPABILITY":
-            self.send("* CAPABILITY IMAP4rev1 MOVE UIDPLUS SPECIAL-USE")
+            self.send("* CAPABILITY " + srv.caps)
         elif cmd == "NOOP":
             pass
         elif cmd == "LOGOUT":
@@ -282,7 +282,10 @@ class ImapHandler(socketserver.StreamRequestHandler):
             if not self.box:
                 self.send(f"{tag} NO select first")
                 return
-            getattr(self, "c_" + cmd.lower())(srv, tag, uid, toks, lits)
+            code = getattr(self, "c_" + cmd.lower())(srv, tag, uid, toks, lits)
+            if code:
+                self.send(f"{tag} OK [{code}] {cmd} done")
+                return
         else:
             self.send(f"{tag} BAD unknown command {cmd}")
             return
@@ -370,6 +373,13 @@ class ImapHandler(socketserver.StreamRequestHandler):
                     needle = args[i + 1].lower().encode()
                     ok = ok and needle in m["raw"].lower()
                     i += 2
+                elif a == "UID":
+                    ok = ok and m["uid"] in seqset(args[i + 1], [x["uid"] for x in self.box.msgs])
+                    i += 2
+                elif a == "HEADER":
+                    got = email.message_from_bytes(m["raw"]).get(args[i + 1]) or ""
+                    ok = ok and args[i + 2].lower() in str(got).lower()
+                    i += 3
                 else:
                     i += 1
             if ok:
@@ -381,17 +391,23 @@ class ImapHandler(socketserver.StreamRequestHandler):
         if dest is None:
             raise ValueError("no such mailbox")
         picked = self.pick(uid, toks[0][1])
-        for _, m in picked:
-            dest.add(m["raw"], set(m["flags"]) - {"\\Deleted"}, m["date"])
-        return picked
+        new = [dest.add(m["raw"], set(m["flags"]) - {"\\Deleted"}, m["date"]) for _, m in picked]
+        code = ""
+        if picked and "UIDPLUS" in srv.caps:
+            code = f"COPYUID {dest.uidvalidity} {','.join(str(m['uid']) for _, m in picked)} {','.join(map(str, new))}"
+        return picked, code
 
     def c_copy(self, srv, tag, uid, toks, lits):
-        self.copy_to(srv, uid, toks, lits)
+        return self.copy_to(srv, uid, toks, lits)[1]
 
     def c_move(self, srv, tag, uid, toks, lits):
-        picked = self.copy_to(srv, uid, toks, lits)
+        if "MOVE" not in srv.caps:
+            raise ValueError("MOVE not supported")
+        picked, code = self.copy_to(srv, uid, toks, lits)
         gone = {id(m) for _, m in picked}
         self.box.msgs = [m for m in self.box.msgs if id(m) not in gone]
+        if code:            # RFC 6851: COPYUID comes in an untagged OK
+            self.send(f"* OK [{code}] moved")
 
     def c_expunge(self, srv, tag, uid, toks, lits):
         keep = set(seqset(toks[0][1], [m["uid"] for m in self.box.msgs])) if uid else None
@@ -478,6 +494,7 @@ class _Server(socketserver.ThreadingTCPServer):
 class FakeMail:
     def __init__(self, user="me@example.com", password="secret", boxes=None):
         self.user, self.password = user, password
+        self.caps = "IMAP4rev1 MOVE UIDPLUS SPECIAL-USE"        # a test can take some away
         self.lock = threading.RLock()
         self.sent = []
         self.boxes = {}

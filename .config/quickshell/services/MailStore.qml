@@ -20,7 +20,8 @@ import qs.services
 //
 // Changes (read, star, move, delete) show at once and go to the server in the
 // background; one that fails is put back. A check that ran meanwhile can't undo
-// them: they're laid over its result until the server has them.
+// them: they're laid over its result until the server has them. Archive / delete /
+// move can be undone (Ctrl+Z), the last 20 of them, also once the server has them.
 //
 //   qs ipc call mail open | toggle | close | check | compose <to> | mailto <url> | unread
 Singleton {
@@ -91,7 +92,9 @@ Singleton {
     // folders of a role shown together ("unified:sent" …)
     readonly property var roleViews: ["sent", "drafts", "archive", "trash", "junk"]
     // a unified view switched on: its folders get checked right away
-    onFavoritesChanged: if (root.lastSync > 0) Qt.callLater(root.check)
+    // (by content: the list is a new array whenever any mail setting is read again)
+    readonly property string favoritesKey: favorites.join(",")
+    onFavoritesKeyChanged: if (root.lastSync > 0) Qt.callLater(root.check)
 
     // ── Local changes laid over the server's state ───────────────────────────
     // id → { seen?, flagged?, answered?, gone?, done: ms (0 = still being sent) }
@@ -470,11 +473,15 @@ Singleton {
         running: root.activeAccounts.length > 0
         onTriggered: root.check()
     }
-    // first check a little after startup
+    // first check a little after startup. Once: `running` is a binding on the
+    // accounts, and a check that lists the folders assigns the accounts again, so
+    // without the flag this timer re-armed itself after every check it started
+    // (a full check of every account every 14 s, for as long as the shell ran)
+    property bool firstCheckDone: false
     Timer {
         interval: 10000
-        running: root.activeAccounts.length > 0
-        onTriggered: root.check(true)
+        running: root.activeAccounts.length > 0 && !root.firstCheckDone
+        onTriggered: { root.firstCheckDone = true; root.check(true) }
     }
 
     // ── New mail ─────────────────────────────────────────────────────────────
@@ -676,36 +683,105 @@ Singleton {
 
     // ── Undo (archive / delete / move) ───────────────────────────────────────
     // The messages go away at once; the server only gets the change after a few
-    // seconds (Settings: mail → undo), so "Undo" just puts them back.
-    property var undoable: null              // { label, ids, commits: [fn], restore: fn (optional) }
+    // seconds (Settings: mail → undo), so "Undo" just puts them back. After that
+    // Ctrl+Z still works: the change is in `history` with where the messages are
+    // now (mailsync's answer), and undoing it moves them back on the server. A
+    // message deleted for good (out of the trash) can only be undone before.
+    property var undoable: null              // { label, ids, commits: [fn], restore: fn (optional), entry }
+    // done changes, newest last: { what, waiting, wanted, failed, steps: [{ account, folder, uidvalidity, uids, to }],
+    //                              local: fn (unsent drafts: nothing on a server) }
+    property var history: []
+    readonly property int historyMax: 20
+    // what the toast says while / after bringing messages back ("" = nothing)
+    property string undoNote: ""
+    property bool restoring: false
     Timer { id: undoTimer; onTriggered: root.flushUndo() }
-    function later(label, ids, commits) {
+    Timer { id: noteTimer; interval: 3500; onTriggered: root.undoNote = "" }
+    function later(label, ids, commits, entry) {
         patchLocal(ids, { gone: true })
-        if (root.undoSeconds <= 0) { for (const c of commits) c(); return }
-        flushUndo()                           // the one before can't be undone any more
-        root.undoable = { label: label, ids: ids, commits: commits }
+        if (root.undoSeconds <= 0) { commit(entry, commits); return }
+        flushUndo()                           // the one before goes to the server (and into the history)
+        root.undoable = { label: label, ids: ids, commits: commits, entry: entry }
         undoTimer.interval = root.undoSeconds * 1000
         undoTimer.restart()
+    }
+    function commit(entry, commits) {
+        if (entry) root.history = root.history.concat([entry]).slice(-root.historyMax)
+        for (const c of commits) c()
     }
     function flushUndo() {
         undoTimer.stop()
         const u = root.undoable
         root.undoable = null
-        if (u) for (const c of u.commits) c()
+        if (u) commit(u.entry, u.commits)
+    }
+    // a request of a change came back: res.uids = the messages in their new folder
+    function committed(entry, g, res) {
+        if (res.ok && res.to && (res.uids ?? []).length > 0 && res.uidvalidity)
+            entry.steps.push({ account: g.account, folder: res.to, uidvalidity: res.uidvalidity, uids: res.uids, to: g.folder })
+        if (!res.ok) entry.failed = true
+        if (--entry.waiting > 0) return
+        // nothing that could be brought back: not something Ctrl+Z should stop at
+        if (entry.steps.length === 0) root.history = root.history.filter(e => e !== entry)
+        if (entry.wanted) restore(entry)
     }
     function undo() {
-        undoTimer.stop()
-        const u = root.undoable
-        root.undoable = null
-        if (u) { settle(u.ids, false); if (u.restore) u.restore() }
+        if (root.undoable) {
+            undoTimer.stop()
+            const u = root.undoable
+            root.undoable = null
+            settle(u.ids, false)
+            if (u.restore) u.restore()
+            return
+        }
+        if (root.restoring || root.history.length === 0) return
+        const e = root.history[root.history.length - 1]
+        root.history = root.history.slice(0, -1)
+        noteTimer.stop()
+        root.restoring = true
+        root.undoNote = "Bringing back " + e.what + "…"
+        // still on its way to the server: brought back as soon as that's done
+        if (e.waiting > 0) e.wanted = true
+        else restore(e)
+    }
+    function restore(entry) {
+        const finish = (n, error) => {
+            root.restoring = false
+            if (error) root.lastError = error
+            root.undoNote = n > 0 ? "Brought back " + count(n) : ""
+            if (n > 0) noteTimer.restart()
+        }
+        if (entry.local) { entry.local(); root.restoring = false; root.undoNote = "Brought back " + entry.what; noteTimer.restart(); return }
+        const steps = entry.steps.filter(st => root.accountMap[st.account])
+        if (steps.length === 0) {
+            // (a failed change was put back and reported already)
+            finish(0, entry.failed ? "" : "Can't bring back " + entry.what + ": " + (entry.steps.length ? "the account is gone" : "deleted for good"))
+            return
+        }
+        let left = steps.length, back = 0, error = ""
+        for (const st of steps) {
+            // where they are now (the trash, when it's shown): gone from there at once
+            const ids = st.uids.map(u => st.account + "|" + st.folder + "|" + u)
+            patchLocal(ids, { gone: true })
+            actLane.run("move", { account: wire(root.accountMap[st.account]), folder: st.folder, uids: st.uids, to: st.to,
+                                  strict: true, uidvalidity: st.uidvalidity }, res => {
+                settle(ids, res.ok)
+                if (res.ok) { back += st.uids.length; watch(key(st.account, st.to)) }
+                else error = res.error
+                if (--left > 0) return
+                finish(back, error)
+                if (back > 0) check()         // the folder they're back in gets read again
+            })
+        }
     }
 
     function count(n) { return n + (n === 1 ? " message" : " messages") }
 
-    // to: a folder path, or a role ("archive", "junk", "trash", "inbox"); now: no undo
+    // to: a folder path, or a role ("archive", "junk", "trash", "inbox"); now: no time to undo first
     function moveTo(list, to, now) {
         flushFlags()
         const commits = [], ids = []
+        const entry = { what: "", waiting: 0, wanted: false, failed: false, steps: [] }
         for (const g of grouped(list)) {
             const acc = root.accountMap[g.account]
             const dest = ["archive", "junk", "trash", "inbox"].includes(to) ? (folderOf(g.account, to) || (to === "inbox" ? "INBOX" : "")) : to
@@ -713,35 +789,43 @@ Singleton {
             if (dest === g.folder) continue
             const gids = g.msgs.map(m => m.id)
             ids.push(...gids)
+            entry.waiting++
             commits.push(() => actLane.run("move", { account: wire(acc), folder: g.folder, uids: g.msgs.map(m => m.uid), to: dest }, res => {
                 settle(gids, res.ok)
                 if (!res.ok) root.lastError = res.error
                 else if (root.watched.includes(key(g.account, dest))) check()
+                committed(entry, g, res)
             }))
         }
         if (commits.length === 0) return
-        const label = (to === "archive" ? "Archived " : to === "junk" ? "Moved to junk: " : to === "trash" ? "Deleted " : "Moved ") + count(ids.length)
-        if (now) { patchLocal(ids, { gone: true }); for (const c of commits) c() }
-        else later(label, ids, commits)
+        entry.what = count(ids.length)
+        const label = (to === "archive" ? "Archived " : to === "junk" ? "Moved to junk: " : to === "trash" ? "Deleted " : "Moved ") + entry.what
+        if (now) { patchLocal(ids, { gone: true }); commit(entry, commits) }
+        else later(label, ids, commits, entry)
     }
 
     // to the trash, or for good when already there
     function remove(list, now) {
         flushFlags()
         const commits = [], ids = []
+        const entry = { what: "", waiting: 0, wanted: false, failed: false, steps: [] }
         for (const g of grouped(list)) {
             const acc = root.accountMap[g.account]
             const gids = g.msgs.map(m => m.id)
             ids.push(...gids)
+            entry.waiting++
             commits.push(() => actLane.run("delete", { account: wire(acc), folder: g.folder, uids: g.msgs.map(m => m.uid),
                                                        trash: folderOf(g.account, "trash") }, res => {
                 settle(gids, res.ok)
                 if (!res.ok) root.lastError = res.error
+                else if (res.to && root.watched.includes(key(g.account, res.to))) check()
+                committed(entry, g, res)
             }))
         }
         if (commits.length === 0) return
-        if (now) { patchLocal(ids, { gone: true }); for (const c of commits) c() }
-        else later("Deleted " + count(ids.length), ids, commits)
+        entry.what = count(ids.length)
+        if (now) { patchLocal(ids, { gone: true }); commit(entry, commits) }
+        else later("Deleted " + entry.what, ids, commits, entry)
     }
 
     function markAllRead(view) { markRead(messagesIn(view).filter(m => !m.seen), true) }
@@ -884,10 +968,12 @@ Singleton {
         if (gone.length === 0) return
         root.drafts = root.drafts.filter(x => !ids.includes(x.id))
         saveDrafts()
-        if (root.undoSeconds <= 0) return
+        const what = gone.length + (gone.length === 1 ? " draft" : " drafts")
+        const back = () => { root.drafts = root.drafts.concat(gone.filter(d => !root.drafts.some(x => x.id === d.id))); saveDrafts() }
+        const entry = { what: what, waiting: 0, wanted: false, failed: false, steps: [], local: back }
+        if (root.undoSeconds <= 0) { commit(entry, []); return }
         flushUndo()
-        root.undoable = { label: "Deleted " + gone.length + (gone.length === 1 ? " draft" : " drafts"), ids: [], commits: [],
-                          restore: () => { root.drafts = root.drafts.concat(gone); saveDrafts() } }
+        root.undoable = { label: "Deleted " + what, ids: [], commits: [], restore: back, entry: entry }
         undoTimer.interval = root.undoSeconds * 1000
         undoTimer.restart()
     }

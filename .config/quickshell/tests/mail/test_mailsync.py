@@ -36,6 +36,10 @@ class Unit(unittest.TestCase):
     def test_uid_set(self):
         self.assertEqual(M.uid_set([5, 3, 4, 9, 10, 1]), "1,3:5,9:10")
         self.assertEqual(M.uid_set([7]), "7")
+        from mailsync.imap import set_uids
+        self.assertEqual(set_uids("3:5,9"), [3, 4, 5, 9])
+        self.assertEqual(set_uids("7"), [7])
+        self.assertEqual(set_uids("1:4000000000"), [])
 
     def test_parse_fetch_with_literals(self):
         data = [(b'1 (UID 7 FLAGS (\\Seen $Forwarded) BODY[HEADER.FIELDS (FROM SUBJECT)] {30}', b"From: a@b.c\r\nSubject: hi\r\n\r\n"),
@@ -395,6 +399,65 @@ class EndToEnd(unittest.TestCase):
         self.ok("delete", {"account": self.acc, "folder": "Trash", "uids": [tuid], "trash": "Trash"})     # for good
         self.assertEqual(len(self.srv.boxes["Trash"].msgs), 0)
         self.assertNotIn("Zum Verschieben", [m["subject"] for m in self.inbox()["new"]])
+
+    def subjects(self, box):
+        return sorted(email.message_from_bytes(m["raw"], policy=email.policy.default)["Subject"] for m in self.srv.boxes[box].msgs)
+
+    def test_09b_undo_delete(self):
+        """delete says where the message went; a strict move brings it back (Ctrl+Z after the server has it)"""
+        keep = self.srv.add("Trash", message("Schon im Papierkorb", "X", "x@example.org", "old"))
+        uid = self.srv.add("INBOX", message("Versehentlich gelöscht", "X", "x@example.org", "oops"))
+        r = self.ok("delete", {"account": self.acc, "folder": "INBOX", "uids": [uid], "trash": "Trash"})
+        self.assertEqual(r["to"], "Trash")
+        self.assertEqual(r["uidvalidity"], self.srv.boxes["Trash"].uidvalidity)
+        self.assertEqual(len(r["uids"]), 1)
+        self.assertNotEqual(r["uids"][0], keep)
+        back = {"account": self.acc, "folder": "Trash", "uids": r["uids"], "to": "INBOX", "strict": True}
+        # the trash was recreated meanwhile: its uids mean other messages now
+        bad = self.run_cmd("move", dict(back, uidvalidity=r["uidvalidity"] + 1))
+        self.assertFalse(bad["ok"])
+        self.assertIn("changed on the server", bad["error"])
+        self.assertIn("Versehentlich gelöscht", self.subjects("Trash"))
+        r2 = self.ok("move", dict(back, uidvalidity=r["uidvalidity"]))
+        self.assertEqual(r2["to"], "INBOX")
+        self.assertIn("Versehentlich gelöscht", self.subjects("INBOX"))
+        self.assertEqual(self.subjects("Trash"), ["Schon im Papierkorb"])
+        # a second time: it isn't there any more (trash emptied, moved by another client)
+        gone = self.run_cmd("move", dict(back, uidvalidity=r["uidvalidity"]))
+        self.assertFalse(gone["ok"])
+        self.assertIn("isn't in Trash any more", gone["error"])
+        self.assertEqual(self.subjects("Trash"), ["Schon im Papierkorb"])
+        # deleted for good: nothing to bring back
+        self.assertNotIn("uids", self.ok("delete", {"account": self.acc, "folder": "Trash", "uids": [keep], "trash": "Trash"}))
+        self.ok("delete", {"account": self.acc, "folder": "INBOX", "uids": r2["uids"], "trash": ""})
+        self.assertNotIn("Versehentlich gelöscht", self.subjects("INBOX"))
+
+    def test_09c_undo_several_and_old_servers(self):
+        """several at once, and servers without UIDPLUS (found again by Message-ID) or MOVE (copy + expunge)"""
+        caps = self.srv.caps
+        before = self.subjects("Archive")
+
+        def mine():         # this test's messages go again
+            for box in ("INBOX", "Archive"):
+                self.srv.boxes[box].msgs = [m for m in self.srv.boxes[box].msgs
+                                            if b"Subject: Undo " not in m["raw"] and b"Subject: Bleibt im Archiv" not in m["raw"]]
+        try:
+            for caps_now in [caps, "IMAP4rev1 MOVE", "IMAP4rev1 UIDPLUS", "IMAP4rev1"]:
+                self.srv.caps = caps_now
+                other = self.srv.add("Archive", message("Bleibt im Archiv", "X", "x@example.org", "stay"))
+                uids = [self.srv.add("INBOX", message(f"Undo {i}", "X", "x@example.org", "text")) for i in range(3)]
+                r = self.ok("move", {"account": self.acc, "folder": "INBOX", "uids": uids, "to": "Archive"})
+                self.assertEqual(len(r["uids"]), 3, caps_now)
+                self.assertNotIn(other, r["uids"])
+                self.assertFalse([s for s in self.subjects("INBOX") if s.startswith("Undo ")])
+                self.ok("move", {"account": self.acc, "folder": "Archive", "uids": r["uids"], "to": "INBOX",
+                                 "strict": True, "uidvalidity": r["uidvalidity"]})
+                self.assertEqual([s for s in self.subjects("INBOX") if s.startswith("Undo ")], ["Undo 0", "Undo 1", "Undo 2"], caps_now)
+                self.assertEqual(self.subjects("Archive"), before + ["Bleibt im Archiv"])
+                mine()
+        finally:
+            self.srv.caps = caps
+            mine()
 
     def test_10_send(self):
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
